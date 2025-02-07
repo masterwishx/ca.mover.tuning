@@ -673,18 +673,18 @@ createFilteredFilelist (){
         fi
 
         #Add Size to find string and pass to awk to modify some fields
-        FINDSTR+=" -printf '%T@|%s|%S|%n|%i|%p|\0' | awk -v RS='\0' -v FS='|' -v SPARSENESS=\$SPARSENESS -v PRIMARYSTORAGENAME=\$PRIMARYSTORAGENAME -v SECONDARYSTORAGENAME=\$SECONDARYSTORAGENAME -v SHARENAME=\$SHARENAME -v SHAREUSECACHE=\$SHAREUSECACHE -v PRIMARYSIZETHRESH=\$PRIMARYSIZETHRESH"
+        #FINDSTR+=" -printf '%T@|%s|%S|%n|%i|%p|\0' | awk -v RS='\0' -v FS='|' -v SPARSENESS=\$SPARSENESS -v PRIMARYSTORAGENAME=\$PRIMARYSTORAGENAME -v SECONDARYSTORAGENAME=\$SECONDARYSTORAGENAME -v SHARENAME=\$SHARENAME -v SHAREUSECACHE=\$SHAREUSECACHE -v PRIMARYSIZETHRESH=\$PRIMARYSIZETHRESH"
         #
         # Maybe can help fix spaces but seems same code
         #
-        # FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|\0'"
-        # FINDSTR="$FINDSTR | awk -v RS='\0' -v FS='|' \
-        # -v SPARSENESS='$SPARSENESS' \
-        # -v PRIMARYSTORAGENAME='$PRIMARYSTORAGENAME' \
-        # -v SECONDARYSTORAGENAME='$SECONDARYSTORAGENAME' \
-        # -v SHARENAME='$SHARENAME' \
-        # -v SHAREUSECACHE='$SHAREUSECACHE' \
-        # -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
+        FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|\0'"
+        FINDSTR="$FINDSTR | awk -v RS='\0' -v FS='|' \
+        -v SPARSENESS='$SPARSENESS' \
+        -v PRIMARYSTORAGENAME='$PRIMARYSTORAGENAME' \
+        -v SECONDARYSTORAGENAME='$SECONDARYSTORAGENAME' \
+        -v SHARENAME='$SHARENAME' \
+        -v SHAREUSECACHE='$SHAREUSECACHE' \
+        -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
         #
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
