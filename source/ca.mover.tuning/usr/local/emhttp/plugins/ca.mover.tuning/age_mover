@@ -588,9 +588,9 @@ createFilteredFilelist (){
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
         if [ "$SHAREUSECACHE" = "prefer" ] || ( [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ] ); then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-            FINDSTR="find \"$SHAREPATH\" ! -path \"\"/mnt/user*\"\" -type f -depth \"" # or maybe fix spaces FINDSTR="find \"$SHAREPATH\" -type f -not -path \"/mnt/user*\""            
+            FINDSTR="find \"$SHAREPATH\" -type f -not -path \"/mnt/user*\" -depth "            
         else
-            FINDSTR="find \"$SHAREPATH\" -type f -depth " #or FINDSTR="find \"$SHAREPATH\" -type f"
+            FINDSTR="find \"$SHAREPATH\" -type f -depth "
         fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
