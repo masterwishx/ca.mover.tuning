@@ -2,11 +2,11 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "Reynald">
-<!ENTITY version   "2024.09.05.0222">
+<!ENTITY version   "2025.07.02">
 <!ENTITY md5       "a367c78a27e2254742437ee2b14df87c">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
-<!ENTITY github    "R3yn4ld/ca.mover.tuning">
+<!ENTITY github    "masterwishx/ca.mover.tuning">
 <!ENTITY branch    "master">
 <!ENTITY upgrade   "minor">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/plugins/&name;.plg">
@@ -15,6 +15,8 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.07.02
+- Fix issue for shares with spaces.Thanks DToX_ from forums. [masterwishx]
 ###2024.09.05.0222
 - Fix find not finding hidden files. Thanks solidno8 from forums. [R3yn4ld]
 2024.09.05.0115
