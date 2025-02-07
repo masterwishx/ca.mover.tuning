@@ -588,9 +588,9 @@ createFilteredFilelist (){
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
         if [ "$SHAREUSECACHE" = "prefer" ] || ( [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ] ); then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-            FINDSTR="find $SHAREPATH ! -path \"/mnt/user*\" -type f -depth "
+            FINDSTR="find \"$SHAREPATH\" ! -path \"\"/mnt/user*\"\" -type f -depth \"" # or maybe fix spaces FINDSTR="find \"$SHAREPATH\" -type f -not -path \"/mnt/user*\""            
         else
-            FINDSTR="find $SHAREPATH -type f -depth "
+            FINDSTR="find \"$SHAREPATH\" -type f -depth " #or FINDSTR="find \"$SHAREPATH\" -type f"
         fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
@@ -674,6 +674,18 @@ createFilteredFilelist (){
 
         #Add Size to find string and pass to awk to modify some fields
         FINDSTR+=" -printf '%T@|%s|%S|%n|%i|%p|\0' | awk -v RS='\0' -v FS='|' -v SPARSENESS=\$SPARSENESS -v PRIMARYSTORAGENAME=\$PRIMARYSTORAGENAME -v SECONDARYSTORAGENAME=\$SECONDARYSTORAGENAME -v SHARENAME=\$SHARENAME -v SHAREUSECACHE=\$SHAREUSECACHE -v PRIMARYSIZETHRESH=\$PRIMARYSIZETHRESH"
+        #
+        # Maybe can help fix spaces but seems same code
+        #
+        # FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|\0'"
+        # FINDSTR="$FINDSTR | awk -v RS='\0' -v FS='|' \
+        # -v SPARSENESS='$SPARSENESS' \
+        # -v PRIMARYSTORAGENAME='$PRIMARYSTORAGENAME' \
+        # -v SECONDARYSTORAGENAME='$SECONDARYSTORAGENAME' \
+        # -v SHARENAME='$SHARENAME' \
+        # -v SHAREUSECACHE='$SHAREUSECACHE' \
+        # -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
+        #
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
             FINDSTR+="' \$3 > 0.SPARSENESS ' {"
