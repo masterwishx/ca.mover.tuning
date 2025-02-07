@@ -315,7 +315,7 @@ getMoverSettings() {
     else
         if [ $(cfg sparsnessf) = "yes" ]; then
             SPARSENESS=$(cfg sparsnessv)
-            [ $SPARSENESS - gt 0 ] && mvlogger "Sparness supplied: $SPARSENESS"
+            [ $SPARSENESS -gt 0 ] && mvlogger "Sparness supplied: $SPARSENESS"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SPARSENESS=0
         fi
