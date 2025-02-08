@@ -1113,13 +1113,28 @@ processTheMoves () {
                     fi
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
-                    else
-                        echo "Deleting empty dir ${DIR}"
-                        if [ $TESTMODE = "no" ]; then
-                            rmdir "${DIR}"
+                    else                                            
+                    if [ $TESTMODE = "no" ]; then
+                     if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                        DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
+                        echo "Checking if dataset ${DATASET} is completely empty..."
+                        
+                        # Check for any files in the dataset avalible                        
+                        dataset_file_count=$(find "${DATASET}" -type f | wc -l)
+                        if [ "${dataset_file_count}" -eq 0 ]; then
+                        echo "Dataset ${DATASET} appears empty, attempting to unmount and delete..."
+                            zfs unmount "${DATASET}" >/dev/null 2>&1
+                            zfs destroy -r "${DATASET}" >/dev/null 2>&1
+                        else
+                            echo "Dataset ${DATASET} contains files or directories, will not delete..."
                         fi
-                    fi
-                done <<< $(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)
+                     else
+                        echo "Deleting empty dir ${DIR}"
+                       # rmdir "${DIR}"
+                     fi
+                    fi                    
+                    fi 
+                done <<< "$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)"
             fi
             # Setting mover status
             if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
