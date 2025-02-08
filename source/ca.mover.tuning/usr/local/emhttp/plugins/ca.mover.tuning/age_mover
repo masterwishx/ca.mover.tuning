@@ -1145,8 +1145,8 @@ processTheMoves () {
                         dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
                         if [ "${dataset_file_count}" -eq 0 ]; then
                         echo "Dataset ${DATASET} appears empty, attempting to unmount and delete..."
-                            zfs unmount "${DATASET}" 2>&1
-                            zfs destroy -r "${DATASET}" 2>&1
+                            zfs unmount "${DATASET}"
+                            zfs destroy -r "${DATASET}"
                         else
                             echo "Dataset ${DATASET} contains files or directories, will not delete..."
                         fi                    
