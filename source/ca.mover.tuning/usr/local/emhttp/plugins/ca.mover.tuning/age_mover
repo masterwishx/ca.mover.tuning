@@ -1142,7 +1142,7 @@ processTheMoves () {
                         echo "Checking if dataset ${DATASET} is completely empty..."
                         
                         # Check for any files in the dataset avalible                        
-                        dataset_file_count=$(find "${DATASET}" -type f | wc -l)
+                        dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
                         if [ "${dataset_file_count}" -eq 0 ]; then
                         echo "Dataset ${DATASET} appears empty, attempting to unmount and delete..."
                             zfs unmount "${DATASET}" 2>&1
