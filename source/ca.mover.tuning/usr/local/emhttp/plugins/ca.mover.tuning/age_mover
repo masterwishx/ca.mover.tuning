@@ -216,6 +216,19 @@ getMoverSettings() {
         fi
     fi
 
+    if [ -z $(cfg cleanDatasets) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]] ;then
+            mvlogger "No Clean datasets argument provided, defaulting to no"
+            CLEANDATASETS="no"
+            echo 'cleanDatasets="no"' >> $config_file
+        fi
+    else
+        CLEANDATASETS=$(cfg cleanDatasets)
+        if [ $CLEANDATASETS = "yes" ]; then
+            mvlogger "Clean Datasets: $CLEANDATASETS"
+        fi
+    fi
+
     if [ -z $(cfg ctime)  ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]] ;then
             mvlogger "No CTIME argument provided, defaulting to no"
@@ -1114,8 +1127,17 @@ processTheMoves () {
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else                                            
-                    if [ $TESTMODE = "no" ]; then
-                     if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                    if [ $TESTMODE = "no" ]; then                     
+                        echo "Deleting empty dir ${DIR}"
+                        rmdir "${DIR}"
+                     fi
+                    fi                
+                done <<< "$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)"
+            fi
+
+            # Clean parent dataset if empty
+            if [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
+                if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                         DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
                         echo "Checking if dataset ${DATASET} is completely empty..."
                         
@@ -1123,19 +1145,14 @@ processTheMoves () {
                         dataset_file_count=$(find "${DATASET}" -type f | wc -l)
                         if [ "${dataset_file_count}" -eq 0 ]; then
                         echo "Dataset ${DATASET} appears empty, attempting to unmount and delete..."
-                            zfs unmount "${DATASET}" >/dev/null 2>&1
-                            zfs destroy -r "${DATASET}" >/dev/null 2>&1
+                            zfs unmount "${DATASET}" 2>&1
+                            zfs destroy -r "${DATASET}" 2>&1
                         else
                             echo "Dataset ${DATASET} contains files or directories, will not delete..."
-                        fi
-                     else
-                        echo "Deleting empty dir ${DIR}"
-                       # rmdir "${DIR}"
-                     fi
-                    fi                    
-                    fi 
-                done <<< "$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)"
-            fi
+                        fi                    
+                fi
+            fi            
+
             # Setting mover status
             if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
                 REMAINING_CACHE_SIZE=$(($REMAINING_CACHE_SIZE - $FILESIZE))
