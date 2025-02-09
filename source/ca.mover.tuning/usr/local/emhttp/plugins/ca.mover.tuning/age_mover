@@ -1136,17 +1136,27 @@ processTheMoves () {
             fi
 
             # Clean parent dataset if empty
-            if [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
+            if [[ "$ACTION" =~ "move" ]] && [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
                 if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                         DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
                         echo "Checking if dataset ${DATASET} is completely empty..."
                         
-                        # Check for any files in the dataset avalible                        
+                        # Check for any files in the dataset avalible
                         dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
                         if [ "${dataset_file_count}" -eq 0 ]; then
                         echo "Dataset ${DATASET} appears empty, attempting to unmount and delete..."
                             zfs unmount "${DATASET}"
+                            if [ $? -ne 0 ]; then
+                               echo "Failed to unmount dataset: ${DATASET}"
+                            else 
+                               echo "Dataset ${DATASET} has been successfully unmounted."
+                            fi
                             zfs destroy -r "${DATASET}"
+                            if [ $? -ne 0 ]; then
+                              echo "Failed to destroy dataset: ${DATASET}"
+                            else
+                              echo "Dataset ${DATASET} has been successfully destroyed."
+                            fi            
                         else
                             echo "Dataset ${DATASET} contains files or directories, will not delete..."
                         fi                    
