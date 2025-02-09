@@ -244,9 +244,6 @@ if ! pgrep age_mover; then
   done
 fi
 
-# Fix age_mover until next update
-cp -a /boot/config/plugins/ca.mover.tuning/age_mover /usr/local/emhttp/plugins/ca.mover.tuning/
-
 echo "Fixing permissions"
 chmod +x /usr/local/sbin/mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/*.php
