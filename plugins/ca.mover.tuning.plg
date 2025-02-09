@@ -17,6 +17,7 @@
 <CHANGES>
 ###2025.02.07
 - Fix issue for shares with spaces.Thanks DToX_ from forums. [masterwishx]
+- Add option to clean ZFS datasets.  [masterwishx]
 ###2024.09.05.0222
 - Fix find not finding hidden files. Thanks solidno8 from forums. [R3yn4ld]
 2024.09.05.0115
