@@ -218,14 +218,14 @@ getMoverSettings() {
 
     if [ -z $(cfg cleanDatasets) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]] ;then
-            mvlogger "No Clean datasets argument provided, defaulting to no"
+            mvlogger "No Clean ZFS datasets argument provided, defaulting to no"
             CLEANDATASETS="no"
             echo 'cleanDatasets="no"' >> $config_file
         fi
     else
         CLEANDATASETS=$(cfg cleanDatasets)
         if [ $CLEANDATASETS = "yes" ]; then
-            mvlogger "Clean Datasets: $CLEANDATASETS"
+            mvlogger "Clean ZFS datasets: $CLEANDATASETS"
         fi
     fi
 
