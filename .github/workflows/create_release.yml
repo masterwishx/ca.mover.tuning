@@ -1,0 +1,25 @@
+name: Create release
+
+on:
+    push:
+        tags:
+        - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Release Tag
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref_name }}
+        run: |
+          gh release create "$tag" \
+              --repo="$GITHUB_REPOSITORY" \
+              --title="CA Mover Tuning Plugin ${tag#v}" \
+              --generate-notes
+              --latest
