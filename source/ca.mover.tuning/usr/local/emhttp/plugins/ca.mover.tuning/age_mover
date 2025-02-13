@@ -687,9 +687,7 @@ createFilteredFilelist() {
 
         #Add Size to find string and pass to awk to modify some fields
         #FINDSTR+=" -printf '%T@|%s|%S|%n|%i|%p|\0' | awk -v RS='\0' -v FS='|' -v SPARSENESS=\$SPARSENESS -v PRIMARYSTORAGENAME=\$PRIMARYSTORAGENAME -v SECONDARYSTORAGENAME=\$SECONDARYSTORAGENAME -v SHARENAME=\$SHARENAME -v SHAREUSECACHE=\$SHAREUSECACHE -v PRIMARYSIZETHRESH=\$PRIMARYSIZETHRESH"
-        #
-        # Maybe can help fix spaces but seems same code
-        #
+        # Fix shares space issue but same code as above
         FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|\0'"
         FINDSTR="$FINDSTR | awk -v RS='\0' -v FS='|' \
         -v SPARSENESS='$SPARSENESS' \
@@ -698,7 +696,7 @@ createFilteredFilelist() {
         -v SHARENAME='$SHARENAME' \
         -v SHAREUSECACHE='$SHAREUSECACHE' \
         -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
-        #
+        
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
             FINDSTR+="' \$3 > 0.SPARSENESS ' {"
@@ -1136,30 +1134,32 @@ processTheMoves() {
 
             # Clean parent ZFS dataset if empty
             if [[ "$ACTION" =~ "move" ]] && [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
+              # If no files in directory
+              if [ "$count" = 0 ]; then
                 if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                     DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
-                    echo "Checking if ZFS dataset ${DATASET} is completely empty..."
-
+                    #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."                             
                     # Check for any files in the ZFS dataset avalible
                     dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
                     if [ "${dataset_file_count}" -eq 0 ]; then
-                        echo "ZFS dataset ${DATASET} appears empty, attempting to unmount and delete..."
+                        echo "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
                         zfs unmount "${DATASET}"
                         if [ $? -ne 0 ]; then
-                            echo "Failed to unmount ZFS dataset: ${DATASET}"
+                            echo "Failed to unmount ZFS dataset [${DATASET}]"
                         else
-                            echo "ZFS dataset ${DATASET} has been successfully unmounted."
+                            echo "ZFS dataset [${DATASET}] has been successfully unmounted."
                         fi
                         zfs destroy -r "${DATASET}"
                         if [ $? -ne 0 ]; then
-                            echo "Failed to destroy ZFS dataset: ${DATASET}"
+                            echo "Failed to destroy ZFS dataset [${DATASET}]"
                         else
-                            echo "ZFS dataset ${DATASET} has been successfully destroyed."
+                            echo "ZFS dataset [${DATASET}] has been successfully destroyed."
                         fi
                     else
-                        echo "ZFS dataset ${DATASET} contains files or directories, will not delete..."
+                        echo "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
                     fi
                 fi
+              fi
             fi
 
             # Setting mover status
