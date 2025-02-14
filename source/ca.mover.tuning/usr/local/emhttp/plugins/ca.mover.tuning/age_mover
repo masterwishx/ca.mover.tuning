@@ -84,7 +84,7 @@ function bytes_to_human() {
 }
 
 function human_to_bytes() {
-    echo $(numfmt $1 --from=iec)
+    echo "$(numfmt $1 --from=iec)"
 }
 
 # Function for verbose output and logging
@@ -615,29 +615,33 @@ createFilteredFilelist() {
             # Use Creation time or modification time according to settings
             if [ "$CTIME" == "yes" ]; then
                 mvlogger "Age (creation time) ${AGE}"
-                FINDSTR+=" -ctime +$RAGE"
+                FINDSTR="$FINDSTR -ctime +$RAGE"
             else
                 mvlogger "Age (modification time) ${AGE}"
-                FINDSTR+=" -mtime +$RAGE"
+                FINDSTR="$FINDSTR -mtime +$RAGE"
             fi
         fi
 
         #Add Size to find string
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SIZE" -gt 0 ]; then
             mvlogger "Adding Size: ${SIZE}"
-            FINDSTR+=" -size +${SIZE}M"
+            FINDSTR="$FINDSTR -size +${SIZE}M"
         fi
 
         #Add Ignore Hidden Files to find string
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && ([ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]) && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
-            FINDSTR+=" -not -path '*/\.*'"
+            FINDSTR="$FINDSTR -not -path '*/\.*'"
             HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -path '*/\.*' -print0 | xargs -0 du -sh | awk '{ sum += $1 } END { print sum }')
             echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|/mnt/$PRIMARYSTORAGENAME/$SHARENAME hidden files" >>$FILTERED_FILELIST
             mvlogger "    Hidden files are using $(bytes_to_human $SKIPPED_PATH_RESERVED_SPACE)"
         fi
         #Add skipped files and folders
-        FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
+        #FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
+        #
+        #Needs test !!!!!!!!!!
+        FINDSTR="$FINDSTR -not -name .placeholder" #do not move placeholders
+        #
         # Add files from ignore list
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && ([ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]) && [ -f "$SKIPFILESLIST" ] && grep -q "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" "$SKIPFILESLIST"; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
@@ -652,11 +656,11 @@ createFilteredFilelist() {
                     # Add /* at the end for better reading in Mover_action file
                     skipped_path="${skipped_path}/*" # add slash asterisk
                     # Add filter to find string
-                    FINDSTR+=" -not -path \"${skipped_path}\""
+                    FINDSTR="$FINDSTR -not -path ${skipped_path}"
                 elif [ -f "$skipped_path" ]; then
                     SKIPPED_PATH_RESERVED_SPACE=$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)
                     # Add filter to find string
-                    FINDSTR+=" -not -name \"${skipped_path}\""
+                    FINDSTR="$FINDSTR -not -name ${skipped_path}"
                 fi
                 if [ ! -z "$SKIPPED_PATH_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>$FILTERED_FILELIST
@@ -664,7 +668,7 @@ createFilteredFilelist() {
                 else
                     mvlogger "Error calculating size for $skipped_path"
                 fi
-            done <<<$(grep "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" "$SKIPFILESLIST")
+            done <<<"$(grep "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" "$SKIPFILESLIST")"
             mvlogger "    Ignored files are using $(bytes_to_human $TOTAL_SKIPPED_PATH_RESERVED_SPACE)"
         fi
 
@@ -673,13 +677,13 @@ createFilteredFilelist() {
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && ([ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]) && ([ ! -z "$SKIPFILETYPES" ] || [ ! -z "$globalSkipFileTypes" ]); then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
-                FINDSTR+=" -not -name \*.$ext"
+                FINDSTR="$FINDSTR -not -name \*.$ext"
                 SKIPPED_FILETYPES_RESERVED_SPACE=$(find /mnt/$PRIMARYSTORAGENAME/$SHARENAME -type f -name \*.$ext -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')
                 if [ $? -eq 0 ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>$FILTERED_FILELIST
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
-                    mvlogger "Error calculating size for $skipFileTypes"
+                    mvlogger "Error calculating size for ${globalSkipFileTypes}"
                 fi
             done
             mvlogger "    Ignored filetypes are using $(bytes_to_human $TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE)"
@@ -699,13 +703,13 @@ createFilteredFilelist() {
         
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
-            FINDSTR+="' \$3 > 0.SPARSENESS ' {"
+            FINDSTR="$FINDSTR ' \$3 > 0.SPARSENESS ' {"
         else
-            FINDSTR+=" ' {"
+            FINDSTR="$FINDSTR ' {"
         fi
         # Get Birthtime with stat if CTIME option enabled
         if [ $CTIME == "yes" ]; then
-            FINDSTR+="cmd=\"stat -c%W \\\"\"\$6\"\\\"\";
+            FINDSTR="$FINDSTR cmd=\"stat -c%W \\\"\"\$6\"\\\"\";
                 cmd | getline result;
                 close(cmd);
                 sub(/\\n\$/, \"\", result);
@@ -714,14 +718,14 @@ createFilteredFilelist() {
         fi
         # Get size with du if on zfs mountpoint with compression enabled
         #        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME" && [ "$(zfs get compression -Hpo value "$PRIMARYSTORAGENAME/$SHARENAME")" == "on" ]; then
-        #            FINDSTR+="cmd = \"du -sh \\\"\"\$6\"\\\" | numfmt --from=iec\";
+        #            FINDSTR="$FINDSTR cmd = \"du -sh \\\"\"\$6\"\\\" | numfmt --from=iec\";
         #                cmd | getline result;
         #                close(cmd);
         #                sub(/\\n\$/, \"\", result);
         #                \$2 = result;
         #            "
         #        fi
-        FINDSTR+="printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6}'"
+        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6}'"
 
         if [ -d "$SHAREPATH" ] || [ "$SHAREUSECACHE" = "prefer" ] || [ $REBALANCESHARES = "yes" ]; then
             [ $CTIME == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
@@ -1135,7 +1139,13 @@ processTheMoves() {
             # Clean parent ZFS dataset if empty
             if [[ "$ACTION" =~ "move" ]] && [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
               # If no files in directory
-              if [ "$count" = 0 ]; then
+              if [ "$count" = 0 ]; then #&& [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0
+
+                echo "$SHAREPATH = sharepath"
+                echo "$DIR = dir"
+                echo "FILEPATH = filepath"
+                echo "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME} = /mnt/PRIMARYSTORAGENAME/SHARENAME"
+
                 if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                     DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
                     #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."                             
