@@ -602,9 +602,9 @@ createFilteredFilelist() {
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
         if [ "$SHAREUSECACHE" = "prefer" ] || ([ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]); then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-            FINDSTR="find \"$SHAREPATH\" -type f -not -path \"/mnt/user*\" -depth "
+            FINDSTR="find '$SHAREPATH' -type f -not -path '/mnt/user*' -depth "
         else
-            FINDSTR="find \"$SHAREPATH\" -type f -depth "
+            FINDSTR="find '$SHAREPATH' -type f -depth "
         fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
@@ -656,11 +656,11 @@ createFilteredFilelist() {
                     # Add /* at the end for better reading in Mover_action file
                     skipped_path="${skipped_path}/*" # add slash asterisk
                     # Add filter to find string
-                    FINDSTR="$FINDSTR -not -path ${skipped_path}"
+                    FINDSTR="$FINDSTR -not -path '${skipped_path}'"
                 elif [ -f "$skipped_path" ]; then
                     SKIPPED_PATH_RESERVED_SPACE=$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)
                     # Add filter to find string
-                    FINDSTR="$FINDSTR -not -name ${skipped_path}"
+                    FINDSTR="$FINDSTR -not -name '${skipped_path}'"
                 fi
                 if [ ! -z "$SKIPPED_PATH_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>$FILTERED_FILELIST
@@ -678,7 +678,7 @@ createFilteredFilelist() {
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name \*.$ext"
-                SKIPPED_FILETYPES_RESERVED_SPACE=$(find /mnt/$PRIMARYSTORAGENAME/$SHARENAME -type f -name \*.$ext -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')
+                SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name \*.$ext -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"
                 if [ $? -eq 0 ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>$FILTERED_FILELIST
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
@@ -700,7 +700,7 @@ createFilteredFilelist() {
         -v SHARENAME='$SHARENAME' \
         -v SHAREUSECACHE='$SHAREUSECACHE' \
         -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
-        
+
         if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
             FINDSTR="$FINDSTR ' \$3 > 0.SPARSENESS ' {"
@@ -1138,38 +1138,37 @@ processTheMoves() {
 
             # Clean parent ZFS dataset if empty
             if [[ "$ACTION" =~ "move" ]] && [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
-              # If no files in directory
-              if [ "$count" = 0 ]; then #&& [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0
-
-                echo "$SHAREPATH = sharepath"
-                echo "$DIR = dir"
-                echo "FILEPATH = filepath"
-                echo "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME} = /mnt/PRIMARYSTORAGENAME/SHARENAME"
-
-                if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                    DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
-                    #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."                             
-                    # Check for any files in the ZFS dataset avalible
-                    dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
-                    if [ "${dataset_file_count}" -eq 0 ]; then
-                        echo "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
-                        zfs unmount "${DATASET}"
-                        if [ $? -ne 0 ]; then
-                            echo "Failed to unmount ZFS dataset [${DATASET}]"
-                        else
-                            echo "ZFS dataset [${DATASET}] has been successfully unmounted."
+                # If no files in directory
+                if [ "$count" = 0 ]; then
+                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
+                    #if no files in share
+                    if [ "${share_file_count}" -eq 0 ]; then
+                        #Check if mount
+                        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                            DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
+                            #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
+                            # Check for any files in the ZFS dataset avalible
+                            dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
+                            if [ "${dataset_file_count}" -eq 0 ]; then
+                                echo "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
+                                zfs unmount "${DATASET}"
+                                if [ $? -ne 0 ]; then
+                                    echo "Failed to unmount ZFS dataset [${DATASET}]"
+                                else
+                                    echo "ZFS dataset [${DATASET}] has been successfully unmounted."
+                                fi
+                                zfs destroy -r "${DATASET}"
+                                if [ $? -ne 0 ]; then
+                                    echo "Failed to destroy ZFS dataset [${DATASET}]"
+                                else
+                                    echo "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                fi
+                            else
+                                echo "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
+                            fi
                         fi
-                        zfs destroy -r "${DATASET}"
-                        if [ $? -ne 0 ]; then
-                            echo "Failed to destroy ZFS dataset [${DATASET}]"
-                        else
-                            echo "ZFS dataset [${DATASET}] has been successfully destroyed."
-                        fi
-                    else
-                        echo "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
                     fi
                 fi
-              fi
             fi
 
             # Setting mover status
@@ -1183,7 +1182,7 @@ processTheMoves() {
                 mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches $(bytes_to_human $REMAINING_ARRAY_SIZE)"
             fi
             moverStatusWrite
-        done <<<$(eval $GREP_CMD)
+        done <<<$(eval $GREP_CMD)"
     done
 
     mvlogger "$(titleLine "Cleaning up" '-')"
