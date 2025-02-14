@@ -1182,7 +1182,7 @@ processTheMoves() {
                 mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches $(bytes_to_human $REMAINING_ARRAY_SIZE)"
             fi
             moverStatusWrite
-        done <<<$(eval $GREP_CMD)"
+        done <<<"$(eval $GREP_CMD)"
     done
 
     mvlogger "$(titleLine "Cleaning up" '-')"
