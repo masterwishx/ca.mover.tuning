@@ -246,7 +246,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Turbo Mode argument provided, defaulting to no"
             ENABLETURBO="no"
-            echo 'enableTurbo="no"' >>$config_file
+            echo 'enableTurbo="no"' >>"$config_file"
         fi
     else
         ENABLETURBO=$(cfg enableTurbo)
@@ -522,7 +522,7 @@ createFilteredFilelist() {
             continue # Move to the next iteration of the loop
         fi
 
-        if [ $SHAREUSECACHE = "prefer" ] || ([ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]); then
+        if [ $SHAREUSECACHE = "prefer" ] || { [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; } then
             SHAREPATH="/mnt/*/$SHARENAME"
         fi
         mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
@@ -609,7 +609,7 @@ createFilteredFilelist() {
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         #Add Age variables to find string
-        if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$AGE" -ge 1 ]; then
+        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && [ "$AGE" -ge 1 ]; then
             mvlogger "Adding Age"
             RAGE=$((AGE - 1))
             # Use Creation time or modification time according to settings
@@ -634,7 +634,7 @@ createFilteredFilelist() {
             FINDSTR="$FINDSTR -not -path '*/\.*'"
             HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -path '*/\.*' -print0 | xargs -0 du -sh | awk '{ sum += $1 } END { print sum }')
             echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|/mnt/$PRIMARYSTORAGENAME/$SHARENAME hidden files" >>$FILTERED_FILELIST
-            mvlogger "    Hidden files are using $(bytes_to_human $SKIPPED_PATH_RESERVED_SPACE)"
+            mvlogger "    Hidden files are using $(bytes_to_human $HIDDENFILES_RESERVED_SPACE)"
         fi
         #Add skipped files and folders
         #FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
@@ -643,7 +643,7 @@ createFilteredFilelist() {
         FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
         #
         # Add files from ignore list
-        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && grep -q "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" "$SKIPFILESLIST"; then
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && grep -q "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" "$SKIPFILESLIST"; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
             mvlogger "List Path: ${SKIPFILESLIST}:"
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
@@ -677,8 +677,8 @@ createFilteredFilelist() {
         if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
-                FINDSTR="$FINDSTR -not -name \*.$ext"
-                SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name \*.$ext -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"
+                FINDSTR="$FINDSTR -not -name '*.$ext'"
+                SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"
                 if [ $? -eq 0 ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>$FILTERED_FILELIST
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
@@ -1287,7 +1287,7 @@ start() {
     moverStatusWrite
 
     #Run mover after script if specified.
-    if [ -n "$AFTERSCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
+    if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
         if [ -f "$AFTERSCRIPT" ] && [ -x "$AFTERSCRIPT" ]; then
             mvlogger "Launching after script: $AFTERSCRIPT"
             eval \"$AFTERSCRIPT\"
