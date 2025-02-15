@@ -135,7 +135,7 @@ getMoverSettings() {
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
         [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=0
         mvlogger "Using global moving threshold: $MOVINGPCTTHRESHOLD %"
-    elif [ ! -z $(cfg movingThreshold) ]; then
+    elif [ -n "$(cfg movingThreshold)" ]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
         mvlogger "Using share moving threshold: $MOVINGPCTTHRESHOLD %"
     fi
@@ -147,7 +147,7 @@ getMoverSettings() {
             echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
         fi
         mvlogger "Using global freeing threshold: $FREEINGPCTLIMIT %"
-    elif [ ! -z $(cfg freeingThreshold) ]; then
+    elif [ -n "$(cfg freeingThreshold)" ]; then
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
         mvlogger "Using share freeing threshold: $FREEINGPCTLIMIT %"
     fi
@@ -162,7 +162,7 @@ getMoverSettings() {
     else
         if [ $(cfg omovercfg) = "yes" ]; then
             OMOVERTHRESH=$(cfg omoverthresh)
-            [ ! -z $OMOVERTHRESH ] && mvlogger "Primary threshold to Move all Primary->Secondary shares to secondary: $OMOVERTHRESH %"
+            [ -n "$OMOVERTHRESH" ] && mvlogger "Primary threshold to Move all Primary->Secondary shares to secondary: $OMOVERTHRESH %"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && OMOVERTHRESH=""
         fi
@@ -522,7 +522,7 @@ createFilteredFilelist() {
             continue # Move to the next iteration of the loop
         fi
 
-        if [ $SHAREUSECACHE = "prefer" ] || ([ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]); then
+        if [ $SHAREUSECACHE = "prefer" ] || ([ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]); then
             SHAREPATH="/mnt/*/$SHARENAME"
         fi
         mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
@@ -530,7 +530,7 @@ createFilteredFilelist() {
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced back to these."
             elif [ $POOLPCTUSED -lt $FREEINGPCTLIMIT ]; then
@@ -546,7 +546,7 @@ createFilteredFilelist() {
             fi
         elif [ $SHAREUSECACHE = "yes" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
             elif [ "$OMOVERTHRESH" != "" ] && [ $POOLPCTUSED -gt $OMOVERTHRESH ]; then
@@ -565,7 +565,7 @@ createFilteredFilelist() {
                 mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
             fi
         elif [ $SHAREUSECACHE = "only" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
@@ -582,7 +582,7 @@ createFilteredFilelist() {
                 continue
             fi
         elif [ $SHAREUSECACHE = "no" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:no). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
@@ -600,7 +600,7 @@ createFilteredFilelist() {
 
         #Base Find String
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
-        if [ "$SHAREUSECACHE" = "prefer" ] || ([ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]); then
+        if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; } then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
             FINDSTR="find '$SHAREPATH' -type f -not -path '/mnt/user*' -depth "
         else
@@ -662,7 +662,7 @@ createFilteredFilelist() {
                     # Add filter to find string
                     FINDSTR="$FINDSTR -not -name '${skipped_path}'"
                 fi
-                if [ ! -z "$SKIPPED_PATH_RESERVED_SPACE" ]; then
+                if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>$FILTERED_FILELIST
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
                 else
@@ -674,7 +674,7 @@ createFilteredFilelist() {
 
         #Add Skipfilelist to find string
         TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=0
-        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ ! -z "$SKIPFILETYPES" ] || [ ! -z "$globalSkipFileTypes" ]; }; then
+        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name \*.$ext"
@@ -701,7 +701,7 @@ createFilteredFilelist() {
         -v SHAREUSECACHE='$SHAREUSECACHE' \
         -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
 
-        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && [ "$SPARSENESS" -gt 0 ]; then
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
             FINDSTR="$FINDSTR ' \$3 > 0.SPARSENESS ' {"
         else
@@ -1266,7 +1266,7 @@ start() {
     shopt -s nullglob dotglob
 
     #Run mover before script if specified.
-    if [ ! -z "$BEFORESCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
+    if [ -n "$BEFORESCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
         if [ -f "$BEFORESCRIPT" ] && [ -x "$BEFORESCRIPT" ]; then
             mvlogger "Launching before script: $BEFORESCRIPT"
             eval \"$BEFORESCRIPT\"
@@ -1287,7 +1287,7 @@ start() {
     moverStatusWrite
 
     #Run mover after script if specified.
-    if [ ! -z "$AFTERSCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
+    if [ -n "$AFTERSCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
         if [ -f "$AFTERSCRIPT" ] && [ -x "$AFTERSCRIPT" ]; then
             mvlogger "Launching after script: $AFTERSCRIPT"
             eval \"$AFTERSCRIPT\"
