@@ -1148,7 +1148,7 @@ processTheMoves() {
                             DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
                             #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
                             # If ZFS dataset children size is zero and No ZFS dataset children exist
-                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
+                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
                                 # Check for any files in the ZFS dataset avalible
                                 dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
                                 if [ "${dataset_file_count}" -eq 0 ]; then
