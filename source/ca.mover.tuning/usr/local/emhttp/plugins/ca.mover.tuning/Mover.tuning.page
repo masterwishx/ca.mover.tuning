@@ -390,7 +390,7 @@ Clean empty folders
 <?=mk_option($cfg['cleanFolders'],"yes","Yes")?>
 </select>
 
-> This will remove the parent folder (only) of moved file.
+> This will remove the parent folder (only) of moved files.
 
 Clean empty ZFS datasets
 : <select name='cleanDatasets' size='1' class='narrow'>
@@ -398,7 +398,7 @@ Clean empty ZFS datasets
 <?=mk_option($cfg['cleanDatasets'],"yes","Yes")?>
 </select>
 
-> This will unmount and destroy the parent ZFS dataset of moved file.
+> This will unmount and destroy the parent ZFS dataset on share where moved files, only if not contain child datasets within.
 
 
 Synchronize Primary files to Secondary
