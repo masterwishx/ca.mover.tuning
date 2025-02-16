@@ -110,9 +110,9 @@ Disable Mover running on a schedule:
 <?=mk_option($cfg['moverDisabled'],"no","No")?>
 <?=mk_option($cfg['moverDisabled'],"yes","Yes")?>
 </select>
-<strong>Note</strong><em> - Setting this to </em><strong>yes</strong> <em>effectively disables this plugin</em>
+<em>setting this to </em><strong>Yes</strong> <em>effectively disables this plugin</em>
 
-> This will prevent mover from running at the schedule set in Mover Settings.  You will only be able to run mover by manually invoking it.
+> This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
 
 <div markdown="1" id="moverTuningSettings">
 Test Mode (dry run):
@@ -120,9 +120,9 @@ Test Mode (dry run):
 <?=mk_option($cfg['testmode'],"no",'No')?>
 <?=mk_option($cfg['testmode'],"yes","Yes")?>
 </select>
-<strong>Note</strong><em> - Setting this to </em><strong>no</strong> <em>effectively disables Test Mode</em>
+<em>setting this to </em><strong>No</strong> <em>effectively disables test mode</em>
 
-> Test Mode will not run mover but will output the custom find command results to /tmp/ca.mover.tuning/. Caution - If you have "Move Now button follows plug-in filters" set to <strong>no</strong>, original Mover will still run.
+> Test Mode will <strong>not</strong> run mover but will output the custom find command results to /tmp/ca.mover.tuning/. Caution - If you have "Move Now button follows plug-in filters" set to <strong>no</strong>, original Mover will still run.
 
 Log Mover Tuning plugin actions
 : <select name='logging' size='1' class='narrow'>
