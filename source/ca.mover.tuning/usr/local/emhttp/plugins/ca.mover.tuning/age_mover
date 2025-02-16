@@ -522,7 +522,7 @@ createFilteredFilelist() {
             continue # Move to the next iteration of the loop
         fi
 
-        if [ $SHAREUSECACHE = "prefer" ] || { [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; } then
+        if [ $SHAREUSECACHE = "prefer" ] || { [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             SHAREPATH="/mnt/*/$SHARENAME"
         fi
         mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
@@ -600,7 +600,7 @@ createFilteredFilelist() {
 
         #Base Find String
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
-        if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; } then
+        if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
             FINDSTR="find '$SHAREPATH' -type f -not -path '/mnt/user*' -depth "
         else
@@ -737,14 +737,14 @@ createFilteredFilelist() {
     # Sort the file list by PRIMARYSTORAGENAME, shareusecache, creation/modification time, and inode, keeping /mnt/disk at the end
     sort -t '|' -k1,1 -k4,4 -k5,5nr -k10,10 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
     # Need to remove duplicate (cache and array)
-    if grep -q "/mnt/disk" $FILTERED_FILELIST; then
+    if grep -q "/mnt/disk" "$FILTERED_FILELIST"; then
         mvlogger "$(titleLine 'Optimizing Filtered Filelist' '-')"
         tempfile1=$(mktemp)
         tempfile2=$(mktemp)
 
         mvlogger "Removing duplicate giving priority to cache"
-        grep -v "/mnt/disk" $FILTERED_FILELIST >"$tempfile1"
-        grep "/mnt/disk" $FILTERED_FILELIST >"$tempfile2"
+        grep -v "/mnt/disk" "$FILTERED_FILELIST" >"$tempfile1"
+        grep "/mnt/disk" "$FILTERED_FILELIST" >"$tempfile2"
         cat "$tempfile1" "$tempfile2" | awk -F"|" '
             function is_duplicate(key) {
                 if (prev[key]) {
@@ -1137,34 +1137,40 @@ processTheMoves() {
             fi
 
             # Clean parent ZFS dataset if empty
-            if [[ "$ACTION" =~ "move" ]] && [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
+            if [[ "$ACTION" =~ "move" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
                 # If no files in directory
                 if [ "$count" = 0 ]; then
                     share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
-                    # if no files in share
+                    # If no files in share
                     if [ "${share_file_count}" -eq 0 ]; then
                         # Check if mount point is ZFS
                         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                             DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
                             #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
-                            # Check for any files in the ZFS dataset avalible
-                            dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
-                            if [ "${dataset_file_count}" -eq 0 ]; then
-                                echo "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
-                                zfs unmount "${DATASET}"
-                                if [ $? -ne 0 ]; then
-                                    echo "Failed to unmount ZFS dataset [${DATASET}]"
+                            # If ZFS dataset children size is zero and No ZFS dataset children exist
+                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
+                                # Check for any files in the ZFS dataset avalible
+                                dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
+                                if [ "${dataset_file_count}" -eq 0 ]; then
+                                    echo "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
+                                    zfs unmount "${DATASET}"
+                                    if [ $? -ne 0 ]; then
+                                        echo "Failed to unmount ZFS dataset [${DATASET}]"
+                                    else
+                                        echo "ZFS dataset [${DATASET}] has been successfully unmounted."
+                                    fi
+                                    zfs destroy "${DATASET}"
+                                    if [ $? -ne 0 ]; then
+                                        echo "Failed to destroy ZFS dataset [${DATASET}]"
+                                    else
+                                        echo "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                    fi
                                 else
-                                    echo "ZFS dataset [${DATASET}] has been successfully unmounted."
-                                fi
-                                zfs destroy -r "${DATASET}"
-                                if [ $? -ne 0 ]; then
-                                    echo "Failed to destroy ZFS dataset [${DATASET}]"
-                                else
-                                    echo "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                    echo "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
                                 fi
                             else
-                                echo "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
+                                echo "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
+
                             fi
                         fi
                     fi
