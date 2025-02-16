@@ -110,7 +110,7 @@ Disable Mover running on a schedule:
 <?=mk_option($cfg['moverDisabled'],"no","No")?>
 <?=mk_option($cfg['moverDisabled'],"yes","Yes")?>
 </select>
-<em>setting this to </em><strong>Yes</strong> <em>effectively disables this plugin</em>
+<strong>Yes</strong> <em>- setting effectively disables this plugin</em>
 
 > This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
 
@@ -120,7 +120,7 @@ Test Mode (dry run):
 <?=mk_option($cfg['testmode'],"no",'No')?>
 <?=mk_option($cfg['testmode'],"yes","Yes")?>
 </select>
-<em>setting this to </em><strong>No</strong> <em>effectively disables test mode</em>
+<strong>No</strong> <em>- setting effectively disables test mode</em>
 
 > Test Mode will <strong>not</strong> run mover but will output the custom find command results to /tmp/ca.mover.tuning/. Caution - If you have "Move Now button follows plug-in filters" set to <strong>no</strong>, original Mover will still run.
 
@@ -252,7 +252,7 @@ Move files that are greater than this many days old:
 <?=mk_option($cfg['daysold'], $dt, "$dt")?>
 <?endfor;?>
 </select>
-'Auto' setting enable smart caching
+<strong>Auto</strong> <em>- setting enable smart caching</em>
 
 > Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
