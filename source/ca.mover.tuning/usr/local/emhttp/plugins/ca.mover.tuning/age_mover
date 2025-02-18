@@ -569,13 +569,20 @@ createFilteredFilelist() {
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
-                mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
-                mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
-                if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                    CACHESHARERESERVEDSPACE=$(zfs list -Hpo used $PRIMARYSTORAGENAME/$SHARENAME)
+                # Check if there's only one share in the cache pool
+                ONLY_ONE_SHARE=$(find "/mnt/$PRIMARYSTORAGENAME" -maxdepth 1 -type d ! -path "/mnt/$PRIMARYSTORAGENAME" | wc -l)
+                if [ $ONLY_ONE_SHARE -eq 1 ]; then
+                    mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
+                    mvlogger "Only one share found in cache pool. Skipping cache pool size calculation."
                 else
-                    mvlogger "Calculating share usage... (can take a moment)"
-                    CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                    mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
+                    mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
+                    if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                        CACHESHARERESERVEDSPACE=$(zfs list -Hpo used $PRIMARYSTORAGENAME/$SHARENAME)
+                    else
+                        mvlogger "Calculating share usage... (can take a moment)"
+                        CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                    fi
                 fi
                 echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}" >>$FILTERED_FILELIST
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human $CACHESHARERESERVEDSPACE)"
