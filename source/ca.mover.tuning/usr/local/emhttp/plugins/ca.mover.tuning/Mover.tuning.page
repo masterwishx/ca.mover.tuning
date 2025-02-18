@@ -212,7 +212,7 @@ Move Now button follows plug-in filters:
 
 Only move if above this threshold of used Primary (cache) space:
 : <select name="movingThreshold" size="1" class='narrow'>
-<?for ($t=95;$t>0;$t-=5):?>
+<?for ($t=95;$t>=0;$t-=5):?>
 <?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
 <?endfor;?>
 </select>
