@@ -110,9 +110,9 @@ Disable Mover running on a schedule:
 <?=mk_option($cfg['moverDisabled'],"no","No")?>
 <?=mk_option($cfg['moverDisabled'],"yes","Yes")?>
 </select>
-* Note that setting this to yes effectively disables this plugin
+<strong>Yes</strong> <em>- setting effectively disables this plugin</em>
 
-> This will prevent mover from running at the schedule set in Mover Settings.  You will only be able to run mover by manually invoking it.
+> This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
 
 <div markdown="1" id="moverTuningSettings">
 Test Mode (dry run):
@@ -120,8 +120,9 @@ Test Mode (dry run):
 <?=mk_option($cfg['testmode'],"no",'No')?>
 <?=mk_option($cfg['testmode'],"yes","Yes")?>
 </select>
+<strong>No</strong> <em>- setting effectively disables test mode</em>
 
-> Test Mode will not run mover but will output the custom find command results to /tmp/ca.mover.tuning/. Caution - If you have "Move Now button follows plug-in filters" set to no, original Mover will still run.  
+> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
 
 Log Mover Tuning plugin actions
 : <select name='logging' size='1' class='narrow'>
@@ -129,7 +130,7 @@ Log Mover Tuning plugin actions
 <?=mk_option($cfg['logging'],"yes","Yes")?>
 </select>
 
-> Enables or disables logging from this plugin. Logs are displayed in syslog and stored at /tmp/ca.mover.tuning
+> Enables or disables logging from this plugin. Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
 
 Show advanced settings:
 : <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
@@ -175,7 +176,7 @@ Force move of all files on a schedule:
 Cron Schedule to force move all of files:
 : <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=$cfg['cron']?>' <?=$cronDisabled?>>
 
-> Cron Schedule entry example 20 4 1 * *   To run the first day of the month at 4:20 AM  
+> Cron Schedule entry example <strong>20 4 1 * *</strong>. To run the <em>first day of the month at </em><strong>4:20 AM</strong>
 
 Allow force mover schedule to run during a parity check/rebuild:
 : <select name='forceParity' size='1' class='narrow mycron' <?=$cronDisabled?>>
@@ -204,14 +205,14 @@ Move Now button follows plug-in filters:
 <?=mk_option($cfg['movenow'],"yes","Yes")?>
 </select>
 
-> Select yes to to follow plug-in filters, no to run original mover from button.
+> Select <strong>Yes</strong> to to follow plug-in filters, <strong>No</strong> to run original mover from button.
 </div>
 
 <div class="title"><span class="center"><i class="fa fa-filter title"></i>Filters</span></div>
 
 Only move if above this threshold of used Primary (cache) space:
 : <select name="movingThreshold" size="1" class='narrow'>
-<?for ($t=95;$t>0;$t-=5):?>
+<?for ($t=95;$t>=0;$t-=5):?>
 <?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
 <?endfor;?>
 </select>
@@ -251,7 +252,7 @@ Move files that are greater than this many days old:
 <?=mk_option($cfg['daysold'], $dt, "$dt")?>
 <?endfor;?>
 </select>
-'Auto' setting enable smart caching
+<strong>Auto</strong> <em>- setting enable smart caching</em>
 
 > Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
@@ -305,7 +306,7 @@ Move files off Primary (cache) based on sparseness?
        <?=mk_option($cfg['sparsnessf'],'yes','Yes')?>
 </select>
 
-> Select the sparseness size.  Any file with a sparseness larger will be moved.
+> Select the sparseness size. Any file with a sparseness larger will be moved.
 
 Move files that are greather than this sparseness:
 : <select name="sparsnessv" size="1" class='narrow mysparsnessf' <?=$sparsnessfDisabled?>>
@@ -351,8 +352,8 @@ Ignore All hidden files and directories
 </select>
 
 > Very few will use this, keep set to No.
-> Removes any files or directories that start with a .
-> Adds -not -path '*/\.*' to the end of the find command.
+> Removes any files or directories that start with a <strong>.</strong>
+> Adds <em>-not -path '*/\.*'</em> to the end of the find command.
 
 Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage:
 : <select name='omovercfg' size='1' class='narrow' onchange='$(".myomthresh").toggleAttr("disabled")'>
@@ -360,7 +361,7 @@ Move All from Primary->Secondary (cache:yes) shares when disk is above a certain
 <?=mk_option($cfg['omovercfg'],"yes","Yes")?>
 </select>
 
-> Set to "Yes" if you want to move all files from a Primary->Secondary (cache:yes) share to the array if the percentage below is exceeded.  This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.
+> Set to "<strong>Yes</strong>" if you want to move all files from a Primary->Secondary (cache:yes) share to the array if the percentage below is exceeded.  This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.
 
 Move All from Primary->Secondary shares pool percentage:
 : <select name="omoverthresh" size="1" class='narrow myomthresh' <?=$omoverthreshDisabled?>>
@@ -369,7 +370,7 @@ Move All from Primary->Secondary shares pool percentage:
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the Primary pool to initiate a move of all files in a Primary->Secondary (cache:yes) share.  Filters will still run after, for any remaining pool's that do not meet this threshold.  This threshold should at a minimum be 5% larger than "Only move at this threshold of used primary (cache) space:" above. 
+> Set to the amount of disk space used on the Primary pool to initiate a move of all files in a Primary->Secondary (cache:yes) share.  Filters will still run after, for any remaining pool's that do not meet this threshold.  This threshold should at a minimum be 5% larger than "Only move at this threshold of used primary (cache) space:" above.
 
 
 </div>
@@ -390,7 +391,7 @@ Clean empty folders
 <?=mk_option($cfg['cleanFolders'],"yes","Yes")?>
 </select>
 
-> This will clean the parent folder (only) of moved file. 
+> This will remove the parent folder <strong>only of moved</strong> files.
 
 Clean empty ZFS datasets
 : <select name='cleanDatasets' size='1' class='narrow'>
@@ -398,7 +399,7 @@ Clean empty ZFS datasets
 <?=mk_option($cfg['cleanDatasets'],"yes","Yes")?>
 </select>
 
-> This will clean the parent ZFS dataset (only) of moved file.
+> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
 
 
 Synchronize Primary files to Secondary

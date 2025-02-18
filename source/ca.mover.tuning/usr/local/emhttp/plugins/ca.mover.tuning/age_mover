@@ -84,7 +84,7 @@ function bytes_to_human() {
 }
 
 function human_to_bytes() {
-    echo $(numfmt $1 --from=iec)
+    echo "$(numfmt $1 --from=iec)"
 }
 
 # Function for verbose output and logging
@@ -135,7 +135,7 @@ getMoverSettings() {
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
         [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=0
         mvlogger "Using global moving threshold: $MOVINGPCTTHRESHOLD %"
-    elif [ ! -z $(cfg movingThreshold) ]; then
+    elif [ -n "$(cfg movingThreshold)" ]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
         mvlogger "Using share moving threshold: $MOVINGPCTTHRESHOLD %"
     fi
@@ -147,7 +147,7 @@ getMoverSettings() {
             echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
         fi
         mvlogger "Using global freeing threshold: $FREEINGPCTLIMIT %"
-    elif [ ! -z $(cfg freeingThreshold) ]; then
+    elif [ -n "$(cfg freeingThreshold)" ]; then
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
         mvlogger "Using share freeing threshold: $FREEINGPCTLIMIT %"
     fi
@@ -162,7 +162,7 @@ getMoverSettings() {
     else
         if [ $(cfg omovercfg) = "yes" ]; then
             OMOVERTHRESH=$(cfg omoverthresh)
-            [ ! -z $OMOVERTHRESH ] && mvlogger "Primary threshold to Move all Primary->Secondary shares to secondary: $OMOVERTHRESH %"
+            [ -n "$OMOVERTHRESH" ] && mvlogger "Primary threshold to Move all Primary->Secondary shares to secondary: $OMOVERTHRESH %"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && OMOVERTHRESH=""
         fi
@@ -246,7 +246,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Turbo Mode argument provided, defaulting to no"
             ENABLETURBO="no"
-            echo 'enableTurbo="no"' >>$config_file
+            echo 'enableTurbo="no"' >>"$config_file"
         fi
     else
         ENABLETURBO=$(cfg enableTurbo)
@@ -522,7 +522,7 @@ createFilteredFilelist() {
             continue # Move to the next iteration of the loop
         fi
 
-        if [ $SHAREUSECACHE = "prefer" ] || ([ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]); then
+        if [ $SHAREUSECACHE = "prefer" ] || { [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             SHAREPATH="/mnt/*/$SHARENAME"
         fi
         mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
@@ -530,7 +530,7 @@ createFilteredFilelist() {
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced back to these."
             elif [ $POOLPCTUSED -lt $FREEINGPCTLIMIT ]; then
@@ -546,7 +546,7 @@ createFilteredFilelist() {
             fi
         elif [ $SHAREUSECACHE = "yes" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
             elif [ "$OMOVERTHRESH" != "" ] && [ $POOLPCTUSED -gt $OMOVERTHRESH ]; then
@@ -565,24 +565,31 @@ createFilteredFilelist() {
                 mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
             fi
         elif [ $SHAREUSECACHE = "only" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
-                mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
-                mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
-                if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                    CACHESHARERESERVEDSPACE=$(zfs list -Hpo used $PRIMARYSTORAGENAME/$SHARENAME)
+                # Check if there's only one share in the cache pool
+                ONLY_ONE_SHARE=$(find "/mnt/$PRIMARYSTORAGENAME" -maxdepth 1 -type d ! -path "/mnt/$PRIMARYSTORAGENAME" | wc -l)
+                if [ $ONLY_ONE_SHARE -eq 1 ]; then
+                    mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
+                    mvlogger "Only one share found in cache pool. Skipping cache pool size calculation."
                 else
-                    mvlogger "Calculating share usage... (can take a moment)"
-                    CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                    mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
+                    mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
+                    if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                        CACHESHARERESERVEDSPACE=$(zfs list -Hpo used $PRIMARYSTORAGENAME/$SHARENAME)
+                    else
+                        mvlogger "Calculating share usage... (can take a moment)"
+                        CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                    fi
                 fi
                 echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}" >>$FILTERED_FILELIST
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human $CACHESHARERESERVEDSPACE)"
                 continue
             fi
         elif [ $SHAREUSECACHE = "no" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]; then
+            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:no). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
@@ -600,46 +607,50 @@ createFilteredFilelist() {
 
         #Base Find String
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
-        if [ "$SHAREUSECACHE" = "prefer" ] || ([ $REBALANCESHARES = "yes" ] && [ ! -z $UNATTENDEDSTORAGE ]); then
+        if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-            FINDSTR="find \"$SHAREPATH\" -type f -not -path \"/mnt/user*\" -depth "
+            FINDSTR="find '$SHAREPATH' -type f -not -path '/mnt/user*' -depth "
         else
-            FINDSTR="find \"$SHAREPATH\" -type f -depth "
+            FINDSTR="find '$SHAREPATH' -type f -depth "
         fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         #Add Age variables to find string
-        if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$AGE" -ge 1 ]; then
+        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && [ "$AGE" -ge 1 ]; then
             mvlogger "Adding Age"
             RAGE=$((AGE - 1))
             # Use Creation time or modification time according to settings
             if [ "$CTIME" == "yes" ]; then
                 mvlogger "Age (creation time) ${AGE}"
-                FINDSTR+=" -ctime +$RAGE"
+                FINDSTR="$FINDSTR -ctime +$RAGE"
             else
                 mvlogger "Age (modification time) ${AGE}"
-                FINDSTR+=" -mtime +$RAGE"
+                FINDSTR="$FINDSTR -mtime +$RAGE"
             fi
         fi
 
         #Add Size to find string
-        if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SIZE" -gt 0 ]; then
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SIZE" -gt 0 ]; then
             mvlogger "Adding Size: ${SIZE}"
-            FINDSTR+=" -size +${SIZE}M"
+            FINDSTR="$FINDSTR -size +${SIZE}M"
         fi
 
         #Add Ignore Hidden Files to find string
-        if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && ([ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]) && [ "$IGNOREHIDDENFILES" == "yes" ]; then
+        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
-            FINDSTR+=" -not -path '*/\.*'"
+            FINDSTR="$FINDSTR -not -path '*/\.*'"
             HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -path '*/\.*' -print0 | xargs -0 du -sh | awk '{ sum += $1 } END { print sum }')
             echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|/mnt/$PRIMARYSTORAGENAME/$SHARENAME hidden files" >>$FILTERED_FILELIST
-            mvlogger "    Hidden files are using $(bytes_to_human $SKIPPED_PATH_RESERVED_SPACE)"
+            mvlogger "    Hidden files are using $(bytes_to_human $HIDDENFILES_RESERVED_SPACE)"
         fi
         #Add skipped files and folders
-        FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
+        #FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
+        #
+        #Needs test !!!!!!!!!!
+        FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
+        #
         # Add files from ignore list
-        if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && ([ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]) && [ -f "$SKIPFILESLIST" ] && grep -q "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" "$SKIPFILESLIST"; then
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && grep -q "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" "$SKIPFILESLIST"; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
             mvlogger "List Path: ${SKIPFILESLIST}:"
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
@@ -652,34 +663,34 @@ createFilteredFilelist() {
                     # Add /* at the end for better reading in Mover_action file
                     skipped_path="${skipped_path}/*" # add slash asterisk
                     # Add filter to find string
-                    FINDSTR+=" -not -path \"${skipped_path}\""
+                    FINDSTR="$FINDSTR -not -path '${skipped_path}'"
                 elif [ -f "$skipped_path" ]; then
                     SKIPPED_PATH_RESERVED_SPACE=$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)
                     # Add filter to find string
-                    FINDSTR+=" -not -name \"${skipped_path}\""
+                    FINDSTR="$FINDSTR -not -name '${skipped_path}'"
                 fi
-                if [ ! -z "$SKIPPED_PATH_RESERVED_SPACE" ]; then
+                if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>$FILTERED_FILELIST
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
                 else
                     mvlogger "Error calculating size for $skipped_path"
                 fi
-            done <<<$(grep "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" "$SKIPFILESLIST")
+            done <<<"$(grep "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" "$SKIPFILESLIST")"
             mvlogger "    Ignored files are using $(bytes_to_human $TOTAL_SKIPPED_PATH_RESERVED_SPACE)"
         fi
 
         #Add Skipfilelist to find string
         TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=0
-        if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && ([ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]) && ([ ! -z "$SKIPFILETYPES" ] || [ ! -z "$globalSkipFileTypes" ]); then
+        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
-                FINDSTR+=" -not -name \*.$ext"
-                SKIPPED_FILETYPES_RESERVED_SPACE=$(find /mnt/$PRIMARYSTORAGENAME/$SHARENAME -type f -name \*.$ext -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')
+                FINDSTR="$FINDSTR -not -name '*.$ext'"
+                SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"
                 if [ $? -eq 0 ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>$FILTERED_FILELIST
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
-                    mvlogger "Error calculating size for $skipFileTypes"
+                    mvlogger "Error calculating size for ${globalSkipFileTypes}"
                 fi
             done
             mvlogger "    Ignored filetypes are using $(bytes_to_human $TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE)"
@@ -687,9 +698,7 @@ createFilteredFilelist() {
 
         #Add Size to find string and pass to awk to modify some fields
         #FINDSTR+=" -printf '%T@|%s|%S|%n|%i|%p|\0' | awk -v RS='\0' -v FS='|' -v SPARSENESS=\$SPARSENESS -v PRIMARYSTORAGENAME=\$PRIMARYSTORAGENAME -v SECONDARYSTORAGENAME=\$SECONDARYSTORAGENAME -v SHARENAME=\$SHARENAME -v SHAREUSECACHE=\$SHAREUSECACHE -v PRIMARYSIZETHRESH=\$PRIMARYSIZETHRESH"
-        #
-        # Maybe can help fix spaces but seems same code
-        #
+        # Fix shares space issue but same code as above
         FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|\0'"
         FINDSTR="$FINDSTR | awk -v RS='\0' -v FS='|' \
         -v SPARSENESS='$SPARSENESS' \
@@ -698,16 +707,16 @@ createFilteredFilelist() {
         -v SHARENAME='$SHARENAME' \
         -v SHAREUSECACHE='$SHAREUSECACHE' \
         -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
-        #
-        if ([ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]) && [ "$SPARSENESS" -gt 0 ]; then
+
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
-            FINDSTR+="' \$3 > 0.SPARSENESS ' {"
+            FINDSTR="$FINDSTR ' \$3 > 0.SPARSENESS ' {"
         else
-            FINDSTR+=" ' {"
+            FINDSTR="$FINDSTR ' {"
         fi
         # Get Birthtime with stat if CTIME option enabled
         if [ $CTIME == "yes" ]; then
-            FINDSTR+="cmd=\"stat -c%W \\\"\"\$6\"\\\"\";
+            FINDSTR="$FINDSTR cmd=\"stat -c%W \\\"\"\$6\"\\\"\";
                 cmd | getline result;
                 close(cmd);
                 sub(/\\n\$/, \"\", result);
@@ -716,17 +725,17 @@ createFilteredFilelist() {
         fi
         # Get size with du if on zfs mountpoint with compression enabled
         #        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME" && [ "$(zfs get compression -Hpo value "$PRIMARYSTORAGENAME/$SHARENAME")" == "on" ]; then
-        #            FINDSTR+="cmd = \"du -sh \\\"\"\$6\"\\\" | numfmt --from=iec\";
+        #            FINDSTR="$FINDSTR cmd = \"du -sh \\\"\"\$6\"\\\" | numfmt --from=iec\";
         #                cmd | getline result;
         #                close(cmd);
         #                sub(/\\n\$/, \"\", result);
         #                \$2 = result;
         #            "
         #        fi
-        FINDSTR+="printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6}'"
+        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6}'"
 
-        if [ -d "$SHAREPATH" ] || [ "$SHAREUSECACHE" = "prefer" ] || [ $REBALANCESHARES = "yes" ]; then
-            [ $CTIME == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
+        if [ -d "$SHAREPATH" ] || [ "$SHAREUSECACHE" = "prefer" ] || [ "$REBALANCESHARES" = "yes" ]; then
+            [ "$CTIME" == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
             eval "$FINDSTR>>$FILTERED_FILELIST"
             mvlogger "Updated Filtered filelist: $FILTERED_FILELIST for $SHARENAME"
         fi
@@ -735,14 +744,14 @@ createFilteredFilelist() {
     # Sort the file list by PRIMARYSTORAGENAME, shareusecache, creation/modification time, and inode, keeping /mnt/disk at the end
     sort -t '|' -k1,1 -k4,4 -k5,5nr -k10,10 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
     # Need to remove duplicate (cache and array)
-    if grep -q "/mnt/disk" $FILTERED_FILELIST; then
+    if grep -q "/mnt/disk" "$FILTERED_FILELIST"; then
         mvlogger "$(titleLine 'Optimizing Filtered Filelist' '-')"
         tempfile1=$(mktemp)
         tempfile2=$(mktemp)
 
         mvlogger "Removing duplicate giving priority to cache"
-        grep -v "/mnt/disk" $FILTERED_FILELIST >"$tempfile1"
-        grep "/mnt/disk" $FILTERED_FILELIST >"$tempfile2"
+        grep -v "/mnt/disk" "$FILTERED_FILELIST" >"$tempfile1"
+        grep "/mnt/disk" "$FILTERED_FILELIST" >"$tempfile2"
         cat "$tempfile1" "$tempfile2" | awk -F"|" '
             function is_duplicate(key) {
                 if (prev[key]) {
@@ -814,7 +823,7 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
     # $6:PRIMARYSIZETRESH $7:FILESIZE $8:SPARSENESS $9:NBLINKS $10:INODE $11:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC=$LASTCACHESYNC -v SOFTSTOPFILE="$SOFTSTOPFILE" -v SYNCHRONIZECACHE=$SYNCHRONIZECACHE -v REBALANCESHARES=$REBALANCESHARES -v RESYNCHRONIZECACHE=$RESYNCHRONIZECACHE '
+    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
         BEGIN {
             FS = OFS = "|"
 
@@ -1118,7 +1127,7 @@ processTheMoves() {
             if [[ "$ACTION" =~ "move" ]] && [ $CLEANFOLDERS = "yes" ]; then
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
-                    if [ -e "$DIR/.placeholder" ]; then
+                    if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
                     else
                         count=$(ls -A "$DIR" | wc -l)
@@ -1135,29 +1144,42 @@ processTheMoves() {
             fi
 
             # Clean parent ZFS dataset if empty
-            if [[ "$ACTION" =~ "move" ]] && [ $TESTMODE = "no" ] && [ $CLEANDATASETS = "yes" ]; then
-                if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                    DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
-                    echo "Checking if ZFS dataset ${DATASET} is completely empty..."
+            if [[ "$ACTION" =~ "move" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
+                # If no files in directory
+                if [ "$count" = 0 ]; then
+                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
+                    # If no files in share
+                    if [ "${share_file_count}" -eq 0 ]; then
+                        # Check if mount point is ZFS
+                        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                            DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
+                            #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
+                            # If ZFS dataset children size is zero and No ZFS dataset children exist
+                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
+                                # Check for any files in the ZFS dataset avalible
+                                dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
+                                if [ "${dataset_file_count}" -eq 0 ]; then
+                                    echo "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
+                                    zfs unmount "${DATASET}"
+                                    if [ $? -ne 0 ]; then
+                                        echo "Failed to unmount ZFS dataset [${DATASET}]"
+                                    else
+                                        echo "ZFS dataset [${DATASET}] has been successfully unmounted."
+                                    fi
+                                    zfs destroy "${DATASET}"
+                                    if [ $? -ne 0 ]; then
+                                        echo "Failed to destroy ZFS dataset [${DATASET}]"
+                                    else
+                                        echo "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                    fi
+                                else
+                                    echo "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
+                                fi
+                            else
+                                echo "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
 
-                    # Check for any files in the ZFS dataset avalible
-                    dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
-                    if [ "${dataset_file_count}" -eq 0 ]; then
-                        echo "ZFS dataset ${DATASET} appears empty, attempting to unmount and delete..."
-                        zfs unmount "${DATASET}"
-                        if [ $? -ne 0 ]; then
-                            echo "Failed to unmount ZFS dataset: ${DATASET}"
-                        else
-                            echo "ZFS dataset ${DATASET} has been successfully unmounted."
+                            fi
                         fi
-                        zfs destroy -r "${DATASET}"
-                        if [ $? -ne 0 ]; then
-                            echo "Failed to destroy ZFS dataset: ${DATASET}"
-                        else
-                            echo "ZFS dataset ${DATASET} has been successfully destroyed."
-                        fi
-                    else
-                        echo "ZFS dataset ${DATASET} contains files or directories, will not delete..."
                     fi
                 fi
             fi
@@ -1173,7 +1195,7 @@ processTheMoves() {
                 mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches $(bytes_to_human $REMAINING_ARRAY_SIZE)"
             fi
             moverStatusWrite
-        done <<<$(eval $GREP_CMD)
+        done <<<"$(eval $GREP_CMD)"
     done
 
     mvlogger "$(titleLine "Cleaning up" '-')"
@@ -1257,7 +1279,7 @@ start() {
     shopt -s nullglob dotglob
 
     #Run mover before script if specified.
-    if [ ! -z "$BEFORESCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
+    if [ -n "$BEFORESCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
         if [ -f "$BEFORESCRIPT" ] && [ -x "$BEFORESCRIPT" ]; then
             mvlogger "Launching before script: $BEFORESCRIPT"
             eval \"$BEFORESCRIPT\"
@@ -1278,7 +1300,7 @@ start() {
     moverStatusWrite
 
     #Run mover after script if specified.
-    if [ ! -z "$AFTERSCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
+    if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
         if [ -f "$AFTERSCRIPT" ] && [ -x "$AFTERSCRIPT" ]; then
             mvlogger "Launching after script: $AFTERSCRIPT"
             eval \"$AFTERSCRIPT\"
