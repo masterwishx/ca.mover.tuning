@@ -15,7 +15,7 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
-###2025.02.12.1707
+###2025.02.18.1752
 - [Check parent empty ZFS dataset for children empty datasets before destroy it.](https://github.com/masterwishx/ca.mover.tuning/pull/1) ([masterwishx](https://github.com/masterwishx))
 - Shell Check Fixes + speedup `if` checks.
 - Better help text cosmetic with Bold and italic + added note for Test Mode and some changes in config page.
