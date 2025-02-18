@@ -29,12 +29,12 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
-- 2025.02.12.1707
+- 2025.02.18.1752
     - [Check parent empty ZFS dataset for children empty datasets before destroy it.](https://github.com/masterwishx/ca.mover.tuning/pull/1) ([masterwishx](https://github.com/masterwishx))
-- Shell Check Fixes + speedup `if` checks.
-- Better help text cosmetic with Bold and italic + added note for Test Mode and some changes in config page.
-- Skip cache pool size calculation when only one share found in cache pool.
-- Changed minimum threshold of used Primary (cache) space from 5% to 0%.
+    - Shell Check Fixes + speedup `if` checks.
+    - Better help text cosmetic with Bold and italic + added note for Test Mode and some changes in config page.
+    - Skip cache pool size calculation when only one share found in cache pool.
+    - Changed minimum threshold of used Primary (cache) space from 5% to 0%.
 - 2025.02.12.1707
     - [Fix issue for shares with spaces](https://github.com/R3yn4ld/ca.mover.tuning/pull/69) Thanks [DToX_](https://forums.unraid.net/topic/176951-mover-is-refusing-to-move-any-files-off-the-cache-from-a-share-with-a-space-in-the-name/#findComment-1521811) from forums. ([masterwishx](https://github.com/masterwishx))
     - [Add option to clean ZFS datasets](https://github.com/R3yn4ld/ca.mover.tuning/pull/69) ([masterwishx](https://github.com/masterwishx))
