@@ -175,3 +175,4 @@ See the [Mover Tuning_ thread on the Unraid support forum](https://forums.unraid
 ## Thanks
 
 This was originally created by [Squid](https://github.com/Squidly271) and updated by [hugenbd](https://github.com/hugenbd/ca.mover.tuning), with contributions by [Castcore](https://github.com/Castcore), [Swarles](https://github.com/hugenbd/ca.mover.tuning/commit/64e06e91bd83431d768346e4d8158f7be039564e), [Dphelan](https://github.com/dphelan) and [Davendsai](https://github.com/davendesai).
+@2025 Updated by [masterwishx](https://github.com/masterwishx/ca.mover.tuning).
