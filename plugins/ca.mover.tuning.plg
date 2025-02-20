@@ -21,9 +21,11 @@
 - Better help text cosmetic with Bold and italic + added note for Test Mode and some changes in config page.
 - Skip cache pool size calculation when only one share found in cache pool.
 - Changed minimum threshold of used Primary (cache) space from 5% to 0%.
+
 ###2025.02.12.1707
 - Fix issue for shares with spaces.Thanks DToX_ from forums. [masterwishx]
 - Add option to clean ZFS datasets. [masterwishx]
+
 ###2024.09.05.0222
 - Fix find not finding hidden files. Thanks solidno8 from forums. [R3yn4ld]
 2024.09.05.0115
