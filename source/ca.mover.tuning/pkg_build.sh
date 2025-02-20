@@ -7,9 +7,11 @@ DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 tmpdir=/tmp/tmp.$(( $RANDOM * 19318203981230 + 40 ))
 plugin=$(basename ${DIR})
 archive="$(dirname $(dirname ${DIR}))/archive"
-version=$(date +"%Y.%m.%d.%H%M")$1
-config_file=/mnt/user/appdata/AutoSlackPack/in/ca.mover.tuning/plugins/ca.mover.tuning.plg
-readme_file="/mnt/user/appdata/AutoSlackPack/in/ca.mover.tuning/README.md"
+# $2 is argument addition to date (a,b,c)
+version=$(date +"%Y.%m.%d")$2
+# $1 Path to the plugin directory
+config_file="$1/ca.mover.tuning/plugins/ca.mover.tuning.plg"
+readme_file="$1/ca.mover.tuning/README.md"
 
 # Create the temporary directory and copy files
 mkdir -p $tmpdir
@@ -17,7 +19,8 @@ mkdir -p $tmpdir
 # Get the content from .update file
 update_content="$(dirname $(dirname "$DIR"))/.updates.txt"
 
-#cp --parents -f $(find . -type f ! \( -iname "pkg_build.sh" -o -iname "sftp-config.json"  \) ) $tmpdir/
+cp --parents -f $(find . -type f ! \( -iname "pkg_build.sh" -o -iname "sftp-config.json"  \) ) $tmpdir/
+
 cd $tmpdir
 
 # Build the package using makepkg
