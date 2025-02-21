@@ -57,6 +57,7 @@ MOVER_ACTIONLIST="/tmp/ca.mover.tuning/Mover_action_$NOW.list"
 STATS_FILE="/tmp/ca.mover.tuning/Summary_$NOW.txt"
 MOVER_STATUS="/usr/local/emhttp/state/mover.ini"
 MOVER_LOG="/tmp/ca.mover.tuning/Mover_tuning_$NOW.log"
+MOVER_DEBUG_LOG="/tmp/ca.mover.tuning/Mover_tuning_debug_$NOW.log"
 GUI_CURRENT_FILE=""
 GUI_ACTION="Calculating"
 
@@ -516,9 +517,16 @@ createFilteredFilelist() {
         SHAREPATH="/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
 
         if [ ! -d "$SHAREPATH" ]; then # && [ $SHAREUSECACHE != "no" ]
-            # Do not process this pool if path does not exist
-            mvlogger "$SHAREPATH does not exist. Is the share still used? Consider removing $SHARECFG if not."
-            mvlogger "=> Skipping"
+            # Check if share mount point is ZFS
+            if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                # Do not process this pool if path does not exist
+                mvlogger "$SHAREPATH does not exist. Is the ZFS dataset not created yet? Copy files to '/mnt/user*/$SHARENAME' first."
+                mvlogger "=> Skipping"
+            else
+                # Do not process this pool if path does not exist
+                mvlogger "$SHAREPATH does not exist. Is the share still used? Consider removing $SHARECFG if not."
+                mvlogger "=> Skipping"
+            fi
             continue # Move to the next iteration of the loop
         fi
 
@@ -570,7 +578,7 @@ createFilteredFilelist() {
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
                 # Check if there's only one share in the cache pool
-                ONLY_ONE_SHARE=$(find "/mnt/$PRIMARYSTORAGENAME" -maxdepth 1 -type d ! -path "/mnt/$PRIMARYSTORAGENAME" | wc -l)
+                ONLY_ONE_SHARE=$(find "/mnt/$PRIMARYSTORAGENAME" -maxdepth 1 -type d -not -path "/mnt/$PRIMARYSTORAGENAME" | wc -l)
                 if [ $ONLY_ONE_SHARE -eq 1 ]; then
                     mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
                     mvlogger "Only one share found in cache pool. Skipping cache pool size calculation."
@@ -1096,7 +1104,7 @@ processTheMoves() {
             fi
 
             # Get files to rsync:
-            SYNCED_FILES=$(grep "|$NBLINKS|$INODE|" $MOVER_ACTIONLIST | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while read line; do echo "\"$SOURCE/./$line\""; done | tr '\n' ' ')
+            SYNCED_FILES=$(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while read line; do echo "\"$SOURCE/./$line\""; done | tr '\n' ' ')
             GUI_CURRENT_FILE=$SYNCED_FILES
 
             # Check if list is complete
@@ -1109,14 +1117,14 @@ processTheMoves() {
             # Proceed with rsync
             if [[ "$ACTION" =~ "move" ]]; then
                 # Some verbosity
-                GUI_ACTION="Moving to $DESTINATION/ $([ $NBLINKS -gt 1 ] && echo '(preserving hardlinks)')"
-                mvlogger "Moving $SYNCED_FILES to  $DESTINATION/ $([ $NBLINKS -gt 1 ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
+                mvlogger "Moving $SYNCED_FILES to  $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
                 # Finalize RSYNC_CMD
                 RSYNC_CMD+=" --remove-source-files"
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
-                GUI_ACTION="Synchronizing to $DESTINATION/ $([ $NBLINKS -gt 1 ] && echo '(preserving hardlinks)')"
-                mvlogger "Synchronizing  $SYNCED_FILES to  $DESTINATION/ $([ $NBLINKS -gt 1 ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
+                mvlogger "Synchronizing  $SYNCED_FILES to  $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
             fi
 
             moverStatusWrite
@@ -1135,7 +1143,7 @@ processTheMoves() {
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
-                        if [ $TESTMODE = "no" ]; then
+                        if [ "$TESTMODE" = "no" ]; then
                             echo "Deleting empty dir ${DIR}"
                             rmdir "${DIR}"
                         fi
@@ -1195,7 +1203,7 @@ processTheMoves() {
                 mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches $(bytes_to_human $REMAINING_ARRAY_SIZE)"
             fi
             moverStatusWrite
-        done <<<"$(eval $GREP_CMD)"
+        done <<<"$(eval "$GREP_CMD")"
     done
 
     mvlogger "$(titleLine "Cleaning up" '-')"
@@ -1282,7 +1290,7 @@ start() {
     if [ -n "$BEFORESCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
         if [ -f "$BEFORESCRIPT" ] && [ -x "$BEFORESCRIPT" ]; then
             mvlogger "Launching before script: $BEFORESCRIPT"
-            eval \"$BEFORESCRIPT\"
+            eval "$BEFORESCRIPT"
             mvlogger "Before script finished"
         else
             mvlogger "Before script file $BEFORESCRIPT does not exist or is not executable"
@@ -1303,7 +1311,7 @@ start() {
     if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
         if [ -f "$AFTERSCRIPT" ] && [ -x "$AFTERSCRIPT" ]; then
             mvlogger "Launching after script: $AFTERSCRIPT"
-            eval \"$AFTERSCRIPT\"
+            eval "$AFTERSCRIPT"
             mvlogger "After script finished with result: $([ $? = 0 ] && echo "OK" || echo "$?")"
         else
             mvlogger "After script file $AFTERSCRIPT does not exist or is not executable."
