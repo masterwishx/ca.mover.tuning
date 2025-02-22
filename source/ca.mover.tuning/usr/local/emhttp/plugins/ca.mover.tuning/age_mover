@@ -61,9 +61,36 @@ MOVER_DEBUG_LOG="/tmp/ca.mover.tuning/Mover_tuning_debug_$NOW.log"
 GUI_CURRENT_FILE=""
 GUI_ACTION="Calculating"
 
+# This function is to send messages to Unraid gui etc. Thanks for @SpaceInvaderOne from forums
+function unraid_notify() {
+    local message="$1"
+    local flag="$2"
+    #
+    # Check the notification_type variable
+    if [[ "$NOTIFY" == "no" ]]; then
+        return 0 # Exit the function if notification_type is set to 'none'
+    fi
+    #
+    # If notification_type is set to 'error' and the flag is 'success', exit the function
+    if [[ "$NOTIFY" == "error" && "$flag" == "success" ]]; then
+        return 0 # Do not process success messages
+    fi
+    #
+    # Determine the severity of the message based on the flag it received
+    local severity
+    if [[ "$flag" == "success" ]]; then
+        severity="normal"
+    else
+        severity="warning"
+    fi
+    #
+    # Call the Unraid notification script
+    /usr/local/emhttp/webGui/scripts/notify -s "Mover Tuning Notification" -d "$message" -i "$severity" -l "/Settings/Scheduler"
+}
+
 function is_zfs_mountpoint_fstype() {
     local result
-    result=$(findmnt $1 -o fstype | tail -n 1)
+    result=$(findmnt "$1" -o fstype | tail -n 1)
     [ "$result" = "zfs" ]
     return
 }
@@ -104,6 +131,11 @@ mvlogger() {
         fi
     fi
     echo "$(date +"%T.%3N") $1" >>$MOVER_LOG
+
+    # if $2 exist send notify message
+    if [ -n "$2" ]; then
+        unraid_notify "$1" "$2"
+    fi 
 }
 
 #Moved variable assignment into a function
@@ -381,6 +413,16 @@ getMoverSettings() {
         [ $TESTMODE = "yes" ] && mvlogger "Test Mode: $TESTMODE"
     fi
 
+    if [ -z $(cfg notify) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Notify argument provided, defaulting to yes"
+            echo 'notify="yes"' >>$config_file
+            NOTIFY="yes"
+        fi
+    else
+        NOTIFY=$(cfg notify)
+        mvlogger "Notify: $NOTIFY"
+    fi
 }
 
 resetRunOnceMoverSettings() {
@@ -1143,8 +1185,8 @@ processTheMoves() {
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
-                        if [ "$TESTMODE" = "no" ]; then
-                            echo "Deleting empty dir ${DIR}"
+                        if [ "$TESTMODE" = "no" ]; then                            
+                            mvlogger "Deleting empty dir ${DIR}"
                             rmdir "${DIR}"
                         fi
                     fi
@@ -1167,24 +1209,26 @@ processTheMoves() {
                                 # Check for any files in the ZFS dataset avalible
                                 dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
                                 if [ "${dataset_file_count}" -eq 0 ]; then
-                                    echo "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
+                                    mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
                                     zfs unmount "${DATASET}"
-                                    if [ $? -ne 0 ]; then
-                                        echo "Failed to unmount ZFS dataset [${DATASET}]"
-                                    else
-                                        echo "ZFS dataset [${DATASET}] has been successfully unmounted."
+                                    if [ $? -ne 0 ]; then                                        
+                                        mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
+                                        break
+                                    else                                        
+                                        mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
                                     fi
                                     zfs destroy "${DATASET}"
-                                    if [ $? -ne 0 ]; then
-                                        echo "Failed to destroy ZFS dataset [${DATASET}]"
-                                    else
-                                        echo "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                    if [ $? -ne 0 ]; then                                        
+                                        mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
+                                        break
+                                    else                                        
+                                        mvlogger "ZFS dataset [${DATASET}] has been successfully destroyed."
                                     fi
                                 else
-                                    echo "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
+                                    mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
                                 fi
                             else
-                                echo "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
+                                mvlogger "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
 
                             fi
                         fi
@@ -1231,7 +1275,7 @@ start() {
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
     # Do not start if already running
     if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
-        mvlogger "mover: already running"
+        mvlogger "mover: already running" "warning" "warning"
         exit 1
     fi
     echo $$ >$PIDFILE
@@ -1248,7 +1292,7 @@ start() {
             mvlogger "Log Level: $LOGLEVEL"
         fi
     else
-        mvlogger "Fatal error: $UNRAIDCFGFILE does not exist, check this."
+        mvlogger "Fatal error: $UNRAIDCFGFILE does not exist, check this." "failure"
         rm $SOFTSTOPFILE
         exit 2
     fi
@@ -1257,19 +1301,19 @@ start() {
         mvlogger "$(titleLine "Global settings" '-')"
         getMoverSettings $MOVERTUNINGCFGFILE
     else
-        mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this."
+        mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this." "failure"
         rm $SOFTSTOPFILE
         exit 3
     fi
 
     # Only start if cache enabled and present
     if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
-        mvlogger "Fatal error: cache not enabled and less than 2 pools set up."
+        mvlogger "Fatal error: cache not enabled and less than 2 pools set up." "failure"
         rm $SOFTSTOPFILE
         exit 4
     fi
     if ! mountpoint -q /mnt/user0 && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
-        mvlogger "Fatal error: cache not present, or only cache present, and less than 2 pools set up."
+        mvlogger "Fatal error: cache not present, or only cache present, and less than 2 pools set up." "failure"
         rm $SOFTSTOPFILE
         exit 5
     fi
@@ -1332,6 +1376,7 @@ start() {
     done
 
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
+    unraid_notify "Mover tuning plugin done!" "success"
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 

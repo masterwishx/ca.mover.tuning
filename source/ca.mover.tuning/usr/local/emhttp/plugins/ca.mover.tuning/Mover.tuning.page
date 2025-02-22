@@ -132,6 +132,15 @@ Log Mover Tuning plugin actions
 
 > Enables or disables logging from this plugin. Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
 
+Notify Mover Tuning plugin actions
+: <select name='notify' size='1' class='narrow'>
+<?=mk_option($cfg['notify'],"no",'No')?>
+<?=mk_option($cfg['notify'],"yes","Yes")?>
+<?=mk_option($cfg['notify'],"error","Error")?>
+</select>
+
+> Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <em>Error</em> will send <strong>only</strong> when an error occurs.
+
 Show advanced settings:
 : <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
 <?=mk_option($cfg['advancedSettings'],"no","No")?>
