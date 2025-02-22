@@ -136,10 +136,10 @@ Notify Mover Tuning plugin actions
 : <select name='notify' size='1' class='narrow'>
 <?=mk_option($cfg['notify'],"no",'No')?>
 <?=mk_option($cfg['notify'],"yes","Yes")?>
-<?=mk_option($cfg['notify'],"error","Error")?>
+<?=mk_option($cfg['notify'],"errorsOnly","Errors Only")?>
 </select>
 
-> Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <em>Error</em> will send <strong>only</strong> when an error occurs.
+> Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <strong>Errors Only</strong> will send <strong>only</strong> when an error occurs.
 
 Show advanced settings:
 : <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">

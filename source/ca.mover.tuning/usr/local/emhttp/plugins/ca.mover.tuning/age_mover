@@ -72,7 +72,7 @@ function unraid_notify() {
     fi
     #
     # If notification_type is set to 'error' and the flag is 'success', exit the function
-    if [[ "$NOTIFY" == "error" && "$flag" == "success" ]]; then
+    if [[ "$NOTIFY" == "errorsOnly" && "$flag" == "success" ]]; then
         return 0 # Do not process success messages
     fi
     #
@@ -135,7 +135,7 @@ mvlogger() {
     # if $2 exist send notify message
     if [ -n "$2" ]; then
         unraid_notify "$1" "$2"
-    fi 
+    fi
 }
 
 #Moved variable assignment into a function
@@ -1185,7 +1185,7 @@ processTheMoves() {
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
-                        if [ "$TESTMODE" = "no" ]; then                            
+                        if [ "$TESTMODE" = "no" ]; then
                             mvlogger "Deleting empty dir ${DIR}"
                             rmdir "${DIR}"
                         fi
@@ -1211,17 +1211,17 @@ processTheMoves() {
                                 if [ "${dataset_file_count}" -eq 0 ]; then
                                     mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
                                     zfs unmount "${DATASET}"
-                                    if [ $? -ne 0 ]; then                                        
+                                    if [ $? -ne 0 ]; then
                                         mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
                                         break
-                                    else                                        
+                                    else
                                         mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
                                     fi
                                     zfs destroy "${DATASET}"
-                                    if [ $? -ne 0 ]; then                                        
+                                    if [ $? -ne 0 ]; then
                                         mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
                                         break
-                                    else                                        
+                                    else
                                         mvlogger "ZFS dataset [${DATASET}] has been successfully destroyed."
                                     fi
                                 else
