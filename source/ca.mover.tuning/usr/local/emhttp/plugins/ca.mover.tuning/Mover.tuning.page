@@ -341,7 +341,12 @@ Ignore files and folders listed inside of a text file:
 File list path:
 : <input type='text' name='filelistv' size='1' class='narrow myfilelistf' value='<?=$cfg['filelistv']?>' <?=$filelistfDisabled?>>
 
-> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.
+<blockquote class="inline_help">
+<p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
+<p> File List example: <strong><em>/mnt/user/MyDiskNas/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
+<p> Folder example: <strong><em>/mnt/cache_ssd/Files/MyFiles</em></strong> , Do <strong>NOT</strong> put (<strong><em> * </em></strong>) or (<strong><em> / </em></strong>) at the end of the line.</p>
+<p> File example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
+</blockquote>
 
 Ignore file types:
 : <select name='filetypesf' size='1' class='narrow' onchange='$(".myfiletypesf").toggleAttr("disabled")'>

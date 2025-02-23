@@ -61,7 +61,7 @@ MOVER_DEBUG_LOG="/tmp/ca.mover.tuning/Mover_tuning_debug_$NOW.log"
 GUI_CURRENT_FILE=""
 GUI_ACTION="Calculating"
 
-# This function is to send messages to Unraid gui etc. Thanks for @SpaceInvaderOne from forums
+# This function is to send messages to Unraid gui etc.
 function unraid_notify() {
     local message="$1"
     local flag="$2"
@@ -562,7 +562,7 @@ createFilteredFilelist() {
             # Check if share mount point is ZFS
             if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                 # Do not process this pool if path does not exist
-                mvlogger "$SHAREPATH does not exist. Is the ZFS dataset not created yet? Copy files to '/mnt/user*/$SHARENAME' first."
+                mvlogger "$SHAREPATH does not exist. Is the ZFS dataset not created yet? Copy files to '/mnt/user/$SHARENAME' first."
                 mvlogger "=> Skipping"
             else
                 # Do not process this pool if path does not exist
@@ -686,7 +686,7 @@ createFilteredFilelist() {
         fi
 
         #Add Ignore Hidden Files to find string
-        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
             HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -path '*/\.*' -print0 | xargs -0 du -sh | awk '{ sum += $1 } END { print sum }')
@@ -709,18 +709,18 @@ createFilteredFilelist() {
                 skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 if [ -d "$skipped_path" ]; then
                     # Size calculation
-                    SKIPPED_PATH_RESERVED_SPACE=$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)
+                    SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
                     # Add /* at the end for better reading in Mover_action file
                     skipped_path="${skipped_path}/*" # add slash asterisk
                     # Add filter to find string
                     FINDSTR="$FINDSTR -not -path '${skipped_path}'"
                 elif [ -f "$skipped_path" ]; then
-                    SKIPPED_PATH_RESERVED_SPACE=$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)
+                    SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
                     # Add filter to find string
                     FINDSTR="$FINDSTR -not -name '${skipped_path}'"
                 fi
                 if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
-                    echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>$FILTERED_FILELIST
+                    echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
                 else
                     mvlogger "Error calculating size for $skipped_path"
@@ -731,13 +731,13 @@ createFilteredFilelist() {
 
         #Add Skipfilelist to find string
         TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=0
-        if { [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name '*.$ext'"
                 SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"
                 if [ $? -eq 0 ]; then
-                    echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>$FILTERED_FILELIST
+                    echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
                     mvlogger "Error calculating size for ${globalSkipFileTypes}"
@@ -1376,7 +1376,7 @@ start() {
     done
 
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
-    unraid_notify "Mover tuning plugin done!" "success"
+    unraid_notify "All files were successfully moved by Mover Tuning plugin." "success"
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 
