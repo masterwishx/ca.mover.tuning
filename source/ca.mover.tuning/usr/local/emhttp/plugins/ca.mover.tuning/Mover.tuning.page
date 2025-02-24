@@ -15,6 +15,8 @@ $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
 $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
 $moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
+$ctimeDisabled = ($cfg['atime'] != "yes") ? "no" : "yes";
+$atimeDisabled = ($cfg['ctime'] != "yes") ? "no" : "yes";
 $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
@@ -131,6 +133,23 @@ Log Mover Tuning plugin actions
 </select>
 
 > Enables or disables logging from this plugin. Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
+
+Debug Log Mover Tuning plugin actions
+: <select name='debuglogging' size='1' class='narrow'>
+<?=mk_option($cfg['debuglogging'],"no",'No')?>
+<?=mk_option($cfg['debuglogging'],"yes","Yes")?>
+</select>
+
+> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
+
+Notify Mover Tuning plugin actions
+: <select name='notify' size='1' class='narrow'>
+<?=mk_option($cfg['notify'],"no",'No')?>
+<?=mk_option($cfg['notify'],"yes","Yes")?>
+<?=mk_option($cfg['notify'],"errorsOnly","Errors Only")?>
+</select>
+
+> Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <strong>Errors Only</strong> will send <strong>only</strong> when an error occurs.
 
 Show advanced settings:
 : <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
@@ -266,12 +285,20 @@ Show advanced filters:
 
 <div markdown="1" id="moverAdvancedFilters">
 Use CTIME:
-: <select name="ctime" size='1' class='narrow myage' <?=$ageDisabled?> >
+: <select name="ctime" size='1' class='narrow myage ctime' <?=$ageDisabled?> <?=$ctimeDisabled?> onchange='$(".atime").toggleAttr("disabled")'>
        <?=mk_option($cfg['ctime'],'no','No')?>
        <?=mk_option($cfg['ctime'],'yes','Yes')?>
 </select>
 
-> Use CTIME instead of MTIME in the find command.
+> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+
+Use ATIME:
+: <select name="atime" size='1' class='narrow myage atime' <?=$ageDisabled?> <?=$atimeDisabled?> onchange='$(".ctime").toggleAttr("disabled")'>
+       <?=mk_option($cfg['atime'],'no','No')?>
+       <?=mk_option($cfg['atime'],'yes','Yes')?>
+</select>
+
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 Move files based on minimum size?
 : <select name="sizef" size='1' class='narrow' onchange='$(".mysizef").toggleAttr("disabled")'>
@@ -288,12 +315,12 @@ Move files that are larger than this size (In M).
 	<?=mk_option($cfg['sizeinM'], 3, "3")?>
 	<?=mk_option($cfg['sizeinM'], 4, "4")?>
 	<?=mk_option($cfg['sizeinM'], 5, "5")?>
-        <?=mk_option($cfg['sizeinM'], 6, "6")?>
-        <?=mk_option($cfg['sizeinM'], 7, "7")?>
-        <?=mk_option($cfg['sizeinM'], 8, "8")?>
-        <?=mk_option($cfg['sizeinM'], 9, "9")?>
-        <?=mk_option($cfg['sizeinM'], 10, "10")?>
-        <?=mk_option($cfg['sizeinM'], 11, "11")?>
+  <?=mk_option($cfg['sizeinM'], 6, "6")?>
+  <?=mk_option($cfg['sizeinM'], 7, "7")?>
+  <?=mk_option($cfg['sizeinM'], 8, "8")?>
+  <?=mk_option($cfg['sizeinM'], 9, "9")?>
+  <?=mk_option($cfg['sizeinM'], 10, "10")?>
+  <?=mk_option($cfg['sizeinM'], 11, "11")?>
 
 	<?for ($ds=12;$ds<1026;$ds+=2):?>
 		<?=mk_option($cfg['sizeinM'], $ds, "$ds")?>
@@ -332,7 +359,12 @@ Ignore files and folders listed inside of a text file:
 File list path:
 : <input type='text' name='filelistv' size='1' class='narrow myfilelistf' value='<?=$cfg['filelistv']?>' <?=$filelistfDisabled?>>
 
-> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.
+<blockquote class="inline_help">
+<p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
+<p> File List example: <strong><em>/mnt/user/MyDiskNas/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
+<p> Folder example: <strong><em>/mnt/cache_ssd/Files/MyFiles</em></strong> , Do <strong>NOT</strong> put (<strong><em> * </em></strong>) or (<strong><em> / </em></strong>) at the end of the line.</p>
+<p> File example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
+</blockquote>
 
 Ignore file types:
 : <select name='filetypesf' size='1' class='narrow' onchange='$(".myfiletypesf").toggleAttr("disabled")'>
