@@ -29,6 +29,13 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.02.24
+    - [Added log message when no share avalible on cache for ZFS dataset.](https://github.com/masterwishx/ca.mover.tuning/pull/7) ([masterwishx](https://github.com/masterwishx)).
+    - Added option with Notifications to Unraid GUI for error and success messages.
+    - Fixed issue with (') symbol in ignore File list. Thanks to JayBriers from forums.
+    - ATIME option is now added for based on age option.
+    - Debug Logging option added (To print find command and ignored folders/files)
+
 - 2025.02.18.1752
     - [Check parent empty ZFS dataset for children empty datasets before destroy it.](https://github.com/masterwishx/ca.mover.tuning/pull/1) ([masterwishx](https://github.com/masterwishx))
     - Shell Check Fixes + speedup `if` checks.
