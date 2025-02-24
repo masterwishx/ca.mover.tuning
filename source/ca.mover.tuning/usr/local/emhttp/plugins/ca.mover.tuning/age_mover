@@ -448,6 +448,21 @@ getMoverSettings() {
         NOTIFY=$(cfg notify)
         mvlogger "Notify: $NOTIFY"
     fi
+
+    if [ -z $(cfg debuglogging) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Debug Logging argument provided, defaulting to no"
+            echo 'debuglogging="no"' >>$config_file
+            DEBUGLEVEL=0
+        fi
+    else
+        if [ $(cfg debuglogging) = "no" ]; then
+            DEBUGLEVEL=0            
+        else
+            DEBUGLEVEL=1            
+        fi
+        mvlogger "Debug Logging: $DEBUGLEVEL"
+    fi
 }
 
 resetRunOnceMoverSettings() {
@@ -734,10 +749,10 @@ createFilteredFilelist() {
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
             while IFS= read -r skipped_path; do
                 SKIPPED_PATH_RESERVED_SPACE=""
-                skipped_path="${skipped_path%/}"                      # Remove potential trailing slash
-                mvDebuglogger "skipped_path=$skipped_path"            #to remove
-                if [[ -d "${skipped_path}" ]]; then                   #NEED TO FIX?
-                    mvDebuglogger "skipped_path in if =$skipped_path" #to remove
+                skipped_path="${skipped_path%/}"                             # Remove potential trailing slash
+                mvDebuglogger "skipped_path=$skipped_path"
+                if [[ -d "${skipped_path}" ]]; then                          #NEED TO FIX?
+                    mvDebuglogger "skipped_path dir after if =$skipped_path"
                     # Size calculation
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
                     # Add /* at the end for better reading in Mover_action file
@@ -745,6 +760,7 @@ createFilteredFilelist() {
                     # Add filter to find string
                     FINDSTR="$FINDSTR -not -path \"${skipped_path}\"" # changed from '${skipped_path}'" eval: line 791: unexpected EOF while looking for matching `''
                 elif [ -f "${skipped_path}" ]; then
+                    mvDebuglogger "skipped_path file after if =$skipped_path"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
                     # Add filter to find string
                     FINDSTR="$FINDSTR -not -name \"${skipped_path}\"" # changed from '${skipped_path}'"

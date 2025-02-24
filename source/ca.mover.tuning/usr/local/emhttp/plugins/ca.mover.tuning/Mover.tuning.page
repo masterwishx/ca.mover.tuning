@@ -134,6 +134,14 @@ Log Mover Tuning plugin actions
 
 > Enables or disables logging from this plugin. Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
 
+Debug Log Mover Tuning plugin actions
+: <select name='debuglogging' size='1' class='narrow'>
+<?=mk_option($cfg['debuglogging'],"no",'No')?>
+<?=mk_option($cfg['debuglogging'],"yes","Yes")?>
+</select>
+
+> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
+
 Notify Mover Tuning plugin actions
 : <select name='notify' size='1' class='narrow'>
 <?=mk_option($cfg['notify'],"no",'No')?>
