@@ -457,9 +457,9 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg debuglogging) = "no" ]; then
-            DEBUGLEVEL=0            
+            DEBUGLEVEL=0
         else
-            DEBUGLEVEL=1            
+            DEBUGLEVEL=1
         fi
         mvlogger "Debug Logging: $DEBUGLEVEL"
     fi
@@ -699,9 +699,20 @@ createFilteredFilelist() {
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
         if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-            FINDSTR="find \"${SHAREPATH}\" -type f -not -path '/mnt/user*' -depth " # '$SHAREPATH'
+
+            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
+            if [[ "$SHAREPATH" == "/mnt/*/$SHARENAME" ]]; then
+                for sharepath in $(find ${SHAREPATH%/*} -maxdepth 1 -type d); do
+                    if [ -d "$sharepath" ] && [ $(basename "$sharepath") == "$SHARENAME" ]; then
+                        # Find "/mnt/*/$SHARENAME"
+                        FINDSTR="find \"${sharepath}\" -type f -not -path '/mnt/user*' -depth "
+                    fi
+                done
+            else
+                FINDSTR="find \"${SHAREPATH}\" -type f -not -path '/mnt/user*' -depth " # not sure if we can get here
+            fi
         else
-            FINDSTR="find \"${SHAREPATH}\" -type f -depth " # '$SHAREPATH'
+            FINDSTR="find \"${SHAREPATH}\" -type f -depth "
         fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
@@ -749,9 +760,9 @@ createFilteredFilelist() {
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
             while IFS= read -r skipped_path; do
                 SKIPPED_PATH_RESERVED_SPACE=""
-                skipped_path="${skipped_path%/}"                             # Remove potential trailing slash
+                skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path=$skipped_path"
-                if [[ -d "${skipped_path}" ]]; then                          #NEED TO FIX?
+                if [[ -d "${skipped_path}" ]]; then #NEED TO FIX?
                     mvDebuglogger "skipped_path dir after if =$skipped_path"
                     # Size calculation
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
