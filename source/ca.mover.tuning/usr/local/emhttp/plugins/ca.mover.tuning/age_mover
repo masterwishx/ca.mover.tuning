@@ -58,7 +58,7 @@ MOVER_ACTIONLIST="/tmp/ca.mover.tuning/Mover_action_$NOW.list"
 STATS_FILE="/tmp/ca.mover.tuning/Summary_$NOW.txt"
 MOVER_STATUS="/usr/local/emhttp/state/mover.ini"
 MOVER_LOG="/tmp/ca.mover.tuning/Mover_tuning_$NOW.log"
-MOVER_DEBUG_LOG="/tmp/ca.mover.tuning/Mover_tuning_debug_$NOW.log"
+MOVER_DEBUG_LOG="/tmp/ca.mover.tuning/Debug_Mover_tuning_$NOW.log"
 GUI_CURRENT_FILE=""
 GUI_ACTION="Calculating"
 
@@ -140,6 +140,8 @@ mvlogger() {
 }
 
 # Function for verbose debug output and debug logging
+# $1 is the debug message to log
+# $2 is the name of debug message
 mvDebuglogger() {
 
     if [ $DEBUGLEVEL = 1 ]; then
@@ -148,7 +150,10 @@ mvDebuglogger() {
         else # running from cron
             echo "$1"
         fi
+
+        echo "$(titleLine "Debugging $2" '-')" >>$MOVER_DEBUG_LOG
         echo "$(date +"%T.%3N") $1" >>$MOVER_DEBUG_LOG
+        #echo "$(titleLine "end" '-')" >>$MOVER_DEBUG_LOG
     fi
 }
 
@@ -700,20 +705,23 @@ createFilteredFilelist() {
         if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
 
-            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            if [[ "$SHAREPATH" == "/mnt/*/$SHARENAME" ]]; then
-                tmpsharepath=$(find ${SHAREPATH%/*} -maxdepth 1 -type d)
-                for sharepath in $tmpsharepath; do
-                    if [ $(basename "$sharepath") == "$SHARENAME" ]; then
-                        # Find "/mnt/*/$SHARENAME"
-                        FINDSTR="find \"${sharepath}\" -type f -not -path '/mnt/user*' -depth "
-                    fi
-                done
-            else
-                FINDSTR="find \"${SHAREPATH}\" -type f -not -path '/mnt/user*' -depth " # not sure if we can get here
-            fi
+            # # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
+            # if [[ "$SHAREPATH" == "/mnt/*/$SHARENAME" ]]; then
+            #     ListsharePath=$(find ${SHAREPATH%/*} -maxdepth 1 -type d)
+            #     for sharepath in $ListsharePath; do
+            #         if [ "$(basename "$sharepath")" == "$SHARENAME" ]; then
+            #             TMPsharepath+="\"${sharepath}\""
+            #             TMPsharepath+=" "
+            #         fi
+            #     done
+            #     TMPsharePath="${TMPsharePath%" "}" # Remove trailing space
+            #     # Find "/mnt/*/$SHARENAME"
+            #     FINDSTR="find ${TMPsharePath} -type f -not -path '/mnt/user*' -depth"
+            # else
+            FINDSTR="find \"${SHAREPATH}\" -type f -not -path '/mnt/user*' -depth" # not sure if we can get here
+            #            fi
         else
-            FINDSTR="find \"${SHAREPATH}\" -type f -depth "
+            FINDSTR="find \"${SHAREPATH}\" -type f -depth"
         fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
@@ -762,9 +770,9 @@ createFilteredFilelist() {
             while IFS= read -r skipped_path; do
                 SKIPPED_PATH_RESERVED_SPACE=""
                 skipped_path="${skipped_path%/}" # Remove potential trailing slash
-                mvDebuglogger "skipped_path=$skipped_path"
+                mvDebuglogger "skipped_path= $skipped_path" "skipped_path"
                 if [[ -d "${skipped_path}" ]]; then #NEED TO FIX?
-                    mvDebuglogger "skipped_path dir after if =$skipped_path"
+                    mvDebuglogger "skipped_path after if Folder= $skipped_path" "skipped_path"
                     # Size calculation
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
                     # Add /* at the end for better reading in Mover_action file
@@ -772,7 +780,7 @@ createFilteredFilelist() {
                     # Add filter to find string
                     FINDSTR="$FINDSTR -not -path \"${skipped_path}\"" # changed from '${skipped_path}'" eval: line 791: unexpected EOF while looking for matching `''
                 elif [ -f "${skipped_path}" ]; then
-                    mvDebuglogger "skipped_path file after if =$skipped_path"
+                    mvDebuglogger "skipped_path file after if =$skipped_path" "skipped_path"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
                     # Add filter to find string
                     FINDSTR="$FINDSTR -not -name \"${skipped_path}\"" # changed from '${skipped_path}'"
@@ -842,8 +850,6 @@ createFilteredFilelist() {
             "
         fi
 
-        mvDebuglogger "FINDSTR: $FINDSTR"
-
         # Get size with du if on zfs mountpoint with compression enabled
         #        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME" && [ "$(zfs get compression -Hpo value "$PRIMARYSTORAGENAME/$SHARENAME")" == "on" ]; then
         #            FINDSTR="$FINDSTR cmd = \"du -sh \\\"\"\$6\"\\\" | numfmt --from=iec\";
@@ -854,6 +860,9 @@ createFilteredFilelist() {
         #            "
         #        fi
         FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6}'"
+
+        # Send FINDSTR to debug
+        mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
 
         if [ -d "$SHAREPATH" ] || [ "$SHAREUSECACHE" = "prefer" ] || [ "$REBALANCESHARES" = "yes" ]; then
             [ "$CTIME" == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
@@ -1266,42 +1275,40 @@ processTheMoves() {
 
             # Clean parent ZFS dataset if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
-                # If no files in directory
-                if [ "$count" = 0 ]; then
-                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
-                    # If no files in share
-                    if [ "${share_file_count}" -eq 0 ]; then
-                        # Check if mount point is ZFS
-                        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                            DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
-                            #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
-                            # If ZFS dataset children size is zero and No ZFS dataset children exist
-                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
-                                # Check for any files in the ZFS dataset avalible
-                                dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
-                                if [ "${dataset_file_count}" -eq 0 ]; then
-                                    mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
-                                    zfs unmount "${DATASET}"
-                                    if [ $? -ne 0 ]; then
-                                        mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
-                                        break
-                                    else
-                                        mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
-                                    fi
-                                    zfs destroy "${DATASET}"
-                                    if [ $? -ne 0 ]; then
-                                        mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
-                                        break
-                                    else
-                                        mvlogger "ZFS dataset [${DATASET}] has been successfully destroyed."
-                                    fi
+                # Count files in share
+                share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
+                # If no files in share
+                if [ "${share_file_count}" -eq 0 ]; then
+                    # Check if mount point is ZFS
+                    if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                        DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
+                        #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
+                        # If ZFS dataset children size is zero and No ZFS dataset children exist
+                        if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
+                            # Check for any files in the ZFS dataset avalible
+                            dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
+                            if [ "${dataset_file_count}" -eq 0 ]; then
+                                mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
+                                zfs unmount "${DATASET}"
+                                if [ $? -ne 0 ]; then
+                                    mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
+                                    break
                                 else
-                                    mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
+                                    mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
+                                fi
+                                zfs destroy "${DATASET}"
+                                if [ $? -ne 0 ]; then
+                                    mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
+                                    break
+                                else
+                                    mvlogger "ZFS dataset [${DATASET}] has been successfully destroyed."
                                 fi
                             else
-                                mvlogger "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
-
+                                mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
                             fi
+                        else
+                            mvlogger "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
+
                         fi
                     fi
                 fi
