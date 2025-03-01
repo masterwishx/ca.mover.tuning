@@ -16,20 +16,20 @@
 
 <CHANGES>
 ###2025.03.01
-- [Fix for [*] in path when cache prefers or RebalanceShare. Thanks to [tehg] from the forums for identifying the bug.](https://github.com/masterwishx/ca.mover.tuning/pull/7) ([masterwishx](https://github.com/masterwishx)).
+- Fix for [*] in path when cache prefers or RebalanceShare. Thanks to [tehg] from the forums for identifying the bug. [masterwishx]
 - Fix for Clean empty ZFS datset when enabled but Clean empty Folders is disabled.
 - Added Sanitize check for input filenames to prevent attacks. Thanks to [AEnterprise] from forums for identifying the bug.
 - Plugin icon changed.
 
 ###2025.02.24
-- [Added log message when no share avalible on cache for ZFS dataset.](https://github.com/masterwishx/ca.mover.tuning/pull/7) ([masterwishx](https://github.com/masterwishx)).
+- Added log message when no share avalible on cache for ZFS dataset. [masterwishx]
 - Added option with Notifications to Unraid GUI for error and success messages.
 - Fixed issue with (') symbol in ignore File list. Thanks to JayBriers from forums.
 - ATIME option is now added for based on age option.
 - Debug Logging option added (To print find command and ignored folders/files)
 
 ###2025.02.18.1752
-- [Check parent empty ZFS dataset for children empty datasets before destroy it.](https://github.com/masterwishx/ca.mover.tuning/pull/1) ([masterwishx](https://github.com/masterwishx))
+- Check parent empty ZFS dataset for children empty datasets before destroy it. [masterwishx]
 - Shell Check Fixes + speedup `if` checks.
 - Better help text cosmetic with Bold and italic + added note for Test Mode and some changes in config page.
 - Skip cache pool size calculation when only one share found in cache pool.
