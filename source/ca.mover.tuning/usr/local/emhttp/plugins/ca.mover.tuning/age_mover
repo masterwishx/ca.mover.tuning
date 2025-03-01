@@ -116,6 +116,31 @@ function human_to_bytes() {
     echo "$(numfmt $1 --from=iec)"
 }
 
+# Sanitize input filename to prevent attacks
+function validate_filename() {
+    local filename="$1"
+
+    ## Check filename length
+    if [[ ${#filename} -gt 255 ]]; then
+        mvlogger "Error: Filename too long '$filename'"
+        return 1
+    fi
+
+    ## Check for invalid characters
+    if [[ "$filename" =~ [\$\/\<\>\:\"\|\?\*] ]]; then
+        mvlogger "Error: Invalid characters in filename '$filename'"
+        return 1
+    fi
+
+    ## Prevent path traversal
+    if [[ "$filename" == *"../"* ]]; then
+        mvlogger "Error: Path traversal attempt detected '$filename'"
+        return 1
+    fi
+
+    return 0
+}
+
 # Function for verbose output and logging
 mvlogger() {
 
@@ -146,13 +171,18 @@ mvDebuglogger() {
 
     if [ $DEBUGLEVEL = 1 ]; then
         if [ -t 1 ]; then # running from terminal, echoing date
+            echo "$(titleLine "Debugging $2" '-')"
             echo "$(date +"%T.%3N") $1"
+            echo "$(titleLine " " ' ')"
         else # running from cron
+            echo "$(titleLine "Debugging $2" '-')"
             echo "$1"
+            echo "$(titleLine " " ' ')"
         fi
 
         echo "$(titleLine "Debugging $2" '-')" >>$MOVER_DEBUG_LOG
         echo "$(date +"%T.%3N") $1" >>$MOVER_DEBUG_LOG
+        echo "$(titleLine " " ' ')" >>$MOVER_DEBUG_LOG
         #echo "$(titleLine "end" '-')" >>$MOVER_DEBUG_LOG
     fi
 }
@@ -513,7 +543,7 @@ createFilteredFilelist() {
         #Sharename
         SHARENAME="$(basename "$SHARECFG" .cfg)"
         # Share title line
-        mvlogger "$(titleLine "Processing $SHARENAME share" '-')"
+        mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
 
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
         if [ -f "/boot/config/plugins/ca.mover.tuning/shareOverrideConfig/$SHARENAME.cfg" ]; then
@@ -718,8 +748,15 @@ createFilteredFilelist() {
             #     # Find "/mnt/*/$SHARENAME"
             #     FINDSTR="find ${TMPsharePath} -type f -not -path '/mnt/user*' -depth"
             # else
-            FINDSTR="find \"${SHAREPATH}\" -type f -not -path '/mnt/user*' -depth" # not sure if we can get here
-            #            fi
+
+            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
+            #if [[ "$SHAREPATH" == "/mnt/*/$SHARENAME" ]]; then
+            shopt -s globstar
+            #SHAREPATH="/mnt/*/$SHARENAME"
+            FINDSTR="find ${SHAREPATH} -type f -not -path '/mnt/user*' -depth"
+            #else
+            #FINDSTR="find \"${SHAREPATH}\" -type f -not -path '/mnt/user*' -depth" # not sure if we can get here
+            #fi
         else
             FINDSTR="find \"${SHAREPATH}\" -type f -depth"
         fi
@@ -1223,6 +1260,18 @@ processTheMoves() {
 
             if [ $TESTMODE = "yes" ]; then
                 RSYNC_CMD+=" --dry-run"
+            fi
+
+            # print to debug $SYNCED_FILES $FILEPATH
+            #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
+            #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
+
+            # Check File by validate function
+            if ! validate_filename "$(basename "$FILEPATH")"; then
+                mvlogger "Error: Invalid filename '$FILEPATH'"
+                break
+            else
+                mvlogger "Valid filename"
             fi
 
             # Get files to rsync:
