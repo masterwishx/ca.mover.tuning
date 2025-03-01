@@ -122,19 +122,19 @@ function validate_filename() {
 
     ## Check filename length
     if [[ ${#filename} -gt 255 ]]; then
-        mvlogger "Error: Filename too long '$filename'"
+        mvlogger "Error: Filename too long: '$filename'"
         return 1
     fi
 
     ## Check for invalid characters
     if [[ "$filename" =~ [\$\/\<\>\:\"\|\?\*] ]]; then
-        mvlogger "Error: Invalid characters in filename '$filename'"
+        mvlogger "Error: Invalid characters in filename: '$filename'"
         return 1
     fi
 
     ## Prevent path traversal
     if [[ "$filename" == *"../"* ]]; then
-        mvlogger "Error: Path traversal attempt detected '$filename'"
+        mvlogger "Error: Path traversal attempt detected: '$filename'"
         return 1
     fi
 
@@ -734,29 +734,22 @@ createFilteredFilelist() {
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
         if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-
-            # # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            # if [[ "$SHAREPATH" == "/mnt/*/$SHARENAME" ]]; then
-            #     ListsharePath=$(find ${SHAREPATH%/*} -maxdepth 1 -type d)
-            #     for sharepath in $ListsharePath; do
-            #         if [ "$(basename "$sharepath")" == "$SHARENAME" ]; then
-            #             TMPsharepath+="\"${sharepath}\""
-            #             TMPsharepath+=" "
-            #         fi
-            #     done
-            #     TMPsharePath="${TMPsharePath%" "}" # Remove trailing space
-            #     # Find "/mnt/*/$SHARENAME"
-            #     FINDSTR="find ${TMPsharePath} -type f -not -path '/mnt/user*' -depth"
-            # else
-
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            #if [[ "$SHAREPATH" == "/mnt/*/$SHARENAME" ]]; then
-            shopt -s globstar
-            #SHAREPATH="/mnt/*/$SHARENAME"
-            FINDSTR="find ${SHAREPATH} -type f -not -path '/mnt/user*' -depth"
-            #else
-            #FINDSTR="find \"${SHAREPATH}\" -type f -not -path '/mnt/user*' -depth" # not sure if we can get here
-            #fi
+            # Initialize FINDSTR with the base find command
+            FINDSTR="find"
+
+            # Iterate over all directories in /mnt/*
+            for dir in /mnt/*; do
+                # Check if the directory contains a subdirectory named $SHARENAME
+                if [ -d "$dir/$SHARENAME" ]; then
+                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
+                    FINDSTR+=" \"$dir/$SHARENAME\""
+                fi
+            done
+
+            # Add the depth option at the end
+            FINDSTR+=" -type f -not -path '/mnt/user*' -depth"
+
         else
             FINDSTR="find \"${SHAREPATH}\" -type f -depth"
         fi
@@ -1268,7 +1261,7 @@ processTheMoves() {
 
             # Check File by validate function and skip if error
             if ! validate_filename "$(basename "$FILEPATH")"; then
-                mvlogger "Error: Invalid filename '$FILEPATH'"
+                mvlogger "Error: Invalid filename path: '$FILEPATH'"
                 continue
             #else
             #    mvlogger "Valid filename"
