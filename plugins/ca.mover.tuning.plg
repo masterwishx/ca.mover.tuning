@@ -16,9 +16,9 @@
 
 <CHANGES>
 ###2025.03.01
-- Fix for [*] in path when cache prefers or RebalanceShare. Thanks to [tehg] from the forums for identifying the bug. [masterwishx]
+- Fix for (*) in path when cache prefers or RebalanceShare. Thanks to (tehg) from the forums for identifying the bug. [masterwishx]
 - Fix for Clean empty ZFS datset when enabled but Clean empty Folders is disabled.
-- Added Sanitize check for input filenames to prevent attacks. Thanks to [AEnterprise] from forums for identifying the bug.
+- Added Sanitize check for input filenames to prevent attacks. Thanks to (AEnterprise) from forums for identifying the bug.
 - Plugin icon changed.
 
 ###2025.02.24
