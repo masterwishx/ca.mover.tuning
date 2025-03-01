@@ -734,10 +734,10 @@ createFilteredFilelist() {
         # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
         if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
             #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
+
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
             # Initialize FINDSTR with the base find command
             FINDSTR="find"
-
             # Iterate over all directories in /mnt/*
             for dir in /mnt/*; do
                 # Check if the directory contains a subdirectory named $SHARENAME
@@ -746,10 +746,8 @@ createFilteredFilelist() {
                     FINDSTR+=" \"$dir/$SHARENAME\""
                 fi
             done
-
             # Add the depth option at the end
             FINDSTR+=" -type f -not -path '/mnt/user*' -depth"
-
         else
             FINDSTR="find \"${SHAREPATH}\" -type f -depth"
         fi
