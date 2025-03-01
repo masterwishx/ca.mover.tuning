@@ -1270,8 +1270,8 @@ processTheMoves() {
             if ! validate_filename "$(basename "$FILEPATH")"; then
                 mvlogger "Error: Invalid filename '$FILEPATH'"
                 break
-            else
-                mvlogger "Valid filename"
+            #else
+            #    mvlogger "Valid filename"
             fi
 
             # Get files to rsync:
