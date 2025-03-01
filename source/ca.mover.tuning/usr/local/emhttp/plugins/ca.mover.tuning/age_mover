@@ -1266,10 +1266,10 @@ processTheMoves() {
             #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
-            # Check File by validate function
+            # Check File by validate function and skip if error
             if ! validate_filename "$(basename "$FILEPATH")"; then
                 mvlogger "Error: Invalid filename '$FILEPATH'"
-                break
+                continue
             #else
             #    mvlogger "Valid filename"
             fi
