@@ -29,6 +29,12 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.03.01
+    - [Fix for [*] in path when cache prefers or RebalanceShare. Thanks to [tehg] from the forums for identifying the bug](https://github.com/masterwishx/ca.mover.tuning/pull/7) ([masterwishx](https://github.com/masterwishx)).
+    - Fix for Clean empty ZFS datset when enabled but Clean empty Folders is disabled.
+    - Added Sanitize check for input filenames to prevent attacks. Thanks to [AEnterprise] from forums for identifying the bug.
+    - Plugin icon changed.
+
 - 2025.02.24
     - [Added log message when no share avalible on cache for ZFS dataset.](https://github.com/masterwishx/ca.mover.tuning/pull/7) ([masterwishx](https://github.com/masterwishx)).
     - Added option with Notifications to Unraid GUI for error and success messages.
