@@ -127,9 +127,9 @@ Test Mode (dry run):
 > Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
 
 Validate input filenames to prevent attacks
-: <select name='validate_filenames' size='1' class='narrow'>
-<?=mk_option($cfg['validate_filenames'],"yes","Yes")?>
-<?=mk_option($cfg['validate_filenames'],"no",'No')?>
+: <select name='validateFilenames' size='1' class='narrow'>
+<?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
+<?=mk_option($cfg['validateFilenames'],"no",'No')?>
 </select>
 <strong>No</strong> <em>- setting effectively disables validation of input filenames</em>
 

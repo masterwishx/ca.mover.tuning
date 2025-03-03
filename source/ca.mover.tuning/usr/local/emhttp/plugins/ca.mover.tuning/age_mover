@@ -499,14 +499,14 @@ getMoverSettings() {
         mvlogger "Debug Logging: $(cfg debuglogging)"
     fi
 
-    if [ -z $(cfg validate_filenames) ]; then
+    if [ -z $(cfg validateFilenames) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Validate Filenames argument provided, defaulting to yes"
-            echo 'validate_filenames="yes"' >>$config_file
+            echo 'validateFilenames="yes"' >>$config_file
             VALIDATE_FILENAMES="yes"
         fi
     else
-        VALIDATE_FILENAMES=$(cfg validate_filenames)
+        VALIDATE_FILENAMES=$(cfg validateFilenames)
         mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
     fi
 
