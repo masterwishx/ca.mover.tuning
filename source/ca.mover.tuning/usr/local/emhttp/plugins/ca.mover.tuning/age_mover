@@ -496,7 +496,7 @@ getMoverSettings() {
         else
             DEBUGLEVEL=1
         fi
-        mvlogger "Debug Logging: $debuglogging"
+        mvlogger "Debug Logging: $(cfg debuglogging)"
     fi
 }
 
