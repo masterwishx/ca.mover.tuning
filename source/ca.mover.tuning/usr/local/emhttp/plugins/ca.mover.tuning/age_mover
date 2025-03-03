@@ -799,7 +799,7 @@ createFilteredFilelist() {
                 SKIPPED_PATH_RESERVED_SPACE=""
                 skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path= $skipped_path" "skipped_path"
-                if [ -d "${skipped_path}" || -f "${skipped_path}" ]; then
+                if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
                     mvDebuglogger "${skipped_path} exists"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
 
