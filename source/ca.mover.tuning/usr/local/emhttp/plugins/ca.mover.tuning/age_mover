@@ -498,6 +498,18 @@ getMoverSettings() {
         fi
         mvlogger "Debug Logging: $(cfg debuglogging)"
     fi
+
+    if [ -z $(cfg validate_filenames) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Validate Filenames argument provided, defaulting to yes"
+            echo 'validate_filenames="yes"' >>$config_file
+            VALIDATE_FILENAMES="yes"
+        fi
+    else
+        VALIDATE_FILENAMES=$(cfg validate_filenames)
+        mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
+    fi
+
 }
 
 resetRunOnceMoverSettings() {
@@ -1258,11 +1270,13 @@ processTheMoves() {
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
             # Check File by validate function and skip if error
-            if ! validate_filename "$(basename "$FILEPATH")"; then
-                mvlogger "Error: Invalid filename path: '$FILEPATH'"
-                continue
-            #else
-            #    mvlogger "Valid filename"
+            if [ $VALIDATE_FILENAMES = "yes" ]; then
+                if ! validate_filename "$(basename "$FILEPATH")"; then
+                    mvlogger "Error: Invalid filename path: '$FILEPATH'"
+                    continue
+                #else
+                #    mvlogger "Valid filename"
+                fi
             fi
 
             # Get files to rsync:
