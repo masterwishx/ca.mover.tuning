@@ -496,8 +496,20 @@ getMoverSettings() {
         else
             DEBUGLEVEL=1
         fi
-        mvlogger "Debug Logging: $DEBUGLEVEL"
+        mvlogger "Debug Logging: $(cfg debuglogging)"
     fi
+
+    if [ -z $(cfg validateFilenames) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Validate Filenames argument provided, defaulting to yes"
+            echo 'validateFilenames="yes"' >>$config_file
+            VALIDATE_FILENAMES="yes"
+        fi
+    else
+        VALIDATE_FILENAMES=$(cfg validateFilenames)
+        mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
+    fi
+
 }
 
 resetRunOnceMoverSettings() {
@@ -591,6 +603,12 @@ createFilteredFilelist() {
             fi
         fi
 
+        # If primary storage share set to cache prefer then set $MOVINGPCTTHRESHOLD and $FREEINGPCTLIMIT to 95% to avoid moving from cache share bellow 95% threshold.
+        if [ "$SHAREUSECACHE" = "prefer" ] && [ "$SECONDARYSTORAGENAME" = "user0" ]; then
+            MOVINGPCTTHRESHOLD=99
+            FREEINGPCTLIMIT=0
+        fi
+
         #Find the current percent of used size of pool.
         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
             #mvlogger "$PRIMARYSTORAGENAME is zfs."
@@ -654,6 +672,10 @@ createFilteredFilelist() {
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
+            # If primary share cache preferred, check if it is used and pool usage is high, set 98% free threshold
+            if [ "$SECONDARYSTORAGENAME" = "user0" ] && [ "$POOLPCTUSED" -eq 100 ]; then
+                FREEINGPCTLIMIT=98
+            fi
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
@@ -1030,6 +1052,8 @@ decideMoveActions() {
             if (storage_pool == $1) {
                 # Make decision to move or keep:
                 action = (($4 != "only" && $4 != "skipped") && (($4 == "prefer" || $4 == "yes") && (pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
+                #action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (($4 == "yes") && (pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
+
 
                 if (action == "keep on primary")  {
                     source = storage_path
@@ -1258,11 +1282,13 @@ processTheMoves() {
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
             # Check File by validate function and skip if error
-            if ! validate_filename "$(basename "$FILEPATH")"; then
-                mvlogger "Error: Invalid filename path: '$FILEPATH'"
-                continue
-            #else
-            #    mvlogger "Valid filename"
+            if [ $VALIDATE_FILENAMES = "yes" ]; then
+                if ! validate_filename "$(basename "$FILEPATH")"; then
+                    mvlogger "Error: Invalid filename path: '$FILEPATH'"
+                    continue
+                #else
+                #    mvlogger "Valid filename"
+                fi
             fi
 
             # Get files to rsync:
@@ -1494,7 +1520,7 @@ start() {
     done
 
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
-    unraid_notify "All files were successfully moved by Mover Tuning plugin." "success"
+    unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin." "success"
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 

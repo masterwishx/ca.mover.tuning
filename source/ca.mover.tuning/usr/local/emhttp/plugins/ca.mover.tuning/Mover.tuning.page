@@ -126,6 +126,24 @@ Test Mode (dry run):
 
 > Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
 
+Validate input filenames to prevent attacks
+: <select name='validateFilenames' size='1' class='narrow'>
+<?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
+<?=mk_option($cfg['validateFilenames'],"no",'No')?>
+</select>
+<strong>No</strong> <em>- setting effectively disables validation of input filenames</em>
+
+<blockquote class="inline_help">
+<p> <em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></p>
+<p> Validate input filenames will check every filename before it is processed by the Mover. This ensures that <strong>only valid</strong> filenames are accepted, <strong>reducing the risk</strong> of attacks and vulnerabilities.</p>
+<p> Disable <strong>Only</strong> if you have many files to move and you are <strong>sure</strong> that all filenames are <strong>valid</strong> and do not contain any potential security risks.</p>
+<p> 1. <strong>Check filename length</strong> - If the filename exceeds 255 characters, it will be rejected.</p>
+<p> 2. <strong>Check for invalid characters</strong> - The filename should not contain any characters that are considered invalid for filenames, such as 
+(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> \ </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>).</p>
+<p> 3. <strong>Prevent path traversal</strong> - The filename should not contain any characters that can be used to traverse directories, such as (<strong><em> ../ </em></strong>).</p>
+<p> If one of these checks fails, the filename will be rejected.</p>
+</blockquote>
+
 Log Mover Tuning plugin actions
 : <select name='logging' size='1' class='narrow'>
 <?=mk_option($cfg['logging'],"no",'No')?>
