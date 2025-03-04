@@ -603,6 +603,12 @@ createFilteredFilelist() {
             fi
         fi
 
+        # If primary storage share set to cache prefer then set $MOVINGPCTTHRESHOLD and $FREEINGPCTLIMIT to 95% to avoid moving from cache share bellow 95% threshold.
+        if [ "$SHAREUSECACHE" = "prefer" ] && [ "$SECONDARYSTORAGENAME" = "user0" ]; then
+            MOVINGPCTTHRESHOLD=99
+            FREEINGPCTLIMIT=0
+        fi
+
         #Find the current percent of used size of pool.
         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
             #mvlogger "$PRIMARYSTORAGENAME is zfs."
@@ -666,6 +672,10 @@ createFilteredFilelist() {
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
+            # If primary share cache preferred, check if it is used and pool usage is high, set 98% free threshold
+            if [ "$SECONDARYSTORAGENAME" = "user0" ] && [ "$POOLPCTUSED" -eq 100 ]; then
+                FREEINGPCTLIMIT=98
+            fi
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
@@ -1042,6 +1052,8 @@ decideMoveActions() {
             if (storage_pool == $1) {
                 # Make decision to move or keep:
                 action = (($4 != "only" && $4 != "skipped") && (($4 == "prefer" || $4 == "yes") && (pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
+                #action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (($4 == "yes") && (pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
+
 
                 if (action == "keep on primary")  {
                     source = storage_path
