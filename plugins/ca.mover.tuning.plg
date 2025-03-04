@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.03.01">
-<!ENTITY md5       "a70200798229310a797e2fc7cc1b413c">
+<!ENTITY version   "2025.03.04">
+<!ENTITY md5       "d9af789d92c354120fad3195d05dbb3d">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,12 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.03.04
+- Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor.
+- Fixed Debug = yes/no instead of 0/1 in mover logs.
+- Fixed primary cache prefer not to move data. Set fixed moving threshold to 99% freeing threshold to 0% for skip moving.
+  when chache is full set freeing to 98% to move some data. Maybe better fix will be later.
+
 ###2025.03.01
 - Fix for (*) in path when cache prefers or RebalanceShare. Thanks to (tehg) from the forums for identifying the bug. [masterwishx]
 - Fix for Clean empty ZFS datset when enabled but Clean empty Folders is disabled.
