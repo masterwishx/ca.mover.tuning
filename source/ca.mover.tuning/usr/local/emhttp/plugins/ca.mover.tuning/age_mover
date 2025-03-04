@@ -603,7 +603,8 @@ createFilteredFilelist() {
             fi
         fi
 
-        # If primary storage share set to cache prefer then set $MOVINGPCTTHRESHOLD and $FREEINGPCTLIMIT to 95% to avoid moving from cache share bellow 95% threshold.
+        # If primary storage share set to cache prefer then set moving threshold to 99% and freeing threshold to 0%
+        # to avoid moving from cache share when bellow 99% threshold.
         if [ "$SHAREUSECACHE" = "prefer" ] && [ "$SECONDARYSTORAGENAME" = "user0" ]; then
             MOVINGPCTTHRESHOLD=99
             FREEINGPCTLIMIT=0
@@ -673,7 +674,7 @@ createFilteredFilelist() {
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             # If primary share cache preferred, check if it is used and pool usage is high, set 98% free threshold
-            if [ "$SECONDARYSTORAGENAME" = "user0" ] && [ "$POOLPCTUSED" -eq 100 ]; then
+            if [ "$SECONDARYSTORAGENAME" = "user0" ] && [ "$POOLPCTUSED" -ge 100 ]; then
                 FREEINGPCTLIMIT=98
             fi
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
