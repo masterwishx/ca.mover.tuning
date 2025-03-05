@@ -254,7 +254,7 @@ Only move if above this threshold of used Primary (cache) space:
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the Primary (cache) drive for mover to run.
+> Set to the amount of disk space used on the Primary (cache) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
 
 Free down/prime up to this level of used Primary (cache) space:
 : <select name="freeingThreshold" size="1" class='narrow'>
@@ -263,7 +263,7 @@ Free down/prime up to this level of used Primary (cache) space:
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the Primary (cache) drive after the mover ran.
+> Set to the amount of disk space used on the Primary (cache) drive after the has mover ran. Setting this to <strong><em>0%</em></strong> means that the mover will continue until all data is moved off the cache pool.
 
 Move files off Primary (cache) based on age?
 : <select name="age" size='1' class='narrow' onchange='$(".myage").toggleAttr("disabled")'>
