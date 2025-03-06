@@ -234,6 +234,28 @@ getMoverSettings() {
         mvlogger "Using share freeing threshold: $FREEINGPCTLIMIT %"
     fi
 
+    # cache:prefer limits
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        PREFER_MOVINGPCTTHRESHOLD=$(cfg movingPreferThreshold)
+        [ -z $PREFER_MOVINGPCTTHRESHOLD ] && PREFER_MOVINGPCTTHRESHOLD=0
+        mvlogger "Using global moving threshold: $PREFER_MOVINGPCTTHRESHOLD %"
+    elif [ -n "$(cfg movingPreferThreshold)" ]; then
+        PREFER_MOVINGPCTTHRESHOLD=$(cfg movingPreferThreshold)
+        mvlogger "Using share moving threshold: $PREFER_MOVINGPCTTHRESHOLD %"
+    fi
+
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        PREFER_FREEINGPCTLIMIT=$(cfg freeingPreferThreshold)
+        if [ -z $PREFER_FREEINGPCTLIMIT ]; then
+            PREFER_FREEINGPCTLIMIT=$PREFER_MOVINGPCTTHRESHOLD
+            echo "freeingPreferThreshold=\"$PREFER_FREEINGPCTLIMIT\"" >>$config_file
+        fi
+        mvlogger "Using global freeing threshold: $PREFER_FREEINGPCTLIMIT %"
+    elif [ -n "$(cfg freeingPreferThreshold)" ]; then
+        PREFER_FREEINGPCTLIMIT=$(cfg freeingPreferThreshold)
+        mvlogger "Using share freeing threshold: $PREFER_FREEINGPCTLIMIT %"
+    fi
+
     # Read other thresholds
     if [ -z $(cfg omovercfg) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -603,17 +625,16 @@ createFilteredFilelist() {
             fi
         fi
 
-        # If primary storage share set to cache prefer then set moving threshold to 99% and freeing threshold to 0%
-        # to avoid moving from cache share when bellow 99% threshold.
+        # If primary storage share set to cache prefer then set moving threshold and freeing threshold from configuration
         if [ "$SHAREUSECACHE" = "prefer" ] && [ "$SECONDARYSTORAGENAME" = "user0" ]; then
-            MOVINGPCTTHRESHOLD=99
-            FREEINGPCTLIMIT=0
+            MOVINGPCTTHRESHOLD="$PREFER_MOVINGPCTTHRESHOLD"
+            FREEINGPCTLIMIT="$PREFER_FREEINGPCTLIMIT"
         fi
 
         #Find the current percent of used size of pool.
         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
             #mvlogger "$PRIMARYSTORAGENAME is zfs."
-            POOLPCTUSED=$(zpool get -o value capacity "$PRIMARYSTORAGENAME" | tail -n 1 | tr -d '%')
+            POOLPCTUSED=$(zfs list -Hp -o available,used "$PRIMARYSTORAGENAME" | awk '{print int(($2 / ($1 + $2)) * 100)}')
             POOLBYTEUSED=$(zfs list -Hpo used "$PRIMARYSTORAGENAME")
         else
             POOLPCTUSED=$(df --output=pcent "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | tr -d '%')
@@ -622,7 +643,7 @@ createFilteredFilelist() {
 
         #Get the size threshold in bytes
         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-            POOLSIZE=$(zfs list -Hp -o available,used "$PRIMARYSTORAGENAME" | awk '{print $1 + $2}')
+            POOLSIZE=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print $1 + $2}')
         else
             POOLSIZE=$(df --output=size --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1)
         fi
@@ -673,17 +694,13 @@ createFilteredFilelist() {
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            # If primary share cache preferred, check if it is used and pool usage is high, set 98% free threshold
-            if [ "$SECONDARYSTORAGENAME" = "user0" ] && [ "$POOLPCTUSED" -ge 100 ]; then
-                FREEINGPCTLIMIT=98
-            fi
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced back to these."
             elif [ "$POOLPCTUSED" -lt "$FREEINGPCTLIMIT" ]; then
-                mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $FREEINGPCTLIMIT%."
-                mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold. Older files will be moved from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME."
+               mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $FREEINGPCTLIMIT%."
+               mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold. Older files will be moved from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME."
             elif [ "$POOLPCTUSED" -gt "$MOVINGPCTTHRESHOLD" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is above moving threshold percentage: $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
                 mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until freeing threshold. Older files will be moved from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME."
@@ -1053,8 +1070,11 @@ decideMoveActions() {
             if (storage_pool == $1) {
                 # Make decision to move or keep:
                 action = (($4 != "only" && $4 != "skipped") && (($4 == "prefer" || $4 == "yes") && (pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
-                #action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (($4 == "yes") && (pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
-
+                # action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (($4 == "yes") && (pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
+                
+                # ($4 == "prefer") {
+                # action = ((pool_sums[$1] >= $6 && AGE == -1) || AGE >= 0) || $4 == "no" ) ? "move from primary" : "keep on primary"
+                # }
 
                 if (action == "keep on primary")  {
                     source = storage_path
