@@ -23,6 +23,8 @@ $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
 $om = $cfg['movingThreshold']; $om = $om + 5;
 $f = $cfg['movingThreshold'];
+$om = $cfg['movingPreferThreshold']; $om = $om + 5;
+$c = $cfg['movingPreferThreshold'];
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
 $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $version = ($cfg['version'])
@@ -253,8 +255,9 @@ Only move if above this threshold of used Primary (cache) space:
 <?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
 <?endfor;?>
 </select>
+<em>Cache → Array</em>
 
-> Set to the amount of disk space used on the Primary (cache) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
+> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
 
 Free down/prime up to this level of used Primary (cache) space:
 : <select name="freeingThreshold" size="1" class='narrow'>
@@ -262,8 +265,29 @@ Free down/prime up to this level of used Primary (cache) space:
 <?=mk_option($cfg['freeingThreshold'], $f, "$f %")?>
 <?endfor;?>
 </select>
+<em>Cache → Array</em>
 
-> Set to the amount of disk space used on the Primary (cache) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.
+> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.
+
+Only move if above this threshold of used Primary (cache) space:
+: <select name="movingPreferThreshold" size="1" class='narrow'>
+<?for ($t=95;$t>=0;$t-=5):?>
+<?=mk_option($cfg['movingPreferThreshold'], $t, "$t %")?>
+<?endfor;?>
+</select>
+<em>Array → Cache</em>
+
+> Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
+
+Free down/prime up to this level of used Primary (cache) space:
+: <select name="freeingPreferThreshold" size="1" class='narrow'>
+<?for ($c=$c;$c>=0;$c-=5):?>
+<?=mk_option($cfg['freeingPreferThreshold'], $c, "$c %")?>
+<?endfor;?>
+</select>
+<em>Array → Cache</em>
+
+> Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.
 
 Move files off Primary (cache) based on age?
 : <select name="age" size='1' class='narrow' onchange='$(".myage").toggleAttr("disabled")'>
@@ -291,7 +315,7 @@ Move files that are greater than this many days old:
 </select>
 <strong>Auto</strong> <em>- setting enable smart caching</em>
 
-> Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
 Show advanced filters:
 : <select name='advancedFilters' size='1' class='narrow' onchange="updateScreenMoverAdvancedFilters(this.value, 'slow')">
