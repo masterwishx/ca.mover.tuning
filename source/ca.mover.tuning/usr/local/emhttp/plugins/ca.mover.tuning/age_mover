@@ -634,7 +634,7 @@ createFilteredFilelist() {
         #Find the current percent of used size of pool.
         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
             #mvlogger "$PRIMARYSTORAGENAME is zfs."
-            POOLPCTUSED=$(zfs list -Hp -o available,used "$PRIMARYSTORAGENAME" | awk '{print int(($2 / ($1 + $2)) * 100)}')
+            POOLPCTUSED=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print int(($2 / ($1 + $2)) * 100)}')
             POOLBYTEUSED=$(zfs list -Hpo used "$PRIMARYSTORAGENAME")
         else
             POOLPCTUSED=$(df --output=pcent "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | tr -d '%')
