@@ -81,7 +81,7 @@ _(Override Mover Tuning settings for this share)_:
   </select>
   
 <!--:mover_tuning_override_help:-->
->Select **Yes** to override the primary Mover Tuning settings for this share.
+> Select **Yes** to override the primary Mover Tuning settings for this share.
 
 <div markdown="1" id="moverSettings">
 _(Only move if above this threshold of used Primary (cache) space:)_
@@ -91,7 +91,7 @@ _(Only move if above this threshold of used Primary (cache) space:)_
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the Primary (cache) drive for mover to run.
+> Set to the amount of disk space used on the Primary (cache) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
 
 _(Free down to this level of used Primary (cache) space)_:
 : <select name="freeingThreshold" size="1" class='narrow'>
@@ -100,7 +100,7 @@ _(Free down to this level of used Primary (cache) space)_:
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the Primary (cache) drive after the mover ran.
+> Set to the amount of disk space used on the Primary (cache) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.
 
 _(Move files off Primary (cache) based on age)_:
 : <select name="age" onchange='$(".myage").toggleAttr("disabled")'>
