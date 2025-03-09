@@ -681,8 +681,8 @@ createFilteredFilelist() {
             elif [ "$POOLPCTUSED" -lt "$FREEINGPCTLIMIT" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $FREEINGPCTLIMIT%."
                 mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold."
-                # Set the real free size of pool for later calculation
-                PRIMARYSIZETHRESH=$(($POOLSIZE-$POOLBYTEUSED))
+                # Get the real free size from upto fill limit (95%) of pool for later calculations
+                PRIMARYSIZETHRESH=$(($POOLSIZE*$FREEINGPCTLIMIT/100-$POOLBYTEUSED))
             # elif [ "$POOLPCTUSED" -gt "$MOVINGPCTTHRESHOLD" ]; then
             #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is above moving threshold percentage: $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
             #     mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
