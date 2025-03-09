@@ -216,10 +216,10 @@ getMoverSettings() {
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
         [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=0
-        mvlogger "Using global (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
+        mvlogger "Using global (cache) moving threshold: $MOVINGPCTTHRESHOLD %"
     elif [ -n "$(cfg movingThreshold)" ]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
-        mvlogger "Using share (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
+        mvlogger "Using share (cache) moving threshold: $MOVINGPCTTHRESHOLD %"
     fi
 
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -228,10 +228,10 @@ getMoverSettings() {
             FREEINGPCTLIMIT=$MOVINGPCTTHRESHOLD
             echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
         fi
-        mvlogger "Using global (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
+        mvlogger "Using global (cache) freeing threshold: $FREEINGPCTLIMIT %"
     elif [ -n "$(cfg freeingThreshold)" ]; then
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
-        mvlogger "Using share (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
+        mvlogger "Using share (cache) freeing threshold: $FREEINGPCTLIMIT %"
     fi
 
     # Read other thresholds
@@ -605,8 +605,8 @@ createFilteredFilelist() {
 
         # If primary storage share set to cache prefer then set moving threshold and freeing threshold from configuration
         if [ "$SHAREUSECACHE" = "prefer" ] && [ "$SECONDARYSTORAGENAME" = "user0" ]; then
-            MOVINGPCTTHRESHOLD=95
-            FREEINGPCTLIMIT=95
+            MOVINGPCTTHRESHOLD=0
+            FREEINGPCTLIMIT=95 # in this case: fill upto limit
         fi
 
         # Find the current percent of used size of pool.
@@ -674,20 +674,22 @@ createFilteredFilelist() {
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
+            mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced back to these."
             elif [ "$POOLPCTUSED" -lt "$FREEINGPCTLIMIT" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $FREEINGPCTLIMIT%."
                 mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold."
+                # Set the real free size of pool for later calculation
+                PRIMARYSIZETHRESH=$(($POOLSIZE-$POOLBYTEUSED))
             # elif [ "$POOLPCTUSED" -gt "$MOVINGPCTTHRESHOLD" ]; then
             #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is above moving threshold percentage: $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
             #     mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
-            else
-                mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $MOVINGPCTTHRESHOLD%."
-                mvlogger "=> Skipping"
-                continue
+            # else
+            #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $MOVINGPCTTHRESHOLD%."
+            #     mvlogger "=> Skipping"
+            #     continue
             fi
         elif [ $SHAREUSECACHE = "yes" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
@@ -1073,7 +1075,7 @@ decideMoveActions() {
             } else {
                 if (storage_pool == "user" || ($2 == "user0" && storage_pool ~ "disk")) {
                     # Make decision to move or keep:
-                    action = (($4 == "only" && REBALANCESHARES == "yes") || ($4 == "prefer" && ((pool_sums[$1] <= $6 && AGE == -1) || AGE >= 0))) ? "move from secondary" : "keep on secondary"
+                    action = (($4 == "only" && REBALANCESHARES == "yes") || ($4 == "prefer" && pool_sums[$1] <= $6 && (AGE == -1 || AGE >= 0))) ? "move from secondary" : "keep on secondary"
 
                     if (action == "keep on secondary") {
                         source = storage_path
