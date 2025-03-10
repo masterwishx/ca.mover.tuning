@@ -241,7 +241,10 @@ Move All from Primary->Secondary (cache:yes) shares when disk is above a certain
 <?=mk_option($cfg['omovercfg'],"yes","Yes")?>
 </select>
 
-> Set to "Yes" if you want to move all files from a Primary->Secondary (cache:yes) share to the array if the percentage below is exceeded.  This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.
+<blockquote class="inline_help">
+<p>Set to <strong>Yes</strong> if you want to move all files from a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share to the array if the percentage below is exceeded.</p>
+<p>This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.</p>
+</blockquote>
 
 Move All from Primary->Secondary (cache:yes) shares pool percentage:
 : <select name="omoverthresh" size="1" class='narrow myomthresh' <?=$omoverthreshDisabled?>>
@@ -250,7 +253,11 @@ Move All from Primary->Secondary (cache:yes) shares pool percentage:
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the cache pool to initiate a move of all files in a Primary->Secondary (cache:yes) share.  Filters will still run after, for any remaining pool's that do not meet this threshold.  This threshold should at a minimum be 5% larger than "Only move at this threshold of used cache space:" above. 
+<blockquote class="inline_help">
+<p>Set to the amount of disk space used on the Primary pool to initiate a move of all files in a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share.</p>
+<p>Filters will still run after, for any remaining pool's that do not meet this threshold.</p>
+<p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
+</blockquote>
 
 </div>
 </div>
