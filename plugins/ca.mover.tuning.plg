@@ -17,9 +17,9 @@
 <CHANGES>
 ###2025.03.11
 - Fixed zfs cache pool percent calculation. Thanks to Renegade605 from forums for the bug report.
-- Array -> Cache (cache:prefer) now moves data to the cache pool from the array only until reaching a fillup limit of 95%.
+- Array to Cache (cache:prefer) now moves data to the cache pool from the array only until reaching a fillup limit of 95%.
     - Thanks to alturismo and Renegade605 from forums, who helped clarify how this feature should work.
-    - Disabled override setting for mover tuning if shareUseCache="prefer" (Array->Cache) is set.
+    - Disabled override setting for mover tuning if shareUseCache="prefer" (Array to Cache) is set.
 - Format global and share settings help text descriptions add more clear description for mover thresholds.
 - Fixed ignore file list path setting when folder in list file contains (&#91;). Thanks to JamieBriers from forums for the PR and fix.
 
