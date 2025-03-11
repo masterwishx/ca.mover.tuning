@@ -680,9 +680,9 @@ createFilteredFilelist() {
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced back to these."
             elif [ "$POOLPCTUSED" -lt "$FREEINGPCTLIMIT" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $FREEINGPCTLIMIT%."
-                mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold."                
+                mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold."
                 # Calculate the real free space by considering an upper limit of 95% pool usage for later calculations
-                PRIMARYSIZETHRESH=$(($POOLSIZE*$FREEINGPCTLIMIT/100-$POOLBYTEUSED))
+                PRIMARYSIZETHRESH=$(($POOLSIZE * $FREEINGPCTLIMIT / 100 - $POOLBYTEUSED))
             # elif [ "$POOLPCTUSED" -gt "$MOVINGPCTTHRESHOLD" ]; then
             #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is above moving threshold percentage: $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
             #     mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
@@ -822,17 +822,20 @@ createFilteredFilelist() {
                 skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path= $skipped_path" "skipped_path"
                 if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
-                    mvDebuglogger "${skipped_path} exists"
+                    mvDebuglogger "${skipped_path} exists" "skipped_path"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
 
                     if [[ -d "${skipped_path}" ]]; then
-                        mvDebuglogger "${skipped_path} is a directory"
+                        mvDebuglogger "${skipped_path} is a folder" "skipped_path"
                         # Add /* at the end for better reading in Mover_action file
                         skipped_path="${skipped_path}/*"
                     fi
-                    
-                    FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # changed from '${skipped_path}'"
-                fi   
+
+                    FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
+                else
+                    mvDebuglogger "${skipped_path} does not exist?" "skipped_path"
+                fi
+
                 if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
