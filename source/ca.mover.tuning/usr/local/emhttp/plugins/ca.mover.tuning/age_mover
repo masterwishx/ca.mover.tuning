@@ -206,7 +206,7 @@ getMoverSettings() {
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
 
     if [[ ! -f "$config_file" ]]; then
-        mvlogger "Error: Config file '$config_file' not found."
+        mvlogger "Error: Config file '$config_file' not found." "failure"
         return 1
     fi
 
@@ -1284,7 +1284,7 @@ processTheMoves() {
             # Check File by validate function and skip if error
             if [ $VALIDATE_FILENAMES = "yes" ]; then
                 if ! validate_filename "$(basename "$FILEPATH")"; then
-                    mvlogger "Error: Invalid filename path: '$FILEPATH'"
+                    mvlogger "Error: Invalid filename path: '$FILEPATH'" "failure"
                     continue
                 #else
                 #    mvlogger "Valid filename"
