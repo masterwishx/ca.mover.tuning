@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.03.04">
-<!ENTITY md5       "d9af789d92c354120fad3195d05dbb3d">
+<!ENTITY version   "2025.03.11">
+<!ENTITY md5       "82ab40b7410b42839bff454ddfb5cfad">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,14 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.03.11
+- Fixed zfs cache pool percent calculation. Thanks to Renegade605 from forums for the bug report.
+- Array -> Cache (cache:prefer) now moves data to the cache pool from the array only until reaching a fillup limit of 95%.
+    - Thanks to alturismo and Renegade605 from forums, who helped clarify how this feature should work.
+    - Disabled override setting for mover tuning if shareUseCache="prefer" (Array->Cache) is set.
+- Format global and share settings help text descriptions add more clear description for mover thresholds.
+- Fixed ignore file list path setting when folder in list file contains ('['). Thanks to JamieBriers from forums for the PR and fix.
+
 ###2025.03.04
 - Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor.
 - Fixed Debug = yes/no instead of 0/1 in mover logs.
