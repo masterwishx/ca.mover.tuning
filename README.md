@@ -35,7 +35,7 @@ If an error occurs in copying a file, the partial file, if present, is deleted a
         - Thanks to alturismo and Renegade605 from forums, who helped clarify how this feature should work.
         - Disabled override setting for mover tuning if shareUseCache="prefer" (Array->Cache) is set.
     - Format global and share settings help text descriptions add more clear description for mover thresholds.
-    - Fixed ignore file list path setting when folder in list file contains ('['). Thanks to JamieBriers from forums for the PR and fix.
+    - Fixed ignore file list path setting when folder in list file contains ([). Thanks to JamieBriers from forums for the PR and fix.
 
 - 2025.03.04
     - Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor.
