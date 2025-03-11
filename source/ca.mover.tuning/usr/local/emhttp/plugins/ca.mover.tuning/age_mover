@@ -821,20 +821,18 @@ createFilteredFilelist() {
                 SKIPPED_PATH_RESERVED_SPACE=""
                 skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path= $skipped_path" "skipped_path"
-                if [[ -d "${skipped_path}" ]]; then #NEED TO FIX?
-                    mvDebuglogger "skipped_path after if Folder= $skipped_path" "skipped_path"
-                    # Size calculation
+                if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
+                    mvDebuglogger "${skipped_path} exists"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
-                    # Add /* at the end for better reading in Mover_action file
-                    skipped_path="${skipped_path}/*" # add slash asterisk
-                    # Add filter to find string
-                    FINDSTR="$FINDSTR -not -path \"${skipped_path}\""
-                elif [ -f "${skipped_path}" ]; then
-                    mvDebuglogger "skipped_path file after if =$skipped_path" "skipped_path"
-                    SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
-                    # Add filter to find string
-                    FINDSTR="$FINDSTR -not -name \"${skipped_path}\""
-                fi
+
+                    if [[ -d "${skipped_path}" ]]; then
+                        mvDebuglogger "${skipped_path} is a directory"
+                        # Add /* at the end for better reading in Mover_action file
+                        skipped_path="${skipped_path}/*"
+                    fi
+                    
+                    FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # changed from '${skipped_path}'"
+                fi   
                 if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
