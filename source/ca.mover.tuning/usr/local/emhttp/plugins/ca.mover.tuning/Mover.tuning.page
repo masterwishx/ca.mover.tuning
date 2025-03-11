@@ -208,7 +208,7 @@ Force move of all files on a schedule:
 <?=mk_option($cfg['force'],"yes","Yes")?>
 </select>
 
-> Select yes to run original mover on a custom cron schedule.
+> Select <strong>yes</strong> to run <strong>original mover</strong> on a custom cron schedule.
 
 Cron Schedule to force move all of files:
 : <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=$cfg['cron']?>' <?=$cronDisabled?>>
@@ -221,9 +221,13 @@ Allow force mover schedule to run during a parity check/rebuild:
 <?=mk_option($cfg['forceParity'],"no","No")?>
 </select>
 
-> Setting a cron schedule to force a move will run mover on that schedule.
-> <br>Example: In Mover Settings you would have a schedule of Hourly.  During that schedule the rules above are followed.  The cron schedule for a force move could be set to <strong>30 03 * * *</strong> which would force all files to be moved at 3:30 AM every day regardless of the rules
-> <br>Note that no error checking is done on the cron schedule.  It must be a valid entry.
+<blockquote class="inline_help">
+<p>Setting a cron schedule to force a move will run mover on that schedule.</p>
+<p>Example: In Mover Settings you would have a schedule of Hourly. During that schedule the rules above are followed.</p>
+<p>The cron schedule for a force move could be set to <strong>30 03 * * *</strong> which would force all files to be moved at <strong>3:30 AM</strong> every day regardless of the rules</p>
+<p>The forceParity setting allows you to override this behavior and force all files to be moved regardless of the rules.</p>
+<p>Note that no error checking is done on the cron schedule. It must be a valid entry.</p>
+</blockquote>
 
 Script to run before mover (No checks, always runs):
 : <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=$cfg['beforeScript']?>'>
@@ -247,25 +251,27 @@ Move Now button follows plug-in filters:
 
 <div class="title"><span class="center"><i class="fa fa-filter title"></i>Filters</span></div>
 
-Only move if above this threshold of used Primary (cache) space:
+Only move if above this threshold of used Primary (<em>cache</em>) space:
 : <select name="movingThreshold" size="1" class='narrow'>
 <?for ($t=95;$t>=0;$t-=5):?>
 <?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
 <?endfor;?>
 </select>
+<em>Cache → Array</em>
 
-> Set to the amount of disk space used on the Primary (cache) drive for mover to run.
+> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
 
-Free down/prime up to this level of used Primary (cache) space:
+Free down/prime up to this level of used Primary (<em>cache</em>) space:
 : <select name="freeingThreshold" size="1" class='narrow'>
 <?for ($f=$f;$f>=0;$f-=5):?>
 <?=mk_option($cfg['freeingThreshold'], $f, "$f %")?>
 <?endfor;?>
 </select>
+<em>Cache → Array</em>
 
-> Set to the amount of disk space used on the Primary (cache) drive after the mover ran.
+> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.
 
-Move files off Primary (cache) based on age?
+Move files off Primary (<em>cache</em>) based on age?
 : <select name="age" size='1' class='narrow' onchange='$(".myage").toggleAttr("disabled")'>
        <?=mk_option($cfg['age'],'no','No')?>
        <?=mk_option($cfg['age'],'yes','Yes')?>
@@ -291,7 +297,7 @@ Move files that are greater than this many days old:
 </select>
 <strong>Auto</strong> <em>- setting enable smart caching</em>
 
-> Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
 Show advanced filters:
 : <select name='advancedFilters' size='1' class='narrow' onchange="updateScreenMoverAdvancedFilters(this.value, 'slow')">
@@ -324,7 +330,7 @@ Move files based on minimum size?
        <?=mk_option($cfg['sizef'],'yes','Yes')?>
 </select>
 
-> Select yes if you want to move files based on the size of the file in M.
+> Select yes if you want to move files based on the size of the file in <strong>M</strong>.
 
 Move files that are larger than this size (In M).
 : <select name="sizeinM" size="1" class='narrow mysizef' <?=$sizefDisabled?>>
@@ -393,7 +399,7 @@ Ignore file types:
 Comma separated list of file types:
 : <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' value='<?=$cfg['filetypesv']?>' <?=$filetypesfDisabled?>>
 
-> A list of file types separated by a comma.
+> A list of file types separated by a <strong>comma</strong>.
 
 Ignore All hidden files and directories
 : <select name='ignoreHidden' size='1' class='narrow' >
@@ -401,9 +407,11 @@ Ignore All hidden files and directories
 <?=mk_option($cfg['ignoreHidden'],"yes","Yes")?>
 </select>
 
-> Very few will use this, keep set to No.
-> Removes any files or directories that start with a <strong>.</strong>
-> Adds <em>-not -path '*/\.*'</em> to the end of the find command.
+<blockquote class="inline_help">
+<p>Very few will use this, keep set to No.</p>
+<p>Removes any files or directories that start with a (<strong><em> . </em></strong>).</p>
+<p>Adds (<strong><em> -not -path '*/\.*' </em></strong>) to the end of the find command.</p>
+</blockquote>
 
 Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage:
 : <select name='omovercfg' size='1' class='narrow' onchange='$(".myomthresh").toggleAttr("disabled")'>
@@ -411,7 +419,10 @@ Move All from Primary->Secondary (cache:yes) shares when disk is above a certain
 <?=mk_option($cfg['omovercfg'],"yes","Yes")?>
 </select>
 
-> Set to "<strong>Yes</strong>" if you want to move all files from a Primary->Secondary (cache:yes) share to the array if the percentage below is exceeded.  This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.
+<blockquote class="inline_help">
+<p>Set to <strong>Yes</strong> if you want to move all files from a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share to the array if the percentage below is exceeded.</p>
+<p>This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.</p>
+</blockquote>
 
 Move All from Primary->Secondary shares pool percentage:
 : <select name="omoverthresh" size="1" class='narrow myomthresh' <?=$omoverthreshDisabled?>>
@@ -420,8 +431,11 @@ Move All from Primary->Secondary shares pool percentage:
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the Primary pool to initiate a move of all files in a Primary->Secondary (cache:yes) share.  Filters will still run after, for any remaining pool's that do not meet this threshold.  This threshold should at a minimum be 5% larger than "Only move at this threshold of used primary (cache) space:" above.
-
+<blockquote class="inline_help">
+<p>Set to the amount of disk space used on the Primary pool to initiate a move of all files in a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share.</p>
+<p>Filters will still run after, for any remaining pool's that do not meet this threshold.</p>
+<p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
+</blockquote>
 
 </div>
 
@@ -458,9 +472,11 @@ Synchronize Primary files to Secondary
 <?=mk_option($cfg['synchronizeCache'],"yes","Yes")?>
 </select>
 
-> This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected. 
-> Reading and modification will still occur on Primary.
-> Only modified files since last sync are synchronized
+<blockquote class="inline_help">
+<p>This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
+<p>Reading and modification will still occur on Primary.</p>
+<p>Only modified files since last sync are synchronized.</p>
+</blockquote>
 
 Show advanced options:
 : <select name='advancedOptions' size='1' class='narrow' onchange="updateScreenMoverAdvancedOptions(this.value, 'slow')">
@@ -478,8 +494,10 @@ Rebalance shares:
 <?=mk_option($cfg['rebalanceShares'],"yes","Yes")?>
 </select>
 
-> This will move files from shares to their primary and secondary storage if spread elsewhere. 
-> May imply moving older files from Primary->Secondary or Secondary->Primary if allowed (cache:prefer or cache:yes) to free some space. 
+<blockquote class="inline_help">
+<p>This will move files from shares to their primary and secondary storage if spread elsewhere.
+<p>May imply moving older files from <strong><em>Primary->Secondary</em></strong> or <strong><em>Secondary->Primary</em></strong> if allowed (cache:prefer or cache:yes) to free some space.
+</blockquote>
 
 Resynchronize all Primary files to Secondary:
 : <select name='resynchronizeCache' size='1' class='narrow'>
@@ -488,9 +506,11 @@ Resynchronize all Primary files to Secondary:
 <?=mk_option($cfg['resynchronizeCache'],"yes","Yes")?>
 </select>
 
-> This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected. 
-> All files will be synchronized again independently of modification time.
-> This can be a long operation. Run-once setting will reset back to No after next run
+<blockquote class="inline_help">
+<p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.
+<p>All files will be synchronized again independently of modification time.
+<p>This can be a long operation. Run-once setting will reset back to No after next run.
+</blockquote>
 
 </div>
 </div>
