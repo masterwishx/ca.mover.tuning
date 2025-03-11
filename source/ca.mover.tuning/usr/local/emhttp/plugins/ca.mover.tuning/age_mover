@@ -822,18 +822,19 @@ createFilteredFilelist() {
                 skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path= $skipped_path" "skipped_path"
                 if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
-                    mvDebuglogger "${skipped_path} exists" "skipped_path"
+                    mvDebuglogger "${skipped_path} - exists" "skipped_path"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
 
                     if [[ -d "${skipped_path}" ]]; then
-                        mvDebuglogger "${skipped_path} is a folder" "skipped_path"
+                        mvDebuglogger "${skipped_path} - is a Folder" "skipped_path"
                         # Add /* at the end for better reading in Mover_action file
                         skipped_path="${skipped_path}/*"
                     fi
 
                     FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
                 else
-                    mvDebuglogger "${skipped_path} does not exist?" "skipped_path"
+                    mvDebuglogger "${skipped_path} - does not exist?" "skipped_path"
+                    continue
                 fi
 
                 if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
