@@ -819,7 +819,9 @@ createFilteredFilelist() {
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
             while IFS= read -r skipped_path; do
                 SKIPPED_PATH_RESERVED_SPACE=""
-                skipped_path="${skipped_path%/}" # Remove potential trailing slash
+                # Remove trailing /, *, /* characters from the skipped_path
+                skipped_path="${skipped_path%"${skipped_path##*[!/*]}"}"
+                #skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path= $skipped_path" "skipped_path"
                 if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
                     mvDebuglogger "${skipped_path} - exists" "skipped_path"
