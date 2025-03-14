@@ -729,7 +729,7 @@ createFilteredFilelist() {
                         CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME")
                         # if error on command then share can be a folder instead dataset
                         if [ $? -ne 0 ]; then
-                            mvlogger "Share is currently a folder. Convert it to a dataset for better performance."
+                            mvlogger "Warning: Share is currently a folder. Convert it to a dataset for better performance."
                             mvlogger "Calculating share usage... (can take a moment)"
                             CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
                         fi
