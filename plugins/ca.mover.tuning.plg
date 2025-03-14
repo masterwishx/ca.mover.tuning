@@ -16,7 +16,7 @@
 
 <CHANGES>
 ###2025.03.11
-- Fixed zfs cache pool percent calculation. Thanks to Renegade605 from forums for the bug report.
+- Fixed zfs cache pool percent calculation. Thanks to Renegade605 from forums for the bug report. **(masterwishx)**
 - Array -> Cache (cache:prefer) now moves data to the cache pool from the array only until reaching a fillup limit of 95%.
     - Thanks to alturismo and Renegade605 from forums, who helped clarify how this feature should work.
     - Disabled override setting for mover tuning if shareUseCache="prefer" (Array -> Cache) is set.
