@@ -30,7 +30,7 @@ If an error occurs in copying a file, the partial file, if present, is deleted a
 
 ## Changelog
 - 2025.03.11
-    - Fixed zfs cache pool percent calculation. Thanks to Renegade605 from forums for the bug report. **(masterwishx)**
+    - Fixed zfs cache pool percent calculation. Thanks to Renegade605 from forums for the bug report. **_(masterwishx)_**
     - Array -> Cache (cache:prefer) now moves data to the cache pool from the array only until reaching a fillup limit of 95%.
         - Thanks to alturismo and Renegade605 from forums, who helped clarify how this feature should work.
         - Disabled override setting for mover tuning if shareUseCache="prefer" (Array->Cache) is set.
@@ -38,7 +38,7 @@ If an error occurs in copying a file, the partial file, if present, is deleted a
     - Fixed ignore file list path setting when folder in list file contains ([). Thanks to JamieBriers from forums for the PR and fix.
 
 - 2025.03.04
-    - Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor. **(masterwishx)**
+    - Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor. **_(masterwishx)_**
     - Fixed Debug = yes/no instead of 0/1 in mover logs.
     - Fixed primary cache prefer not to move data. Set fixed moving threshold to 99% freeing threshold to 0% for skip moving.
       when chache is full set freeing to 98% to move some data. Maybe better fix will be later.
