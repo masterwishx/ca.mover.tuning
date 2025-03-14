@@ -718,14 +718,15 @@ createFilteredFilelist() {
             else
                 # Check if there's only one share in the cache pool
                 ONLY_ONE_SHARE=$(find "/mnt/$PRIMARYSTORAGENAME" -maxdepth 1 -type d -not -path "/mnt/$PRIMARYSTORAGENAME" | wc -l)
-                if [ $ONLY_ONE_SHARE -eq 1 ]; then
+                if [ "$ONLY_ONE_SHARE" -eq 1 ]; then
                     mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
                     mvlogger "Only one share found in cache pool. Skipping cache pool size calculation."
                 else
                     mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
                     mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
                     if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                        CACHESHARERESERVEDSPACE=$(zfs list -Hpo used $PRIMARYSTORAGENAME/$SHARENAME)
+                        mvlogger "Calculating zfs share usage..."
+                        CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME")
                     else
                         mvlogger "Calculating share usage... (can take a moment)"
                         CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
@@ -819,7 +820,7 @@ createFilteredFilelist() {
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
             while IFS= read -r skipped_path; do
                 SKIPPED_PATH_RESERVED_SPACE=""
-                # Remove trailing /, *, /* characters from the skipped_path
+                # Remove potential trailing /, *, /* characters from the skipped_path
                 skipped_path="${skipped_path%"${skipped_path##*[!/*]}"}"
                 #skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path = $skipped_path" "Skipped Path"
