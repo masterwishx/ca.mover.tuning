@@ -24,34 +24,34 @@
 - Fixed ignore file list path setting when folder in list file contains (left square bracket). Thanks to JamieBriers from forums for the PR and fix.
 
 ###2025.03.04
-- Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor.
+- Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor. **_(masterwishx)_**
 - Fixed Debug = yes/no instead of 0/1 in mover logs.
 - Fixed primary cache prefer not to move data. Set fixed moving threshold to 99% freeing threshold to 0% for skip moving.
   when chache is full set freeing to 98% to move some data. Maybe better fix will be later.
 
 ###2025.03.01
-- Fix for (*) in path when cache prefers or RebalanceShare. Thanks to (tehg) from the forums for identifying the bug. [masterwishx]
+- Fix for (*) in path when cache prefers or RebalanceShare. Thanks to (tehg) from the forums for identifying the bug. **_(masterwishx)_**
 - Fix for Clean empty ZFS datset when enabled but Clean empty Folders is disabled.
 - Added Sanitize check for input filenames to prevent attacks. Thanks to (AEnterprise) from forums for identifying the bug.
 - Plugin icon changed.
 
 ###2025.02.24
-- Added log message when no share avalible on cache for ZFS dataset. [masterwishx]
+- Added log message when no share avalible on cache for ZFS dataset. **_(masterwishx)_**
 - Added option with Notifications to Unraid GUI for error and success messages.
 - Fixed issue with (') symbol in ignore File list. Thanks to JayBriers from forums.
 - ATIME option is now added for based on age option.
 - Debug Logging option added (To print find command and ignored folders/files)
 
 ###2025.02.18.1752
-- Check parent empty ZFS dataset for children empty datasets before destroy it. [masterwishx]
+- Check parent empty ZFS dataset for children empty datasets before destroy it. **_(masterwishx)_**
 - Shell Check Fixes + speedup `if` checks.
 - Better help text cosmetic with Bold and italic + added note for Test Mode and some changes in config page.
 - Skip cache pool size calculation when only one share found in cache pool.
 - Changed minimum threshold of used Primary (cache) space from 5% to 0%.
 
 ###2025.02.12.1707
-- Fix issue for shares with spaces.Thanks DToX_ from forums. [masterwishx]
-- Add option to clean ZFS datasets. [masterwishx]
+- Fix issue for shares with spaces.Thanks DToX_ from forums. **_(masterwishx)_**
+- Add option to clean ZFS datasets.
 
 ###2024.09.05.0222
 - Fix find not finding hidden files. Thanks solidno8 from forums. [R3yn4ld]
