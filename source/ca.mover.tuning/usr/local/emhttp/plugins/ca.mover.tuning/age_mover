@@ -603,7 +603,7 @@ createFilteredFilelist() {
             fi
         fi
 
-        # If primary storage share set to cache prefer then set moving threshold and freeing threshold from configuration
+        # If primary storage share set to cache prefer then set moving threshold and fillup static thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             PREFER_MOVINGPCTTHRESHOLD=0
             PREFER_FILLUPPCTLIMIT=95 # in this case: fill upto limit
