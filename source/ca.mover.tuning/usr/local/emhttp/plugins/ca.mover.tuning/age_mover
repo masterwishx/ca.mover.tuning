@@ -604,9 +604,9 @@ createFilteredFilelist() {
         fi
 
         # If primary storage share set to cache prefer then set moving threshold and freeing threshold from configuration
-        if [ "$SHAREUSECACHE" = "prefer" ] && [ "$SECONDARYSTORAGENAME" = "user0" ]; then
-            MOVINGPCTTHRESHOLD=0
-            FREEINGPCTLIMIT=95 # in this case: fill upto limit
+        if [ "$SHAREUSECACHE" = "prefer" ]; then
+            PREFER_MOVINGPCTTHRESHOLD=0
+            PREFER_FILLUPPCTLIMIT=95 # in this case: fill upto limit
         fi
 
         # Find the current percent of used size of pool.
@@ -627,8 +627,13 @@ createFilteredFilelist() {
         fi
 
         # Calculate primary storage size thresholds in bytes
-        PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100))
-        MOVESIZETHRESH=$((POOLSIZE * MOVINGPCTTHRESHOLD / 100))
+        if [ "$SHAREUSECACHE" = "prefer" ]; then
+            PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100))
+            MOVESIZETHRESH=$((POOLSIZE * PREFER_MOVINGPCTTHRESHOLD / 100))
+        else
+            PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100))
+            MOVESIZETHRESH=$((POOLSIZE * MOVINGPCTTHRESHOLD / 100))
+        fi
 
         # Print pool info:
         mvlogger "Primary storage: $PRIMARYSTORAGENAME - size: $(bytes_to_human $POOLSIZE) - used: $POOLPCTUSED % ($(bytes_to_human $POOLBYTEUSED))"
@@ -674,15 +679,15 @@ createFilteredFilelist() {
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
+            mvlogger "Moving threshold: $PREFER_MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $PREFER_FILLUPPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced back to these."
-            elif [ "$POOLPCTUSED" -lt "$FREEINGPCTLIMIT" ]; then
-                mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $FREEINGPCTLIMIT%."
+            elif [ "$POOLPCTUSED" -lt "$PREFER_FILLUPPCTLIMIT" ]; then
+                mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $PREFER_FILLUPPCTLIMIT%."
                 mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold."
                 # Calculate the real free space by considering an upper limit of 95% pool usage for later calculations
-                PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100 - POOLBYTEUSED))
+                PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100 - POOLBYTEUSED))
             # elif [ "$POOLPCTUSED" -gt "$MOVINGPCTTHRESHOLD" ]; then
             #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is above moving threshold percentage: $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
             #     mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
@@ -691,9 +696,9 @@ createFilteredFilelist() {
             #     mvlogger "=> Skipping"
             #     continue
             fi
-        elif [ $SHAREUSECACHE = "yes" ]; then
+        elif [ "$SHAREUSECACHE" = "yes" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
-            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+            if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
             elif [ "$OMOVERTHRESH" != "" ] && [ $POOLPCTUSED -gt $OMOVERTHRESH ]; then
@@ -711,8 +716,8 @@ createFilteredFilelist() {
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is above moving threshold percentage:  $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
                 mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
             fi
-        elif [ $SHAREUSECACHE = "only" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+        elif [ "$SHAREUSECACHE" = "only" ]; then
+            if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
@@ -742,8 +747,8 @@ createFilteredFilelist() {
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human $CACHESHARERESERVEDSPACE)"
                 continue
             fi
-        elif [ $SHAREUSECACHE = "no" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+        elif [ "$SHAREUSECACHE" = "no" ]; then
+            if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:no). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
@@ -815,7 +820,7 @@ createFilteredFilelist() {
         fi
         #Add skipped files and folders
         #FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
-        #        
+        #
         FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
         #
         # Add files from ignore list
