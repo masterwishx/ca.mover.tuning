@@ -139,7 +139,7 @@ Validate input filenames to prevent attacks
 <p> Disable <strong>Only</strong> if you have many files to move and you are <strong>sure</strong> that all filenames are <strong>valid</strong> and do not contain any potential security risks.</p>
 <p> 1. <strong>Check filename length</strong> - If the filename exceeds 255 characters, it will be rejected.</p>
 <p> 2. <strong>Check for invalid characters</strong> - The filename should not contain any characters that are considered invalid for filenames, such as 
-(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> \ </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>).</p>
+(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> | </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>).</p>
 <p> 3. <strong>Prevent path traversal</strong> - The filename should not contain any characters that can be used to traverse directories, such as (<strong><em> ../ </em></strong>).</p>
 <p> If one of these checks fails, the filename will be rejected.</p>
 </blockquote>
@@ -270,6 +270,16 @@ Free down/prime up to this level of used Primary (<em>cache</em>) space:
 <em>Cache → Array</em>
 
 > Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.
+
+Fill up/prime up to this level of used Primary (<em>cache</em>) space:
+: <select name="fillupThreshold" size="1" class='narrow'>
+<?for ($c=95;$c>=0;$c-=5):?>
+<?=mk_option($cfg['fillupThreshold'], $c, "$c %")?>
+<?endfor;?>
+</select>
+<em>Array → Cache</em>
+
+> Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive after the mover has completed its run. Setting this to (<strong><em>95%</em></strong>) means that the mover will continue until <strong><em>95%</em></strong> of the cache pool is filled.
 
 Move files off Primary (<em>cache</em>) based on age?
 : <select name="age" size='1' class='narrow' onchange='$(".myage").toggleAttr("disabled")'>
@@ -464,7 +474,6 @@ Clean empty ZFS datasets
 </select>
 
 > This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
-
 
 Synchronize Primary files to Secondary
 : <select name='synchronizeCache' size='1' class='narrow'>

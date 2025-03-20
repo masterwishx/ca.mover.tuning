@@ -13,14 +13,14 @@ mvlogger() {
 }
 
 function titleLine() {
-  local title="$1"
-  local padding_char="$2"
-  local line_length=71
-  local padding_left=$((line_length - ${#title} / 2))
-  local padding_right=$(( padding_left - ${#title} % 2 -1 ))
-  local left_padding=$(printf "%*s" "$padding_left" | tr ' ' "$padding_char")
-  local right_padding=$(printf "%*s" "$padding_right" | tr ' ' "$padding_char")
-  echo "${left_padding}$padding_char $title $padding_char${right_padding}"
+    local title="$1"
+    local padding_char="$2"
+    local line_length=71
+    local padding_left=$((line_length - ${#title} / 2))
+    local padding_right=$((padding_left - ${#title} % 2 - 1))
+    local left_padding=$(printf "%*s" "$padding_left" | tr ' ' "$padding_char")
+    local right_padding=$(printf "%*s" "$padding_right" | tr ' ' "$padding_char")
+    echo "${left_padding}$padding_char $title $padding_char${right_padding}"
 }
 
 #Moved variable assignment into a function
@@ -32,9 +32,12 @@ getMoverSettings() {
         local param="$1"
         local value
         while IFS='=' read -r key val; do
-        [ "$key" == "$param" ] && { value="$val"; break; }
-        done < "$config_file"
-        echo "${value//\"/}"  # Print value or empty string if not found, without quotes
+            [ "$key" == "$param" ] && {
+                value="$val"
+                break
+            }
+        done <"$config_file"
+        echo "${value//\"/}" # Print value or empty string if not found, without quotes
     }
 
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
@@ -45,12 +48,12 @@ getMoverSettings() {
     fi
 
     ## [[ ! "$config_file" =~ shareOverrideConfig ]] ensure that we are not reading share custom settings
-    
+
     if [ -z $(cfg enableTurbo) ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]] ;then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Turbo Mode argument provided, defaulting to no"
             ENABLETURBO="no"
-            echo 'enableTurbo="no"' >> $config_file
+            echo 'enableTurbo="no"' >>$config_file
         fi
     else
         ENABLETURBO=$(cfg enableTurbo)
@@ -58,9 +61,9 @@ getMoverSettings() {
     fi
 
     if [ -z $(cfg testmode) ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]] ;then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Test Mode argument provided, defaulting to yes"
-            echo 'testmode="yes"' >> $config_file
+            echo 'testmode="yes"' >>$config_file
             TESTMODE="yes"
         fi
     else
@@ -70,32 +73,30 @@ getMoverSettings() {
 
 }
 
-
-if [ -f $UNRAIDCFGFILE ] ; then
-        if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE ; then
-                mvlogger "cache not enabled"
-                exit 2
-        fi
-        if grep -qs 'shareMoverLogging="yes"' $UNRAIDCFGFILE ; then
-                LOGLEVEL=1
-                mvlogger "Log Level: $LOGLEVEL"
-        fi
+if [ -f $UNRAIDCFGFILE ]; then
+    if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE; then
+        mvlogger "cache not enabled"
+        exit 2
+    fi
+    if grep -qs 'shareMoverLogging="yes"' $UNRAIDCFGFILE; then
+        LOGLEVEL=1
+        mvlogger "Log Level: $LOGLEVEL"
+    fi
 fi
 
 mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
 
-
 #Test input variables
-if [ -z "$1" ] ; then
-        mvlogger "No Share Argument Supplied"
-        exit 2
+if [ -z "$1" ]; then
+    mvlogger "No Share Argument Supplied"
+    exit 2
 else
-        SHARENAME=$1
-        SHARECFG="/boot/config/shares/${SHARENAME}.cfg"
+    SHARENAME=$1
+    SHARECFG="/boot/config/shares/${SHARENAME}.cfg"
 fi
 
-if [ -f $PIDFILE ] ; then
-    if ps h $(cat $PIDFILE) | grep mover ; then
+if [ -f $PIDFILE ]; then
+    if ps h $(cat $PIDFILE) | grep mover; then
         mvlogger "already running"
         exit 1
     fi
@@ -103,32 +104,32 @@ fi
 
 # Only start if config OK
 if [ -f $UNRAIDCFGFILE ]; then
-        if grep -qs 'shareMoverLogging="yes"' $UNRAIDCFGFILE; then
-            mvlogger "Log Level: $LOGLEVEL"
-        fi
-else 
-        mvlogger "Fatal error: $UNRAIDCFGFILE does not exist, check this."
-        rm $SOFTSTOPFILE
-        exit 2
+    if grep -qs 'shareMoverLogging="yes"' $UNRAIDCFGFILE; then
+        mvlogger "Log Level: $LOGLEVEL"
+    fi
+else
+    mvlogger "Fatal error: $UNRAIDCFGFILE does not exist, check this."
+    rm $SOFTSTOPFILE
+    exit 2
 fi
 if [ -f $MOVERTUNINGCFGFILE ]; then
-        #Get Mover Tuning Settings
-        mvlogger "$(titleLine "Global settings" '-')"
-        getMoverSettings $MOVERTUNINGCFGFILE
+    #Get Mover Tuning Settings
+    mvlogger "$(titleLine "Global settings" '-')"
+    getMoverSettings $MOVERTUNINGCFGFILE
 else
-        mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this."
-        rm $SOFTSTOPFILE
-        exit 3
+    mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this."
+    rm $SOFTSTOPFILE
+    exit 3
 fi
 
 # Only start if cache enabled and present
-if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $( ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
-        mvlogger "Fatal error: cache not enabled and less than 2 pools set up."
-        exit 4
+if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
+    mvlogger "Fatal error: cache not enabled and less than 2 pools set up."
+    exit 4
 fi
-if ! mountpoint -q /mnt/user0 && [ $( ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
-        mvlogger "Fatal error: cache not present, or only cache present, and less than 2 pools set up."
-        exit 5
+if ! mountpoint -q /mnt/user0 && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
+    mvlogger "Fatal error: cache not present, or only cache present, and less than 2 pools set up."
+    exit 5
 fi
 
 echo $$ >/var/run/mover.pid
@@ -136,76 +137,102 @@ echo $$ >/var/run/mover.pid
 shopt -s nullglob
 
 mvlogger "$(titleLine "Processing $SHARENAME share" '-')"
-if grep -qs 'shareUseCache="yes"' "$SHARECFG" ; then
-        mvlogger "Sharecfg: $SHARECFG"
-        # Determine primary storage
-        PRIMARYSTORAGENAME=$(grep "shareCachePool=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
-        if [ -z "$PRIMARYSTORAGENAME" ]; then
-            PRIMARYSTORAGENAME="user0"
-        fi
-        # Check if the storage exists
-        if [ ! -d "/mnt/$PRIMARYSTORAGENAME" ]; then
-            # Do not process this pool if path does not exist
-            mvlogger "/mnt/$PRIMARYSTORAGENAME does not exist. Is the pool still used? Consider removing $SHARECFG if not."
-            mvlogger "=> Skipping"
-            exit  # Move to the next iteration of the loop
-        fi
+if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
+    mvlogger "Sharecfg: $SHARECFG"
 
-        # Determine secondary storage
-        SECONDARYSTORAGENAME=$(grep "shareCachePool2=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
-        if [ -z "$SECONDARYSTORAGENAME" ]; then
-            if [ $SHAREUSECACHE = "only" ] || [ $SHAREUSECACHE = "no" ]; then
-                SECONDARYSTORAGENAME="none"
-            else
-                SECONDARYSTORAGENAME="user0"
-            fi
-        fi
+    # Determine Cache mode
+    SHAREUSECACHE=$(grep shareUseCache "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
 
-        # Print pool info:
-        mvlogger "Primary storage: $PRIMARYSTORAGENAME"
-        mvlogger "Secondary storage: $SECONDARYSTORAGENAME"
-        
-        # Determine sharepath
-        SHAREPATH="/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
+    # Determine primary storage
+    PRIMARYSTORAGENAME=$(grep "shareCachePool=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+    if [ -z "$PRIMARYSTORAGENAME" ]; then
+        PRIMARYSTORAGENAME="user0"
+    fi
+    # Check if the storage exists
+    if [ ! -d "/mnt/$PRIMARYSTORAGENAME" ]; then
+        # Do not process this pool if path does not exist
+        mvlogger "/mnt/$PRIMARYSTORAGENAME does not exist. Is the pool still used? Consider removing $SHARECFG if not."
+        mvlogger "=> Skipping"
+        exit # Move to the next iteration of the loop
+    fi
 
-        mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
-        if [ ! -d "$SHAREPATH" ]; then  # && [ $SHAREUSECACHE != "no" ]
-                # Do not process this pool if path does not exist
-                mvlogger "$SHAREPATH does not exist or is empty."
-                mvlogger "=> Skipping"
+    # Determine secondary storage
+    SECONDARYSTORAGENAME=$(grep "shareCachePool2=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+    if [ -z "$SECONDARYSTORAGENAME" ]; then
+        if [ $SHAREUSECACHE = "only" ] || [ $SHAREUSECACHE = "no" ]; then
+            SECONDARYSTORAGENAME="none"
         else
-                mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
-                if [ $ENABLETURBO = "yes" ] ; then
-                        mvlogger "Forcing turbo write on"
-                        [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
-                fi
-
-
-                FINDSTR="find \"$SHAREPATH\" -depth"
-
-                if [ "$TESTMODE" = "yes" ] ; then
-                        mvlogger "Running in Test Mode: $FINDSTR"
-                        eval "$FINDSTR"
-                else
-                        #Add Mover to find string
-                        FINDSTR+=" | $([ -f /usr/libexec/unraid/move ] && echo /usr/libexec/unraid/move || which move) -d $LOGLEVEL"
-                        mvlogger "Complete Mover Command: $FINDSTR"
-                        eval " $FINDSTR"
-                fi
-
-                if [ $ENABLETURBO = "yes" ] ; then
-                        turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
-                        mvlogger "Restoring original turbo write mode $( ( [ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)" ) || ( [ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)" ) || echo "Read/modify/write" )"
-                        [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
-                fi
-
+            SECONDARYSTORAGENAME="user0"
         fi
-  fi
+    fi
 
+    # Print pool info:
+    mvlogger "Primary storage: $PRIMARYSTORAGENAME"
+    mvlogger "Secondary storage: $SECONDARYSTORAGENAME"
+
+    # Determine sharepath
+    if [ "$SHAREUSECACHE" = "prefer" ]; then
+        SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
+    else
+        SHAREPATH="/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
+    fi
+
+    mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
+    if [ ! -d "$SHAREPATH" ]; then # && [ $SHAREUSECACHE != "no" ]
+        # Do not process this pool if path does not exist
+        mvlogger "$SHAREPATH does not exist or is empty."
+        mvlogger "=> Skipping"
+    else
+        mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
+        if [ $ENABLETURBO = "yes" ]; then
+            mvlogger "Forcing turbo write on"
+            [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
+        fi
+
+        #Base Find String
+        # Alterate SHAREPATH on Cache=prefer
+        if [ "$SHAREUSECACHE" = "prefer" ]; then
+            #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
+
+            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
+            # Initialize FINDSTR with the base find command
+            FINDSTR="find"
+            # Iterate over all directories in /mnt/*
+            for dir in /mnt/*; do
+                # Check if the directory contains a subdirectory named $SHARENAME
+                if [ -d "$dir/$SHARENAME" ]; then
+                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
+                    FINDSTR+=" \"$dir/$SHARENAME\""
+                fi
+            done
+            # Add the depth option at the end
+            FINDSTR+=" -type f -not -path '/mnt/user*' -depth"
+        else
+            FINDSTR="find \"${SHAREPATH}\" -type f -depth"
+        fi
+
+        if [ "$TESTMODE" = "yes" ]; then
+            mvlogger "Running in Test Mode: $FINDSTR"
+            eval "${FINDSTR}"
+        else
+            #Add Mover to find string
+            FINDSTR="${FINDSTR} | $([ -f /usr/libexec/unraid/move ] && echo /usr/libexec/unraid/move || which move) -d $LOGLEVEL"
+            mvlogger "Complete Mover Command: $FINDSTR"
+            eval " ${FINDSTR}"
+        fi
+
+        if [ $ENABLETURBO = "yes" ]; then
+            turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
+            mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
+            [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
+        fi
+
+    fi
+fi
 
 mvlogger "Cleaning lock file"
 for file in $PIDFILE; do
-        [[ -e "$file" ]] && rm -f "$file"
+    [[ -e "$file" ]] && rm -f "$file"
 done
 
 mvlogger "$(titleLine 'WE ARE DONE !' '*')"

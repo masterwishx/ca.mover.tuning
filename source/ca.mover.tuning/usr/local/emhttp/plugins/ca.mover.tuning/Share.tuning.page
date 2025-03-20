@@ -67,10 +67,178 @@ $(function() {
 <input type="hidden" name="#file" value="<?=$shareCFG?>">
 
 <? if ($shareName != ""): ?>
-<? if (strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="no"') !== false || strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="only"') !== false || strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="prefer"') !== false): ?>
+<? if (strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="no"') !== false || strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="only"') !== false): ?>
 <div markdown="1" class="shade-<?=$display['theme']?>">
 _(Mover Tuning settings not available for this share.)_
 </div>
+<? elseif (strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="prefer"') !== false): ?>
+
+<div markdown="1" class="shade-<?=$display['theme']?>">
+_(Override Mover Tuning settings for this share)_:
+: <select name="moverOverride" onchange="updateScreenMoverTuning(this.value, 'slow')">
+  <?= mk_option($cfg['moverOverride'], 'no', 'No') ?>
+  <?= mk_option($cfg['moverOverride'], 'yes', 'Yes') ?>
+  </select>
+  
+<!--:mover_tuning_override_help:-->
+> Select **Yes** to override the primary Mover Tuning settings for this share.
+
+<div markdown="1" id="moverSettings">
+_(Fill up to this level of used Primary (<em>cache</em>) space)_:
+: <select name="fillupThreshold" size="1" class='narrow'>
+<?for ($c=95;$c>=0;$c-=5):?>
+<?=mk_option($cfg['fillupThreshold'], $c, "$c %")?>
+<?endfor;?>
+</select>
+
+> Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive after the mover has completed its run. Setting this to (<strong><em>95%</em></strong>) means that the mover will continue until <strong><em>95%</em></strong> of the cache pool is filled.
+
+_(Move files to Primary (<em>cache</em>) based on age)_:
+: <select name="age" onchange='$(".myage").toggleAttr("disabled")'>
+  <?= mk_option($cfg['age'], 'no', 'No') ?>
+  <?= mk_option($cfg['age'], 'yes', 'Yes') ?>
+  </select>
+
+<!--:mover_tuning_age_help:-->
+> Select **Yes** to move files to the Primary (cache) based on their age (in **days**).
+
+_(Only move files that are older than this (in days))_:
+: <select name="daysold" class='myage' <?= $ageDisabled ?>>
+  <?= mk_option($cfg['daysold'], -1, "Auto")?>
+  <?= mk_option($cfg['daysold'], 1, "1") ?>
+  <?= mk_option($cfg['daysold'], 2, "2") ?>
+  <?= mk_option($cfg['daysold'], 3, "3") ?>
+  <?= mk_option($cfg['daysold'], 4, "4") ?>
+  <?= mk_option($cfg['daysold'], 5, "5") ?>
+  <?= mk_option($cfg['daysold'], 6, "6") ?>
+  <?= mk_option($cfg['daysold'], 7, "7") ?>
+  <?= mk_option($cfg['daysold'], 8, "8") ?>
+  <?= mk_option($cfg['daysold'], 9, "9") ?>
+  <? for ($dt = 10; $dt < 770; $dt += 5): ?>
+  <?= mk_option($cfg['daysold'], $dt, "$dt") ?>
+  <? endfor; ?>
+  </select>
+
+<!--:mover_tuning_min_age_help:-->
+> Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+
+_(Use CTIME)_:
+: <select name="ctime" class='myage' <?= $ageDisabled ?>>
+  <?= mk_option($cfg['ctime'], 'no', 'No') ?>
+  <?= mk_option($cfg['ctime'], 'yes', 'Yes') ?>
+  </select>
+
+<!--:mover_tuning_ctime_help:-->
+> Select **Yes** to use CTIME instead of MTIME in the find command.
+
+_(Move files based on size)_:
+: <select name="sizef" onchange='$(".mysizef").toggleAttr("disabled")'>
+  <?= mk_option($cfg['sizef'], 'no', 'No') ?>
+  <?= mk_option($cfg['sizef'], 'yes', 'Yes') ?>
+  </select>
+
+<!--:mover_tuning_size_help:-->
+> Select **Yes** to move files based on their file size.
+
+_(Only move files larger than this (in MB))_:
+: <select name="sizeinM" size="1" class='mysizef' <?= $sizefDisabled ?>>
+  <?= mk_option($cfg['sizeinM'], 1, "1") ?>
+  <?= mk_option($cfg['sizeinM'], 2, "2") ?>
+  <?= mk_option($cfg['sizeinM'], 3, "3") ?>
+  <?= mk_option($cfg['sizeinM'], 4, "4") ?>
+  <?= mk_option($cfg['sizeinM'], 5, "5") ?>
+  <?= mk_option($cfg['sizeinM'], 6, "6") ?>
+  <?= mk_option($cfg['sizeinM'], 7, "7") ?>
+  <?= mk_option($cfg['sizeinM'], 8, "8") ?>
+  <?= mk_option($cfg['sizeinM'], 9, "9") ?>
+  <?= mk_option($cfg['sizeinM'], 10, "10") ?>
+  <?= mk_option($cfg['sizeinM'], 11, "11") ?>
+
+  <? for ($ds = 12; $ds < 1026; $ds += 2): ?>
+  <?= mk_option($cfg['sizeinM'], $ds, "$ds") ?>
+  <? endfor; ?>
+  </select>
+
+<!--:mover_tuning_min_size_help:-->
+> Select the minimum size a file has to be to get moved (in **Megabytes**).
+
+_(Move files based on sparseness)_:
+: <select name="sparsenessf" onchange='$(".mysparsenessf").toggleAttr("disabled")'>
+  <?= mk_option($cfg['sparsenessf'], 'no', 'No') ?>
+  <?= mk_option($cfg['sparsenessf'], 'yes', 'Yes') ?>
+  </select>
+
+<!--:mover_tuning_sparseness_help:-->
+> Select **Yes** to move files based on their sparseness.
+
+_(Move files that are greater than this sparseness)_:
+: <select name='sparsenessv' class='mysparsenessf' <?= $sparsenessfDisabled ?>>
+  <?= mk_option($cfg['sparsenessv'], 1, "0.1") ?>
+	<?= mk_option($cfg['sparsenessv'], 2, "0.2") ?>
+	<?= mk_option($cfg['sparsenessv'], 3, "0.3") ?>
+	<?= mk_option($cfg['sparsenessv'], 4, "0.4") ?>
+	<?= mk_option($cfg['sparsenessv'], 5, "0.5") ?>
+	<?= mk_option($cfg['sparsenessv'], 6, "0.6") ?>
+	<?= mk_option($cfg['sparsenessv'], 7, "0.7") ?>
+	<?= mk_option($cfg['sparsenessv'], 8, "0.8") ?>
+	<?= mk_option($cfg['sparsenessv'], 9, "0.9") ?>
+  </select>
+
+<!--:mover_tuning_min_sparseness_help:-->
+> Select the minimum sparseness a file has to be to get moved.
+
+_(Skip files listed in text file)_:
+: <select name='filelistf' onchange='$(".myfilelistf").toggleAttr("disabled")'>
+  <?= mk_option($cfg['filelistf'], "no", 'No') ?>
+  <?= mk_option($cfg['filelistf'], "yes", "Yes") ?>
+  </select>
+
+<!--:mover_tuning_file_list_help:-->
+> Select **Yes** to skip files which have been listed in a specified text file.
+
+_(File list path)_:
+: <input type='text' name='filelistv' class='myfilelistf' value='<?= $cfg['filelistv'] ?>' <?= $filelistfDisabled ?>>
+
+<!--:mover_tuning_file_list_path_help:-->
+> Specify the full path to a text file that contains the list of files the mover should skip.
+
+_(Skip file types)_:
+: <select name='filetypesf' onchange='$(".myfiletypesf").toggleAttr("disabled")'>
+  <?= mk_option($cfg['filetypesf'], "no", 'No') ?>
+  <?= mk_option($cfg['filetypesf'], "yes", "Yes") ?>
+  </select>
+
+<!--:mover_tuning_file_type_help:-->
+> Select **Yes** to skip specific file types in addition to those selected globally.
+
+_(Comma separated list of file types)_:
+: <input type='text' name='filetypesv' class='myfiletypesf' value='<?= $cfg['filetypesv'] ?>' <?= $filetypesfDisabled ?>>
+
+<!--:mover_tuning_file_type_delimited_help:-->
+> Specify the file types to be skipped, separated by a comma (e.g. **".txt,.mp3,.pdf"**).
+
+Ignore All hidden files and directories
+: <select name='ignoreHidden'>
+  <?= mk_option($cfg['ignoreHidden'], "no", "No") ?>
+  <?= mk_option($cfg['ignoreHidden'], "yes", "Yes") ?>
+  </select>
+
+<!--:mover_tuning_hidden_files_help:-->
+> Select **Yes** to skip all hidden files and directories (starting with **"."**).
+
+</div>
+</div>
+
+&nbsp;
+: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+
+<div markdown="1" class="shade-<?=$display['theme']?>">
+_(Move **ALL** files to current pool (wont use mover settings))_:
+: <input type="button" id="MoveShare" value="Move Now" onclick="moveShareNow()">
+
+> Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Secondary->Primary_** storage space, disregarding any existing mover settings.
+</div>
+
 <? elseif (strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="yes"') !== false): ?>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
@@ -268,8 +436,9 @@ Move All from Primary->Secondary (cache:yes) shares pool percentage:
 <div markdown="1" class="shade-<?=$display['theme']?>">
 _(Move **ALL** files from current pool (wont use mover settings))_:
 : <input type="button" id="MoveShare" value="Move Now" onclick="moveShareNow()">
+
+> Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Primary->Secondary_** storage space, disregarding any existing mover settings.
 </div>
-> Clicking the **"Move Now"** button will invoke the mover for only this share. It will move the entire share to the array ignoring any mover settings.
 
 <? else: ?>
 <div markdown="1" class="shade-<?=$display['theme']?>">

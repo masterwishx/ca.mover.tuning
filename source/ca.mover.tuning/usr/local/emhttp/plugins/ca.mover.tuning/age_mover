@@ -206,7 +206,7 @@ getMoverSettings() {
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
 
     if [[ ! -f "$config_file" ]]; then
-        mvlogger "Error: Config file '$config_file' not found."
+        mvlogger "Error: Config file '$config_file' not found." "failure"
         return 1
     fi
 
@@ -216,10 +216,10 @@ getMoverSettings() {
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
         [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=0
-        mvlogger "Using global (cache) moving threshold: $MOVINGPCTTHRESHOLD %"
+        mvlogger "Using global (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
     elif [ -n "$(cfg movingThreshold)" ]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
-        mvlogger "Using share (cache) moving threshold: $MOVINGPCTTHRESHOLD %"
+        mvlogger "Using share (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
     fi
 
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -228,10 +228,24 @@ getMoverSettings() {
             FREEINGPCTLIMIT=$MOVINGPCTTHRESHOLD
             echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
         fi
-        mvlogger "Using global (cache) freeing threshold: $FREEINGPCTLIMIT %"
+        mvlogger "Using global (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
     elif [ -n "$(cfg freeingThreshold)" ]; then
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
-        mvlogger "Using share (cache) freeing threshold: $FREEINGPCTLIMIT %"
+        mvlogger "Using share (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
+    fi
+
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        PREFER_FILLUPPCTLIMIT=$(cfg fillupThreshold)
+        if [ -z $PREFER_FILLUPPCTLIMIT ]; then
+            PREFER_FILLUPPCTLIMIT=95
+            PREFER_MOVINGPCTTHRESHOLD=0
+            echo "fillupThreshold=\"$PREFER_FILLUPPCTLIMIT\"" >>$config_file
+        fi
+        mvlogger "Using global (cache:prefer) fillup threshold: $PREFER_FILLUPPCTLIMIT %"
+    elif [ -n "$(cfg fillupThreshold)" ]; then
+        PREFER_FILLUPPCTLIMIT=$(cfg fillupThreshold)
+        PREFER_MOVINGPCTTHRESHOLD=0
+        mvlogger "Using share (cache:prefer) fillup threshold: $PREFER_FILLUPPCTLIMIT %"
     fi
 
     # Read other thresholds
@@ -560,11 +574,11 @@ createFilteredFilelist() {
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
         if [ -f "/boot/config/plugins/ca.mover.tuning/shareOverrideConfig/$SHARENAME.cfg" ]; then
             SHARETUNINGFILE="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig/$SHARENAME.cfg"
-            if grep -qs 'moverOverride="yes"' $SHARETUNINGFILE; then
+            if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
                 overrideFlag=1
                 mvlogger "Settings override:"
                 mvlogger "------------------"
-                getMoverSettings $SHARETUNINGFILE
+                getMoverSettings "$SHARETUNINGFILE"
                 mvlogger "------------------------------------------------------------------------"
             fi
         elif [ $overrideFlag = 1 ]; then
@@ -603,12 +617,6 @@ createFilteredFilelist() {
             fi
         fi
 
-        # If primary storage share set to cache prefer then set moving threshold and freeing threshold from configuration
-        if [ "$SHAREUSECACHE" = "prefer" ] && [ "$SECONDARYSTORAGENAME" = "user0" ]; then
-            MOVINGPCTTHRESHOLD=0
-            FREEINGPCTLIMIT=95 # in this case: fill upto limit
-        fi
-
         # Find the current percent of used size of pool.
         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
             #mvlogger "$PRIMARYSTORAGENAME is zfs."
@@ -627,15 +635,20 @@ createFilteredFilelist() {
         fi
 
         # Calculate primary storage size thresholds in bytes
-        PRIMARYSIZETHRESH=$(($POOLSIZE * $FREEINGPCTLIMIT / 100))
-        MOVESIZETHRESH=$(($POOLSIZE * $MOVINGPCTTHRESHOLD / 100))
+        if [ "$SHAREUSECACHE" = "prefer" ]; then
+            PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100))
+            MOVESIZETHRESH=$((POOLSIZE * PREFER_MOVINGPCTTHRESHOLD / 100))
+        else
+            PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100))
+            MOVESIZETHRESH=$((POOLSIZE * MOVINGPCTTHRESHOLD / 100))
+        fi
 
         # Print pool info:
         mvlogger "Primary storage: $PRIMARYSTORAGENAME - size: $(bytes_to_human $POOLSIZE) - used: $POOLPCTUSED % ($(bytes_to_human $POOLBYTEUSED))"
         mvlogger "Secondary storage: $SECONDARYSTORAGENAME"
 
         # Count number of storage pools on system for this share:
-        if [ $PRIMARYSTORAGENAME = "user0" ] || [ $SECONDARYSTORAGENAME = "user0" ]; then
+        if [ "$PRIMARYSTORAGENAME" = "user0" ] || [ "$SECONDARYSTORAGENAME" = "user0" ]; then
             UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
                 -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
                 -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
@@ -674,15 +687,15 @@ createFilteredFilelist() {
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
+            mvlogger "Moving threshold: $PREFER_MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $PREFER_FILLUPPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced back to these."
-            elif [ "$POOLPCTUSED" -lt "$FREEINGPCTLIMIT" ]; then
-                mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $FREEINGPCTLIMIT%."
+            elif [ "$POOLPCTUSED" -lt "$PREFER_FILLUPPCTLIMIT" ]; then
+                mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $PREFER_FILLUPPCTLIMIT%."
                 mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold."
                 # Calculate the real free space by considering an upper limit of 95% pool usage for later calculations
-                PRIMARYSIZETHRESH=$(($POOLSIZE * $FREEINGPCTLIMIT / 100 - $POOLBYTEUSED))
+                PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100 - POOLBYTEUSED))
             # elif [ "$POOLPCTUSED" -gt "$MOVINGPCTTHRESHOLD" ]; then
             #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is above moving threshold percentage: $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
             #     mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
@@ -691,9 +704,9 @@ createFilteredFilelist() {
             #     mvlogger "=> Skipping"
             #     continue
             fi
-        elif [ $SHAREUSECACHE = "yes" ]; then
+        elif [ "$SHAREUSECACHE" = "yes" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
-            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+            if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
             elif [ "$OMOVERTHRESH" != "" ] && [ $POOLPCTUSED -gt $OMOVERTHRESH ]; then
@@ -711,21 +724,28 @@ createFilteredFilelist() {
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is above moving threshold percentage:  $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
                 mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
             fi
-        elif [ $SHAREUSECACHE = "only" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+        elif [ "$SHAREUSECACHE" = "only" ]; then
+            if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
                 # Check if there's only one share in the cache pool
                 ONLY_ONE_SHARE=$(find "/mnt/$PRIMARYSTORAGENAME" -maxdepth 1 -type d -not -path "/mnt/$PRIMARYSTORAGENAME" | wc -l)
-                if [ $ONLY_ONE_SHARE -eq 1 ]; then
+                if [ "$ONLY_ONE_SHARE" -eq 1 ]; then
                     mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
                     mvlogger "Only one share found in cache pool. Skipping cache pool size calculation."
                 else
                     mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
                     mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
                     if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                        CACHESHARERESERVEDSPACE=$(zfs list -Hpo used $PRIMARYSTORAGENAME/$SHARENAME)
+                        mvlogger "Calculating zfs share usage..."
+                        CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME")
+                        # if error on command then share can be a folder instead dataset
+                        if [ $? -ne 0 ]; then
+                            mvlogger "Warning: Share is currently a folder. Convert it to a dataset for better performance."
+                            mvlogger "Calculating share usage... (can take a moment)"
+                            CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                        fi
                     else
                         mvlogger "Calculating share usage... (can take a moment)"
                         CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
@@ -735,8 +755,8 @@ createFilteredFilelist() {
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human $CACHESHARERESERVEDSPACE)"
                 continue
             fi
-        elif [ $SHAREUSECACHE = "no" ]; then
-            if [ $REBALANCESHARES = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+        elif [ "$SHAREUSECACHE" = "no" ]; then
+            if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:no). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME. They will be rebalanced to $PRIMARYSTORAGENAME"
             else
@@ -809,7 +829,6 @@ createFilteredFilelist() {
         #Add skipped files and folders
         #FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
         #
-        #Needs test !!!!!!!!!!
         FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
         #
         # Add files from ignore list
@@ -819,21 +838,26 @@ createFilteredFilelist() {
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
             while IFS= read -r skipped_path; do
                 SKIPPED_PATH_RESERVED_SPACE=""
-                skipped_path="${skipped_path%/}" # Remove potential trailing slash
-                mvDebuglogger "skipped_path= $skipped_path" "skipped_path"
+                # Remove potential trailing /, *, /* characters from the skipped_path
+                skipped_path="${skipped_path%"${skipped_path##*[!/*]}"}"
+                #skipped_path="${skipped_path%/}" # Remove potential trailing slash
+                mvDebuglogger "skipped_path = $skipped_path" "Skipped Path"
                 if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
-                    mvDebuglogger "${skipped_path} exists" "skipped_path"
+                    mvDebuglogger "${skipped_path} - exists" "Skipped Path"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
 
                     if [[ -d "${skipped_path}" ]]; then
-                        mvDebuglogger "${skipped_path} is a folder" "skipped_path"
+                        mvDebuglogger "${skipped_path} - is a Folder" "Skipped Path"
                         # Add /* at the end for better reading in Mover_action file
                         skipped_path="${skipped_path}/*"
+                    elif [[ -f "${skipped_path}" ]]; then
+                        mvDebuglogger "${skipped_path} - is a File" "Skipped Path"
                     fi
 
                     FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
                 else
-                    mvDebuglogger "${skipped_path} does not exist?" "skipped_path"
+                    mvDebuglogger "${skipped_path} - does not exist?" "Skipped Path"
+                    continue
                 fi
 
                 if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
@@ -998,7 +1022,7 @@ decideMoveActions() {
     fi
 
     ## Loop Filtered Filelist and for each file decide to move to/from the array
-    mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep "/mnt" $FILTERED_FILELIST | wc -l) files, it can take a while..."
+    mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep "/mnt" "$FILTERED_FILELIST" | wc -l) files, it can take a while..."
 
     ## Proceed with files
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
@@ -1182,7 +1206,7 @@ decideMoveActions() {
     # Add total files and size
     TOTALFILES=$((TOTALPRIMARYFILES + TOTALSECONDARYFILES + TOTALUNATTENDEDFILES))
     TOTALSIZE=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
-    UNATTENDEDFILES=$(grep "keep misplaced" $MOVER_ACTIONLIST | wc -l)
+    UNATTENDEDFILES=$(grep "keep misplaced" "$MOVER_ACTIONLIST" | wc -l)
 
     # Print stats
     if [ $UNATTENDEDFILES -gt 0 ]; then
@@ -1283,7 +1307,7 @@ processTheMoves() {
             # Check File by validate function and skip if error
             if [ $VALIDATE_FILENAMES = "yes" ]; then
                 if ! validate_filename "$(basename "$FILEPATH")"; then
-                    mvlogger "Error: Invalid filename path: '$FILEPATH'"
+                    mvlogger "Error: Invalid filename path: '$FILEPATH'" "failure"
                     continue
                 #else
                 #    mvlogger "Valid filename"
@@ -1395,7 +1419,7 @@ processTheMoves() {
 
     mvlogger "$(titleLine "Cleaning up" '-')"
 
-    if [ $TESTMODE != "yes" ] && [ ! -e $SOFTSTOPFILE ] && grep -q "|sync from" $MOVER_ACTIONLIST; then
+    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
         mvlogger "Set last sync date in config file: $EPOCH = $NOW"
         if grep -q "lastCacheSync=" "$MOVERTUNINGCFGFILE"; then
