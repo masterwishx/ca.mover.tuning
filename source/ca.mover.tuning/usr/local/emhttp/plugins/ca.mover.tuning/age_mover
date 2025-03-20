@@ -216,10 +216,10 @@ getMoverSettings() {
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
         [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=0
-        mvlogger "Using global (cache) moving threshold: $MOVINGPCTTHRESHOLD %"
+        mvlogger "Using global (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
     elif [ -n "$(cfg movingThreshold)" ]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
-        mvlogger "Using share (cache) moving threshold: $MOVINGPCTTHRESHOLD %"
+        mvlogger "Using share (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
     fi
 
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -228,10 +228,24 @@ getMoverSettings() {
             FREEINGPCTLIMIT=$MOVINGPCTTHRESHOLD
             echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
         fi
-        mvlogger "Using global (cache) freeing threshold: $FREEINGPCTLIMIT %"
+        mvlogger "Using global (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
     elif [ -n "$(cfg freeingThreshold)" ]; then
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
-        mvlogger "Using share (cache) freeing threshold: $FREEINGPCTLIMIT %"
+        mvlogger "Using share (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
+    fi
+
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        PREFER_FILLUPPCTLIMIT=$(cfg fillupThreshold)
+        if [ -z $PREFER_FILLUPPCTLIMIT ]; then
+            PREFER_FILLUPPCTLIMIT=95
+            PREFER_MOVINGPCTTHRESHOLD=0
+            echo "fillupThreshold=\"$PREFER_FILLUPPCTLIMIT\"" >>$config_file
+        fi
+        mvlogger "Using global (cache:prefer) fillup threshold: $PREFER_FILLUPPCTLIMIT %"
+    elif [ -n "$(cfg fillupThreshold)" ]; then
+        PREFER_FILLUPPCTLIMIT=$(cfg fillupThreshold)
+        PREFER_MOVINGPCTTHRESHOLD=0
+        mvlogger "Using share (cache:prefer) fillup threshold: $PREFER_FILLUPPCTLIMIT %"
     fi
 
     # Read other thresholds
@@ -601,12 +615,6 @@ createFilteredFilelist() {
             else
                 SECONDARYSTORAGENAME="user0"
             fi
-        fi
-
-        # If primary storage share set to cache prefer then set moving threshold and fillup static thresholds
-        if [ "$SHAREUSECACHE" = "prefer" ]; then
-            PREFER_MOVINGPCTTHRESHOLD=0
-            PREFER_FILLUPPCTLIMIT=95 # in this case: fill upto limit
         fi
 
         # Find the current percent of used size of pool.
