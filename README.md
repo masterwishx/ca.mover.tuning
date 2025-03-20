@@ -31,7 +31,7 @@ If an error occurs in copying a file, the partial file, if present, is deleted a
 ## Changelog
 - 2025.03.20
     - fix: Added zfs cache:only share calculation when share is folder instead of dataset. Thanks to Sak from forums for the bug report. **_(masterwishx)_**
-    - fix: Added remove potential trailing ( /, *, /* ) characters from the skipped folder path in ignore file list path.
+    - fix: Added remove potential trailing ( \/, \*, \/\* ) characters from the skipped folder path in ignore file list path.
     - fix: Fixed issue when thresholds for cache:prefer was applyed to cache:yes shares. Tnanks to Ichthus and other users from forum for the bug report.
     - new: Added fillup (%) global setting threshold option and override for cache:prefer shares.
     - new: Move now button in cache:prefer share page , moving all data from array to cache pool by unraid mover.
