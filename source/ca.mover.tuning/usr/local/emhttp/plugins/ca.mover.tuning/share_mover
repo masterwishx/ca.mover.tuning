@@ -199,8 +199,8 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
             FINDSTR="find"
             # Iterate over all directories in /mnt/*
             for dir in /mnt/*; do
-                # Check if the directory contains a subdirectory named $SHARENAME
-                if [ -d "$dir/$SHARENAME" ]; then
+                # Check if the directory contains a subdirectory named $SHARENAME and not equal to "/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
+                if [ -d "$dir/$SHARENAME" ] && [ "$dir/$SHARENAME" != "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" ]; then
                     # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
                     FINDSTR+=" \"$dir/$SHARENAME\""
                 fi
@@ -208,6 +208,7 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
             # Add the depth option at the end
             FINDSTR+=" -type f -not -path '/mnt/user*' -depth"
         else
+            # Alterate SHAREPATH on Cache=yes
             FINDSTR="find \"${SHAREPATH}\" -type f -depth"
         fi
 
