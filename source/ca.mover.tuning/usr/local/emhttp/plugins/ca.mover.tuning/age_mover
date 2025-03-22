@@ -636,7 +636,8 @@ createFilteredFilelist() {
 
         # Calculate primary storage size thresholds in bytes
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100))
+            # Calculate the real free space by considering an upper limit of fillup (95%) minus pool used usage for later calculations
+            PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100 - POOLBYTEUSED))
             MOVESIZETHRESH=$((POOLSIZE * PREFER_MOVINGPCTTHRESHOLD / 100))
         else
             PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100))
@@ -694,15 +695,6 @@ createFilteredFilelist() {
             elif [ "$POOLPCTUSED" -lt "$PREFER_FILLUPPCTLIMIT" ]; then
                 mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $PREFER_FILLUPPCTLIMIT%."
                 mvlogger "=> Will smart move newest files from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME until threshold."
-                # Calculate the real free space by considering an upper limit of 95% pool usage for later calculations
-                PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100 - POOLBYTEUSED))
-            # elif [ "$POOLPCTUSED" -gt "$MOVINGPCTTHRESHOLD" ]; then
-            #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is above moving threshold percentage: $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
-            #     mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
-            # else
-            #     mvlogger "Mover action: $SECONDARYSTORAGENAME->$PRIMARYSTORAGENAME (cache:prefer). Pool is below priming threshold percentage: $POOLPCTUSED% < $MOVINGPCTTHRESHOLD%."
-            #     mvlogger "=> Skipping"
-            #     continue
             fi
         elif [ "$SHAREUSECACHE" = "yes" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
