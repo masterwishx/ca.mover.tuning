@@ -152,7 +152,24 @@ Log Mover Tuning plugin actions
 
 > Enables or disables logging from this plugin. Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
 
-Log parent Folder for Mover Tuning plugin:
+Debug Log Mover Tuning plugin actions
+: <select name='debuglogging' size='1' class='narrow'>
+<?=mk_option($cfg['debuglogging'],"no",'No')?>
+<?=mk_option($cfg['debuglogging'],"yes","Yes")?>
+</select>
+
+> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
+
+Notify Mover Tuning plugin actions
+: <select name='notify' size='1' class='narrow'>
+<?=mk_option($cfg['notify'],"no",'No')?>
+<?=mk_option($cfg['notify'],"yes","Yes")?>
+<?=mk_option($cfg['notify'],"errorsOnly","Errors Only")?>
+</select>
+
+> Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <strong>Errors Only</strong> will send <strong>only</strong> when an error occurs.
+
+Logs parent folder for Mover Tuning plugin:
 : <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=$cfg['loggingFolder']?>'>
 
 > Path to a parent Logs folder <em>/tmp</em>. Logs are stored at this parent path, by default at <em>/tmp/ca.mover.tuning</em>
@@ -168,7 +185,7 @@ Delete Mover Log files over than this days old:
 <?=mk_option($cfg['logfilesDaysold'], 7, "7")?>
 <?=mk_option($cfg['logfilesDaysold'], 8, "8")?>
 <?=mk_option($cfg['logfilesDaysold'], 9, "9")?>
-<?for ($ldt=10;$ldt<60;$ldt+=5):?>
+<?for ($ldt=10;$ldt<=60;$ldt+=5):?>
 <?=mk_option($cfg['logfilesDaysold'], $ldt, "$ldt")?>
 <?endfor;?>
 </select>
@@ -186,29 +203,12 @@ Delete Mover helper files over than this days old:
 <?=mk_option($cfg['listfilesDaysold'], 7, "7")?>
 <?=mk_option($cfg['listfilesDaysold'], 8, "8")?>
 <?=mk_option($cfg['listfilesDaysold'], 9, "9")?>
-<?for ($ldt=10;$ldt<60;$ldt+=5):?>
+<?for ($ldt=10;$ldt<=60;$ldt+=5):?>
 <?=mk_option($cfg['listfilesDaysold'], $ldt, "$ldt")?>
 <?endfor;?>
 </select>
 
 > Select the number of **days old** for Mover Tuning plugin to delete list files <em>*.list</em>.
-
-Debug Log Mover Tuning plugin actions
-: <select name='debuglogging' size='1' class='narrow'>
-<?=mk_option($cfg['debuglogging'],"no",'No')?>
-<?=mk_option($cfg['debuglogging'],"yes","Yes")?>
-</select>
-
-> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
-
-Notify Mover Tuning plugin actions
-: <select name='notify' size='1' class='narrow'>
-<?=mk_option($cfg['notify'],"no",'No')?>
-<?=mk_option($cfg['notify'],"yes","Yes")?>
-<?=mk_option($cfg['notify'],"errorsOnly","Errors Only")?>
-</select>
-
-> Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <strong>Errors Only</strong> will send <strong>only</strong> when an error occurs.
 
 Show advanced settings:
 : <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">

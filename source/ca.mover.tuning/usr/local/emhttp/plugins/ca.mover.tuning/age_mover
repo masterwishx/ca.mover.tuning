@@ -1512,10 +1512,10 @@ start() {
     fi
 
     #Delete helper files over 5 days old.
-    find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +5 -name '*.list' -delete
+    find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +"$LOGFILESAGE" -name '*.list' -delete
 
     #Delete Mover Log files over 10 days old.
-    find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +10 -name '*.log' -delete
+    find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +"$LISTFILESAGE" -name '*.log' -delete
 
     #Delete Mover List files with 0 lines.
     find "${LOGFOLDER}"/ca.mover.tuning/* -size 0 -name '*.list' -delete
