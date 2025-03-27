@@ -152,6 +152,47 @@ Log Mover Tuning plugin actions
 
 > Enables or disables logging from this plugin. Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
 
+Log parent Folder for Mover Tuning plugin:
+: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=$cfg['loggingFolder']?>'>
+
+> Path to a parent Logs folder <em>/tmp</em>. Logs are stored at this parent path, by default at <em>/tmp/ca.mover.tuning</em>
+
+Delete Mover Log files over than this days old:
+: <select name="logfilesDaysold" size="1" class='narrow logfilesDaysold' value='<?=$cfg['logfilesDaysold']?>'>
+<?=mk_option($cfg['logfilesDaysold'], 1, "1")?>
+<?=mk_option($cfg['logfilesDaysold'], 2, "2")?>
+<?=mk_option($cfg['logfilesDaysold'], 3, "3")?>
+<?=mk_option($cfg['logfilesDaysold'], 4, "4")?>
+<?=mk_option($cfg['logfilesDaysold'], 5, "5")?>
+<?=mk_option($cfg['logfilesDaysold'], 6, "6")?>
+<?=mk_option($cfg['logfilesDaysold'], 7, "7")?>
+<?=mk_option($cfg['logfilesDaysold'], 8, "8")?>
+<?=mk_option($cfg['logfilesDaysold'], 9, "9")?>
+<?for ($ldt=10;$ldt<60;$ldt+=5):?>
+<?=mk_option($cfg['logfilesDaysold'], $ldt, "$ldt")?>
+<?endfor;?>
+</select>
+
+> Select the number of **days old** for Mover Tuning plugin to delete log files <em>*.log</em>.
+
+Delete Mover helper files over than this days old:
+: <select name="listfilesDaysold" size="1" class='narrow listfilesDaysold' value='<?=$cfg['listfilesDaysold']?>'>
+<?=mk_option($cfg['listfilesDaysold'], 1, "1")?>
+<?=mk_option($cfg['listfilesDaysold'], 2, "2")?>
+<?=mk_option($cfg['listfilesDaysold'], 3, "3")?>
+<?=mk_option($cfg['listfilesDaysold'], 4, "4")?>
+<?=mk_option($cfg['listfilesDaysold'], 5, "5")?>
+<?=mk_option($cfg['listfilesDaysold'], 6, "6")?>
+<?=mk_option($cfg['listfilesDaysold'], 7, "7")?>
+<?=mk_option($cfg['listfilesDaysold'], 8, "8")?>
+<?=mk_option($cfg['listfilesDaysold'], 9, "9")?>
+<?for ($ldt=10;$ldt<60;$ldt+=5):?>
+<?=mk_option($cfg['listfilesDaysold'], $ldt, "$ldt")?>
+<?endfor;?>
+</select>
+
+> Select the number of **days old** for Mover Tuning plugin to delete list files <em>*.list</em>.
+
 Debug Log Mover Tuning plugin actions
 : <select name='debuglogging' size='1' class='narrow'>
 <?=mk_option($cfg['debuglogging'],"no",'No')?>
@@ -233,7 +274,6 @@ Script to run before mover (No checks, always runs):
 : <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=$cfg['beforeScript']?>'>
 
 > Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
-
 
 Script to run after mover (No checks, always runs):
 : <input type='text' name='afterScript' size='1' class='narrow myafter' value='<?=$cfg['afterScript']?>'>
