@@ -38,6 +38,7 @@ UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
 LOGLEVEL=1
 DEBUGLEVEL=1
+LOGFOLDER="/tmp"
 TOTALPRIMARYFILES=0
 REMAININGPRIMARYFILES=0
 TOTALPRIMARYSIZE=0
@@ -53,12 +54,12 @@ REMAININGUNATTENDEDSIZE=0
 overrideFlag=0
 
 NOW=$(date +"%FT%H%M%S")
-FILTERED_FILELIST="/tmp/ca.mover.tuning/Filtered_files_$NOW.list"
-MOVER_ACTIONLIST="/tmp/ca.mover.tuning/Mover_action_$NOW.list"
-STATS_FILE="/tmp/ca.mover.tuning/Summary_$NOW.txt"
+FILTERED_FILELIST="${LOGFOLDER}/ca.mover.tuning/Filtered_files_$NOW.list"
+MOVER_ACTIONLIST="${LOGFOLDER}/ca.mover.tuning/Mover_action_$NOW.list"
+STATS_FILE="${LOGFOLDER}/ca.mover.tuning/Summary_$NOW.txt"
 MOVER_STATUS="/usr/local/emhttp/state/mover.ini"
-MOVER_LOG="/tmp/ca.mover.tuning/Mover_tuning_$NOW.log"
-MOVER_DEBUG_LOG="/tmp/ca.mover.tuning/Debug_Mover_tuning_$NOW.log"
+MOVER_LOG="${LOGFOLDER}/ca.mover.tuning/Mover_tuning_$NOW.log"
+MOVER_DEBUG_LOG="${LOGFOLDER}/ca.mover.tuning/Debug_Mover_tuning_$NOW.log"
 GUI_CURRENT_FILE=""
 GUI_ACTION="Calculating"
 
@@ -144,9 +145,9 @@ function validate_filename() {
 # Function for verbose output and logging
 mvlogger() {
 
-    if [ ! -d "/tmp/ca.mover.tuning" ]; then
-        echo "/tmp/ca.mover.tuning Directory does not exist. Creating it"
-        mkdir -p /tmp/ca.mover.tuning
+    if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
+        echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
+        mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
     if [ $LOGLEVEL = 1 ]; then
@@ -511,6 +512,39 @@ getMoverSettings() {
             DEBUGLEVEL=1
         fi
         mvlogger "Debug Logging: $(cfg debuglogging)"
+    fi
+
+    if [ -z $(cfg loggingFolder) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Log parent folder argument provided, defaulting to /tmp"
+            LOGFOLDER="/tmp"
+            echo 'loggingFolder="/tmp"' >>$config_file
+        fi
+    else
+        LOGFOLDER=$(cfg loggingFolder)
+        mvlogger "Log parent folder: $LOGFOLDER"
+    fi
+
+    if [ -z $(cfg logfilesDaysold) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No age for delete mover log files argument provided, defaulting to 5 days"
+            echo 'logfilesDaysold="5"' >>$config_file
+            LOGFILESAGE=5
+        fi
+    else
+        LOGFILESAGE=$(cfg logfilesDaysold)
+        mvlogger "Age for delete mover log files: $LOGFILESAGE days"
+    fi
+
+    if [ -z $(cfg listfilesDaysold) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No age for delete mover log files argument provided, defaulting to 10 days"
+            echo 'listfilesDaysold="10"' >>$config_file
+            LISTFILESAGE=10
+        fi
+    else
+        LISTFILESAGE=$(cfg listfilesDaysold)
+        mvlogger "Age for delete mover list files: $LISTFILESAGE days"
     fi
 
     if [ -z $(cfg validateFilenames) ]; then
@@ -1478,13 +1512,13 @@ start() {
     fi
 
     #Delete helper files over 5 days old.
-    find /tmp/ca.mover.tuning/* -daystart -mtime +5 -name '*.list' -delete
+    find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +5 -name '*.list' -delete
 
     #Delete Mover Log files over 10 days old.
-    find /tmp/ca.mover.tuning/* -daystart -mtime +10 -name '*.log' -delete
+    find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +10 -name '*.log' -delete
 
     #Delete Mover List files with 0 lines.
-    find /tmp/ca.mover.tuning/* -size 0 -name '*.list' -delete
+    find "${LOGFOLDER}"/ca.mover.tuning/* -size 0 -name '*.list' -delete
 
     #Let find find hidden files.
     shopt -s nullglob dotglob
