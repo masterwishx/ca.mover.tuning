@@ -1102,11 +1102,11 @@ decideMoveActions() {
             # Take decision
             if (storage_pool == $1) {
                 # Make decision to move or keep:
-                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (($4 == "yes") && (pool_sums[$1] >= $6 && (AGE == -1 || AGE >= 0)) || $4 == "no" ) ? "move from primary" : "keep on primary"
+                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (($4 == "yes") && (pool_sums[$1] >= $6 && (AGE == -1 || AGE >= 0))) ? "move from primary" : "keep on primary"
 
                 if (action == "keep on primary")  {
                     source = storage_path
-                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ( $5 >= LASTCACHESYNC || RESYNCHRONIZECACHE == "yes" ) )  {
+                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC || RESYNCHRONIZECACHE == "yes"))  {
                         action = "sync from primary"
                         destination = "/mnt/" $2
                         pool_stats[$1]["files_from_primary"] += 1
