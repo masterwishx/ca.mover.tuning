@@ -156,8 +156,8 @@ mvlogger() {
         else # running from cron
             echo "$1"
         fi
+        echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
     fi
-    echo "$(date +"%T.%3N") $1" >>$MOVER_LOG
 
     # if $2 exist send notify message
     if [ -n "$2" ]; then
