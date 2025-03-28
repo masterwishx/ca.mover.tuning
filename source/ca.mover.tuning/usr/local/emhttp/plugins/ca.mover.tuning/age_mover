@@ -499,6 +499,21 @@ getMoverSettings() {
         mvlogger "Notify: $NOTIFY"
     fi
 
+    if [ -z $(cfg logging) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Logging argument provided, defaulting to yes"
+            echo 'logging="yes"' >>$config_file
+            LOGLEVEL=1
+        fi
+    else
+        if [ $(cfg logging) = "no" ]; then
+            LOGLEVEL=0
+        else
+            LOGLEVEL=1
+        fi
+        mvlogger "Logging: $(cfg logging)"
+    fi
+
     if [ -z $(cfg debuglogging) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Debug Logging argument provided, defaulting to no"
@@ -1102,7 +1117,7 @@ decideMoveActions() {
             # Take decision
             if (storage_pool == $1) {
                 # Make decision to move or keep:
-                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (($4 == "yes") && (pool_sums[$1] >= $6 && (AGE == -1 || AGE >= 0))) ? "move from primary" : "keep on primary"
+                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && (pool_sums[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"                
 
                 if (action == "keep on primary")  {
                     source = storage_path
