@@ -52,15 +52,9 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 overrideFlag=0
 
-# # Get parent Logs Folder from config, if blank set to default /tmp
-# LOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
-
-# if [ -z "$LOGFOLDER" ]; then
-#     LOGFOLDER="/tmp"
-# fi
+# Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 LOGFOLDER=${CONFIGLOGFOLDER:-/tmp}
-
 
 NOW=$(date +"%FT%H%M%S")
 FILTERED_FILELIST="${LOGFOLDER}/ca.mover.tuning/Filtered_files_$NOW.list"
