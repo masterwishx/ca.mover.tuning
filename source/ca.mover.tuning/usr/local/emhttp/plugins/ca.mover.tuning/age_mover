@@ -52,12 +52,15 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 overrideFlag=0
 
-# Get parent Logs Folder from config, if blank set to default /tmp
-LOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+# # Get parent Logs Folder from config, if blank set to default /tmp
+# LOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 
-if [ -z "$LOGFOLDER" ]; then
-    LOGFOLDER="/tmp"
-fi
+# if [ -z "$LOGFOLDER" ]; then
+#     LOGFOLDER="/tmp"
+# fi
+CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+LOGFOLDER=${CONFIGLOGFOLDER:-/tmp}
+
 
 NOW=$(date +"%FT%H%M%S")
 FILTERED_FILELIST="${LOGFOLDER}/ca.mover.tuning/Filtered_files_$NOW.list"
@@ -1486,7 +1489,7 @@ processTheMoves() {
 
 start() {
     [ $LOGLEVEL = 0 ] && echo "Starting Mover tuning plugin.."
-    
+
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
     # Do not start if already running
     if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
