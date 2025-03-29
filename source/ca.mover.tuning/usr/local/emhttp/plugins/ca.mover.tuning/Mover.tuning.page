@@ -134,7 +134,7 @@ Validate input filenames to prevent attacks
 <strong>No</strong> <em>- setting effectively disables validation of input filenames</em>
 
 <blockquote class="inline_help">
-<p> <em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></p>
+<p> <strong><em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></strong></p>
 <p> Validate input filenames will check every filename before it is processed by the Mover. This ensures that <strong>only valid</strong> filenames are accepted, <strong>reducing the risk</strong> of attacks and vulnerabilities.</p>
 <p> Disable <strong>Only</strong> if you have many files to move and you are <strong>sure</strong> that all filenames are <strong>valid</strong> and do not contain any potential security risks.</p>
 <p> 1. <strong>Check filename length</strong> - If the filename exceeds 255 characters, it will be rejected.</p>
@@ -150,7 +150,7 @@ Log Mover Tuning plugin actions
 <?=mk_option($cfg['logging'],"yes","Yes")?>
 </select>
 
-> Enables or disables logging from this plugin. Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> as example.
+> Enables or disables logging from this plugin. Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> by default.
 
 Debug Log Mover Tuning plugin actions
 : <select name='debuglogging' size='1' class='narrow'>
@@ -158,7 +158,7 @@ Debug Log Mover Tuning plugin actions
 <?=mk_option($cfg['debuglogging'],"yes","Yes")?>
 </select>
 
-> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <strong><em>/tmp/ca.mover.tuning</em></strong>.
+> Enables or disables debug logging from this plugin. Debug Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong> by default.
 
 Notify Mover Tuning plugin actions
 : <select name='notify' size='1' class='narrow'>
