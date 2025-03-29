@@ -150,7 +150,7 @@ Log Mover Tuning plugin actions
 <?=mk_option($cfg['logging'],"yes","Yes")?>
 </select>
 
-> Enables or disables logging from this plugin. Logs are displayed in SYSLOG and stored at <em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em> as example.
+> Enables or disables logging from this plugin. Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> as example.
 
 Debug Log Mover Tuning plugin actions
 : <select name='debuglogging' size='1' class='narrow'>
@@ -158,7 +158,7 @@ Debug Log Mover Tuning plugin actions
 <?=mk_option($cfg['debuglogging'],"yes","Yes")?>
 </select>
 
-> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
+> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 
 Notify Mover Tuning plugin actions
 : <select name='notify' size='1' class='narrow'>
@@ -172,7 +172,7 @@ Notify Mover Tuning plugin actions
 Logs parent folder for Mover Tuning plugin:
 : <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=$cfg['loggingFolder']?>'>
 
-> Path to a parent Logs folder <em>/tmp</em>. Logs are stored at this parent path, by default at <em>/tmp/ca.mover.tuning</em>
+> Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 
 Delete Mover Log files over than this days old:
 : <select name="logfilesDaysold" size="1" class='narrow logfilesDaysold' value='<?=$cfg['logfilesDaysold']?>'>
@@ -190,7 +190,7 @@ Delete Mover Log files over than this days old:
 <?endfor;?>
 </select>
 
-> Select the number of **days old** for Mover Tuning plugin to delete log files <em>*.log</em>.
+> Select the number of **days old** for Mover Tuning plugin to delete log files **_*.log_** and text files **_*.txt_**.
 
 Delete Mover helper files over than this days old:
 : <select name="listfilesDaysold" size="1" class='narrow listfilesDaysold' value='<?=$cfg['listfilesDaysold']?>'>
@@ -208,7 +208,7 @@ Delete Mover helper files over than this days old:
 <?endfor;?>
 </select>
 
-> Select the number of **days old** for Mover Tuning plugin to delete list files <em>*.list</em>.
+> Select the number of **days old** for Mover Tuning plugin to delete list files **<em>*.list</em>**.
 
 Show advanced settings:
 : <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
