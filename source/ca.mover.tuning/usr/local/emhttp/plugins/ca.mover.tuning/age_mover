@@ -604,7 +604,7 @@ createFilteredFilelist() {
     mvlogger "$(titleLine 'FILTERING FILES' '*')"
 
     # create a file containing the list off all shareUseCache yes or prefer whith this format:
-    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH" >$FILTERED_FILELIST
+    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH" >"$FILTERED_FILELIST"
 
     for SHARECFG in /boot/config/shares/*.cfg; do
         if [ -e $SOFTSTOPFILE ]; then
@@ -1230,7 +1230,7 @@ decideMoveActions() {
             # Print overall totals to stats file
             printf("TOTAL|%d|%d|%d|%d|%d|%d\n", total_files_from_primary, total_size_from_primary, total_files_from_secondary, size_from_secondary, total_files_from_unattended, size_from_unattended) >> "'"${STATS_FILE}"'"
 
-    }' "$FILTERED_FILELIST" >$MOVER_ACTIONLIST
+    }' "$FILTERED_FILELIST" >"$MOVER_ACTIONLIST"
     if [ -e $SOFTSTOPFILE ]; then
         [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
         return
@@ -1250,12 +1250,12 @@ decideMoveActions() {
     UNATTENDEDFILES=$(grep "keep misplaced" "$MOVER_ACTIONLIST" | wc -l)
 
     # Print stats
-    if [ $UNATTENDEDFILES -gt 0 ]; then
+    if [ "$UNATTENDEDFILES" -gt 0 ]; then
         mvlogger "Warning: $UNATTENDEDFILES files are stored outside their primary or secondary storages and won't be moved according to actual settings."
     fi
     if [ $TOTALFILES -gt 0 ]; then
         mvlogger "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) will be moved/synced:"
-        if [ $TOTALPRIMARYFILES -gt 0 ]; then
+        if [ "$TOTALPRIMARYFILES" -gt 0 ]; then
             # Read data line by line using while loop
             while IFS="|" read -r PRIMARYSTORAGENAME PRIMARYFILES PRIMARYSIZE SECONDARYFILES SECONDARYSIZE; do
                 if [ -e $SOFTSTOPFILE ]; then
@@ -1263,15 +1263,15 @@ decideMoveActions() {
                     break
                 fi
                 # Check if line is not the total line nor the header line
-                if [ $PRIMARYSTORAGENAME != "TOTAL" ] && [ $PRIMARYSTORAGENAME != "PRIMARYSTORAGENAME" ]; then
+                if [ "$PRIMARYSTORAGENAME" != "TOTAL" ] && [ "$PRIMARYSTORAGENAME" != "PRIMARYSTORAGENAME" ]; then
                     mvlogger "- $PRIMARYFILES files representing $(bytes_to_human $PRIMARYSIZE) will be moved/sync from $PRIMARYSTORAGENAME to secondary"
                 fi
             done <"$STATS_FILE"
         fi
-        if [ $TOTALSECONDARYFILES -gt 0 ]; then
+        if [ "$TOTALSECONDARYFILES" -gt 0 ]; then
             mvlogger "- $TOTALSECONDARYFILES new files representing $(bytes_to_human $TOTALSECONDARYSIZE) will then be moved/synced from secondary to primary"
         fi
-        if [ $TOTALUNATTENDEDFILES -gt 0 ]; then
+        if [ "$TOTALUNATTENDEDFILES" -gt 0 ]; then
             mvlogger "- $TOTALUNATTENDEDFILES files from unattended storage and representing $(bytes_to_human $TOTALUNATTENDEDSIZE) will then be rebalanced from unattended shares to primary and/or secondary"
         fi
     else
@@ -1288,9 +1288,9 @@ processTheMoves() {
     fi
 
     mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
-    if [ $ENABLETURBO = "yes" ]; then
+    if [ "$ENABLETURBO" = "yes" ]; then
         mvlogger "Forcing turbo write on"
-        [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
+        [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
     fi
     # MOVER_ACTIONLIST header:
     # PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH
@@ -1337,7 +1337,7 @@ processTheMoves() {
             #Prepare RSYNC_CMD
             RSYNC_CMD="rsync --archive --xattrs --relative --hard-links"
 
-            if [ $TESTMODE = "yes" ]; then
+            if [ "$TESTMODE" = "yes" ]; then
                 RSYNC_CMD+=" --dry-run"
             fi
 
@@ -1346,7 +1346,7 @@ processTheMoves() {
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
             # Check File by validate function and skip if error
-            if [ $VALIDATE_FILENAMES = "yes" ]; then
+            if [ "$VALIDATE_FILENAMES" = "yes" ]; then
                 if ! validate_filename "$(basename "$FILEPATH")"; then
                     mvlogger "Error: Invalid filename path: '$FILEPATH'" "failure"
                     continue
@@ -1384,7 +1384,7 @@ processTheMoves() {
             eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
 
             # Clean parent folder if empty
-            if [[ "$ACTION" =~ "move" ]] && [ $CLEANFOLDERS = "yes" ]; then
+            if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "yes" ]; then
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
                     if [ -e "${DIR}/.placeholder" ]; then
@@ -1446,12 +1446,12 @@ processTheMoves() {
 
             # Setting mover status
             if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
-                REMAINING_CACHE_SIZE=$(($REMAINING_CACHE_SIZE - $FILESIZE))
-                REMAINING_CACHE_FILES=$(($REMAINING_CACHE_FILES - $NBLINKS))
+                REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - FILESIZE))
+                REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
                 mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array  $(bytes_to_human $REMAINING_CACHE_SIZE)"
             else
-                REMAINING_ARRAY_SIZE=$(($REMAINING_ARRAY_SIZE - $FILESIZE))
-                REMAINING_ARRAY_FILES=$(($REMAINING_ARRAY_FILES - $NBLINKS))
+                REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
+                REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
                 mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches $(bytes_to_human $REMAINING_ARRAY_SIZE)"
             fi
             moverStatusWrite
