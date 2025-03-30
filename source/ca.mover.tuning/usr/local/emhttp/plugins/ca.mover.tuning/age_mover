@@ -1391,15 +1391,11 @@ processTheMoves() {
 
             # Clean parent folder if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "yes" ]; then
-
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
 
-                    # # Check if the current directory is different from the previous one
-                    # echo ""
-                    # echo "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR", Previous count: "$last_count"
-                    # echo ""
+                    mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $last_count" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
@@ -1422,9 +1418,7 @@ processTheMoves() {
                         fi
                     fi
 
-                    # echo ""
-                    # echo "Cycle of delete folder, Previous count: $last_count, Count of files: $count"
-                    # echo ""
+                    mvDebuglogger "Cycle of delete folder, Previous count: $last_count, Count of files: $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
@@ -1443,9 +1437,7 @@ processTheMoves() {
                 if [ "$last_count" -eq 0 ]; then
                     # Count files in share
                     share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
-                    echo ""
-                    echo "Cycle of delete dataset"
-                    echo ""
+                    mvDebuglogger "Cycle of delete dataset" "Clean Dataset - Start Loop"
                     # If no files in share
                     if [ "${share_file_count}" -eq 0 ]; then
                         # Check if mount point is ZFS
