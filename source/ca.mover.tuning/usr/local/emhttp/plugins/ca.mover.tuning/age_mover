@@ -1409,15 +1409,17 @@ processTheMoves() {
                             # Check counter if greater than 1 to not count files in folder
                             if [ "$last_count" -gt 1 ]; then
                                 count=$((last_count - 1))
+                                # Save current counter
+                                last_count="$count"
                             fi
                         else
                             count=$(ls -A "$DIR" | wc -l)
                             # Save current counter
                             last_count="$count"
+                            # Save current Folder
+                            LAST_DIR="$DIR"
+                            echo "Directory changed to: ${DIR}, Count of files: $count"
                         fi
-                        # Save current Folder
-                        LAST_DIR="$DIR"
-                        echo "Directory changed to: ${DIR}, Count of files: $count"
                     fi
 
                     # if [ -e "${DIR}/.placeholder" ]; then
