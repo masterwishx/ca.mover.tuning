@@ -1396,18 +1396,18 @@ processTheMoves() {
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
 
-                    # Check if the current directory is different from the previous one
-                    echo ""
-                    echo "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR", Previous count: "$last_count"
-                    echo ""
+                    # # Check if the current directory is different from the previous one
+                    # echo ""
+                    # echo "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR", Previous count: "$last_count"
+                    # echo ""
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
                     else
                         # Check if the current directory is same as the previous one
                         if [ "${LAST_DIR}" == "${DIR}" ]; then
-                            # Check counter if greater than 1 to not count files in folder
-                            if [ "$last_count" -gt 1 ]; then
+                            # Check if the counter is greater than 0 to avoid counting files in the folder using wc -l
+                            if [ "$last_count" -gt 0 ]; then
                                 count=$((last_count - 1))
                                 # Save current counter
                                 last_count="$count"
@@ -1418,10 +1418,13 @@ processTheMoves() {
                             last_count="$count"
                             # Save current Folder
                             LAST_DIR="$DIR"
-                            echo "Directory changed to: ${DIR}, Count of files: $count"
+                            # echo "Directory changed to: ${DIR}, Count of files: $count"
                         fi
                     fi
 
+                    # echo ""
+                    # echo "Cycle of delete folder, Previous count: $last_count, Count of files: $count"
+                    # echo ""
                     # if [ -e "${DIR}/.placeholder" ]; then
                     #     count=".placeholder"
                     # else
@@ -1440,40 +1443,46 @@ processTheMoves() {
 
             # Clean parent ZFS dataset if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
-                # Count files in share
-                share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
-                # If no files in share
-                if [ "${share_file_count}" -eq 0 ]; then
-                    # Check if mount point is ZFS
-                    if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                        DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
-                        #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
-                        # If ZFS dataset children size is zero and No ZFS dataset children exist
-                        if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
-                            # Check for any files in the ZFS dataset avalible
-                            dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
-                            if [ "${dataset_file_count}" -eq 0 ]; then
-                                mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
-                                zfs unmount "${DATASET}"
-                                if [ $? -ne 0 ]; then
-                                    mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
-                                    break
+                # Check counter if equal to 0 then check datasets
+                if [ "$last_count" -eq 0 ]; then
+                    # Count files in share
+                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
+                    echo ""
+                    echo "Cycle of delete dataset"
+                    echo ""
+                    # If no files in share
+                    if [ "${share_file_count}" -eq 0 ]; then
+                        # Check if mount point is ZFS
+                        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                            DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
+                            #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
+                            # If ZFS dataset children size is zero and No ZFS dataset children exist
+                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
+                                # Check for any files in the ZFS dataset avalible
+                                dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
+                                if [ "${dataset_file_count}" -eq 0 ]; then
+                                    mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
+                                    zfs unmount "${DATASET}"
+                                    if [ $? -ne 0 ]; then
+                                        mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
+                                        break
+                                    else
+                                        mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
+                                    fi
+                                    zfs destroy "${DATASET}"
+                                    if [ $? -ne 0 ]; then
+                                        mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
+                                        break
+                                    else
+                                        mvlogger "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                    fi
                                 else
-                                    mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
-                                fi
-                                zfs destroy "${DATASET}"
-                                if [ $? -ne 0 ]; then
-                                    mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
-                                    break
-                                else
-                                    mvlogger "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                    mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
                                 fi
                             else
-                                mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
-                            fi
-                        else
-                            mvlogger "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
+                                mvlogger "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
 
+                            fi
                         fi
                     fi
                 fi
