@@ -1394,7 +1394,6 @@ processTheMoves() {
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
-
                     mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $last_count" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
@@ -1417,7 +1416,6 @@ processTheMoves() {
                             # echo "Directory changed to: ${DIR}, Count of files: $count"
                         fi
                     fi
-
                     mvDebuglogger "Cycle of delete folder, Previous count: $last_count, Count of files: $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
