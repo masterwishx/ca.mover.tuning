@@ -51,6 +51,9 @@ TOTALUNATTENDEDSIZE=0
 REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 overrideFlag=0
+# Variables for counts when delete folders
+LAST_DIR=""
+last_count=-1
 
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -795,7 +798,7 @@ createFilteredFilelist() {
                         CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
                     fi
                 fi
-                echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}" >>$FILTERED_FILELIST
+                echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}" >>"$FILTERED_FILELIST"
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human $CACHESHARERESERVEDSPACE)"
                 continue
             fi
@@ -867,7 +870,7 @@ createFilteredFilelist() {
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
             HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -path '*/\.*' -print0 | xargs -0 du -sh | awk '{ sum += $1 } END { print sum }')
-            echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|/mnt/$PRIMARYSTORAGENAME/$SHARENAME hidden files" >>$FILTERED_FILELIST
+            echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|/mnt/$PRIMARYSTORAGENAME/$SHARENAME hidden files" >>"$FILTERED_FILELIST"
             mvlogger "    Hidden files are using $(bytes_to_human $HIDDENFILES_RESERVED_SPACE)"
         fi
         #Add skipped files and folders
@@ -1388,13 +1391,40 @@ processTheMoves() {
 
             # Clean parent folder if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "yes" ]; then
+
+                # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
+
+                    # Check if the current directory is different from the previous one
+                    echo ""
+                    echo "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR", Previous count: "$last_count"
+                    echo ""
+
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
                     else
-                        count=$(ls -A "$DIR" | wc -l)
+                        # Check if the current directory is same as the previous one
+                        if [ "${LAST_DIR}" == "${DIR}" ]; then
+                            # Check counter if greater than 1 to not count files in folder
+                            if [ "$last_count" -gt 1 ]; then
+                                count=$((last_count - 1))
+                            fi
+                        else
+                            count=$(ls -A "$DIR" | wc -l)
+                            # Save current counter
+                            last_count="$count"
+                        fi
+                        # Save current Folder
+                        LAST_DIR="$DIR"
+                        echo "Directory changed to: ${DIR}, Count of files: $count"
                     fi
+
+                    # if [ -e "${DIR}/.placeholder" ]; then
+                    #     count=".placeholder"
+                    # else
+                    #     count=$(ls -A "$DIR" | wc -l)
+                    # fi
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
