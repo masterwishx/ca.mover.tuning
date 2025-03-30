@@ -134,7 +134,7 @@ Validate input filenames to prevent attacks
 <strong>No</strong> <em>- setting effectively disables validation of input filenames</em>
 
 <blockquote class="inline_help">
-<p> <em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></p>
+<p> <strong><em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></strong></p>
 <p> Validate input filenames will check every filename before it is processed by the Mover. This ensures that <strong>only valid</strong> filenames are accepted, <strong>reducing the risk</strong> of attacks and vulnerabilities.</p>
 <p> Disable <strong>Only</strong> if you have many files to move and you are <strong>sure</strong> that all filenames are <strong>valid</strong> and do not contain any potential security risks.</p>
 <p> 1. <strong>Check filename length</strong> - If the filename exceeds 255 characters, it will be rejected.</p>
@@ -150,7 +150,7 @@ Log Mover Tuning plugin actions
 <?=mk_option($cfg['logging'],"yes","Yes")?>
 </select>
 
-> Enables or disables logging from this plugin. Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
+> Enables or disables logging from this plugin. Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> by default.
 
 Debug Log Mover Tuning plugin actions
 : <select name='debuglogging' size='1' class='narrow'>
@@ -158,7 +158,7 @@ Debug Log Mover Tuning plugin actions
 <?=mk_option($cfg['debuglogging'],"yes","Yes")?>
 </select>
 
-> Enables or disables debug logging from this plugin. Debug Logs are displayed in syslog and stored at <em>/tmp/ca.mover.tuning</em>
+> Enables or disables debug logging from this plugin. Debug Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong> by default.
 
 Notify Mover Tuning plugin actions
 : <select name='notify' size='1' class='narrow'>
@@ -168,6 +168,47 @@ Notify Mover Tuning plugin actions
 </select>
 
 > Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <strong>Errors Only</strong> will send <strong>only</strong> when an error occurs.
+
+Logs parent folder for Mover Tuning plugin:
+: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=$cfg['loggingFolder']?>'>
+
+> Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
+
+Delete Mover Log files over than this days old:
+: <select name="logfilesDaysold" size="1" class='narrow logfilesDaysold' value='<?=$cfg['logfilesDaysold']?>'>
+<?=mk_option($cfg['logfilesDaysold'], 1, "1")?>
+<?=mk_option($cfg['logfilesDaysold'], 2, "2")?>
+<?=mk_option($cfg['logfilesDaysold'], 3, "3")?>
+<?=mk_option($cfg['logfilesDaysold'], 4, "4")?>
+<?=mk_option($cfg['logfilesDaysold'], 5, "5")?>
+<?=mk_option($cfg['logfilesDaysold'], 6, "6")?>
+<?=mk_option($cfg['logfilesDaysold'], 7, "7")?>
+<?=mk_option($cfg['logfilesDaysold'], 8, "8")?>
+<?=mk_option($cfg['logfilesDaysold'], 9, "9")?>
+<?for ($ldt=10;$ldt<=60;$ldt+=5):?>
+<?=mk_option($cfg['logfilesDaysold'], $ldt, "$ldt")?>
+<?endfor;?>
+</select>
+
+> Select the number of **days old** for Mover Tuning plugin to delete log files **_*.log_** and text files **_*.txt_**.
+
+Delete Mover helper files over than this days old:
+: <select name="listfilesDaysold" size="1" class='narrow listfilesDaysold' value='<?=$cfg['listfilesDaysold']?>'>
+<?=mk_option($cfg['listfilesDaysold'], 1, "1")?>
+<?=mk_option($cfg['listfilesDaysold'], 2, "2")?>
+<?=mk_option($cfg['listfilesDaysold'], 3, "3")?>
+<?=mk_option($cfg['listfilesDaysold'], 4, "4")?>
+<?=mk_option($cfg['listfilesDaysold'], 5, "5")?>
+<?=mk_option($cfg['listfilesDaysold'], 6, "6")?>
+<?=mk_option($cfg['listfilesDaysold'], 7, "7")?>
+<?=mk_option($cfg['listfilesDaysold'], 8, "8")?>
+<?=mk_option($cfg['listfilesDaysold'], 9, "9")?>
+<?for ($ldt=10;$ldt<=60;$ldt+=5):?>
+<?=mk_option($cfg['listfilesDaysold'], $ldt, "$ldt")?>
+<?endfor;?>
+</select>
+
+> Select the number of **days old** for Mover Tuning plugin to delete list files **<em>*.list</em>**.
 
 Show advanced settings:
 : <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
@@ -233,7 +274,6 @@ Script to run before mover (No checks, always runs):
 : <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=$cfg['beforeScript']?>'>
 
 > Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
-
 
 Script to run after mover (No checks, always runs):
 : <input type='text' name='afterScript' size='1' class='narrow myafter' value='<?=$cfg['afterScript']?>'>
