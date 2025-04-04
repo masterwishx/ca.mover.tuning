@@ -825,8 +825,8 @@ createFilteredFilelist() {
         fi
 
         #Base Find String
-        # Alterate SHAREPATH when RebalanceShare=true
-        if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+        # Alterate SHAREPATH when Cache=prefer when secondary storage is cache or RebalanceShare=true
+        if [[ "$SHAREUSECACHE" = "prefer" && "$SECONDARYSTORAGENAME" != "user0" ]] || [[ "$REBALANCESHARES" = "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
             # Initialize FINDSTR with the base find command
             FINDSTR="find"
@@ -840,7 +840,7 @@ createFilteredFilelist() {
             done
             # Add the depth option at the end
             FINDSTR+=" -type f -depth"
-        # Alterate SHAREPATH on Cache=prefer
+        # Alterate SHAREPATH on Cache=prefer when secondary storage is disk*
         elif [ "$SHAREUSECACHE" = "prefer" ]; then
             # Check if SHAREPATH is in the format "/mnt/disk*/$SHARENAME"
             # Initialize FINDSTR with the base find command
@@ -1005,7 +1005,12 @@ createFilteredFilelist() {
         # Send FINDSTR to debug
         mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
 
-        if [ -d "$SHAREPATH" ] || [ "$SHAREUSECACHE" = "prefer" ] || [ "$REBALANCESHARES" = "yes" ]; then
+        # cache:prefer count files to move from array for print next if commands only if array is not empty
+        if [ "$SHAREUSECACHE" = "prefer" ]; then
+            COUNTARRAYFILES="$FINDSTR | wc -l"
+        fi
+
+        if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNTARRAYFILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
             [ "$CTIME" == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
             eval "${FINDSTR}>>${FILTERED_FILELIST}"
             mvlogger "Updated Filtered filelist: $FILTERED_FILELIST for $SHARENAME"
