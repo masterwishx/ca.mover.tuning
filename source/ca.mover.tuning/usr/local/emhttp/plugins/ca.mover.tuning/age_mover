@@ -825,10 +825,8 @@ createFilteredFilelist() {
         fi
 
         #Base Find String
-        # Alterate SHAREPATH on Cache=prefer or RebalanceShare=true
-        if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
-            #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-
+        # Alterate SHAREPATH when RebalanceShare=true
+        if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
             # Initialize FINDSTR with the base find command
             FINDSTR="find"
@@ -842,6 +840,22 @@ createFilteredFilelist() {
             done
             # Add the depth option at the end
             FINDSTR+=" -type f -depth"
+        # Alterate SHAREPATH on Cache=prefer
+        elif [ "$SHAREUSECACHE" = "prefer" ]; then
+            # Check if SHAREPATH is in the format "/mnt/disk*/$SHARENAME"
+            # Initialize FINDSTR with the base find command
+            FINDSTR="find"
+            # Iterate over all directories in /mnt/*
+            for dir in /mnt/*; do
+                # Check if the directory contains a subdirectory named $SHARENAME
+                if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* && "$dir/$SHARENAME" == "/mnt/disk"* ]]; then
+                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
+                    FINDSTR+=" \"$dir/$SHARENAME\""
+                fi
+            done
+            # Add the depth option at the end
+            FINDSTR+=" -type f -depth"
+        # Alterate SHAREPATH on Cache=yes
         else
             FINDSTR="find \"${SHAREPATH}\" -type f -depth"
         fi
