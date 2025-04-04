@@ -49,7 +49,7 @@ function startMover($options = "start")
         $niceLevel = $cfg['moverNice'] ?: "0";
         $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
 
-        if ($cfg['moveThreshold'] >= 0 or $cfg['age'] == "yes" or $cfg['sizef'] == "yes" or $cfg['sparsnessf'] == "yes" or $cfg['filelistf'] == "yes" or $cfg['filetypesf'] == "yes" or $beforescript != '' or $afterscript != '' or $cfg['testmode'] == "yes") {
+        if ($cfg['moveThreshold'] >= 0 or $cfg['age'] == "yes" or $cfg['sizef'] == "yes" or $cfg['sparsnessf'] == "yes" or $cfg['filelistf'] == "yes" or $cfg['filetypesf'] == "yes" or $cfg['$beforescript'] != '' or $cfg['$afterscript'] != '' or $cfg['testmode'] == "yes") {
 			$age_mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover start";
             //exec("echo 'about to hit mover string here: $age_mover_str' >> /var/log/syslog");
             logger("ionice $ioLevel nice -n $niceLevel $age_mover_str");

@@ -57,7 +57,12 @@ last_count=-1
 
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
-LOGFOLDER=${CONFIGLOGFOLDER:-/tmp}
+
+if [ -z "$CONFIGLOGFOLDER" ]; then
+    LOGFOLDER="/tmp"
+else
+    LOGFOLDER="$CONFIGLOGFOLDER"
+fi
 
 NOW=$(date +"%FT%H%M%S")
 FILTERED_FILELIST="${LOGFOLDER}/ca.mover.tuning/Filtered_files_$NOW.list"
@@ -538,8 +543,8 @@ getMoverSettings() {
     if [ -z $(cfg loggingFolder) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Log parent folder argument provided, defaulting to /tmp"
-            LOGFOLDER="/tmp"
             echo 'loggingFolder="/tmp"' >>$config_file
+            LOGFOLDER="/tmp"
         fi
     else
         LOGFOLDER=$(cfg loggingFolder)
