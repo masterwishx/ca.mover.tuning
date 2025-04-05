@@ -50,6 +50,7 @@ TOTALUNATTENDEDFILES=0
 TOTALUNATTENDEDSIZE=0
 REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
+COUNT_SECONDARYSTORAGE_FILES=0
 overrideFlag=0
 # Variables for counts when delete folders
 LAST_DIR=""
@@ -825,8 +826,8 @@ createFilteredFilelist() {
         fi
 
         #Base Find String
-        # Alterate SHAREPATH when Cache=prefer when secondary storage is cache or RebalanceShare=true
-        if [[ "$SHAREUSECACHE" = "prefer" && "$SECONDARYSTORAGENAME" != "user0" ]] || [[ "$REBALANCESHARES" = "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
+        # Alterate SHAREPATH when RebalanceShare=true
+        if [[ "$REBALANCESHARES" = "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
             # Initialize FINDSTR with the base find command
             FINDSTR="find"
@@ -840,17 +841,24 @@ createFilteredFilelist() {
             done
             # Add the depth option at the end
             FINDSTR+=" -type f -depth"
-        # Alterate SHAREPATH on Cache=prefer when secondary storage is disk*
+        # Alterate SHAREPATH on Cache=prefer
         elif [ "$SHAREUSECACHE" = "prefer" ]; then
-            # Check if SHAREPATH is in the format "/mnt/disk*/$SHARENAME"
+            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
+            COUNT_SECONDARYSTORAGE_FILES=0
             # Initialize FINDSTR with the base find command
             FINDSTR="find"
             # Iterate over all directories in /mnt/*
             for dir in /mnt/*; do
                 # Check if the directory contains a subdirectory named $SHARENAME
-                if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* && "$dir/$SHARENAME" == "/mnt/disk"* ]]; then
-                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                    FINDSTR+=" \"$dir/$SHARENAME\""
+                if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* ]]; then
+                    # If the directory contains a secondary storage
+                    if [[ "$SECONDARYSTORAGENAME" != "user0" && "$dir/$SHARENAME" = "/mnt/$SECONDARYSTORAGENAME"* ]] || [[ "$SECONDARYSTORAGENAME" = "user0" && "$dir/$SHARENAME" = "/mnt/disk"* ]]; then
+                        # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
+                        FINDSTR+=" \"$dir/$SHARENAME\""
+                        # Count the number of files in the secondary storage directory
+                        tmp=$(find "$dir/$SHARENAME" -type f -depth | wc -l)
+                        COUNT_SECONDARYSTORAGE_FILES=$((COUNT_SECONDARYSTORAGE_FILES + tmp))
+                    fi
                 fi
             done
             # Add the depth option at the end
@@ -1005,12 +1013,12 @@ createFilteredFilelist() {
         # Send FINDSTR to debug
         mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
 
-        # cache:prefer count files to move from array for print next if commands only if array is not empty
-        if [ "$SHAREUSECACHE" = "prefer" ]; then
-            COUNTARRAYFILES="$FINDSTR | wc -l"
+        # cache:prefer counted files to move from secondary storage for print next if commands only if secondary storage is not empty
+        if [ "$SHAREUSECACHE" = "prefer" ]; then           
+            mvDebuglogger "COUNT_SECONDARYSTORAGE_FILES: $COUNT_SECONDARYSTORAGE_FILES" "[$SHARENAME] count files"
         fi
 
-        if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNTARRAYFILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
+        if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNT_SECONDARYSTORAGE_FILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
             [ "$CTIME" == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
             eval "${FINDSTR}>>${FILTERED_FILELIST}"
             mvlogger "Updated Filtered filelist: $FILTERED_FILELIST for $SHARENAME"
