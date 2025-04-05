@@ -29,6 +29,12 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.04.05
+    - fix: Fix for Logs parent folder can be empty instead of /tmp when no value is provided. Thanks to niwmik2 from forums for reported this issue.
+    - fix: Fixed an issue where (cache:prefer) was generating unnecessary lists for files that should remain on the primary pool.
+    - fix: Only generate updated filtered filelist for (cache:prefer) if we have files on secondary storage.
+    - new: Added Help block to the plugin page, including useful links and a donation link for support.
+
 - 2025.03.30
     - new: Added new settings: Logs parent folder, age for mover Log,txt and List files. Thanks to Renegade605 and jimlei from forums for the idea. **_(masterwishx)_**
     - fix: Log Mover Tuning plugin actions setting when set to No, will not post to syslog and Mover_tuning_xxx.log file.
