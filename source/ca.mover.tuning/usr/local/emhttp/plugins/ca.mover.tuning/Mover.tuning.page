@@ -100,7 +100,7 @@ $(function() {
 </script>
 
 <div class="title">
-<span class="left"><i class="fa fa-cog title"></i>Mover Tuning Plugin Settings</span>
+<span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
 <span class="right">Version: <?=$version?></span>
 </div>
 
@@ -289,7 +289,7 @@ Move Now button follows plug-in filters:
 > Select <strong>Yes</strong> to to follow plug-in filters, <strong>No</strong> to run original mover from button.
 </div>
 
-<div class="title"><span class="center"><i class="fa fa-filter title"></i>Filters</span></div>
+<div class="title"><span class="center"><i class="fa fa-filter title"></i>Mover Tuning - Filters</span></div>
 
 Only move if above this threshold of used Primary (<em>cache</em>) space:
 : <select name="movingThreshold" size="1" class='narrow'>
@@ -489,7 +489,7 @@ Move All from Primary->Secondary shares pool percentage:
 
 </div>
 
-<div class="title"><span class="center"><i class="fa fa-files-o title"></i>Mover options</span></div>
+<div class="title"><span class="center"><i class="fa fa-files-o title"></i>Mover Tuning - Options</span></div>
 
 Force turbo write during mover:
 : <select name='enableTurbo' size='1' class='narrow'>
@@ -568,3 +568,27 @@ Resynchronize all Primary files to Secondary:
 : <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
 </form>
 <span id='test'></span>
+
+<div class="title"><span class="left"><i class="fa fa-info-circle title"></i>Mover Tuning - Help</span></div>
+<p>If you need assistance, you can ask in the unraid community for help.</p>
+<dl>
+    <dt>Plugin thread @ Unraid community</dt>
+    <dd><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank">Open</a></dd>
+    <dt>Maintainers</dt>
+    <dd>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank">masterwishx</a> | 
+        2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank">R3yn4ld</a> | 
+        2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank">hugenbd</a> | 
+        2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
+
+    <dt>Want to support the developer and say <strong>Thank You</strong>?</dt>
+    <dd>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins with ❤️ (and a lot of ☕).
+        If you like the work, you can donate via <a href="https://www.paypal.com/donate/?hosted_button_id=UDXM742YK5ZV6" target="_blank"><i class="fa fa-paypal"></i> <strong>PayPal</strong></a>.
+    </dd>
+
+    <dt>GitHub repository</dt>
+    <dd><a href="https://github.com/masterwishx/ca.mover.tuning" target="_blank"><i class="fa fa-github"></i> Open</a>
+    </dd>
+
+    <dt>Used IDE</dt>
+    <dd>Visual Studio Code</dd>
+</dl>
