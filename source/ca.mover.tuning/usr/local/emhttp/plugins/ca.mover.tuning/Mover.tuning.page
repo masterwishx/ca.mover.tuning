@@ -100,7 +100,7 @@ $(function() {
 </script>
 
 <div class="title">
-<span class="left"><i class="fa fa-cog title"></i>Mover Tuning Plugin Settings</span>
+<span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
 <span class="right">Version: <?=$version?></span>
 </div>
 
@@ -289,7 +289,7 @@ Move Now button follows plug-in filters:
 > Select <strong>Yes</strong> to to follow plug-in filters, <strong>No</strong> to run original mover from button.
 </div>
 
-<div class="title"><span class="center"><i class="fa fa-filter title"></i>Filters</span></div>
+<div class="title"><span class="center"><i class="fa fa-filter title"></i>Mover Tuning - Filters</span></div>
 
 Only move if above this threshold of used Primary (<em>cache</em>) space:
 : <select name="movingThreshold" size="1" class='narrow'>
@@ -489,7 +489,7 @@ Move All from Primary->Secondary shares pool percentage:
 
 </div>
 
-<div class="title"><span class="center"><i class="fa fa-files-o title"></i>Mover options</span></div>
+<div class="title"><span class="center"><i class="fa fa-files-o title"></i>Mover Tuning - Options</span></div>
 
 Force turbo write during mover:
 : <select name='enableTurbo' size='1' class='narrow'>
@@ -569,7 +569,7 @@ Resynchronize all Primary files to Secondary:
 </form>
 <span id='test'></span>
 
-<div class="title"><span class="left"><i class="fa fa-info-circle title"></i>Mover Help</span></div>
+<div class="title"><span class="left"><i class="fa fa-info-circle title"></i>Mover Tuning - Help</span></div>
 <p>If you need assistance, you can ask in the unraid community for help.</p>
 <dl>
     <dt>Plugin thread @ Unraid community</dt>

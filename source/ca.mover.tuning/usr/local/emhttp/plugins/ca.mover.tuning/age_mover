@@ -1451,7 +1451,7 @@ processTheMoves() {
                     mvDebuglogger "Cycle of delete folder, Previous count: $last_count, Count of files: $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
-                        echo "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
+                        mvlogger "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         if [ "$TESTMODE" = "no" ]; then
                             mvlogger "Deleting empty dir ${DIR}"
