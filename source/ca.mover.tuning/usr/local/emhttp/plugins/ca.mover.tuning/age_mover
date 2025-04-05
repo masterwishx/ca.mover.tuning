@@ -1015,7 +1015,7 @@ createFilteredFilelist() {
 
         # cache:prefer counted files to move from secondary storage for print next if commands only if secondary storage is not empty
         if [ "$SHAREUSECACHE" = "prefer" ]; then           
-            mvDebuglogger "COUNT_SECONDARYSTORAGE_FILES: $COUNT_SECONDARYSTORAGE_FILES" "[$SHARENAME] count files"
+            mvDebuglogger "Amount of files on secondary storage: $COUNT_SECONDARYSTORAGE_FILES" "[$SHARENAME] count files"
         fi
 
         if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNT_SECONDARYSTORAGE_FILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
