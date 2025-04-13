@@ -671,7 +671,7 @@ createFilteredFilelist() {
         # Determine secondary storage
         SECONDARYSTORAGENAME=$(grep "shareCachePool2=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
         if [ -z "$SECONDARYSTORAGENAME" ]; then
-            if [ $SHAREUSECACHE = "only" ] || [ $SHAREUSECACHE = "no" ]; then
+            if [ "$SHAREUSECACHE" = "only" ] || [ "$SHAREUSECACHE" = "no" ]; then
                 SECONDARYSTORAGENAME="none"
             else
                 SECONDARYSTORAGENAME="user0"
@@ -928,7 +928,8 @@ createFilteredFilelist() {
                         mvDebuglogger "${skipped_path} - is a File" "Skipped Path"
                     fi
 
-                    FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
+                    #FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
+                    FINDSTR="$FINDSTR | grep -vF \"${skipped_path}\""
                 else
                     mvDebuglogger "${skipped_path} - does not exist?" "Skipped Path"
                     continue
