@@ -560,7 +560,7 @@ getMoverSettings() {
         fi
     else
         LOGFILESAGE=$(cfg logfilesDaysold)
-        mvlogger "Age for delete mover log files: $LOGFILESAGE days"
+        mvlogger "Log files delete age: $LOGFILESAGE days"
     fi
 
     if [ -z $(cfg listfilesDaysold) ]; then
@@ -571,7 +571,7 @@ getMoverSettings() {
         fi
     else
         LISTFILESAGE=$(cfg listfilesDaysold)
-        mvlogger "Age for delete mover list files: $LISTFILESAGE days"
+        mvlogger "List files delete age: $LISTFILESAGE days"
     fi
 
     if [ -z $(cfg validateFilenames) ]; then
