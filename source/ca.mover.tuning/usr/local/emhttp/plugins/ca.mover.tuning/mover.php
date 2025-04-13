@@ -1,5 +1,5 @@
 #!/usr/bin/php
-<?
+<?PHP
 require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
