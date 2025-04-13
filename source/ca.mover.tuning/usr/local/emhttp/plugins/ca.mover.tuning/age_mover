@@ -554,7 +554,7 @@ getMoverSettings() {
 
     if [ -z $(cfg logfilesDaysold) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No age for delete mover log files argument provided, defaulting to 5 days"
+            mvlogger "No Log files delete age argument provided, defaulting to 5 days"
             echo 'logfilesDaysold="5"' >>$config_file
             LOGFILESAGE=5
         fi
@@ -565,7 +565,7 @@ getMoverSettings() {
 
     if [ -z $(cfg listfilesDaysold) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No age for delete mover log files argument provided, defaulting to 10 days"
+            mvlogger "No List files delete age argument provided, defaulting to 10 days"
             echo 'listfilesDaysold="10"' >>$config_file
             LISTFILESAGE=10
         fi
