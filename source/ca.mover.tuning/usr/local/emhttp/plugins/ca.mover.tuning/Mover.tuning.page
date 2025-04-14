@@ -2,13 +2,15 @@ Menu="Scheduler:2a"
 Title="Mover Tuning"
 Tag="gear"
 ---
-<?
+<?PHP
 if ($var['shareCacheEnabled']!='yes') {
   echo "<p class='notice'>Cache disk not enabled!</p>";
 } elseif ($var['shareUser']=='-') {
   echo "<p class='notice'>User shares not enabled!</p>";
 }
-$plugin='ca.mover.tuning';
+$plugin = 'ca.mover.tuning';
+$config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
+$config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
 $cfg = parse_plugin_cfg($plugin);
 $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
@@ -25,9 +27,35 @@ $om = $cfg['movingThreshold']; $om = $om + 5;
 $f = $cfg['movingThreshold'];
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
 $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
-$version = ($cfg['version'])
+$version = ($cfg['version']);
+
+function resetDefaults()
+{
+  global $config_file;
+  global $config_default_file;
+
+  if (!file_exists($config_default_file)) {
+    echo 'Default config file does not exist: ' . $config_default_file;
+    return;
+  }
+
+  @unlink($config_file);
+  if (copy($config_default_file, $config_file)) {
+    echo 'Success';
+  } else {
+    echo 'Error copying file from: ' . $config_default_file . ' to: ' . $config_file;
+
+    // Get the last system error message
+    $last_error = error_get_last();
+    if ($last_error) {
+      echo 'Error details: ';
+      print_r($last_error);
+    }
+  }
+}
 
 ?>
+
 <script>
 $(function(){
 	if ( typeof caPluginUpdateCheck === "function" ) {
@@ -41,6 +69,7 @@ $.fn.toggleAttr = function(attr) {
 		$this.attr(attr) ? $this.removeAttr(attr) : $this.attr(attr,true);
 	});
 }
+
 function updateCron() {
   var cron = $("#cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
@@ -61,6 +90,7 @@ function updateScreenMoverTuningSettings(option,slow) {
     break;
   }
 }
+
 function updateScreenMoverAdvancedSettings(option,slow) {
   switch (option) {
   case 'no':
@@ -70,7 +100,9 @@ function updateScreenMoverAdvancedSettings(option,slow) {
     $('#moverAdvancedSettings').show(slow);
     break;
   }
-}function updateScreenMoverAdvancedFilters(option,slow) {
+}
+
+function updateScreenMoverAdvancedFilters(option,slow) {
   switch (option) {
   case 'no':
     $('#moverAdvancedFilters').hide(slow);
@@ -91,6 +123,7 @@ function updateScreenMoverAdvancedOptions(option,slow) {
     break;
   }
 }
+
 $(function() {
   updateScreenMoverTuningSettings('<? echo $moverDisabled ?>');
   updateScreenMoverAdvancedSettings('<? echo $advancedSettings ?>');
@@ -565,7 +598,7 @@ Resynchronize all Primary files to Secondary:
 </div>
 
 &nbsp;
-: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()"><input type="submit" id="Defaults" value="Defaults" onclick="resetDefaults()">
 </form>
 <span id='test'></span>
 
