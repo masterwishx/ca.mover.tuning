@@ -1,5 +1,5 @@
-<?PHP
 #!/usr/bin/php
+<?PHP
 require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
@@ -50,10 +50,10 @@ function startMover($options = "start")
         $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
 
         if ($cfg['moveThreshold'] >= 0 or $cfg['age'] == "yes" or $cfg['sizef'] == "yes" or $cfg['sparsnessf'] == "yes" or $cfg['filelistf'] == "yes" or $cfg['filetypesf'] == "yes" or $cfg['$beforescript'] != '' or $cfg['$afterscript'] != '' or $cfg['testmode'] == "yes") {
-            $age_mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover start";
+            $age_mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover";
             //exec("echo 'about to hit mover string here: $age_mover_str' >> /var/log/syslog");
-            logger("ionice $ioLevel nice -n $niceLevel $age_mover_str");
-            passthru("ionice $ioLevel nice -n $niceLevel $age_mover_str");
+            logger("ionice $ioLevel nice -n $niceLevel $age_mover_str $options");
+            passthru("ionice $ioLevel nice -n $niceLevel $age_mover_str $options");
         }
     } else {
         //exec("echo 'Running from button' >> /var/log/syslog");
