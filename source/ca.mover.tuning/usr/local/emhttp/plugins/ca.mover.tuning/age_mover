@@ -1015,7 +1015,7 @@ createFilteredFilelist() {
         mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
 
         # cache:prefer counted files to move from secondary storage for print next if commands only if secondary storage is not empty
-        if [ "$SHAREUSECACHE" = "prefer" ]; then           
+        if [ "$SHAREUSECACHE" = "prefer" ]; then
             mvDebuglogger "Amount of files on secondary storage: $COUNT_SECONDARYSTORAGE_FILES" "[$SHARENAME] count files"
         fi
 
@@ -1652,10 +1652,42 @@ start() {
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 
+empty() {
+    if [ -f $PIDFILE ]; then
+        if ps h $(cat $PIDFILE) | grep mover; then
+            echo "mover: already running"
+            exit 1
+        fi
+    fi
+
+    echo $$ >/var/run/mover.pid
+    echo "mover: started"
+
+    shopt -s nullglob
+
+    for SHAREPATH in /mnt/$DISK/*; do
+        if [[ -d "$SHAREPATH" ]]; then
+            find "$SHAREPATH" -depth 2>/dev/null | /usr/libexec/unraid/move -e $DEBUGGING
+        fi
+    done
+
+    # output list of files which could not be moved
+    shopt -s dotglob
+    FILES=/mnt/$DISK/*
+    shopt -u dotglob
+    if [ ${#files[@]} -gt 2 ]; then
+        echo "mover: not moved:"
+        ls -1 --almost-all --recursive /mnt/$DISK
+    fi
+
+    rm -f $PIDFILE
+    echo "mover: finished"
+}
+
 killtree() {
     local pid=$1 child
 
-    for child in $(pgrep -P $pid); do
+    for child in $(pgrep --ns $$ -P $pid); do
         killtree $child
     done
     [ $pid -ne $$ ] && kill -TERM $pid
@@ -1685,6 +1717,22 @@ softstop() {
     exit
 }
 
+# Function to display usage
+usage() {
+    echo "Usage: $0 start [-e] <disk_name>"
+    echo "       $0 stop|softstop|status"
+    echo "       <disk_name> must match pattern 'disk[0-9]*'"
+    exit 1
+}
+
+# validate disk name
+validate_disk() {
+    if [[ ! "$1" =~ ^disk[0-9]+$ ]]; then
+        echo "Error: <disk_name> must match pattern 'disk[0-9]*'"
+        usage
+    fi
+}
+
 status() {
     if [ -f $PIDFILE ]; then
         echo "mover: running"
@@ -1696,9 +1744,26 @@ status() {
     exit
 }
 
+if [ "$#" -lt 1 ]; then
+    usage
+    exit 1
+fi
+
 case $1 in
 start)
-    start
+    if [ -z "$2" ]; then
+        start
+    elif [ "$2" == "-e" ]; then
+        if [ -z "$3" ]; then
+            usage
+        else
+            validate_disk "$3"
+            DISK="$3"
+            empty
+        fi
+    else
+        usage
+    fi
     ;;
 stop)
     stop
@@ -1710,7 +1775,7 @@ status)
     status
     ;;
 *)
-    echo "Usage: $0 (start|stop|softstop|status)"
+    usage
     ;;
 esac
 
