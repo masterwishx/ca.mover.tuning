@@ -62,7 +62,9 @@ function startMover(array $args)
         } else {
             logger("Mover " . implode(' ', $args));
         }
-     } else {
+     } 
+     
+     else {
         $options = "start";
         logger("options: $options");
      }
@@ -112,33 +114,34 @@ function startMover(array $args)
     }
 }
 
-if (!$cron)
+if ($cron)
     if ($argv[2]) {
         $args[] = trim($argv[2]);
         startMover($args);
         exit();
-    } else {
-        logger("Mover not crond");
-        if ($argv[1] || $argv[2] || $argv[3]) {
+    } 
+    // else {
+    //     logger("Mover not crond");
+    //     if ($argv[1] || $argv[2] || $argv[3]) {
 
-            if ($argv[1]) {
-                $args[] = trim($argv[1]);
-            }
+    //         if ($argv[1]) {
+    //             $args[] = trim($argv[1]);
+    //         }
 
-            if ($argv[2]) {
-                $args[] = trim($argv[2]);
-            }
+    //         if ($argv[2]) {
+    //             $args[] = trim($argv[2]);
+    //         }
 
-            if ($argv[3]) {
-                $args[] = trim($argv[3]);
-            }
+    //         if ($argv[3]) {
+    //             $args[] = trim($argv[3]);
+    //         }
 
-            // Call a function to handle all arguments together
-            startMover($args);
+    //         // Call a function to handle all arguments together
+    //         startMover($args);
 
-            exit();
-        }
-    }
+    //         exit();
+    //     }
+//    }
 
 /*if ( ! $cron && $cfg['moveFollows'] != 'follows') {
     logger("Manually starting mover");
