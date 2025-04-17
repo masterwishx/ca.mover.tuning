@@ -10,7 +10,7 @@ This is a simple [Unraid](https://unraid.net/) plugin that will let you fine-tun
 - Optional ability to completely disable the scheduled runs of mover
 - Manually executed runs of mover ("Move Now" button) can either follow the rules for schedules, or always move all files
 
-This new fork merge all [pull requests](https://github.com/hugenbd/ca.mover.tuning/pulls) after review from [Hugenbd's repo](https://github.com/hugenbd/ca.mover.tuning) (cosmetics, merge skipfiletypes from shares, 4 changes from Swarles below) and add several feature, as for example automatic age threshold and compatibility with Unraid 7.x, and other stuff coming.
+This new fork merge all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/pulls) after review from [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning). (cosmetics, merge skipfiletypes from shares and add several feature, as for example automatic age threshold, sanitize input filenames to prevent attacks and compatibility with Unraid 7.x, and other stuff coming.
 
 ## How it works
 
