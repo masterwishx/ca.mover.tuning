@@ -55,11 +55,11 @@ TOTALUNATTENDEDFILES=0
 TOTALUNATTENDEDSIZE=0
 REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
-COUNT_SECONDARYSTORAGE_FILES=0
+COUNT_SECONDARY_FILES=0
 overrideFlag=0
 # Variables for counts when delete folders
 LAST_DIR=""
-last_count=-1
+LAST_COUNT=-1
 
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -849,7 +849,7 @@ createFilteredFilelist() {
         # Alterate SHAREPATH on Cache=prefer
         elif [ "$SHAREUSECACHE" = "prefer" ]; then
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            COUNT_SECONDARYSTORAGE_FILES=0
+            COUNT_SECONDARY_FILES=0
             # Initialize FINDSTR with the base find command
             FINDSTR="find"
             # Iterate over all directories in /mnt/*
@@ -862,7 +862,7 @@ createFilteredFilelist() {
                         FINDSTR+=" \"$dir/$SHARENAME\""
                         # Count the number of files in the secondary storage directory
                         tmp=$(find "$dir/$SHARENAME" -type f -depth | wc -l)
-                        COUNT_SECONDARYSTORAGE_FILES=$((COUNT_SECONDARYSTORAGE_FILES + tmp))
+                        COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                     fi
                 fi
             done
@@ -1021,10 +1021,10 @@ createFilteredFilelist() {
 
         # cache:prefer counted files to move from secondary storage for print next if commands only if secondary storage is not empty
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            mvDebuglogger "Amount of files on secondary storage: $COUNT_SECONDARYSTORAGE_FILES" "[$SHARENAME] count files"
+            mvDebuglogger "Amount of files on secondary storage: $COUNT_SECONDARY_FILES" "[$SHARENAME] count files"
         fi
 
-        if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNT_SECONDARYSTORAGE_FILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
+        if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNT_SECONDARY_FILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
             [ "$CTIME" == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
             eval "${FINDSTR}>>${FILTERED_FILELIST}"
             mvlogger "Updated Filtered filelist: $FILTERED_FILELIST for $SHARENAME"
@@ -1432,7 +1432,7 @@ processTheMoves() {
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
-                    mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $last_count" "Clean Folder - Start Loop"
+                    mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
@@ -1440,22 +1440,22 @@ processTheMoves() {
                         # Check if the current directory is same as the previous one
                         if [ "${LAST_DIR}" == "${DIR}" ]; then
                             # Check if the counter is greater than 0 to avoid counting files in the folder using wc -l
-                            if [ "$last_count" -gt 0 ]; then
-                                count=$((last_count - 1))
+                            if [ "$LAST_COUNT" -gt 0 ]; then
+                                count=$((LAST_COUNT - 1))
                                 # Save current counter
-                                last_count="$count"
+                                LAST_COUNT="$count"
                             fi
                         else
                             #count=$(ls -A "$DIR" | wc -l)
                             count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
                             # Save current counter
-                            last_count="$count"
+                            LAST_COUNT="$count"
                             # Save current Folder
                             LAST_DIR="$DIR"
                             # echo "Directory changed to: ${DIR}, Count of files: $count"
                         fi
                     fi
-                    mvDebuglogger "Cycle of delete folder, Previous count: $last_count, Count of files: $count" "Clean Folder - End Loop"
+                    mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of files: $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         mvlogger "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
@@ -1471,7 +1471,7 @@ processTheMoves() {
             # Clean parent ZFS dataset if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
                 # Check counter if equal to 0 then check datasets
-                if [ "$last_count" -eq 0 ]; then
+                if [ "$LAST_COUNT" -eq 0 ]; then
                     # Count files in share
                     share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
                     mvDebuglogger "Cycle of delete dataset" "Clean Dataset - Start Loop"
