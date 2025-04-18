@@ -1405,7 +1405,7 @@ processTheMoves() {
 
             # Check if list is complete
             NBFILES=$(($(echo "$SYNCED_FILES" | grep -o '" "' | wc -l) + 1))
-            if [ $NBFILES != $NBLINKS ]; then
+            if [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 continue
             fi
@@ -1426,7 +1426,7 @@ processTheMoves() {
             moverStatusWrite
             # Perform rsync. relative paths and hardlinks
             eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
-
+ 
             # Clean parent folder if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "yes" ]; then
                 # Define a function to handle the directory cleanup logic
@@ -1446,7 +1446,8 @@ processTheMoves() {
                                 last_count="$count"
                             fi
                         else
-                            count=$(ls -A "$DIR" | wc -l)
+                            #count=$(ls -A "$DIR" | wc -l)
+                            count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
                             # Save current counter
                             last_count="$count"
                             # Save current Folder
@@ -1677,12 +1678,10 @@ empty() {
     done
 
     # output list of files which could not be moved
-    shopt -s dotglob
-    FILES=/mnt/$DISK/*
-    shopt -u dotglob
-    if [ ${#files[@]} -gt 2 ]; then
+    shopt -s dotglob ; FILES=(/mnt/"$DISK"/*) ; shopt -u dotglob
+    if [ ${#FILES[@]} -gt 2 ]; then
         echo "mover: not moved:"
-        ls -1 --almost-all --recursive /mnt/$DISK
+        ls -1 --almost-all --recursive /mnt/"$DISK"
     fi
 
     rm -f $PIDFILE
