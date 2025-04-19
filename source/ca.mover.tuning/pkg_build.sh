@@ -12,7 +12,7 @@ version=$(date +"%Y.%m.%d")$2
 # $1 Path to the plugin directory
 config_file="$1/ca.mover.tuning/plugins/ca.mover.tuning.plg"
 readme_file="$1/ca.mover.tuning/README.md"
-
+default_config_file="$1/source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
 # Create the temporary directory and copy files
 mkdir -p $tmpdir
 
@@ -67,6 +67,8 @@ sed -i '$a\- '${version}'' "$readme_file"
 cat "$update_content" | sed -e 's/^/    /' >> "$readme_file"; echo -e "\n" >> "$readme_file"
 # Step 5: Add content from $tmp_readme_file to $readme_file
 cat "$tmp_readme_file" >> "$readme_file"
+# Step 6: change version=xxx to $version for default_config_file
+sed -i "s/version=.*/version=$version/" "$default_config_file"
 
 # Clean up the temporary directory
 rm -rf $tmpdir
