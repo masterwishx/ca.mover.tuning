@@ -29,30 +29,34 @@ $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
 $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $version = ($cfg['version']);
 
-function resetDefaults()
-{
-  global $config_file;
-  global $config_default_file;
+// function resetDefaults()
+// {
+//   // global $config_file;
+//   // global $config_default_file;
 
-  if (!file_exists($config_default_file)) {
-    echo 'Default config file does not exist: ' . $config_default_file;
-    return;
-  }
+//   // if (!file_exists($config_default_file)) {
+//   //   echo 'Default config file does not exist: ' . $config_default_file;
+//   //   return;
+//   // }
 
-  @unlink($config_file);
-  if (copy($config_default_file, $config_file)) {
-    echo 'Success';
-  } else {
-    echo 'Error copying file from: ' . $config_default_file . ' to: ' . $config_file;
+//   // @unlink($config_file);
+//   // if (copy($config_default_file, $config_file)) {
+//   //   echo 'Success';
+//   // } else {
+//   //   echo 'Error copying file from: ' . $config_default_file . ' to: ' . $config_file;
 
-    // Get the last system error message
-    $last_error = error_get_last();
-    if ($last_error) {
-      echo 'Error details: ';
-      print_r($last_error);
-    }
-  }
-}
+//   //   // Get the last system error message
+//   //   $last_error = error_get_last();
+//   //   if ($last_error) {
+//   //     echo 'Error details: ';
+//   //     print_r($last_error);
+//   //   }
+//   // }
+  
+// //  $.post("/plugins/ca.mover.tuning/mover.php reset");
+  
+  
+// }
 
 ?>
 
@@ -78,6 +82,11 @@ function updateCron() {
 
 function moveNow() {
 	$.post("/plugins/ca.mover.tuning/mover.php crond start");
+}
+
+function resetDefaults()
+{ 
+  $.post("/plugins/ca.mover.tuning/mover.php reset");
 }
 
 function updateScreenMoverTuningSettings(option,slow) {

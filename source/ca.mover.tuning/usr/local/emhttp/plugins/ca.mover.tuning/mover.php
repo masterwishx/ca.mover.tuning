@@ -120,28 +120,6 @@ if ($cron)
         startMover($args);
         exit();
     } 
-    // else {
-    //     logger("Mover not crond");
-    //     if ($argv[1] || $argv[2] || $argv[3]) {
-
-    //         if ($argv[1]) {
-    //             $args[] = trim($argv[1]);
-    //         }
-
-    //         if ($argv[2]) {
-    //             $args[] = trim($argv[2]);
-    //         }
-
-    //         if ($argv[3]) {
-    //             $args[] = trim($argv[3]);
-    //         }
-
-    //         // Call a function to handle all arguments together
-    //         startMover($args);
-
-    //         exit();
-    //     }
-//    }
 
 /*if ( ! $cron && $cfg['moveFollows'] != 'follows') {
     logger("Manually starting mover");
