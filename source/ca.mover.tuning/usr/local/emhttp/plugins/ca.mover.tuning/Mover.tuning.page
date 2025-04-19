@@ -84,9 +84,8 @@ function moveNow() {
 	$.post("/plugins/ca.mover.tuning/mover.php crond start");
 }
 
-function resetDefaults()
-{ 
-  $.post("/plugins/ca.mover.tuning/mover.php reset");
+function resetDefaults() { 
+  $.post("/plugins/ca.mover.tuning/reset.php");
 }
 
 function updateScreenMoverTuningSettings(option,slow) {

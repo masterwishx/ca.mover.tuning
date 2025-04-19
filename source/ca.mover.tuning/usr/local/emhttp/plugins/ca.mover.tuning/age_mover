@@ -1742,7 +1742,6 @@ softstop() {
 
 # Function to display usage
 usage() {
-    #echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")"
     echo "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)"
     echo ""
     echo "Usage: $0 start [-e] <disk_name>"
