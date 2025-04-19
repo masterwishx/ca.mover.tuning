@@ -1552,7 +1552,8 @@ processTheMoves() {
 start() {
     [ $LOGLEVEL = 0 ] && echo "Starting Mover tuning plugin.."
 
-    mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
+    #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
+    mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
     # Do not start if already running
     if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
         mvlogger "mover: already running" "warning" "warning"
@@ -1741,7 +1742,8 @@ softstop() {
 
 # Function to display usage
 usage() {
-    echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")"
+    #echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")"
+    echo "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)"
     echo ""
     echo "Usage: $0 start [-e] <disk_name>"
     echo "       $0 stop|softstop|status|reset"
