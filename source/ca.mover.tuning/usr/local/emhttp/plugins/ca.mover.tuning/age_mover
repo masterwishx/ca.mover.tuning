@@ -41,6 +41,7 @@ SOFTSTOPFILE="/var/run/moversoft.stop"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
+MOVERTUNING_OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 MOVERTUNING_DEFAULT_CFGFILE="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
 LOGLEVEL=1
 DEBUGLEVEL=1
@@ -639,8 +640,8 @@ createFilteredFilelist() {
         mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
 
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
-        if [ -f "/boot/config/plugins/ca.mover.tuning/shareOverrideConfig/$SHARENAME.cfg" ]; then
-            SHARETUNINGFILE="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig/$SHARENAME.cfg"
+        if [ -f "$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg" ]; then
+            SHARETUNINGFILE="$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg"
             if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
                 overrideFlag=1
                 mvlogger "Settings override:"
@@ -1644,7 +1645,7 @@ start() {
 
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
-        for config_file in $MOVERTUNINGCFGFILE /boot/config/plugins/ca.mover.tuning/shareOverrideConfig/*.cfg; do
+        for config_file in $MOVERTUNINGCFGFILE "$MOVERTUNING_OVERRIDE_CFGFOLDER"/*.cfg; do
             resetRunOnceMoverSettings $MOVERTUNINGCFGFILE
         done
     fi
@@ -1665,9 +1666,8 @@ reset() {
     if [ -e "$MOVERTUNINGCFGFILE" ]; then
         rm -f "$MOVERTUNINGCFGFILE"
     fi
-    # Also delete override configs
-    MOVERTUNING_OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
-    rm -f "$MOVERTUNING_OVERRIDE_CFGFOLDER"
+    # Also delete override configs folder
+    rm -rf "$MOVERTUNING_OVERRIDE_CFGFOLDER"
     # Copy default config
     cp -a "$MOVERTUNING_DEFAULT_CFGFILE" "$MOVERTUNINGCFGFILE"
     exit
