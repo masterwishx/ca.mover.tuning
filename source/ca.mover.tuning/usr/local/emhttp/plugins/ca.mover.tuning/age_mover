@@ -1551,7 +1551,7 @@ processTheMoves() {
 start() {
     [ $LOGLEVEL = 0 ] && echo "Starting Mover tuning plugin.."
 
-    mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
+    mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
     # Do not start if already running
     if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
         mvlogger "mover: already running" "warning" "warning"
@@ -1670,7 +1670,7 @@ reset() {
     rm -f "$MOVERTUNING_OVERRIDE_CFGFOLDER"
     # Copy default config
     cp -a "$MOVERTUNING_DEFAULT_CFGFILE" "$MOVERTUNINGCFGFILE"
-
+    exit
 }
 
 empty() {
@@ -1740,7 +1740,8 @@ softstop() {
 
 # Function to display usage
 usage() {
-    echo "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)"
+    echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")"
+    echo ""
     echo "Usage: $0 start [-e] <disk_name>"
     echo "       $0 stop|softstop|status|reset"
     echo "       <disk_name> must match pattern 'disk[0-9]*'"
