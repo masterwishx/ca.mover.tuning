@@ -1392,7 +1392,7 @@ processTheMoves() {
             # Check File by validate function and skip if error
             if [ "$VALIDATE_FILENAMES" = "yes" ]; then
                 if ! validate_filename "$(basename "$FILEPATH")"; then
-                    mvlogger "Error: Invalid filename path: '$FILEPATH'" "failure"
+                    mvlogger "Error: Invalid filename path: '$FILEPATH'. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure"
                     continue
                 #else
                 #    mvlogger "Valid filename"
@@ -1426,7 +1426,7 @@ processTheMoves() {
             moverStatusWrite
             # Perform rsync. relative paths and hardlinks
             eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
- 
+
             # Clean parent folder if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "yes" ]; then
                 # Define a function to handle the directory cleanup logic
@@ -1678,7 +1678,9 @@ empty() {
     done
 
     # output list of files which could not be moved
-    shopt -s dotglob ; FILES=(/mnt/"$DISK"/*) ; shopt -u dotglob
+    shopt -s dotglob
+    FILES=(/mnt/"$DISK"/*)
+    shopt -u dotglob
     if [ ${#FILES[@]} -gt 2 ]; then
         echo "mover: not moved:"
         ls -1 --almost-all --recursive /mnt/"$DISK"
