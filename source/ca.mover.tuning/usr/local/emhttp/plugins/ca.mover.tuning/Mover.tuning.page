@@ -577,7 +577,7 @@ Resynchronize all Primary files to Secondary:
 </div>
 
 &nbsp;
-: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()"><input type="submit" id="Defaults" value="Defaults" onclick="resetDefaults()">
+: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()"><input type="button" id="Defaults" value="Defaults" onclick="resetDefaults(); location.reload()">
 </form>
 <span id='test'></span>
 
