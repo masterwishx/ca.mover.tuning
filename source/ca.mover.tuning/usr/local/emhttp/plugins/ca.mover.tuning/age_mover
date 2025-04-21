@@ -1646,8 +1646,8 @@ start() {
 
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
-        for config_file in $MOVERTUNINGCFGFILE "$MOVERTUNING_OVERRIDE_CFGFOLDER"/*.cfg; do
-            resetRunOnceMoverSettings $MOVERTUNINGCFGFILE
+        for config_file in "$MOVERTUNINGCFGFILE" "$MOVERTUNING_OVERRIDE_CFGFOLDER"/*.cfg; do
+            resetRunOnceMoverSettings "$config_file"
         done
     fi
 
