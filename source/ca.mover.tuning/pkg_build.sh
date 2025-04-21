@@ -5,14 +5,14 @@ DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
 # Set the temporary directory and plugin name
 tmpdir=/tmp/tmp.$(( $RANDOM * 19318203981230 + 40 ))
-plugin=$(basename ${DIR})
+plugin=$(basename "${DIR}")
 archive="$(dirname $(dirname ${DIR}))/archive"
 # $2 is argument addition to date (a,b,c)
 version=$(date +"%Y.%m.%d")$2
 # $1 Path to the plugin directory
-config_file="$1/ca.mover.tuning/plugins/ca.mover.tuning.plg"
-readme_file="$1/ca.mover.tuning/README.md"
-default_config_file="$1/source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
+config_file="$1/$plugin/plugins/$plugin.plg"
+readme_file="$1/$plugin/README.md"
+default_config_file="$1/source/$plugin/usr/local/emhttp/plugins/$plugin/default.cfg"
 # Create the temporary directory and copy files
 mkdir -p $tmpdir
 
@@ -34,7 +34,7 @@ echo "MD5: $package_md5"
 echo ""
 echo "Update Content: $update_content"
 echo ""
-echo "Updating ca.mover.plugin.plg"
+echo "Updating $plugin.plg"
 echo "Updating README.md"
 
 sed -i "s/<!ENTITY md5.*/<!ENTITY md5       \"$package_md5\">/" "$config_file"
