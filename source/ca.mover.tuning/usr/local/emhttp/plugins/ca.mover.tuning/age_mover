@@ -1663,7 +1663,7 @@ start() {
 
 reset() {
     # Reset to default config file
-    mvlogger "Cleaning the configuration file to default values and removing any override configurations."
+    echo "mover: Cleaning the configuration file to default values and removing any override configurations."
 
     if [ -e "$MOVERTUNINGCFGFILE" ]; then
         rm -f "$MOVERTUNINGCFGFILE"
