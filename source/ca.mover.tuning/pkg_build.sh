@@ -67,7 +67,7 @@ sed -i '$a\- '${version}'' "$readme_file"
 cat "$update_content" | sed -e 's/^/    /' >> "$readme_file"; echo -e "\n" >> "$readme_file"
 # Step 5: Add content from $tmp_readme_file to $readme_file
 cat "$tmp_readme_file" >> "$readme_file"
-# Step 6: change version=xxx to $version for default_config_file
+# Step 6: Change to current version in $default_config_file
 sed -i "s/version=.*/version=\"$version\"/" "$default_config_file"
 
 # Clean up the temporary directory

@@ -314,7 +314,7 @@ Only move if above this threshold of used Primary (<em>cache</em>) space:
 <blockquote class="inline_help">
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.</p>
 <p> <u>Note:</u> In case you see <strong>mover is NOT moving data when it should</strong>, try setting a higher <strong>moving threshold</strong> for an increased gap between the freeing threshold.</p>
-<p> Mover calculates the sum of the free cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
+<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
 </blockquote>
 
 Free down/prime up to this level of used Primary (<em>cache</em>) space:
@@ -328,7 +328,7 @@ Free down/prime up to this level of used Primary (<em>cache</em>) space:
 <blockquote class="inline_help">
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.</p>
 <p> <u>Note:</u> In case you see <strong>mover is NOT moving data when it should</strong>, try lowering the <strong>freeing threshold</strong> for an increased gap between the moving threshold.</p>
-<p> Mover calculates the sum of the free cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
+<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
 </blockquote>
 
 Fill up/prime up to this level of used Primary (<em>cache</em>) space:
