@@ -1681,6 +1681,11 @@ reset() {
 empty() {
     DISK="$1"
 
+    if [ ! -d "/mnt/$DISK" ]; then
+        echo "Error: disk '$DISK' not found"
+        exit 1
+    fi
+
     if [ -f $PIDFILE ]; then
         if ps h $(cat $PIDFILE) | grep mover; then
             echo "mover: already running"
