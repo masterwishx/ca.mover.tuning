@@ -22,10 +22,7 @@ function startMover(array $args)
     global $vars, $cfg, $cron, $argv, $args;
 
     if ($argv[2]) {
-
-        if ($argv[2]) {
-            $args[] = trim($argv[2]);
-        }
+        $args[] = trim($argv[2]);
     }
 
     if (!$cron) {
@@ -40,11 +37,11 @@ function startMover(array $args)
         // Example usage of $options
         logger("Options: $options\n");
 
-        if (isset($args[1]) && $args[1] == "-e" && isset($args[2])) {
-            logger("Mover " . implode(' ', array_slice($args, 0, 3)));
-        } else {
-            logger("Mover " . implode(' ', $args));
-        }
+        // if (isset($args[1]) && $args[1] == "-e" && isset($args[2])) {
+        //     logger("Mover " . implode(' ', array_slice($args, 0, 3)));
+        // } else {
+        //     logger("Mover " . implode(' ', $args));
+        // }
     } else {
         $options = "start";
         logger("Cron + options: $options");
@@ -95,110 +92,18 @@ function startMover(array $args)
     }
 }
 
-// if ($cron)
-//     if ($argv[2]) {
-//         $args[] = trim($argv[2]);
-//         startMover($args);
-//         exit();
-//     } 
-
-/*if ( ! $cron && $cfg['moveFollows'] != 'follows') {
-    logger("Manually starting mover");
-    startMover();
-    exit();
-}
-*/
-
-
+// //Add this at the top of your file with other functions
 // function is_run_by_cron() {
-//     $parent_process_id = escapeshellarg($_ENV['PPID']);
-//     $parent_process = shell_exec("ps h -o comm= . $parent_process_id . ");
-//     $parent_process = trim($parent_process);
-
-//     if ($parent_process == "cron" || $parent_process == "crond") {
-//         echo "This script is being run by crond.";
-//         return true;
-//     } else {
-//         echo "This script is NOT being run by crond.";
-//         return false;
-//     }
-// }
-
-// Add this at the top of your file with other functions
-function is_run_by_cron() {
-    // Combines both checks for better reliability
-    if (isset($_ENV['SHELL']) && strpos($_ENV['SHELL'], '/cron') !== false) {
-        return true;
-    }
-    
-    $pppid = trim (shell_exec("ps h -o ppid= $$"));
-    $parent_process = trim(shell_exec("ps h -o comm= $pppid"));
-    logger ("pppid = $pppid , parent_process =  $parent_process");
-    return $parent_process === 'cron' || $parent_process === 'crond';
-}
-
-
-// function is_run_by_cron() {
-//     // Check if the script was called from a cron job by looking at the environment variable
+//     // Combines both checks for better reliability
 //     if (isset($_ENV['SHELL']) && strpos($_ENV['SHELL'], '/cron') !== false) {
-//         echo "This script is being run by crond.";
 //         return true;
-//     } else {
-//         echo "This script is NOT being run by crond.";
-//         return false;
-//     }
-// }
-
-// function is_run_by_cron() {
-//     // Check if the /var/run/mover.pid file exists
-//     $pidFilePath = '/var/run/mover.pid';
-//     if (file_exists($pidFilePath)) {
-//         echo "This script is being run manually or by another method.\n";
-//         return true;
-//     } else {
-//         echo "This script is NOT being run by crond or manually.\n";
-//         return false;
-//     }
-// }
-
-// Add this at the top of your file with other functions
-// 
-// Add this at the top of your file with other functions
-// function is_run_by_cron() {
-//     // First check if running via crond by parent process ID
-//     $ppid = shell_exec("ps h -o ppid= $$");
-//     $parent_process = trim(shell_exec("ps h -o comm= $ppid"));
-    
-//     // If not found via ppid, try checking the process name directly
-//     if (!in_array($parent_process, ['cron', 'crond'])) {
-//         // Check if any of the ancestors is cron/crond
-//         $depth = 0;
-//         while ($depth < 10) { // Prevent infinite loop in case of weird process trees
-//             $ppid = shell_exec("ps h -o ppid= $$");
-//             $parent_process = trim(shell_exec("ps h -o comm= $ppid"));
-            
-//             if (in_array($parent_process, ['cron', 'crond'])) {
-//                 return true;
-//             }
-            
-//             // If we reach the init process, break
-//             if ($parent_process == 'init' || $parent_process == 'systemd') {
-//                 break;
-//             }
-            
-//             ++$depth;
-//         }
 //     }
     
-//     // Also check if running via a shell that indicates cron (like /bin/sh)
-//     return strpos(shell_exec("ps h -o args= $$"), '/cron') !== false;
+//     $pppid = trim (shell_exec("ps h -o ppid= $$"));
+//     $parent_process = trim(shell_exec("ps h -o comm= $pppid"));
+//     logger ("pppid = $pppid , parent_process =  $parent_process");
+//     return $parent_process === 'cron' || $parent_process === 'crond';
 // }
-
-#PPPID=$(ps h -o ppid= "$PPID" 2>/dev/null)
-#P_COMMAND=$(ps h -o %c "$PPPID" 2>/dev/null)
-
-// //Call the function
-// is_run_by_cron();
 
 if ($cron && $cfg['moverDisabled'] == 'yes') {
     logger("Mover schedule disabled");
@@ -211,21 +116,19 @@ if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
 }
 
 logger("Starting Mover ...");
-logger("cron is: $cron");
+// logger("cron is: $cron");
 
-// Add this near the top of your main script execution
-if (is_run_by_cron()) {
-    logger("This process was started by crond");
-    // Handle cron-specific logic here
-    if ($cfg['moverDisabled'] == 'yes') {
-        logger("Mover schedule disabled when run by cron");
-        exit();
-    }
-} else {
-    logger("This process was NOT started by crond");
-}
-
-
+// // Add this near the top of your main script execution
+// if (is_run_by_cron()) {
+//     logger("This process was started by crond");
+//     // Handle cron-specific logic here
+//     if ($cfg['moverDisabled'] == 'yes') {
+//         logger("Mover schedule disabled when run by cron");
+//         exit();
+//     }
+// } else {
+//     logger("This process was NOT started by crond");
+// }
 
 startMover($args);
 
