@@ -709,7 +709,7 @@ createFilteredFilelist() {
         # Calculate primary storage size thresholds in bytes
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             # Calculate the real free space by considering an upper limit of fillup (95%) minus pool used usage for later calculations
-            PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100 - POOLBYTEUSED))
+            PRIMARYSIZETHRESH=$(((POOLSIZE - POOLBYTEUSED) * PREFER_FILLUPPCTLIMIT / 100))
             MOVESIZETHRESH=$((POOLSIZE * PREFER_MOVINGPCTTHRESHOLD / 100))
         else
             PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100))
