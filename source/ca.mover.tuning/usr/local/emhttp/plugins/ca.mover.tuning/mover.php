@@ -47,7 +47,7 @@ function startMover(array $args)
         }
     } else {
         $options = "start";
-        logger("options: $options");
+        logger("Cron + options: $options");
     }
 
     if ($options != "stop") {
