@@ -29,6 +29,9 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.04.24a
+    - fix: version number in default.cfg file. **_(masterwishx)_**
+
 - 2025.04.24
     - fix: Fix cli arguments when running "mover command" in cli mode for pass them to age_mover script or original mover. **_(masterwishx)_**
     - new: Add "mover start -e diskX" option for age_mover from original mover for empty an array disk.
