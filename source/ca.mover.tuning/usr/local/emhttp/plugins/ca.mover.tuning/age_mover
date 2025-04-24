@@ -1559,7 +1559,7 @@ start() {
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
     # Do not start if already running
     if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
-        mvlogger "mover: already running" "warning" "warning"
+        mvlogger "mover: already running" "warning"
         exit 1
     fi
     echo $$ >$PIDFILE

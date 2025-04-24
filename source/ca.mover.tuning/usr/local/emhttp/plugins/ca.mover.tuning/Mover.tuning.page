@@ -64,7 +64,7 @@ function updateScreenMoverTuningSettings(option,slow) {
   case 'yes':
     $('#moverTuningSettings').hide(slow);
     break;
-  case 'no':
+    case 'no':
     $('#moverTuningSettings').show(slow);
     break;
   }
