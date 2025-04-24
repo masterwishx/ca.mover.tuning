@@ -282,12 +282,12 @@ The 'post-install' script
 echo ""
 if [[ -e /usr/local/sbin/mover ]]; then
    if [[ ! -f /usr/local/sbin/mover.old ]]; then
-     echo "Backing up current /usr/local/sbin/mover binary"
+     echo "Backing up current /usr/local/sbin/mover script"
      mv /usr/local/sbin/mover /usr/local/sbin/mover.old
    fi
 elif [[ -e /usr/local/bin/mover ]]; then
   if [[ ! -f /usr/local/bin/mover.old ]]; then 
-    echo "Backing up current /usr/local/bin/mover binary "
+    echo "Backing up current /usr/local/bin/mover script"
     mv /usr/local/bin/mover /usr/local/bin/mover.old
   fi
 fi
@@ -321,8 +321,8 @@ if [[ ! -f "$config_file" ]]; then
   echo 'testmode="yes"' > $config_file
   echo 'logging="yes"' >> $config_file
   echo 'movenow="yes"' >> $config_file
-  echo "version=&version;" >> "$config_file"
-else
+  echo 'version="&version;"' >> "$config_file"
+else  
   echo "Updating config file"
   if [ &upgrade; = "major" ]; then
     echo "- Major upgrade, forcing test mode"
@@ -336,9 +336,9 @@ else
   fi
   echo "- Updating version number"
   if grep -q "version" "$config_file"; then
-    sed -i "s/version=.*$/version=&version;/" "$config_file"
+    sed -i "s/version=.*$/version=\"&version;\"/" "$config_file"
   else
-    echo "version=&version;" >> "$config_file"
+    echo "version=\"&version;\"" >> "$config_file"
   fi
   if grep -q "threshold=" $config_file; then
     echo "- Updating movingThreshold"

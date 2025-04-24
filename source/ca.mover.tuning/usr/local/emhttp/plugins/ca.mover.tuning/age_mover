@@ -1,5 +1,10 @@
 #!/bin/bash
-#Copyright 2005-2017, Lime Technology
+#Copyright (C)
+#      2005-2024, Lime Technology, Inc. (any and all other parts of Unraid)
+#      2018 - Andrew Zawadzki (parts of code from mover tuning package)
+#      2023 - hugenbd (parts of code from mover tuning package)
+#      2024 - R3yn4ld (parts of code from mover tuning package)
+#      2025 - masterwishx (as current author and maintainer of this file)
 #License: GPLv2 only
 
 # This is the 'mover tuning' script used for moving files between the cache disk and main array.
@@ -36,6 +41,8 @@ SOFTSTOPFILE="/var/run/moversoft.stop"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
+MOVERTUNING_OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
+MOVERTUNING_DEFAULT_CFGFILE="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
 LOGLEVEL=1
 DEBUGLEVEL=1
 TOTALPRIMARYFILES=0
@@ -50,11 +57,15 @@ TOTALUNATTENDEDFILES=0
 TOTALUNATTENDEDSIZE=0
 REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
-COUNT_SECONDARYSTORAGE_FILES=0
+COUNT_SECONDARY_FILES=0
 overrideFlag=0
 # Variables for counts when delete folders
 LAST_DIR=""
-last_count=-1
+LAST_COUNT=-1
+# Variables from unraid mover.old empty() function
+DEBUGGING=""
+CFGPATH="/boot/config/shares"
+#
 
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -554,24 +565,24 @@ getMoverSettings() {
 
     if [ -z $(cfg logfilesDaysold) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No age for delete mover log files argument provided, defaulting to 5 days"
+            mvlogger "No Log files delete age argument provided, defaulting to 5 days"
             echo 'logfilesDaysold="5"' >>$config_file
             LOGFILESAGE=5
         fi
     else
         LOGFILESAGE=$(cfg logfilesDaysold)
-        mvlogger "Age for delete mover log files: $LOGFILESAGE days"
+        mvlogger "Log files delete age: $LOGFILESAGE days"
     fi
 
     if [ -z $(cfg listfilesDaysold) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No age for delete mover log files argument provided, defaulting to 10 days"
+            mvlogger "No List files delete age argument provided, defaulting to 10 days"
             echo 'listfilesDaysold="10"' >>$config_file
             LISTFILESAGE=10
         fi
     else
         LISTFILESAGE=$(cfg listfilesDaysold)
-        mvlogger "Age for delete mover list files: $LISTFILESAGE days"
+        mvlogger "List files delete age: $LISTFILESAGE days"
     fi
 
     if [ -z $(cfg validateFilenames) ]; then
@@ -618,7 +629,7 @@ createFilteredFilelist() {
     # create a file containing the list off all shareUseCache yes or prefer whith this format:
     echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH" >"$FILTERED_FILELIST"
 
-    for SHARECFG in /boot/config/shares/*.cfg; do
+    for SHARECFG in "$CFGPATH"/*.cfg; do
         if [ -e $SOFTSTOPFILE ]; then
             [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
             return
@@ -633,8 +644,8 @@ createFilteredFilelist() {
         mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
 
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
-        if [ -f "/boot/config/plugins/ca.mover.tuning/shareOverrideConfig/$SHARENAME.cfg" ]; then
-            SHARETUNINGFILE="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig/$SHARENAME.cfg"
+        if [ -f "$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg" ]; then
+            SHARETUNINGFILE="$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg"
             if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
                 overrideFlag=1
                 mvlogger "Settings override:"
@@ -671,7 +682,7 @@ createFilteredFilelist() {
         # Determine secondary storage
         SECONDARYSTORAGENAME=$(grep "shareCachePool2=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
         if [ -z "$SECONDARYSTORAGENAME" ]; then
-            if [ $SHAREUSECACHE = "only" ] || [ $SHAREUSECACHE = "no" ]; then
+            if [ "$SHAREUSECACHE" = "only" ] || [ "$SHAREUSECACHE" = "no" ]; then
                 SECONDARYSTORAGENAME="none"
             else
                 SECONDARYSTORAGENAME="user0"
@@ -698,7 +709,7 @@ createFilteredFilelist() {
         # Calculate primary storage size thresholds in bytes
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             # Calculate the real free space by considering an upper limit of fillup (95%) minus pool used usage for later calculations
-            PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100 - POOLBYTEUSED))
+            PRIMARYSIZETHRESH=$(((POOLSIZE - POOLBYTEUSED) * PREFER_FILLUPPCTLIMIT / 100))
             MOVESIZETHRESH=$((POOLSIZE * PREFER_MOVINGPCTTHRESHOLD / 100))
         else
             PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100))
@@ -844,7 +855,7 @@ createFilteredFilelist() {
         # Alterate SHAREPATH on Cache=prefer
         elif [ "$SHAREUSECACHE" = "prefer" ]; then
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            COUNT_SECONDARYSTORAGE_FILES=0
+            COUNT_SECONDARY_FILES=0
             # Initialize FINDSTR with the base find command
             FINDSTR="find"
             # Iterate over all directories in /mnt/*
@@ -857,7 +868,7 @@ createFilteredFilelist() {
                         FINDSTR+=" \"$dir/$SHARENAME\""
                         # Count the number of files in the secondary storage directory
                         tmp=$(find "$dir/$SHARENAME" -type f -depth | wc -l)
-                        COUNT_SECONDARYSTORAGE_FILES=$((COUNT_SECONDARYSTORAGE_FILES + tmp))
+                        COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                     fi
                 fi
             done
@@ -1014,11 +1025,11 @@ createFilteredFilelist() {
         mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
 
         # cache:prefer counted files to move from secondary storage for print next if commands only if secondary storage is not empty
-        if [ "$SHAREUSECACHE" = "prefer" ]; then           
-            mvDebuglogger "Amount of files on secondary storage: $COUNT_SECONDARYSTORAGE_FILES" "[$SHARENAME] count files"
+        if [ "$SHAREUSECACHE" = "prefer" ]; then
+            mvDebuglogger "Amount of files on secondary storage: $COUNT_SECONDARY_FILES" "[$SHARENAME] count files"
         fi
 
-        if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNT_SECONDARYSTORAGE_FILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
+        if [ -d "$SHAREPATH" ] || [[ "$SHAREUSECACHE" = "prefer" && "$COUNT_SECONDARY_FILES" -gt 0 ]] || [ "$REBALANCESHARES" = "yes" ]; then
             [ "$CTIME" == "yes" ] && mvlogger "Filtering $SHARENAME files... (can take a moment)"
             eval "${FINDSTR}>>${FILTERED_FILELIST}"
             mvlogger "Updated Filtered filelist: $FILTERED_FILELIST for $SHARENAME"
@@ -1386,7 +1397,7 @@ processTheMoves() {
             # Check File by validate function and skip if error
             if [ "$VALIDATE_FILENAMES" = "yes" ]; then
                 if ! validate_filename "$(basename "$FILEPATH")"; then
-                    mvlogger "Error: Invalid filename path: '$FILEPATH'" "failure"
+                    mvlogger "Error: Invalid filename path: '$FILEPATH'. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure"
                     continue
                 #else
                 #    mvlogger "Valid filename"
@@ -1399,7 +1410,7 @@ processTheMoves() {
 
             # Check if list is complete
             NBFILES=$(($(echo "$SYNCED_FILES" | grep -o '" "' | wc -l) + 1))
-            if [ $NBFILES != $NBLINKS ]; then
+            if [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 continue
             fi
@@ -1426,7 +1437,7 @@ processTheMoves() {
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
-                    mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $last_count" "Clean Folder - Start Loop"
+                    mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
@@ -1434,21 +1445,22 @@ processTheMoves() {
                         # Check if the current directory is same as the previous one
                         if [ "${LAST_DIR}" == "${DIR}" ]; then
                             # Check if the counter is greater than 0 to avoid counting files in the folder using wc -l
-                            if [ "$last_count" -gt 0 ]; then
-                                count=$((last_count - 1))
+                            if [ "$LAST_COUNT" -gt 0 ]; then
+                                count=$((LAST_COUNT - 1))
                                 # Save current counter
-                                last_count="$count"
+                                LAST_COUNT="$count"
                             fi
                         else
-                            count=$(ls -A "$DIR" | wc -l)
+                            #count=$(ls -A "$DIR" | wc -l)
+                            count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
                             # Save current counter
-                            last_count="$count"
+                            LAST_COUNT="$count"
                             # Save current Folder
                             LAST_DIR="$DIR"
                             # echo "Directory changed to: ${DIR}, Count of files: $count"
                         fi
                     fi
-                    mvDebuglogger "Cycle of delete folder, Previous count: $last_count, Count of files: $count" "Clean Folder - End Loop"
+                    mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of files: $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         mvlogger "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
@@ -1464,7 +1476,7 @@ processTheMoves() {
             # Clean parent ZFS dataset if empty
             if [[ "$ACTION" =~ "move" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
                 # Check counter if equal to 0 then check datasets
-                if [ "$last_count" -eq 0 ]; then
+                if [ "$LAST_COUNT" -eq 0 ]; then
                     # Count files in share
                     share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
                     mvDebuglogger "Cycle of delete dataset" "Clean Dataset - Start Loop"
@@ -1543,10 +1555,11 @@ processTheMoves() {
 start() {
     [ $LOGLEVEL = 0 ] && echo "Starting Mover tuning plugin.."
 
+    #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
     # Do not start if already running
     if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
-        mvlogger "mover: already running" "warning" "warning"
+        mvlogger "mover: already running" "warning"
         exit 1
     fi
     echo $$ >$PIDFILE
@@ -1636,8 +1649,8 @@ start() {
 
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
-        for config_file in $MOVERTUNINGCFGFILE /boot/config/plugins/ca.mover.tuning/shareOverrideConfig/*.cfg; do
-            resetRunOnceMoverSettings $MOVERTUNINGCFGFILE
+        for config_file in "$MOVERTUNINGCFGFILE" "$MOVERTUNING_OVERRIDE_CFGFOLDER"/*.cfg; do
+            resetRunOnceMoverSettings "$config_file"
         done
     fi
 
@@ -1651,10 +1664,66 @@ start() {
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 
+reset() {
+    # Reset to default config file
+    echo "mover: Cleaning the configuration file to default values and removing any override configurations."
+
+    if [ -e "$MOVERTUNINGCFGFILE" ]; then
+        rm -f "$MOVERTUNINGCFGFILE"
+    fi
+    # Also delete override configs folder
+    rm -rf "$MOVERTUNING_OVERRIDE_CFGFOLDER"
+    # Copy default config
+    cp -a "$MOVERTUNING_DEFAULT_CFGFILE" "$MOVERTUNINGCFGFILE"
+    exit
+}
+
+empty() {
+    DISK="$1"
+
+    if [ ! -d "/mnt/$DISK" ]; then
+        echo "Error: disk '$DISK' not found"
+        exit 1
+    fi
+
+    if [ -f $PIDFILE ]; then
+        if ps h $(cat $PIDFILE) | grep mover; then
+            echo "mover: already running"
+            exit 1
+        fi
+    fi
+
+    echo $$ >/var/run/mover.pid
+    echo "mover: started"
+
+    shopt -s nullglob
+
+    # we can only empty share directories
+    for SHAREPATH in /mnt/$DISK/*; do
+        SHARE=$(basename "$SHAREPATH")
+        if [[ -d "$SHAREPATH" && -f "$CFGPATH/$SHARE.cfg" ]]; then
+            find "$SHAREPATH" -depth 2>/dev/null | /usr/libexec/unraid/move -e $DEBUGGING
+        fi
+    done
+
+    # output list of files which could not be moved
+    # use 'find' in case huge number of files left in /mnt/$DISK
+    count=$(find /mnt/$DISK -mindepth 1 | wc -l)
+    if [ "$count" -gt 0 ]; then
+        find /mnt/$DISK -mindepth 1 -depth -printf 'move: %p Not moved\n' | head -n 100
+        if [ "$count" -gt 100 ]; then
+            echo "[output truncated to first 100 entries]"
+        fi
+    fi
+
+    rm -f $PIDFILE
+    echo "mover: finished"
+}
+
 killtree() {
     local pid=$1 child
 
-    for child in $(pgrep -P $pid); do
+    for child in $(pgrep --ns $$ -P $pid); do
         killtree $child
     done
     [ $pid -ne $$ ] && kill -TERM $pid
@@ -1684,6 +1753,26 @@ softstop() {
     exit
 }
 
+# Function to display usage
+usage() {
+    echo "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)"
+    echo ""
+    echo "Usage: $0 start [-e <disk_name>]"
+    echo "       $0 stop|softstop|status|reset"
+    echo "       <disk_name> must match pattern 'disk[0-9]*'"
+    echo ""
+    echo "reset  - reset config file to default values and delete override config folder"
+    exit 1
+}
+
+# validate disk name
+validate_disk() {
+    if [[ ! "$1" =~ ^disk[0-9]+$ ]]; then
+        echo "Error: <disk_name> must match pattern 'disk[0-9]*'"
+        usage
+    fi
+}
+
 status() {
     if [ -f $PIDFILE ]; then
         echo "mover: running"
@@ -1695,9 +1784,25 @@ status() {
     exit
 }
 
+if [ "$#" -lt 1 ]; then
+    usage
+    exit 1
+fi
+
 case $1 in
 start)
-    start
+    if [ -z "$2" ]; then
+        start
+    elif [ "$2" == "-e" ]; then
+        if [ -z "$3" ]; then
+            usage
+        else
+            validate_disk "$3"
+            empty "$3"
+        fi
+    else
+        usage
+    fi
     ;;
 stop)
     stop
@@ -1708,8 +1813,11 @@ softstop)
 status)
     status
     ;;
+reset)
+    reset
+    ;;
 *)
-    echo "Usage: $0 (start|stop|softstop|status)"
+    usage
     ;;
 esac
 

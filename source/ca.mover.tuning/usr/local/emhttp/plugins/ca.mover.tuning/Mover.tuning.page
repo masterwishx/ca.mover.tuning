@@ -2,13 +2,15 @@ Menu="Scheduler:2a"
 Title="Mover Tuning"
 Tag="gear"
 ---
-<?
+<?PHP
 if ($var['shareCacheEnabled']!='yes') {
   echo "<p class='notice'>Cache disk not enabled!</p>";
 } elseif ($var['shareUser']=='-') {
   echo "<p class='notice'>User shares not enabled!</p>";
 }
-$plugin='ca.mover.tuning';
+$plugin = 'ca.mover.tuning';
+$config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
+$config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
 $cfg = parse_plugin_cfg($plugin);
 $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
@@ -25,9 +27,10 @@ $om = $cfg['movingThreshold']; $om = $om + 5;
 $f = $cfg['movingThreshold'];
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
 $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
-$version = ($cfg['version'])
+$version = ($cfg['version']);
 
 ?>
+
 <script>
 $(function(){
 	if ( typeof caPluginUpdateCheck === "function" ) {
@@ -41,6 +44,7 @@ $.fn.toggleAttr = function(attr) {
 		$this.attr(attr) ? $this.removeAttr(attr) : $this.attr(attr,true);
 	});
 }
+
 function updateCron() {
   var cron = $("#cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
@@ -51,16 +55,21 @@ function moveNow() {
 	$.post("/plugins/ca.mover.tuning/mover.php crond start");
 }
 
+function resetDefaults() { 
+  $.post("/plugins/ca.mover.tuning/reset.php");
+}
+
 function updateScreenMoverTuningSettings(option,slow) {
   switch (option) {
   case 'yes':
     $('#moverTuningSettings').hide(slow);
     break;
-  case 'no':
+    case 'no':
     $('#moverTuningSettings').show(slow);
     break;
   }
 }
+
 function updateScreenMoverAdvancedSettings(option,slow) {
   switch (option) {
   case 'no':
@@ -70,7 +79,9 @@ function updateScreenMoverAdvancedSettings(option,slow) {
     $('#moverAdvancedSettings').show(slow);
     break;
   }
-}function updateScreenMoverAdvancedFilters(option,slow) {
+}
+
+function updateScreenMoverAdvancedFilters(option,slow) {
   switch (option) {
   case 'no':
     $('#moverAdvancedFilters').hide(slow);
@@ -91,6 +102,7 @@ function updateScreenMoverAdvancedOptions(option,slow) {
     break;
   }
 }
+
 $(function() {
   updateScreenMoverTuningSettings('<? echo $moverDisabled ?>');
   updateScreenMoverAdvancedSettings('<? echo $advancedSettings ?>');
@@ -299,7 +311,11 @@ Only move if above this threshold of used Primary (<em>cache</em>) space:
 </select>
 <em>Cache → Array</em>
 
-> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
+<blockquote class="inline_help">
+<p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.</p>
+<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>higher moving threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
+<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
+</blockquote>
 
 Free down/prime up to this level of used Primary (<em>cache</em>) space:
 : <select name="freeingThreshold" size="1" class='narrow'>
@@ -309,7 +325,11 @@ Free down/prime up to this level of used Primary (<em>cache</em>) space:
 </select>
 <em>Cache → Array</em>
 
-> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.
+<blockquote class="inline_help">
+<p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.</p>
+<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>lower freeing threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
+<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
+</blockquote>
 
 Fill up/prime up to this level of used Primary (<em>cache</em>) space:
 : <select name="fillupThreshold" size="1" class='narrow'>
@@ -565,7 +585,7 @@ Resynchronize all Primary files to Secondary:
 </div>
 
 &nbsp;
-: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()"><input type="button" id="Defaults" value="Defaults" onclick="resetDefaults(); location.reload()">
 </form>
 <span id='test'></span>
 

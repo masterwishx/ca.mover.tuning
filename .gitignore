@@ -11,6 +11,8 @@ $RECYCLE.BIN/
 # Updates by pr in new version
 .updates.txt
 
+.vscode
+
 # Windows Installer files
 *.cab
 *.msi
