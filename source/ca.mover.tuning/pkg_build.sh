@@ -23,6 +23,9 @@ cp --parents -f $(find . -type f ! \( -iname "pkg_build.sh" -o -iname "sftp-conf
 
 cd $tmpdir
 
+# Step 0: Change to current version in $default_config_file
+sed -i "s/version=.*/version=\"$version\"/" "$default_config_file"
+
 # Build the package using makepkg
 makepkg -l y -c y ${archive}/${plugin}-${version}-x86_64-1.txz
 
@@ -68,8 +71,6 @@ sed -i '$a\- '${version}'' "$readme_file"
 cat "$update_content" | sed -e 's/^/    /' >> "$readme_file"; echo -e "\n" >> "$readme_file"
 # Step 5: Add content from $tmp_readme_file to $readme_file
 cat "$tmp_readme_file" >> "$readme_file"
-# Step 6: Change to current version in $default_config_file
-sed -i "s/version=.*/version=\"$version\"/" "$default_config_file"
 
 # Clean up the temporary directory
 rm -rf $tmpdir
