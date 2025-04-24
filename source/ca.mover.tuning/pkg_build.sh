@@ -12,7 +12,7 @@ version=$(date +"%Y.%m.%d")$2
 # $1 Path to the plugin directory
 config_file="$1/$plugin/plugins/$plugin.plg"
 readme_file="$1/$plugin/README.md"
-default_config_file="$1/source/$plugin/usr/local/emhttp/plugins/$plugin/default.cfg"
+default_config_file="$1/$plugin/source/$plugin/usr/local/emhttp/plugins/$plugin/default.cfg"
 # Create the temporary directory and copy files
 mkdir -p $tmpdir
 
@@ -36,6 +36,7 @@ echo "Update Content: $update_content"
 echo ""
 echo "Updating $plugin.plg"
 echo "Updating README.md"
+echo "Updating default.cfg"
 
 sed -i "s/<!ENTITY md5.*/<!ENTITY md5       \"$package_md5\">/" "$config_file"
 sed -i "s/<!ENTITY version.*/<!ENTITY version   \"$version\">/" "$config_file"
