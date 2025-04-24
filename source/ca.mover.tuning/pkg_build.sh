@@ -19,12 +19,12 @@ mkdir -p $tmpdir
 # Get the content from .update file
 update_content="$(dirname $(dirname "$DIR"))/.updates.txt"
 
+# Step 0: Change to current version in $default_config_file
+sed -i "s/version=.*/version=\"$version\"/" "$default_config_file"
+
 cp --parents -f $(find . -type f ! \( -iname "pkg_build.sh" -o -iname "sftp-config.json"  \) ) $tmpdir/
 
 cd $tmpdir
-
-# Step 0: Change to current version in $default_config_file
-sed -i "s/version=.*/version=\"$version\"/" "$default_config_file"
 
 # Build the package using makepkg
 makepkg -l y -c y ${archive}/${plugin}-${version}-x86_64-1.txz
