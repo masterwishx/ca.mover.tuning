@@ -4,7 +4,7 @@
 DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
 
 # Set the temporary directory and plugin name
-tmpdir=/tmp/tmp.$(( $RANDOM * 19318203981230 + 40 ))
+tmpdir=/tmp/tmp.$(( RANDOM * 19318203981230 + 40 ))
 plugin=$(basename "${DIR}")
 archive="$(dirname "$(dirname "${DIR}")")/archive"
 # $2 is argument addition to date (a,b,c)
