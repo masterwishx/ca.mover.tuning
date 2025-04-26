@@ -1590,6 +1590,11 @@ start() {
         exit 3
     fi
 
+    # If $TESTMODE is set to "yes", log a warning message indicating that the test mode is enabled and should be disabled to run the mover.
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "Warning: Test Mode (dry run) is currently enabled. Please disable it to perform the actual file move."
+    fi
+
     # Only start if cache enabled and present
     if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
         mvlogger "Fatal error: cache not enabled and less than 2 pools set up." "failure"
