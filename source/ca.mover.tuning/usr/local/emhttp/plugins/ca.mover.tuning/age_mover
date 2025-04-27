@@ -260,9 +260,9 @@ getMoverSettings() {
 
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         PREFER_FILLUPPCTLIMIT=$(cfg fillupThreshold)
+        PREFER_MOVINGPCTTHRESHOLD=0
         if [ -z $PREFER_FILLUPPCTLIMIT ]; then
             PREFER_FILLUPPCTLIMIT=95
-            PREFER_MOVINGPCTTHRESHOLD=0
             echo "fillupThreshold=\"$PREFER_FILLUPPCTLIMIT\"" >>$config_file
         fi
         mvlogger "Using global (cache:prefer) fillup threshold: $PREFER_FILLUPPCTLIMIT %"
