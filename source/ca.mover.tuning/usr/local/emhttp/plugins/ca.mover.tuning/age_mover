@@ -1601,7 +1601,7 @@ start() {
     fi
 
     # If $MOVINGPCTTHRESHOLD - $FREEINGPCTLIMIT <= 5, log a warning message indicating that the mover will possibly not move due to the thresholds low gap beetween.
-    if [ "$MOVINGPCTTHRESHOLD" -le "$((FREEINGPCTLIMIT + 5))" ]; then
+    if [ "$MOVINGPCTTHRESHOLD" -eq "$((FREEINGPCTLIMIT + 5))" ]; then
         mvlogger "Warning: The mover will possibly not proceed due to the low gap between thresholds."
     fi
 
