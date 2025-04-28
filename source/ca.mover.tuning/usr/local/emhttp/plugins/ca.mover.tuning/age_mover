@@ -1595,6 +1595,16 @@ start() {
         mvlogger "Warning: Test Mode (dry run) is currently enabled. Please disable it to perform the actual file move."
     fi
 
+    # If $MOVINGPCTTHRESHOLD is equal to $FREEINGPCTLIMIT, log a warning message indicating that the mover will not move due to the thresholds no gap beetween.
+    if [ "$MOVINGPCTTHRESHOLD" = "$FREEINGPCTLIMIT" ]; then
+        mvlogger "Warning: Moving thresholds are equal. No action will be taken because the thresholds do not provide a gap."
+    fi
+
+    # If $MOVINGPCTTHRESHOLD - $FREEINGPCTLIMIT <= 5, log a warning message indicating that the mover will possibly not move due to the thresholds low gap beetween.
+    if [ "$MOVINGPCTTHRESHOLD" -le "$((FREEINGPCTLIMIT + 5))" ]; then
+        mvlogger "Warning: The mover will possibly not proceed due to the low gap between thresholds."
+    fi
+
     # Only start if cache enabled and present
     if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
         mvlogger "Fatal error: cache not enabled and less than 2 pools set up." "failure"
