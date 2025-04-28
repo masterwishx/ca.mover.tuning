@@ -590,12 +590,12 @@ Resynchronize all Primary files to Secondary:
 <span id='test'></span>
 
 <div class="title"><span class="left"><i class="fa fa-info-circle title"></i>Mover Tuning - Help</span></div>
-<p>If you need assistance, you can ask in the unraid community for help.</p>
+<p>If you need assistance, you can ask in the Unraid community for help.</p>
 <dl>
     <dt>Plugin thread @ Unraid community</dt>
-    <dd><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank">Open</a></dd>
+    <dd><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank">Open</a> - Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.</dd>
     <dt>Maintainers</dt>
-    <dd>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank">masterwishx</a> | 
+    <dd>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target=" _blank">masterwishx</a> | 
         2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank">R3yn4ld</a> | 
         2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank">hugenbd</a> | 
         2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
