@@ -239,7 +239,7 @@ getMoverSettings() {
 
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
-        [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=0
+        [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=85
         mvlogger "Using global (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
     elif [ -n "$(cfg movingThreshold)" ]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
@@ -249,7 +249,7 @@ getMoverSettings() {
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
         if [ -z $FREEINGPCTLIMIT ]; then
-            FREEINGPCTLIMIT=$MOVINGPCTTHRESHOLD
+            FREEINGPCTLIMIT=25
             echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
         fi
         mvlogger "Using global (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
