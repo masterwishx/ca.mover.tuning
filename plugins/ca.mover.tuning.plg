@@ -317,9 +317,10 @@ fi
 echo "Fixing permissions"
 chmod +x /usr/local/sbin/mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/*.php
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover 
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/mover
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover 
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover
 
 # Config file
 config_file=/boot/config/plugins/&name;/&name;.cfg;

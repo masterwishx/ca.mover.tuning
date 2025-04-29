@@ -591,6 +591,11 @@ Resynchronize all Primary files to Secondary:
 
 <div class="title"><span class="left"><i class="fa fa-info-circle title"></i>Mover Tuning - Help</span></div>
 <p>If you need assistance, you can ask in the Unraid community for help.</p>
+
+<div style="font-size:x-small;font-weight:bold;">
+    <i class="fa fa-download"></i> <a href="/plugins/ca.mover.tuning/debug.php">Mover Tuning Debug Package (.zip)</a>
+</div>
+
 <dl>
     <dt>Plugin thread @ Unraid community</dt>
     <dd><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank">Open</a> - Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.</dd>

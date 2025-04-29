@@ -1,0 +1,76 @@
+#!/bin/bash
+
+DEBUGROOT="/tmp/ca.mover.tuning-debug"
+PKGROOT="/usr/local/emhttp/plugins/ca.mover.tuning/debug"
+CONFIG="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
+OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
+
+# Get parent Logs Folder from config, if blank set to default /tmp
+CONFIGLOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)
+
+DEBUGTIME="$(date '+%Y%m%d%H%M%S' 2>/dev/null)"
+DEBUGNAME="ca.mover.tuning-debug-${DEBUGTIME}.zip"
+
+# prepare download location
+rm -rf $PKGROOT 2>&1
+mkdir -p $PKGROOT 2>&1
+
+# prepare packaging location
+rm -rf $DEBUGROOT 2>&1
+
+mkdir -p $DEBUGROOT 2>&1
+mkdir -p $DEBUGROOT/PLUGIN 2>&1
+
+# read and prepare configuration file
+[ -e "$CONFIG" ] && source $CONFIG 2>&1
+
+[ -e "$OVERRIDE_CFGFOLDER" ] && {
+    for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
+        if [ -f "$config_file" ]; then
+            source "$config_file" 2>&1
+        fi
+    done
+}
+
+# copy relevant files to packaging location
+[ -f $CONFIG ] && cp -f $CONFIG $DEBUGROOT/PLUGIN/ca.mover.tuning.cfg.txt 2>&1
+
+# copy all config files from "$OVERRIDE_CFGFOLDER"
+for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
+    if [ -f "$config_file" ]; then
+        echo "" >> "$DEBUGROOT/PLUGIN/shareOverrideConfig/$(basename "$config_file").txt"
+    fi
+        cp -f "$config_file" $DEBUGROOT/PLUGIN/shareOverrideConfig/
+done
+
+# copy all files with today date from $CONFIGLOGFOLDER
+[ -d "$CONFIGLOGFOLDER" ] && for file in "$CONFIGLOGFOLDER"/*; do
+  if [[ -f "$file" ]]; then
+    # Get the modification time of the file and format it to compare with today's date
+    mod_date=$(date -r "$file" +%Y-%m-%d)
+    today=$(date +%Y-%m-%d)
+    
+    if [ "$mod_date" == "$today" ]; then
+      cp "$file" $DEBUGROOT/PLUGIN/Logs/
+    fi
+  fi
+done
+
+# include unraid version in package
+[ -f /etc/unraid-version ] && cp -f /etc/unraid-version $DEBUGROOT/unraid-version.txt 2>&1
+
+# include plugin definition files in package
+cp -f /boot/config/plugins/ca.mover.tuning.plg $DEBUGROOT/PLUGIN/ca.mover.tuning.plg.txt 2>&1
+
+# generate and include diagnostics package
+DIAGFILE="$(/usr/local/sbin/diagnostics 2>/dev/null | grep -o "/boot/logs/.*\.zip")"
+[ -f "$DIAGFILE" ] && mv -f "$DIAGFILE" $DEBUGROOT/ 2>&1
+
+# package up the prepared files in our packaging location
+(cd $DEBUGROOT && zip -r "${PKGROOT}/${DEBUGNAME}" . 2>&1)
+
+# clean up packaging location
+rm -rf $DEBUGROOT 2>&1
+
+# return with the name of the debug package
+[ -f "${PKGROOT}/${DEBUGNAME}" ] && echo "DONE:${PKGROOT}/${DEBUGNAME}" 2>&1
