@@ -3,11 +3,12 @@
 DEBUGROOT="/tmp/ca.mover.tuning-debug"
 PKGROOT="/usr/local/emhttp/plugins/ca.mover.tuning/debug"
 CONFIG="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
+DEFAULT_CONFIG="/boot/config/plugins/ca.mover.tuning/default.cfg"
 CRON="/boot/config/plugins/ca.mover.tuning/mover.cron"
 OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 
 # Get parent Logs Folder from config, if blank set to default /tmp
-CONFIGLOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)
+LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)/ca.mover.tuning
 
 DEBUGTIME="$(date '+%Y%m%d%H%M%S' 2>/dev/null)"
 DEBUGNAME="ca.mover.tuning-debug-${DEBUGTIME}.zip"
@@ -23,18 +24,20 @@ mkdir -p $DEBUGROOT 2>&1
 mkdir -p $DEBUGROOT/PLUGIN 2>&1
 
 # read and prepare configuration file
-[ -e "$CONFIG" ] && source $CONFIG 2>&1
+[ -e "$CONFIG" ] && source "$CONFIG" 2>&1
 
-[ -e "$OVERRIDE_CFGFOLDER" ] && {
-    for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
-        if [ -f "$config_file" ]; then
-            source "$config_file" 2>&1
-        fi
-    done
-}
+# [ -e "$OVERRIDE_CFGFOLDER" ] && {
+#     for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
+#         if [ -f "$config_file" ]; then
+#             source "$config_file" 2>&1
+#         fi
+#     done
+# }
 
 # copy relevant files to packaging location
 [ -f $CONFIG ] && cp -f $CONFIG $DEBUGROOT/PLUGIN/ca.mover.tuning.cfg.txt 2>&1
+
+[ -f $DEFAULT_CONFIG ] && cp -f $DEFAULT_CONFIG $DEBUGROOT/PLUGIN/default.cfg.txt 2>&1
 
 # copy $CRON file
 [ -f $CRON ] && cp -f $CRON $DEBUGROOT/PLUGIN/ca.mover.tuning.cron.txt 2>&1
@@ -47,15 +50,16 @@ for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
     fi
 done
 
-# copy all files with today date from $CONFIGLOGFOLDER
-[ -d "$CONFIGLOGFOLDER" ] && for file in "$CONFIGLOGFOLDER"/*; do
+# copy all files with today date from $LOGFOLDER
+[ -d "$LOGFOLDER" ] && for file in "$LOGFOLDER"/*; do
     if [[ -f "$file" ]]; then
         # Get the modification time of the file and format it to compare with today's date
         mod_date=$(date -r "$file" +%Y-%m-%d)
         today=$(date +%Y-%m-%d)
 
         if [ "$mod_date" == "$today" ]; then
-            cp "$file" $DEBUGROOT/PLUGIN/Logs/
+            mkdir -p $DEBUGROOT/PLUGIN/Logs
+            cp -f "$file" $DEBUGROOT/PLUGIN/Logs/"$(basename "$file").txt"
         fi
     fi
 done
