@@ -3,7 +3,7 @@
 DEBUGROOT="/tmp/ca.mover.tuning-debug"
 PKGROOT="/usr/local/emhttp/plugins/ca.mover.tuning/debug"
 CONFIG="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
-DEFAULT_CONFIG="/boot/config/plugins/ca.mover.tuning/default.cfg"
+DEFAULT_CONFIG="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
 CRON="/boot/config/plugins/ca.mover.tuning/mover.cron"
 OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 
@@ -39,7 +39,6 @@ mkdir -p $DEBUGROOT/PLUGIN 2>&1
 
 [ -f $DEFAULT_CONFIG ] && cp -f $DEFAULT_CONFIG $DEBUGROOT/PLUGIN/default.cfg.txt 2>&1
 
-# copy $CRON file
 [ -f $CRON ] && cp -f $CRON $DEBUGROOT/PLUGIN/ca.mover.tuning.cron.txt 2>&1
 
 # copy all config files from "$OVERRIDE_CFGFOLDER"
