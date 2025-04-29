@@ -3,6 +3,7 @@
 DEBUGROOT="/tmp/ca.mover.tuning-debug"
 PKGROOT="/usr/local/emhttp/plugins/ca.mover.tuning/debug"
 CONFIG="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
+CRON="/boot/config/plugins/ca.mover.tuning/mover.cron"
 OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 
 # Get parent Logs Folder from config, if blank set to default /tmp
@@ -35,25 +36,28 @@ mkdir -p $DEBUGROOT/PLUGIN 2>&1
 # copy relevant files to packaging location
 [ -f $CONFIG ] && cp -f $CONFIG $DEBUGROOT/PLUGIN/ca.mover.tuning.cfg.txt 2>&1
 
+# copy $CRON file
+[ -f $CRON ] && cp -f $CRON $DEBUGROOT/PLUGIN/ca.mover.tuning.cron.txt 2>&1
+
 # copy all config files from "$OVERRIDE_CFGFOLDER"
 for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
     if [ -f "$config_file" ]; then
-        echo "" >> "$DEBUGROOT/PLUGIN/shareOverrideConfig/$(basename "$config_file").txt"
+        mkdir -p $DEBUGROOT/PLUGIN/shareOverrideConfig
+        cp -f "$config_file" $DEBUGROOT/PLUGIN/shareOverrideConfig/"$(basename "$config_file").txt"
     fi
-        cp -f "$config_file" $DEBUGROOT/PLUGIN/shareOverrideConfig/
 done
 
 # copy all files with today date from $CONFIGLOGFOLDER
 [ -d "$CONFIGLOGFOLDER" ] && for file in "$CONFIGLOGFOLDER"/*; do
-  if [[ -f "$file" ]]; then
-    # Get the modification time of the file and format it to compare with today's date
-    mod_date=$(date -r "$file" +%Y-%m-%d)
-    today=$(date +%Y-%m-%d)
-    
-    if [ "$mod_date" == "$today" ]; then
-      cp "$file" $DEBUGROOT/PLUGIN/Logs/
+    if [[ -f "$file" ]]; then
+        # Get the modification time of the file and format it to compare with today's date
+        mod_date=$(date -r "$file" +%Y-%m-%d)
+        today=$(date +%Y-%m-%d)
+
+        if [ "$mod_date" == "$today" ]; then
+            cp "$file" $DEBUGROOT/PLUGIN/Logs/
+        fi
     fi
-  fi
 done
 
 # include unraid version in package
