@@ -20,3 +20,9 @@ about: Create a report to help me improve
 
 **Files**
 <!-- A list of relevant files for this issue. Large files can be uploaded one-by-one or in a tarball/zipfile. -->
+
+**Debug Information**
+<!-- To assist me in diagnosing the issue, please follow these steps:
+1. Enable the Debug Log setting.
+2. Click on the "Mover Tuning Debug Package (.zip)" button in the Help Menu and download the package.
+3. Paste the contents of the downloaded file here. -->
