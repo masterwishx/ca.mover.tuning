@@ -10,6 +10,9 @@ OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 # Get parent Logs Folder from config, if blank set to default /tmp
 LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)/ca.mover.tuning
 
+# Get the filelistv from config
+SKIPFILESLIST=$(grep "filelistv=" "$CONFIG" | cut -d '"' -f 2)
+
 DEBUGTIME="$(date '+%Y%m%d%H%M%S' 2>/dev/null)"
 DEBUGNAME="ca.mover.tuning-debug-${DEBUGTIME}.zip"
 
@@ -40,6 +43,17 @@ mkdir -p $DEBUGROOT/PLUGIN 2>&1
 [ -f $DEFAULT_CONFIG ] && cp -f $DEFAULT_CONFIG $DEBUGROOT/PLUGIN/default.cfg.txt 2>&1
 
 [ -f $CRON ] && cp -f $CRON $DEBUGROOT/PLUGIN/ca.mover.tuning.cron.txt 2>&1
+
+# get path from $SKIPFILESLIST and prepare packaging location
+if [ -n "$SKIPFILESLIST" ]; then
+    # get ignore paths from the skipfile list
+    skipfiles=$(echo "$SKIPFILESLIST" | tr ' ' '\n')
+    # save paths inside skipfiles path to variable
+    for skipfile in $skipfiles; do
+        skipfile=$(cat "$skipfile")
+        echo "$skipfile" >>$DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+    done
+fi
 
 # copy all config files from "$OVERRIDE_CFGFOLDER"
 for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
