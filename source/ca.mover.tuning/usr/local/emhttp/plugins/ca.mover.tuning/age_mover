@@ -644,8 +644,8 @@ createFilteredFilelist() {
         mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
 
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
-        if [ -f "$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg" ]; then
-            SHARETUNINGFILE="$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg"
+        if [ -f "${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg" ]; then
+            SHARETUNINGFILE="${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg"
             if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
                 overrideFlag=1
                 mvlogger "Settings override:"
@@ -659,7 +659,7 @@ createFilteredFilelist() {
             #Get Mover Tuning Settings
             mvlogger "Restore global settings"
             mvlogger "-----------------------"
-            getMoverSettings $MOVERTUNINGCFGFILE
+            getMoverSettings "$MOVERTUNINGCFGFILE"
             mvlogger "------------------------------------------------------------------------"
         fi
 
@@ -1088,7 +1088,7 @@ createFilteredFilelist() {
             }' >"$FILTERED_FILELIST"
         mvlogger "Sorting"
         sort -t '|' -k1,1 -k4,4 -k5,5nr -k10,10 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
-        rm $tempfile1 $tempfile2
+        rm "$tempfile1" "$tempfile2"
     fi
 }
 
@@ -1107,12 +1107,12 @@ decideMoveActions() {
         #Get Mover Tuning Settings
         mvlogger "Restore global settings"
         mvlogger "-----------------------"
-        getMoverSettings $MOVERTUNINGCFGFILE
+        getMoverSettings "$MOVERTUNINGCFGFILE"
         mvlogger "------------------------------------------------------------------------"
     fi
 
     ## Loop Filtered Filelist and for each file decide to move to/from the array
-    mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep "/mnt" "$FILTERED_FILELIST" | wc -l) files, it can take a while..."
+    mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep -c "/mnt" "$FILTERED_FILELIST") files, it can take a while..."
 
     ## Proceed with files
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
@@ -1296,7 +1296,7 @@ decideMoveActions() {
     # Add total files and size
     TOTALFILES=$((TOTALPRIMARYFILES + TOTALSECONDARYFILES + TOTALUNATTENDEDFILES))
     TOTALSIZE=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
-    UNATTENDEDFILES=$(grep "keep misplaced" "$MOVER_ACTIONLIST" | wc -l)
+    UNATTENDEDFILES=$(grep -c "keep misplaced" "$MOVER_ACTIONLIST")
 
     # Print stats
     if [ "$UNATTENDEDFILES" -gt 0 ]; then
@@ -1580,10 +1580,10 @@ start() {
         rm $SOFTSTOPFILE
         exit 2
     fi
-    if [ -f $MOVERTUNINGCFGFILE ]; then
+    if [ -f "$MOVERTUNINGCFGFILE" ]; then
         #Get Mover Tuning Settings
         mvlogger "$(titleLine "Global settings" '-')"
-        getMoverSettings $MOVERTUNINGCFGFILE
+        getMoverSettings "$MOVERTUNINGCFGFILE"
     else
         mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this." "failure"
         rm $SOFTSTOPFILE
@@ -1664,7 +1664,7 @@ start() {
 
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
-        for config_file in "$MOVERTUNINGCFGFILE" "$MOVERTUNING_OVERRIDE_CFGFOLDER"/*.cfg; do
+        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
             resetRunOnceMoverSettings "$config_file"
         done
     fi
