@@ -50,8 +50,11 @@ if [ -n "$SKIPFILESLIST" ]; then
     skipfiles=$(echo "$SKIPFILESLIST" | tr ' ' '\n')
     # save paths inside skipfiles path to variable
     for skipfile in $skipfiles; do
-        skipfile=$(cat "$skipfile")
-        echo "$skipfile" >>$DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+        if [ -f "$skipfile" ]; then
+            cat "$skipfile" >> $DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+        else
+            echo "# Warning: Skip file not found: $skipfile" >> $DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+        fi
     done
 fi
 
