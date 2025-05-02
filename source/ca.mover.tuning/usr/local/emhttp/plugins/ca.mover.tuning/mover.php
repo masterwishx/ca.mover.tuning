@@ -29,19 +29,17 @@ function startMover(array $args)
         // Example usage of specific arguments
         if (isset($args[0])) {
             $option1 = $args[0];
-            logger("Option 1: $option1\n");
+            if ($cfg['debuglogging'] == 'yes') {
+                logger("Option 1: $option1\n");
+            }
         }
         // Combine all arguments into a single string with spaces
         $options = implode(' ', $args);
 
         // Example usage of $options
-        logger("Options: $options\n");
-
-        // if (isset($args[1]) && $args[1] == "-e" && isset($args[2])) {
-        //     logger("Mover " . implode(' ', array_slice($args, 0, 3)));
-        // } else {
-        //     logger("Mover " . implode(' ', $args));
-        // }
+        if ($cfg['debuglogging'] == 'yes') {
+            logger("Options: $options\n");
+        }
     } else {
         $options = "start";
         logger("Cron + options: $options");
