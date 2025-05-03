@@ -1,5 +1,7 @@
-<?
+<?PHP
+
 exec("timeout -s9 30 /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover", $debug_result);
+
 if(!empty($debug_result)) {
     if(strpos(end($debug_result), "DONE:") !== false) {
         $debugFile = explode(":", end($debug_result))[1];
