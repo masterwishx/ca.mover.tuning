@@ -48,7 +48,8 @@ $.fn.toggleAttr = function(attr) {
 function updateCron() {
   var cron = $("#cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
-	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron});
+  var ismoverDisabled = $("#moverDisabled").val();
+	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,ismoverDisabled:ismoverDisabled});
 }
 
 function moveNow() {
@@ -64,7 +65,7 @@ function updateScreenMoverTuningSettings(option,slow) {
   case 'yes':
     $('#moverTuningSettings').hide(slow);
     break;
-    case 'no':
+  case 'no':
     $('#moverTuningSettings').show(slow);
     break;
   }
@@ -120,11 +121,11 @@ $(function() {
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 Disable Mover running on a schedule:
-: <select name='moverDisabled' size='1' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
+: <select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
 <?=mk_option($cfg['moverDisabled'],"no","No")?>
 <?=mk_option($cfg['moverDisabled'],"yes","Yes")?>
 </select>
-<strong>Yes</strong> <em>- setting effectively disables this plugin</em>
+<strong>Yes</strong> <em>- setting effectively disables the plugin schedule</em>
 
 > This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
 
