@@ -1,11 +1,30 @@
 #!/usr/bin/php
 <?PHP
+require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
-if ($_POST['cronEnabled'] == "yes") {
-	$cronFile = "# Generated schedule for forced move\n" . trim($_POST['cron']) . " /usr/local/sbin/mover.old start |& logger -t move\n\n";
-	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.cron", $cronFile);
-} else {
-	@unlink("/boot/config/plugins/ca.mover.tuning/mover.cron");
+$cfg = parse_plugin_cfg("ca.mover.tuning");
+
+function logger($string)
+{
+	global $cfg;
+
+	if ($cfg['logging'] == 'yes') {
+		exec("logger -t move " . escapeshellarg($string));
+	}
+}
+
+// Get config value of forced cron
+$cfg_cronEnabled = $cfg['force'];
+// Check if value was changed to prevent the logger of printing when cron was not changed and not make cron file when avalible already
+if ($cfg_cronEnabled != $_POST['cronEnabled']) {
+	if ($_POST['cronEnabled'] == "yes") {
+		$cronFile = "# Generated schedule for forced move\n" . trim($_POST['cron']) . " /usr/local/sbin/mover.old start |& logger -t move\n\n";
+		file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.cron", $cronFile);
+		logger("Unraid mover schedule enabled successfully.");
+	} else {
+		@unlink("/boot/config/plugins/ca.mover.tuning/mover.cron");
+		logger("Unraid mover schedule disabled successfully.");
+	}
 }
 
 // If mover schedule is disabled then rename 'mover.cron' to 'mover.cron.disabled'
@@ -13,14 +32,18 @@ if ($_POST['ismoverDisabled'] == "yes") {
 	// Check if the file exists before attempting to rename it
 	if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
 		if (!rename("/boot/config/plugins/dynamix/mover.cron", "/boot/config/plugins/dynamix/mover.cron.disabled")) {
-			echo ("ERROR: Failed to disable mover cron file");
+			logger("Error: Failed to disable mover cron file");
+		} else {
+			logger("Mover schedule disabled successfully.");
 		}
 	}
 } else {
 	// If mover schedule is enabled then rename back
 	if (file_exists("/boot/config/plugins/dynamix/mover.cron.disabled")) {
 		if (!rename("/boot/config/plugins/dynamix/mover.cron.disabled", "/boot/config/plugins/dynamix/mover.cron")) {
-			echo ("ERROR: Failed to enable mover cron file");
+			logger("Error: Failed to enable mover cron file");
+		} else {
+			logger("Mover schedule enabled successfully.");
 		}
 	}
 }

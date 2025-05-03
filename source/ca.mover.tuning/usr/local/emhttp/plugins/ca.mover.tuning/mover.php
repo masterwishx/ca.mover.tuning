@@ -12,7 +12,7 @@ function logger($string)
     global $cfg;
 
     if ($cfg['logging'] == 'yes') {
-        exec("logger " . escapeshellarg($string));
+        exec("logger -t move " . escapeshellarg($string));
     }
 }
 
