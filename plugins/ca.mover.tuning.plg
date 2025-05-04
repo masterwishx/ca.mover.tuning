@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.04.24a">
-<!ENTITY md5       "c116de3cbb0f563b91cd845d7e5eed2c">
+<!ENTITY version   "2025.05.04">
+<!ENTITY md5       "e871114b7a66d61613bfcca985214ebf">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,13 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.05.04
+- fix: Fix for initialized PREFER_MOVINGPCTTHRESHOLD to 0. Thanks to AdamLeyshon for reported this issue. **_(masterwishx)_**
+- new: A warning will be added when in test mode and thresholds are either identical or have a small gap between them.
+- new: Debug download added that collect all data from plugin and save them to a file for debugging purposes. Thanks to Rysz from forums for the code example.
+- fix: Fix issue where "shareOverrideConfig" with spaces was not working with "grep".
+- fix: Fix for enabling/disabling Mover running on a schedule.
+
 ###2025.04.24a
 - fix: version number in default.cfg file. **_(masterwishx)_**
 

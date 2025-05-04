@@ -29,6 +29,13 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.05.04
+    - fix: Fix for initialized PREFER_MOVINGPCTTHRESHOLD to 0. Thanks to AdamLeyshon for reported this issue. **_(masterwishx)_**
+    - new: A warning will be added when in test mode and thresholds are either identical or have a small gap between them.
+    - new: Debug download added that collect all data from plugin and save them to a file for debugging purposes. Thanks to Rysz from forums for the code example.
+    - fix: Fix issue where "shareOverrideConfig" with spaces was not working with "grep".
+    - fix: Fix for enabling/disabling Mover running on a schedule.
+
 - 2025.04.24a
     - fix: version number in default.cfg file. **_(masterwishx)_**
 
