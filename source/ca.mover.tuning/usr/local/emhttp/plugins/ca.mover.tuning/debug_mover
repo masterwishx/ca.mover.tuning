@@ -5,6 +5,7 @@ PKGROOT="/usr/local/emhttp/plugins/ca.mover.tuning/debug"
 CONFIG="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
 DEFAULT_CONFIG="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
 CRON="/boot/config/plugins/ca.mover.tuning/mover.cron"
+UNRAID_CRON="/boot/config/plugins/dynamix/mover.cron*"
 OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 
 # Get parent Logs Folder from config, if blank set to default /tmp
@@ -13,7 +14,7 @@ LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)/ca.mover.tuning
 # Get the filelistv from config
 SKIPFILESLIST=$(grep "filelistv=" "$CONFIG" | cut -d '"' -f 2)
 
-DEBUGTIME="$(date '+%Y%m%d%H%M%S' 2>/dev/null)"
+DEBUGTIME="$(date '+%Y%m%d-%H%M' 2>/dev/null)"
 DEBUGNAME="ca.mover.tuning-debug-${DEBUGTIME}.zip"
 
 # prepare download location
@@ -29,20 +30,18 @@ mkdir -p $DEBUGROOT/PLUGIN 2>&1
 # read and prepare configuration file
 [ -e "$CONFIG" ] && source "$CONFIG" 2>&1
 
-# [ -e "$OVERRIDE_CFGFOLDER" ] && {
-#     for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
-#         if [ -f "$config_file" ]; then
-#             source "$config_file" 2>&1
-#         fi
-#     done
-# }
-
 # copy relevant files to packaging location
 [ -f $CONFIG ] && cp -f $CONFIG $DEBUGROOT/PLUGIN/ca.mover.tuning.cfg.txt 2>&1
 
 [ -f $DEFAULT_CONFIG ] && cp -f $DEFAULT_CONFIG $DEBUGROOT/PLUGIN/default.cfg.txt 2>&1
 
 [ -f $CRON ] && cp -f $CRON $DEBUGROOT/PLUGIN/ca.mover.tuning.cron.txt 2>&1
+
+for file in $UNRAID_CRON; do
+    if [[ -f $file ]]; then
+        cp -f "$file" "${DEBUGROOT}/PLUGIN/unraid.${file##*/}.txt" 2>&1
+    fi
+done
 
 # get path from $SKIPFILESLIST and prepare packaging location
 if [ -n "$SKIPFILESLIST" ]; then
@@ -51,9 +50,9 @@ if [ -n "$SKIPFILESLIST" ]; then
     # save paths inside skipfiles path to variable
     for skipfile in $skipfiles; do
         if [ -f "$skipfile" ]; then
-            cat "$skipfile" >> $DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+            cat "$skipfile" >>$DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
         else
-            echo "# Warning: Skip file not found: $skipfile" >> $DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+            echo "# Warning: Skip file not found: $skipfile" >>$DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
         fi
     done
 fi
