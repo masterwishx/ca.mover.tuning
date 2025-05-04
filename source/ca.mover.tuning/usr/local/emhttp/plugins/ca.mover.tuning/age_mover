@@ -239,7 +239,7 @@ getMoverSettings() {
 
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
-        [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=0
+        [ -z $MOVINGPCTTHRESHOLD ] && MOVINGPCTTHRESHOLD=85
         mvlogger "Using global (cache:yes) moving threshold: $MOVINGPCTTHRESHOLD %"
     elif [ -n "$(cfg movingThreshold)" ]; then
         MOVINGPCTTHRESHOLD=$(cfg movingThreshold)
@@ -249,7 +249,7 @@ getMoverSettings() {
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
         if [ -z $FREEINGPCTLIMIT ]; then
-            FREEINGPCTLIMIT=$MOVINGPCTTHRESHOLD
+            FREEINGPCTLIMIT=25
             echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
         fi
         mvlogger "Using global (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
@@ -260,9 +260,9 @@ getMoverSettings() {
 
     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
         PREFER_FILLUPPCTLIMIT=$(cfg fillupThreshold)
+        PREFER_MOVINGPCTTHRESHOLD=0
         if [ -z $PREFER_FILLUPPCTLIMIT ]; then
             PREFER_FILLUPPCTLIMIT=95
-            PREFER_MOVINGPCTTHRESHOLD=0
             echo "fillupThreshold=\"$PREFER_FILLUPPCTLIMIT\"" >>$config_file
         fi
         mvlogger "Using global (cache:prefer) fillup threshold: $PREFER_FILLUPPCTLIMIT %"
@@ -644,8 +644,8 @@ createFilteredFilelist() {
         mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
 
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
-        if [ -f "$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg" ]; then
-            SHARETUNINGFILE="$MOVERTUNING_OVERRIDE_CFGFOLDER/$SHARENAME.cfg"
+        if [ -f "${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg" ]; then
+            SHARETUNINGFILE="${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg"
             if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
                 overrideFlag=1
                 mvlogger "Settings override:"
@@ -659,7 +659,7 @@ createFilteredFilelist() {
             #Get Mover Tuning Settings
             mvlogger "Restore global settings"
             mvlogger "-----------------------"
-            getMoverSettings $MOVERTUNINGCFGFILE
+            getMoverSettings "$MOVERTUNINGCFGFILE"
             mvlogger "------------------------------------------------------------------------"
         fi
 
@@ -1088,7 +1088,7 @@ createFilteredFilelist() {
             }' >"$FILTERED_FILELIST"
         mvlogger "Sorting"
         sort -t '|' -k1,1 -k4,4 -k5,5nr -k10,10 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
-        rm $tempfile1 $tempfile2
+        rm "$tempfile1" "$tempfile2"
     fi
 }
 
@@ -1107,12 +1107,12 @@ decideMoveActions() {
         #Get Mover Tuning Settings
         mvlogger "Restore global settings"
         mvlogger "-----------------------"
-        getMoverSettings $MOVERTUNINGCFGFILE
+        getMoverSettings "$MOVERTUNINGCFGFILE"
         mvlogger "------------------------------------------------------------------------"
     fi
 
     ## Loop Filtered Filelist and for each file decide to move to/from the array
-    mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep "/mnt" "$FILTERED_FILELIST" | wc -l) files, it can take a while..."
+    mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep -c "/mnt" "$FILTERED_FILELIST") files, it can take a while..."
 
     ## Proceed with files
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
@@ -1296,7 +1296,7 @@ decideMoveActions() {
     # Add total files and size
     TOTALFILES=$((TOTALPRIMARYFILES + TOTALSECONDARYFILES + TOTALUNATTENDEDFILES))
     TOTALSIZE=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
-    UNATTENDEDFILES=$(grep "keep misplaced" "$MOVER_ACTIONLIST" | wc -l)
+    UNATTENDEDFILES=$(grep -c "keep misplaced" "$MOVER_ACTIONLIST")
 
     # Print stats
     if [ "$UNATTENDEDFILES" -gt 0 ]; then
@@ -1580,14 +1580,29 @@ start() {
         rm $SOFTSTOPFILE
         exit 2
     fi
-    if [ -f $MOVERTUNINGCFGFILE ]; then
+    if [ -f "$MOVERTUNINGCFGFILE" ]; then
         #Get Mover Tuning Settings
         mvlogger "$(titleLine "Global settings" '-')"
-        getMoverSettings $MOVERTUNINGCFGFILE
+        getMoverSettings "$MOVERTUNINGCFGFILE"
     else
         mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this." "failure"
         rm $SOFTSTOPFILE
         exit 3
+    fi
+
+    # If $TESTMODE is set to "yes", log a warning message indicating that the test mode is enabled and should be disabled to run the mover.
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "Warning: Test Mode (dry run) is currently enabled. Please disable it to perform the actual file move."
+    fi
+
+    # If $MOVINGPCTTHRESHOLD is equal to $FREEINGPCTLIMIT, log a warning message indicating that the mover will not move due to the thresholds no gap beetween.
+    if [ "$MOVINGPCTTHRESHOLD" = "$FREEINGPCTLIMIT" ]; then
+        mvlogger "Warning: Moving thresholds are equal. No action will be taken because the thresholds do not provide a gap."
+    fi
+
+    # If $MOVINGPCTTHRESHOLD - $FREEINGPCTLIMIT <= 5, log a warning message indicating that the mover will possibly not move due to the thresholds low gap beetween.
+    if [ "$MOVINGPCTTHRESHOLD" -eq "$((FREEINGPCTLIMIT + 5))" ]; then
+        mvlogger "Warning: The mover will possibly not proceed due to the low gap between thresholds."
     fi
 
     # Only start if cache enabled and present
@@ -1649,7 +1664,7 @@ start() {
 
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
-        for config_file in "$MOVERTUNINGCFGFILE" "$MOVERTUNING_OVERRIDE_CFGFOLDER"/*.cfg; do
+        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
             resetRunOnceMoverSettings "$config_file"
         done
     fi

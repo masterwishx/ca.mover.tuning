@@ -31,7 +31,7 @@
 - fix: Fix for Logs parent folder can be empty instead of /tmp when no value is provided. Thanks to niwmik2 from forums for reported this issue. **_(masterwishx)_**
 - fix: Fixed an issue where (cache:prefer) was generating unnecessary lists for files that should remain on the primary pool.
 - fix: Only generate updated filtered filelist for (cache:prefer) if we have files on secondary storage.
-- new: Added Help block to the plugin page, including useful links and a donation link for support.
+- new: Added Help block to the plugin page, including useful links and a donation link for support. Thanks to KluthR from forums for the code example.
 
 ###2025.03.30
 - new: Added new settings: Logs parent folder, age for mover Log,txt and List files. Thanks to Renegade605 and jimlei from forums for the idea. **_(masterwishx)_**
@@ -317,9 +317,10 @@ fi
 echo "Fixing permissions"
 chmod +x /usr/local/sbin/mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/*.php
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover 
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/mover
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover 
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover
 
 # Config file
 config_file=/boot/config/plugins/&name;/&name;.cfg;

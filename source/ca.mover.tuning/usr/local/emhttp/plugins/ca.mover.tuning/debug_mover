@@ -1,0 +1,99 @@
+#!/bin/bash
+
+DEBUGROOT="/tmp/ca.mover.tuning-debug"
+PKGROOT="/usr/local/emhttp/plugins/ca.mover.tuning/debug"
+CONFIG="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
+DEFAULT_CONFIG="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
+CRON="/boot/config/plugins/ca.mover.tuning/mover.cron"
+UNRAID_CRON="/boot/config/plugins/dynamix/mover.cron*"
+OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
+
+# Get parent Logs Folder from config, if blank set to default /tmp
+LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)/ca.mover.tuning
+
+# Get the filelistv from config
+SKIPFILESLIST=$(grep "filelistv=" "$CONFIG" | cut -d '"' -f 2)
+
+DEBUGTIME="$(date '+%Y%m%d-%H%M' 2>/dev/null)"
+DEBUGNAME="ca.mover.tuning-debug-${DEBUGTIME}.zip"
+
+# prepare download location
+rm -rf $PKGROOT 2>&1
+mkdir -p $PKGROOT 2>&1
+
+# prepare packaging location
+rm -rf $DEBUGROOT 2>&1
+
+mkdir -p $DEBUGROOT 2>&1
+mkdir -p $DEBUGROOT/PLUGIN 2>&1
+
+# read and prepare configuration file
+[ -e "$CONFIG" ] && source "$CONFIG" 2>&1
+
+# copy relevant files to packaging location
+[ -f $CONFIG ] && cp -f $CONFIG $DEBUGROOT/PLUGIN/ca.mover.tuning.cfg.txt 2>&1
+
+[ -f $DEFAULT_CONFIG ] && cp -f $DEFAULT_CONFIG $DEBUGROOT/PLUGIN/default.cfg.txt 2>&1
+
+[ -f $CRON ] && cp -f $CRON $DEBUGROOT/PLUGIN/ca.mover.tuning.cron.txt 2>&1
+
+for file in $UNRAID_CRON; do
+    if [[ -f $file ]]; then
+        cp -f "$file" "${DEBUGROOT}/PLUGIN/unraid.${file##*/}.txt" 2>&1
+    fi
+done
+
+# get path from $SKIPFILESLIST and prepare packaging location
+if [ -n "$SKIPFILESLIST" ]; then
+    # get ignore paths from the skipfile list
+    skipfiles=$(echo "$SKIPFILESLIST" | tr ' ' '\n')
+    # save paths inside skipfiles path to variable
+    for skipfile in $skipfiles; do
+        if [ -f "$skipfile" ]; then
+            cat "$skipfile" >>$DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+        else
+            echo "# Warning: Skip file not found: $skipfile" >>$DEBUGROOT/PLUGIN/mover_ignore.txt 2>&1
+        fi
+    done
+fi
+
+# copy all config files from "$OVERRIDE_CFGFOLDER"
+for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
+    if [ -f "$config_file" ]; then
+        mkdir -p $DEBUGROOT/PLUGIN/shareOverrideConfig
+        cp -f "$config_file" $DEBUGROOT/PLUGIN/shareOverrideConfig/"$(basename "$config_file").txt"
+    fi
+done
+
+# copy all files with today date from $LOGFOLDER
+[ -d "$LOGFOLDER" ] && for file in "$LOGFOLDER"/*; do
+    if [[ -f "$file" ]]; then
+        # Get the modification time of the file and format it to compare with today's date
+        mod_date=$(date -r "$file" +%Y-%m-%d)
+        today=$(date +%Y-%m-%d)
+
+        if [ "$mod_date" == "$today" ]; then
+            mkdir -p $DEBUGROOT/PLUGIN/Logs
+            cp -f "$file" $DEBUGROOT/PLUGIN/Logs/"$(basename "$file").txt"
+        fi
+    fi
+done
+
+# include unraid version in package
+[ -f /etc/unraid-version ] && cp -f /etc/unraid-version $DEBUGROOT/unraid-version.txt 2>&1
+
+# include plugin definition files in package
+cp -f /boot/config/plugins/ca.mover.tuning.plg $DEBUGROOT/PLUGIN/ca.mover.tuning.plg.txt 2>&1
+
+# generate and include diagnostics package
+DIAGFILE="$(/usr/local/sbin/diagnostics 2>/dev/null | grep -o "/boot/logs/.*\.zip")"
+[ -f "$DIAGFILE" ] && mv -f "$DIAGFILE" $DEBUGROOT/ 2>&1
+
+# package up the prepared files in our packaging location
+(cd $DEBUGROOT && zip -r "${PKGROOT}/${DEBUGNAME}" . 2>&1)
+
+# clean up packaging location
+rm -rf $DEBUGROOT 2>&1
+
+# return with the name of the debug package
+[ -f "${PKGROOT}/${DEBUGNAME}" ] && echo "DONE:${PKGROOT}/${DEBUGNAME}" 2>&1
