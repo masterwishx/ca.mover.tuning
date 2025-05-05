@@ -32,11 +32,11 @@ function startMover(array $args)
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1: $option1\n");
             }
-        } else if (version_compare($vars['version'], '7.0', '<')) {
+        } else if (version_compare($vars['version'], '7.0.0', '<')) {
             $args[0] = 'start';
             $option1 = $args[0];
             if ($cfg['debuglogging'] == 'yes') {
-                logger("Option 1 set to 'start' due to version < 7.0\n");
+                logger("Option 1 set to 'start' due to version < 7.0.0\n");
             }
         }
 
