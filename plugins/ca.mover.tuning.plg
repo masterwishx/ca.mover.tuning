@@ -263,12 +263,11 @@
   $displayversion = $version['version'];
   echo "$displayversion \n";
 
-  $min_version = "6.9.0-rc2";
-  if ( version_compare($version['version'], $min_version, "<") )
+  if ( version_compare($version['version'],"6.9.0-rc2", "<") )
   {
     echo "********************************************************************\n";
     echo "\n";
-    echo "CA Mover Tuning Requires unRaid version $min_version or greater to run\n";
+    echo "CA Mover Tuning Requires unRaid version 6.9.0-rc2 or greater to run\n";
     echo "\n";
     echo "********************************************************************\n";
     exit(1);
