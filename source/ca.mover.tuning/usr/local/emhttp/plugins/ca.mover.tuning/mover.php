@@ -4,7 +4,7 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini");
-$cron = $argv[1] == "crond";
+$cron = $argv[1] == "crond"; //Not working anymore needs to be removed in future + change code below related to $cron
 $args = [];
 
 function logger($string)
