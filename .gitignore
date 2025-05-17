@@ -11,6 +11,7 @@ $RECYCLE.BIN/
 # Updates by pr in new version
 .updates.txt
 
+# VS Code Settings
 .vscode
 
 # Windows Installer files

@@ -4,7 +4,7 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini");
-$cron = $argv[1] == "crond";
+$cron = $argv[1] == "crond"; //Not working anymore needs to be removed in future + change code below related to $cron
 $args = [];
 
 function logger($string)
@@ -32,7 +32,14 @@ function startMover(array $args)
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1: $option1\n");
             }
+        } else if (version_compare($vars['version'], '7.0.0', '<')) {
+            $args[0] = 'start';
+            $option1 = $args[0];
+            if ($cfg['debuglogging'] == 'yes') {
+                logger("Option 1 set to 'start' due to version < 7.0.0\n");
+            }
         }
+
         // Combine all arguments into a single string with spaces
         $options = implode(' ', $args);
 
