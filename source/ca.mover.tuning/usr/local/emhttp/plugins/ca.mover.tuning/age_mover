@@ -1596,7 +1596,7 @@ start() {
     fi
 
     # If $MOVINGPCTTHRESHOLD is equal to $FREEINGPCTLIMIT, log a warning message indicating that the mover will not move due to the thresholds no gap beetween.
-    if [ "$MOVINGPCTTHRESHOLD" = "$FREEINGPCTLIMIT" ]; then
+    if [ "$MOVINGPCTTHRESHOLD" = "$FREEINGPCTLIMIT" ] && [ "$FREEINGPCTLIMIT" != 0 ]; then
         mvlogger "Warning: Moving thresholds are equal. No action will be taken because the thresholds do not provide a gap."
     fi
 
