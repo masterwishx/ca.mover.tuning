@@ -1472,9 +1472,9 @@ processTheMoves() {
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
                                 # Get the Top Folder of $DIR on share
                                 top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
-                                if [ "$(find "$top_folder" -type f | wc -l)" = 0 ]; then
+                                if [ "$(find "$top_folder" -type f | wc -l)" -eq 0 ]; then
                                     mvlogger "Deleting empty top folder $top_folder"
-                                    rmdir "${top_folder}"
+                                    rmdir -rf "${top_folder}"
                                 fi
                             fi
                         fi
@@ -1487,7 +1487,7 @@ processTheMoves() {
                 # Check counter if equal to 0 then check datasets
                 if [ "$LAST_COUNT" -eq 0 ]; then
                     # Count files in share
-                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
+                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l)
                     mvDebuglogger "Cycle of delete dataset" "Clean Dataset - Start Loop"
                     # If no files in share
                     if [ "${share_file_count}" -eq 0 ]; then
