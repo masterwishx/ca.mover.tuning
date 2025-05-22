@@ -1433,7 +1433,7 @@ processTheMoves() {
             eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
 
             # Clean parent folder if empty
-            if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "yes" ]; then
+            if [[ "$ACTION" =~ "move" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
@@ -1468,6 +1468,15 @@ processTheMoves() {
                         if [ "$TESTMODE" = "no" ]; then
                             mvlogger "Deleting empty dir ${DIR}"
                             rmdir "${DIR}"
+
+                            if [ "$CLEANFOLDERS" = "topFolder" ]; then
+                                # Get the Top Folder of $DIR on share
+                                top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
+                                if [ "$(find "$top_folder" -type f | wc -l)" = 0 ]; then
+                                    mvlogger "Deleting empty top folder $top_folder"
+                                    rmdir "${top_folder}"
+                                fi
+                            fi
                         fi
                     fi
                 done <<<"$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)"
