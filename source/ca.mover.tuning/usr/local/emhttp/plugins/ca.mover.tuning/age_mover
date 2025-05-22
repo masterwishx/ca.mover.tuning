@@ -333,7 +333,7 @@ getMoverSettings() {
         fi
     else
         CLEANFOLDERS=$(cfg cleanFolders)
-        if [ $CLEANFOLDERS = "yes" ]; then
+        if [[ $CLEANFOLDERS = "yes" || $CLEANFOLDERS = "topFolder" ]]; then
             mvlogger "Clean Folders: $CLEANFOLDERS"
         fi
     fi
@@ -1437,7 +1437,7 @@ processTheMoves() {
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
-                    mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
+                    mvDebuglogger "Current file: $FILE, Current folder: $DIR, Previous folder: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
@@ -1463,18 +1463,23 @@ processTheMoves() {
                     mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of files: $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
-                        mvlogger "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
+                        mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         if [ "$TESTMODE" = "no" ]; then
-                            mvlogger "Deleting empty dir ${DIR}"
+                            mvlogger "Deleting empty folder ${DIR}"
                             rmdir "${DIR}"
 
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
-                                # Get the Top Folder of $DIR on share
+                                # Get the Top-Level Folder of $DIR on share
                                 top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
-                                if [ "$(find "$top_folder" -type f | wc -l)" -eq 0 ]; then
-                                    mvlogger "Deleting empty top folder $top_folder"
-                                    rmdir -rf "${top_folder}"
+                                # Count files in Top Folder
+                                top_folder_count="$(find "$top_folder" -type f | wc -l)"
+                                if [ "$top_folder_count" -eq 0 ]; then
+                                    mvlogger "Deleting empty top-level folder $top_folder"
+                                    #rm -rf "${top_folder}"
+                                    find "$top_folder" -empty -type d -delete
+                                else
+                                    mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$count" != ".placeholder" ] && echo "s"): ${top_folder}"
                                 fi
                             fi
                         fi
