@@ -4,11 +4,13 @@
 
 This is a simple [Unraid](https://unraid.net/) plugin that will let you fine-tune the operation of the [mover](https://docs.unraid.net/unraid-os/manual/additional-settings/#mover).
 
-- On scheduled runs of mover
-    - Only actually move file(s) if the the cache drive is getting full (selectable threshold)
-    - Optionally don't move if a parity check / rebuild is already in-progress
-- Optional ability to completely disable the scheduled runs of mover
-- Manually executed runs of mover ("Move Now" button) can either follow the rules for schedules, or always move all files
+- On scheduled runs of mover    
+    - Only actually move file(s) if the cache drive is getting full (selectable thresholds) or/and based on files age,size,etc.
+    - Optionally don't move if a parity check / rebuild is already in-progress.
+    - Optionally validate input filenames to prevent attacks on the filename.
+- Optional ability to completely disable the scheduled runs of mover.
+- Manually executed runs of mover ("Move Now" button) or via command line ("mover start") can follow schedule rules or/and always move all files.
+- Expanded functionality with numerous additional options and settings.
 
 This new fork merge all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/pulls) after review from [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning). (cosmetics, merge skipfiletypes from shares and add several feature, as for example automatic age threshold, sanitize input filenames to prevent attacks and compatibility with Unraid 7.x, and other stuff coming.
 

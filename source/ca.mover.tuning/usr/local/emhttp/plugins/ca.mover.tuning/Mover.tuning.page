@@ -524,9 +524,10 @@ Clean empty folders
 : <select name='cleanFolders' size='1' class='narrow'>
 <?=mk_option($cfg['cleanFolders'],"no",'No')?>
 <?=mk_option($cfg['cleanFolders'],"yes","Yes")?>
+<?=mk_option($cfg['cleanFolders'],"topFolder","Top Folder")?>
 </select>
 
-> This will remove the parent folder <strong>only of moved</strong> files.
+> This will remove the parent folder <strong>only of moved</strong> files. <strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.
 
 Clean empty ZFS datasets
 : <select name='cleanDatasets' size='1' class='narrow'>

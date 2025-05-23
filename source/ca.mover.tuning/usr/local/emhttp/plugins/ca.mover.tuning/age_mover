@@ -333,7 +333,7 @@ getMoverSettings() {
         fi
     else
         CLEANFOLDERS=$(cfg cleanFolders)
-        if [ $CLEANFOLDERS = "yes" ]; then
+        if [[ $CLEANFOLDERS = "yes" || $CLEANFOLDERS = "topFolder" ]]; then
             mvlogger "Clean Folders: $CLEANFOLDERS"
         fi
     fi
@@ -1433,11 +1433,11 @@ processTheMoves() {
             eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
 
             # Clean parent folder if empty
-            if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "yes" ]; then
+            if [[ "$ACTION" =~ "move" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
-                    mvDebuglogger "Current file: $FILE, Current dir: $DIR, Previous dir: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
+                    mvDebuglogger "Current file: $FILE, Current folder: $DIR, Previous folder: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
@@ -1463,11 +1463,26 @@ processTheMoves() {
                     mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of files: $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
-                        mvlogger "Not deleting dir containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
+                        mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         if [ "$TESTMODE" = "no" ]; then
-                            mvlogger "Deleting empty dir ${DIR}"
+                            mvlogger "Deleting empty folder ${DIR}"
                             rmdir "${DIR}"
+
+                            # Clean top level folder if empty
+                            if [ "$CLEANFOLDERS" = "topFolder" ]; then
+                                # Get the Top-Level Folder of $DIR on share
+                                top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
+                                # Count files in Top Folder
+                                top_folder_count="$(find "$top_folder" -type f | wc -l)"
+                                if [ "$top_folder_count" -eq 0 ]; then
+                                    mvlogger "Deleting empty top-level folder $top_folder"
+                                    #rm -rf "${top_folder}"
+                                    find "$top_folder" -empty -type d -delete
+                                else
+                                    mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$count" != ".placeholder" ] && echo "s"): ${top_folder}"
+                                fi
+                            fi
                         fi
                     fi
                 done <<<"$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)"
@@ -1478,7 +1493,7 @@ processTheMoves() {
                 # Check counter if equal to 0 then check datasets
                 if [ "$LAST_COUNT" -eq 0 ]; then
                     # Count files in share
-                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l) # To find share of dir [ "$(find "$(echo "${DIR}" | cut -d'/' -f1-4)" -type f | wc -l)" = 0 ]
+                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l)
                     mvDebuglogger "Cycle of delete dataset" "Clean Dataset - Start Loop"
                     # If no files in share
                     if [ "${share_file_count}" -eq 0 ]; then
@@ -1596,7 +1611,7 @@ start() {
     fi
 
     # If $MOVINGPCTTHRESHOLD is equal to $FREEINGPCTLIMIT, log a warning message indicating that the mover will not move due to the thresholds no gap beetween.
-    if [ "$MOVINGPCTTHRESHOLD" = "$FREEINGPCTLIMIT" ]; then
+    if [ "$MOVINGPCTTHRESHOLD" = "$FREEINGPCTLIMIT" ] && [ "$FREEINGPCTLIMIT" != 0 ]; then
         mvlogger "Warning: Moving thresholds are equal. No action will be taken because the thresholds do not provide a gap."
     fi
 
@@ -1696,11 +1711,6 @@ reset() {
 empty() {
     DISK="$1"
 
-    if [ ! -d "/mnt/$DISK" ]; then
-        echo "Error: disk '$DISK' not found"
-        exit 1
-    fi
-
     if [ -f $PIDFILE ]; then
         if ps h $(cat $PIDFILE) | grep mover; then
             echo "mover: already running"
@@ -1774,7 +1784,7 @@ usage() {
     echo ""
     echo "Usage: $0 start [-e <disk_name>]"
     echo "       $0 stop|softstop|status|reset"
-    echo "       <disk_name> must match pattern 'disk[0-9]*'"
+    echo "       <disk_name> must match pattern 'disk[0-9]*' and /mnt/<disk_name> must be a mountpoint"
     echo ""
     echo "reset  - reset config file to default values and delete override config folder"
     exit 1
@@ -1783,7 +1793,11 @@ usage() {
 # validate disk name
 validate_disk() {
     if [[ ! "$1" =~ ^disk[0-9]+$ ]]; then
-        echo "Error: <disk_name> must match pattern 'disk[0-9]*'"
+        echo "Error: <disk_name> must match pattern 'disk[0-9]+$'"
+        usage
+    fi
+    if ! mountpoint --nofollow /mnt/$1 >/dev/null 2>&1; then
+        echo "Error: nothing mounted at /mnt/$1"
         usage
     fi
 }

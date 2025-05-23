@@ -258,7 +258,7 @@
 <FILE Run="/usr/bin/php">
 <INLINE>
 <![CDATA[
-<?
+<?php
   $version = parse_ini_file("/etc/unraid-version");
   $displayversion = $version['version'];
   echo "$displayversion \n";
