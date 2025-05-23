@@ -1469,6 +1469,7 @@ processTheMoves() {
                             mvlogger "Deleting empty folder ${DIR}"
                             rmdir "${DIR}"
 
+                            # Clean top level folder if empty
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
                                 # Get the Top-Level Folder of $DIR on share
                                 top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
