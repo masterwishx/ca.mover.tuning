@@ -31,6 +31,13 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.05.23
+    - fix: Fixed "mover start" issue that was scheduled without the "start" parameter by unRaid 6.x. **_(masterwishx)_**
+    - new: Added "Top Folder" option for the Clean empty folders feature to remove top-level empty folders on shares.
+    - fix: Removed warning message when thresholds are equal and both set to 0%.
+    - fix: Enhanced README and plugin with clearer descriptions of plugin functionality, including expanded options and improved usage explanations.
+    - fix: Improved disk validation to ensure only mounted disks matching the required pattern are accepted, with clearer error messages and usage instructions.
+
 - 2025.05.04
     - fix: Fix for initialized PREFER_MOVINGPCTTHRESHOLD to 0. Thanks to AdamLeyshon for reported this issue. **_(masterwishx)_**
     - new: A warning will be added when in test mode and thresholds are either identical or have a small gap between them.
