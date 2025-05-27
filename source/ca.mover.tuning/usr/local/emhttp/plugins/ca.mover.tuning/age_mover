@@ -1430,7 +1430,28 @@ processTheMoves() {
 
             moverStatusWrite
             # Perform rsync. relative paths and hardlinks
-            eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
+            if [[ "$ACTION" =~ "sync" ]]; then
+                eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
+            # Perform unraid binary move.
+            elif [[ "$ACTION" =~ "move" ]]; then
+                find "$SOURCE/$FILEPATH" 2>/dev/null | /usr/libexec/unraid/move "$DEBUGGING"
+            fi
+
+            # Perform unraid binary move. !! for future support !!
+            #find "$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)" 2>/dev/null | /usr/libexec/unraid/move "$DEBUGGING"
+            #find "$SOURCE/$FILEPATH" 2>/dev/null | /usr/libexec/unraid/move "$DEBUGGING"
+
+            # move() {
+            #     find "$1" -depth 2>/dev/null | /usr/libexec/unraid/move $2 $DEBUGGING
+            #     # second pass to clean up leftover empty directories
+            #     find "$1" -depth -type d 2>/dev/null | /usr/libexec/unraid/move $2 $DEBUGGING
+            #     }
+
+            # echo "synced file = $SYNCED_FILES"
+            # echo "file path = $FILEPATH"
+            # echo "source + file path = $SOURCE/$FILEPATH"
+
+            # echo "$DEBUGGING"
 
             # Clean parent folder if empty
             if [[ "$ACTION" =~ "move" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
