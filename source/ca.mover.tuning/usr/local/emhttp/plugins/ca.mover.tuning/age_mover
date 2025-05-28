@@ -1431,16 +1431,15 @@ processTheMoves() {
             moverStatusWrite
             # Perform rsync. relative paths and hardlinks
             if [[ "$ACTION" =~ "sync" ]]; then
-                eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
                 mvDebuglogger "Rsync cmd = $RSYNC_CMD, Sync File = $SYNCED_FILES, Dest = $DESTINATION/" "Sync Action"
+                eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
             # Perform unraid binary move.
             elif [[ "$ACTION" =~ "move" ]]; then
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
-                    #find "$SOURCE/$FILEPATH" 2>&1 > /dev/null | /usr/libexec/unraid/move "$DEBUGGING"
-                    find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" > /dev/null 2>&1
                     mvDebuglogger "Move cmd = move, Move File = $SOURCE/$FILEPATH, Dest = $DESTINATION/" "Move Action"
+                    find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
                 fi
             fi
 
