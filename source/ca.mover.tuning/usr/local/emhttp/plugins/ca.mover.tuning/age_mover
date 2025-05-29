@@ -596,6 +596,16 @@ getMoverSettings() {
         mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
     fi
 
+    if [ -z $(cfg movefilesTool) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Move files tool argument provided, defaulting to rsync"
+            MOVE_FILES_TOOL="rsync"
+            echo 'movefilesTool="rsync"' >>$config_file
+        fi
+    else
+        MOVE_FILES_TOOL=$(cfg movefilesTool)
+        mvlogger "Move files tool: $MOVE_FILES_TOOL"
+    fi
 }
 
 resetRunOnceMoverSettings() {
@@ -1420,25 +1430,27 @@ processTheMoves() {
                 # Some verbosity
                 GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
                 mvlogger "Moving $SYNCED_FILES to  $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
+                rsync_action="Move"
                 # Finalize RSYNC_CMD
                 RSYNC_CMD+=" --remove-source-files"
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
                 GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
                 mvlogger "Synchronizing  $SYNCED_FILES to  $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && echo '(preserving hardlinks)')"
+                rsync_action="Sync"
             fi
 
             moverStatusWrite
             # Perform rsync. relative paths and hardlinks
-            if [[ "$ACTION" =~ "sync" ]]; then
-                mvDebuglogger "Rsync cmd = $RSYNC_CMD, Sync File = $SYNCED_FILES, Dest = $DESTINATION/" "Sync Action"
+            if [[ "$ACTION" =~ "sync" || "$ACTION" =~ "move" && "$MOVE_FILES_TOOL" = "rsync" ]]; then
+                mvDebuglogger "Rsync cmd: $RSYNC_CMD, $rsync_action file: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
                 eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
             # Perform unraid binary move.
             elif [[ "$ACTION" =~ "move" ]]; then
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
-                    mvDebuglogger "Move cmd = move, Move File = $SOURCE/$FILEPATH, Dest = $DESTINATION/" "Move Action"
+                    mvDebuglogger "Move cmd: move, Move file: $SOURCE/$FILEPATH, Dest: $DESTINATION/" "Move Action"
                     find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
                 fi
             fi
