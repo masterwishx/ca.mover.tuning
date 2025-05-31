@@ -139,7 +139,7 @@ Test Mode (dry run):
 
 > Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
 
-Validate input filenames to prevent attacks
+Validate input filenames to prevent attacks:
 : <select name='validateFilenames' size='1' class='narrow'>
 <?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
 <?=mk_option($cfg['validateFilenames'],"no",'No')?>
@@ -157,7 +157,7 @@ Validate input filenames to prevent attacks
 <p> If one of these checks fails, the filename will be rejected.</p>
 </blockquote>
 
-Log Mover Tuning plugin actions
+Log Mover Tuning plugin actions:
 : <select name='logging' size='1' class='narrow'>
 <?=mk_option($cfg['logging'],"no",'No')?>
 <?=mk_option($cfg['logging'],"yes","Yes")?>
@@ -165,7 +165,7 @@ Log Mover Tuning plugin actions
 
 > Enables or disables logging from this plugin. Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> by default.
 
-Debug Log Mover Tuning plugin actions
+Debug Log Mover Tuning plugin actions:
 : <select name='debuglogging' size='1' class='narrow'>
 <?=mk_option($cfg['debuglogging'],"no",'No')?>
 <?=mk_option($cfg['debuglogging'],"yes","Yes")?>
@@ -173,7 +173,7 @@ Debug Log Mover Tuning plugin actions
 
 > Enables or disables debug logging from this plugin. Debug Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong> by default.
 
-Notify Mover Tuning plugin actions
+Notify Mover Tuning plugin actions:
 : <select name='notify' size='1' class='narrow'>
 <?=mk_option($cfg['notify'],"no",'No')?>
 <?=mk_option($cfg['notify'],"yes","Yes")?>
@@ -520,7 +520,15 @@ Force turbo write during mover:
 
 > Forces unRaid to switch to turbo write mode (reconstruct write) when mover is running
 
-Clean empty folders
+Move files tool:
+: <select name='movefilesTool' size='1' class='narrow'>
+<?=mk_option($cfg['movefilesTool'],"rsync",'Rsync')?>
+<?=mk_option($cfg['movefilesTool'],"move","Move")?>
+</select>
+
+> This will change the tool used for moving files, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.
+
+Clean empty folders:
 : <select name='cleanFolders' size='1' class='narrow'>
 <?=mk_option($cfg['cleanFolders'],"no",'No')?>
 <?=mk_option($cfg['cleanFolders'],"yes","Yes")?>
@@ -529,7 +537,7 @@ Clean empty folders
 
 > This will remove the parent folder <strong>only of moved</strong> files. <strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.
 
-Clean empty ZFS datasets
+Clean empty ZFS datasets:
 : <select name='cleanDatasets' size='1' class='narrow'>
 <?=mk_option($cfg['cleanDatasets'],"no",'No')?>
 <?=mk_option($cfg['cleanDatasets'],"yes","Yes")?>
