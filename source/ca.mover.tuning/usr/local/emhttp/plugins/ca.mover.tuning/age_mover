@@ -1362,7 +1362,7 @@ processTheMoves() {
 
     # Dry mode info:
     if [ $TESTMODE = "yes" ]; then
-        mvlogger "Test Mode: yes, running rsync in dry-mode for moving and syncing"
+        mvlogger "Warning: Test Mode: yes, running $MOVE_FILES_TOOL in dry-mode for moving $([ "$MOVE_FILES_TOOL" = "rsync" ] && echo 'and syncing')"
     fi
 
     # Loop through each line in the action list (except those where action is keep), starting by cache and then array

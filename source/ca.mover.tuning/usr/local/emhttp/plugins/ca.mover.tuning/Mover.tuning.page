@@ -522,11 +522,11 @@ Force turbo write during mover:
 
 Move files tool:
 : <select name='movefilesTool' size='1' class='narrow'>
-<?=mk_option($cfg['movefilesTool'],"rsync",'RSync')?>
+<?=mk_option($cfg['movefilesTool'],"rsync",'Rsync')?>
 <?=mk_option($cfg['movefilesTool'],"move","Move")?>
 </select>
 
-> This will change the tool used for moving files, allowing you to select between <strong>RSync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.
+> This will change the tool used for moving files, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.
 
 Clean empty folders:
 : <select name='cleanFolders' size='1' class='narrow'>
