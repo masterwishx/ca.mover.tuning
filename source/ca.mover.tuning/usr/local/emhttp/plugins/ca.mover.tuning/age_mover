@@ -1441,17 +1441,24 @@ processTheMoves() {
             fi
 
             moverStatusWrite
-            # Perform rsync. relative paths and hardlinks
-            if [[ "$ACTION" =~ "sync" || "$ACTION" =~ "move" && "$MOVE_FILES_TOOL" = "rsync" ]]; then
-                mvDebuglogger "Rsync cmd: $RSYNC_CMD, $rsync_action file: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
-                eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
-            # Perform unraid binary move.
-            elif [[ "$ACTION" =~ "move" ]]; then
+
+            # Check if action and move files tool is unraid move
+            if [[ "$ACTION" =~ "move" && "$MOVE_FILES_TOOL" = "move" ]]; then
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
                     mvDebuglogger "Move cmd: move, Move file: $SOURCE/$FILEPATH, Dest: $DESTINATION/" "Move Action"
+                    # Perform unraid binary move.
                     find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                fi
+            else
+                # If action is sync/move and move files tool is rsync
+                if [ "$TESTMODE" = "yes" ]; then
+                    mvlogger "TEST MODE: Would $rsync_action using rsync utility"
+                else
+                    mvDebuglogger "Rsync cmd: $RSYNC_CMD, $rsync_action file: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
+                    # Perform rsync. relative paths and hardlinks
+                    eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
                 fi
             fi
 
