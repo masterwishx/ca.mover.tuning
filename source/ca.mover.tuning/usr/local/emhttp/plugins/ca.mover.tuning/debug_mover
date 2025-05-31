@@ -23,7 +23,6 @@ mkdir -p $PKGROOT 2>&1
 
 # prepare packaging location
 rm -rf $DEBUGROOT 2>&1
-
 mkdir -p $DEBUGROOT 2>&1
 mkdir -p $DEBUGROOT/PLUGIN 2>&1
 
@@ -94,6 +93,9 @@ DIAGFILE="$(/usr/local/sbin/diagnostics 2>/dev/null | grep -o "/boot/logs/.*\.zi
 
 # clean up packaging location
 rm -rf $DEBUGROOT 2>&1
+
+# Copy package to /boot/logs/
+[ -f "${PKGROOT}/${DEBUGNAME}" ] && cp -a "${PKGROOT}/${DEBUGNAME}" /boot/logs/
 
 # return with the name of the debug package
 [ -f "${PKGROOT}/${DEBUGNAME}" ] && echo "DONE:${PKGROOT}/${DEBUGNAME}" 2>&1
