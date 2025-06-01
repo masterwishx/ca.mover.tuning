@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.05.23">
-<!ENTITY md5       "647462541aa23b53744f6fb434ea9ace">
+<!ENTITY version   "2025.06.01">
+<!ENTITY md5       "bb545b734bc5e842df91147eece649b9">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,12 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.06.01
+- new: Added an option "Move files tool" to select the file-moving tool between Rsync and the Unraid move utility, default file-moving tool set to Rsync. **_(masterwishx)_**
+- new: Introduced a new debug command "mover debug" to generate a diagnostics package for troubleshooting.
+- fix: Enhanced logging and debug information for file move operations.
+- fix: Updated debug package creation to copy the diagnostics ZIP to the system boot logs directory.
+
 ###2025.05.23
 - fix: Fixed "mover start" issue that was scheduled without the "start" parameter by unRaid 6.x. **_(masterwishx)_**
 - new: Added "Top Folder" option for the Clean empty folders feature to remove top-level empty folders on shares.
