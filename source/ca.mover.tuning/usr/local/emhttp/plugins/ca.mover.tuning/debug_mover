@@ -1,5 +1,6 @@
 #!/bin/bash
 
+BOOT_LOGS="/boot/logs/"
 DEBUGROOT="/tmp/ca.mover.tuning-debug"
 PKGROOT="/usr/local/emhttp/plugins/ca.mover.tuning/debug"
 CONFIG="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
@@ -23,7 +24,7 @@ mkdir -p $PKGROOT 2>&1
 
 # prepare packaging location
 rm -rf $DEBUGROOT 2>&1
-
+mkdir -p $BOOT_LOGS 2>&1
 mkdir -p $DEBUGROOT 2>&1
 mkdir -p $DEBUGROOT/PLUGIN 2>&1
 
@@ -60,8 +61,8 @@ fi
 # copy all config files from "$OVERRIDE_CFGFOLDER"
 for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
     if [ -f "$config_file" ]; then
-        mkdir -p $DEBUGROOT/PLUGIN/shareOverrideConfig
-        cp -f "$config_file" $DEBUGROOT/PLUGIN/shareOverrideConfig/"$(basename "$config_file").txt"
+        mkdir -p $DEBUGROOT/PLUGIN/shareOverrideConfig 2>&1
+        cp -f "$config_file" $DEBUGROOT/PLUGIN/shareOverrideConfig/"$(basename "$config_file").txt" 2>&1
     fi
 done
 
@@ -73,8 +74,8 @@ done
         today=$(date +%Y-%m-%d)
 
         if [ "$mod_date" == "$today" ]; then
-            mkdir -p $DEBUGROOT/PLUGIN/Logs
-            cp -f "$file" $DEBUGROOT/PLUGIN/Logs/"$(basename "$file").txt"
+            mkdir -p $DEBUGROOT/PLUGIN/Logs 2>&1
+            cp -f "$file" $DEBUGROOT/PLUGIN/Logs/"$(basename "$file").txt" 2>&1
         fi
     fi
 done
@@ -86,7 +87,7 @@ done
 cp -f /boot/config/plugins/ca.mover.tuning.plg $DEBUGROOT/PLUGIN/ca.mover.tuning.plg.txt 2>&1
 
 # generate and include diagnostics package
-DIAGFILE="$(/usr/local/sbin/diagnostics 2>/dev/null | grep -o "/boot/logs/.*\.zip")"
+DIAGFILE="$(/usr/local/sbin/diagnostics 2>/dev/null | grep -o "${BOOT_LOGS}.*\.zip")"
 [ -f "$DIAGFILE" ] && mv -f "$DIAGFILE" $DEBUGROOT/ 2>&1
 
 # package up the prepared files in our packaging location
@@ -94,6 +95,9 @@ DIAGFILE="$(/usr/local/sbin/diagnostics 2>/dev/null | grep -o "/boot/logs/.*\.zi
 
 # clean up packaging location
 rm -rf $DEBUGROOT 2>&1
+
+# Copy package to /boot/logs/
+[ -f "${PKGROOT}/${DEBUGNAME}" ] && cp -a "${PKGROOT}/${DEBUGNAME}" "$BOOT_LOGS" 2>&1
 
 # return with the name of the debug package
 [ -f "${PKGROOT}/${DEBUGNAME}" ] && echo "DONE:${PKGROOT}/${DEBUGNAME}" 2>&1
