@@ -1742,7 +1742,7 @@ debug() {
     # creating plugin diagnostics file at /boot/logs/Mover Tuning Debug Package (.zip)"
     echo "move: Starting Mover Tuning Plugin diagnostics collection..."
     /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover >/dev/null 2>&1
-    echo "move: done. ZIP file at /boot/logs/Mover Tuning Debug Package (.zip) created."
+    echo "move: done. ZIP file at /boot/logs/ca.mover.tuning-debug-<date-time>.zip created."
 }
 
 empty() {
@@ -1824,7 +1824,7 @@ usage() {
     echo "       <disk_name> must match pattern 'disk[0-9]*' and /mnt/<disk_name> must be a mountpoint"
     echo ""
     echo "reset  - reset config file to default values and delete override config folder"
-    echo "debug  - creating plugin diagnostics file at /boot/logs/Mover Tuning Debug Package (.zip)"
+    echo "debug  - creating plugin diagnostics file at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
     exit 1
 }
 
