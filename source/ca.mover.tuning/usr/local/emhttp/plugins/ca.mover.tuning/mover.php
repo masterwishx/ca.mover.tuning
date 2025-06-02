@@ -68,11 +68,18 @@ function startMover(array $args)
         }
     }
 
+    // Check if Move Now button follows plug-in filters
+    if ($cfg['movenow'] == "yes") {
+        $mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover";
+    } else {
+        $mover_str = "/usr/local/sbin/mover.old";
+    }
+
     if ($options == "stop") {
         $niceLevel = $cfg['moverNice'] ?: "0";
         $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
-        logger("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover.old stop");
-        passthru("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover.old stop");
+        logger("ionice $ioLevel nice -n $niceLevel $mover_str stop");
+        passthru("ionice $ioLevel nice -n $niceLevel $mover_str stop");
         exit();
     }
 
