@@ -5,6 +5,7 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini");
 $cron = $argv[1] == "crond"; //Not working anymore needs to be removed in future + change code below related to $cron
+$bash = $argv[1] == "bash";
 $args = [];
 
 function logger($string)
@@ -19,7 +20,7 @@ function logger($string)
 //function startMover($options = "start")
 function startMover(array $args)
 {
-    global $vars, $cfg, $cron, $argv, $args;
+    global $vars, $cfg, $cron, $bash, $argv, $args;
 
     if ($argv[2]) {
         $args[] = trim($argv[2]);
@@ -31,6 +32,10 @@ function startMover(array $args)
             $option1 = $args[0];
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1: $option1\n");
+                //If runned mannualy by bash or button then log it as bash
+                if ($bash) {
+                    logger("Runned by bash: $bash");
+                }
             }
         } else if (version_compare($vars['version'], '7.0.0', '<')) {
             $args[0] = 'start';
