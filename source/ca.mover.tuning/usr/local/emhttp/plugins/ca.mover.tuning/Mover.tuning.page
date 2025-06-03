@@ -530,9 +530,9 @@ Move files tool:
 </select>
 
 <blockquote class="inline_help">
-<p>This will change the tool used for moving files with plugin filters, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.</p>
-<p><strong>Move</strong>: Unraid's built-in file-moving tool is used, but <strong>Rsync</strong> remains for sync files.</p>
-<p><strong>Rsync</strong>: Both move and sync files use the Rsync tool.</p>
+<p>This will change the tool used for moving files with <strong>plugin filters</strong>, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.</p>
+<p><strong>Move</strong> - Use Unraid's built-in file-moving tool for moving, but continue to use <strong>Rsync</strong> for syncing files.</p>
+<p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
 </blockquote>
 
 Clean empty folders:
