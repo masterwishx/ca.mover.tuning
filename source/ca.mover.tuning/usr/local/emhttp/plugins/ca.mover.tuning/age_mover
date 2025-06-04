@@ -610,9 +610,9 @@ getMoverSettings() {
 
 resetRunOnceMoverSettings() {
     local config_file="$1"
-    if grep -q "run-once" $1; then
+    if grep -q "run-once" "$1"; then
         mvlogger "Reset 'Run-once' settings to 'no' in $1"
-        sed 's|"run-once"|"no"|g' -i $1
+        sed 's|"run-once"|"no"|g' -i "$1"
         #else
         #mvlogger "No run-once settings to reset in $1"
     fi
@@ -1697,8 +1697,12 @@ start() {
     # And now.. we move! ... if needed
     [ ! -e $SOFTSTOPFILE ] && [ $TOTALFILES -gt 0 ] && processTheMoves
 
+    mvDebuglogger "processTheMoves completed" "processTheMoves END"
+
     #Write the final status just for sure
     moverStatusWrite
+
+    mvDebuglogger "moverStatusWrite completed" "moverStatusWrite END"
 
     #Run mover after script if specified.
     if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
@@ -1712,6 +1716,8 @@ start() {
         fi
     fi
 
+    mvDebuglogger "after script completed" "after script END"
+
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
         for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
@@ -1719,10 +1725,14 @@ start() {
         done
     fi
 
+    mvDebuglogger "Reset run-once settings completed" "run-once settings END"
+
     mvlogger "Cleaning lock and stop files"
     for file in $PIDFILE $SOFTSTOPFILE; do
         [[ -e "$file" ]] && rm -f "$file"
     done
+
+    mvDebuglogger "Cleaning lock and stop files completed" "Cleaning lock and stop files END"
 
     # Calculate Elapsed Time
     STOP_TIME=$(date +"%s")
