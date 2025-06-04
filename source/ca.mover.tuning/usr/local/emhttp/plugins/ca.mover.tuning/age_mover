@@ -610,11 +610,12 @@ getMoverSettings() {
 
 resetRunOnceMoverSettings() {
     local config_file="$1"
-    if grep -q "run-once" "$1"; then
-        mvlogger "Reset 'Run-once' settings to 'no' in $1"
-        sed 's|"run-once"|"no"|g' -i "$1"
+
+    if grep -q "run-once" "$config_file"; then
+        mvlogger "Reset 'Run-once' settings to 'no' in $config_file"
+        sed 's|"run-once"|"no"|g' -i "$config_file"
         #else
-        #mvlogger "No run-once settings to reset in $1"
+        #mvlogger "No run-once settings to reset in $config_file"
     fi
 }
 
@@ -1721,7 +1722,10 @@ start() {
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
         for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
-            resetRunOnceMoverSettings "$config_file"
+            # If config file exist
+            if [ -f "$config_file" ]; then
+                resetRunOnceMoverSettings "$config_file"
+            fi
         done
     fi
 
