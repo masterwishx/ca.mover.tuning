@@ -32,9 +32,10 @@ function startMover(array $args)
             $option1 = $args[0];
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1: $option1\n");
-                //If runned mannualy by bash or button then log it as bash
+                //If run manually by bash or button then log it as bash
                 if ($bash) {
-                    logger("Runned by bash: $bash");
+                    // Log the manual run using bash command
+                    logger("Manually executed (bash)\n");
                 }
             }
         } else if (version_compare($vars['version'], '7.0.0', '<')) {

@@ -1689,6 +1689,11 @@ start() {
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
     [ ! -e $SOFTSTOPFILE ] && decideMoveActions
+
+    # Get current time to start time counter
+    START_TIME=$(date +"%s")
+    mvlogger "Starting time is: $(date -d "@$START_TIME" +"%T")"
+
     # And now.. we move! ... if needed
     [ ! -e $SOFTSTOPFILE ] && [ $TOTALFILES -gt 0 ] && processTheMoves
 
@@ -1719,8 +1724,15 @@ start() {
         [[ -e "$file" ]] && rm -f "$file"
     done
 
+    # Calculate Elapsed Time
+    STOP_TIME=$(date +"%s")
+    ELAPSED_SECONDS=$((STOP_TIME - START_TIME))
+    mvlogger "Stop time is: $(date -d "@$STOP_TIME" +"%T")"
+    ELAPSED_TIME=$(printf "%02d:%02d:%02d" $((ELAPSED_SECONDS / 3600)) $(((ELAPSED_SECONDS % 3600) / 60)) $((ELAPSED_SECONDS % 60)))
+    mvlogger "Elapsed time is: $ELAPSED_TIME"
+
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
-    unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin." "success"
+    unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time is: $ELAPSED_TIME" "success"
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 
