@@ -1742,7 +1742,41 @@ start() {
     STOP_TIME=$(date +"%s")
     ELAPSED_SECONDS=$((STOP_TIME - START_TIME))
     mvlogger "Action ended at: $(date -d "@$STOP_TIME" +"%T")"
-    ELAPSED_TIME=$(printf "%02d:%02d:%02d" $((ELAPSED_SECONDS / 3600)) $(((ELAPSED_SECONDS % 3600) / 60)) $((ELAPSED_SECONDS % 60)))
+
+    # Convert elapsed seconds to days, hours, minutes, and seconds
+    DAYS=$((ELAPSED_SECONDS / 86400))
+    HOURS=$(((ELAPSED_SECONDS % 86400) / 3600))
+    MINUTES=$(((ELAPSED_SECONDS % 3600) / 60))
+    SECONDS=$((ELAPSED_SECONDS % 60))
+
+    # Format the elapsed time
+    ELAPSED_TIME=""
+    if [ "$DAYS" -gt 0 ]; then
+        ELAPSED_TIME+="${DAYS} day"
+        if [ "$DAYS" -ne 1 ]; then
+            ELAPSED_TIME+="s"
+        fi
+        ELAPSED_TIME+=" "
+    fi
+
+    if [ "$HOURS" -gt 0 ]; then
+        ELAPSED_TIME+="${HOURS} hour"
+        if [ "$HOURS" -ne 1 ]; then
+            ELAPSED_TIME+="s"
+        fi
+        ELAPSED_TIME+=" "
+    fi
+
+    if [ "$MINUTES" -gt 0 ]; then
+        ELAPSED_TIME+="${MINUTES} min"
+        if [ "$MINUTES" -ne 1 ]; then
+            ELAPSED_TIME+="s"
+        fi
+        ELAPSED_TIME+=" "
+    fi
+
+    ELAPSED_TIME+="${SECONDS} sec"
+
     mvlogger "Elapsed time: $ELAPSED_TIME"
 
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
