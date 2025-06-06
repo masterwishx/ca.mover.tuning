@@ -1751,31 +1751,20 @@ start() {
 
     # Format the elapsed time
     ELAPSED_TIME=""
+
     if [ "$DAYS" -gt 0 ]; then
-        ELAPSED_TIME+="${DAYS} day"
-        if [ "$DAYS" -ne 1 ]; then
-            ELAPSED_TIME+="s"
-        fi
-        ELAPSED_TIME+=" "
+        ELAPSED_TIME+="${DAYS} day$([ "$DAYS" -ne 1 ] && echo 's')"
     fi
 
     if [ "$HOURS" -gt 0 ]; then
-        ELAPSED_TIME+="${HOURS} hour"
-        if [ "$HOURS" -ne 1 ]; then
-            ELAPSED_TIME+="s"
-        fi
-        ELAPSED_TIME+=" "
+        ELAPSED_TIME+=" ${HOURS} hr$([ "$HOURS" -ne 1 ] && echo 's')"
     fi
 
     if [ "$MINUTES" -gt 0 ]; then
-        ELAPSED_TIME+="${MINUTES} min"
-        if [ "$MINUTES" -ne 1 ]; then
-            ELAPSED_TIME+="s"
-        fi
-        ELAPSED_TIME+=" "
+        ELAPSED_TIME+=" ${MINUTES} min$([ "$MINUTES" -ne 1 ] && echo 's')"
     fi
 
-    ELAPSED_TIME+="${SECONDS} sec"
+    ELAPSED_TIME+=" ${SECONDS} sec"
 
     mvlogger "Elapsed time: $ELAPSED_TIME"
 
