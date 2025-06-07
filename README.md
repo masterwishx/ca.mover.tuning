@@ -32,6 +32,11 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.06.07
+    - fix: Fixed "mover start" from CLI freezing before the end stage at "resetRunOnceMoverSettings" function. **_(masterwishx)_**
+    - fix: Fixed the mover process retrieving blank values for parent processes instead of "bash" and "crond" commands.
+    - new: Added a time counter feature to calculate the elapsed time during file move operations. This enhancement provides better visibility into the performance of file moves.
+
 - 2025.06.01
     - new: Added an option "Move files tool" to select the file-moving tool between Rsync and the Unraid move utility, default file-moving tool set to Rsync. **_(masterwishx)_**
     - new: Introduced a new debug command "mover debug" to generate a diagnostics package for troubleshooting.
