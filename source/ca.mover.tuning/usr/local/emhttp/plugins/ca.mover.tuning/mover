@@ -1,4 +1,4 @@
 #!/bin/bash
-PPPID=$(ps h -o ppid= "$PPID" 2>/dev/null)
-P_COMMAND=$(ps h -o %c "$PPPID" 2>/dev/null)
+PPPID=$(ps h -o ppid= $PPID 2>/dev/null)
+P_COMMAND=$(ps h -o %c $PPPID 2>/dev/null)
 /usr/local/emhttp/plugins/ca.mover.tuning/mover.php "$P_COMMAND" "$*"

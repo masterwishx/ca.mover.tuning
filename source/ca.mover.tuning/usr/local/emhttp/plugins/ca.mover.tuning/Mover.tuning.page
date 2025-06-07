@@ -238,7 +238,7 @@ Let scheduled mover run during a parity check / rebuild:
 	<?=mk_option($cfg['parity'],'no','No')?>
 </select>
 
-> If a parity check or disk rebuild is in progress, this will prevent mover from running
+> If a parity check or disk rebuild is in progress, this will prevent mover from running.
 
 Priority for mover process
 : <select name='moverNice' size='1' class='narrow'>
@@ -254,7 +254,10 @@ Priority for disk I/O
 <?=mk_option($cfg['moverIO'],"-c 3","Idle")?>
 </select>
 
-> The above two options set the priority for the mover process.  Setting these options may help with circumstances where when mover runs other applications may pause or buffer.  Note that moving the files may take longer when setting these options
+<blockquote class="inline_help">
+<p>The above two options set the priority for the mover process. Setting these options may help with circumstances where when mover runs other applications may pause or buffer.</p>
+<p>Note that moving the files may take <strong>longer</strong> when setting these options.</p>
+</blockquote>
 
 Force move of all files on a schedule:
 : <select name='force' size='1' id='forceCron' class='narrow' onchange='$(".mycron").toggleAttr("disabled")'>
@@ -518,7 +521,7 @@ Force turbo write during mover:
 <?=mk_option($cfg['enableTurbo'],"yes","Yes")?>
 </select>
 
-> Forces unRaid to switch to turbo write mode (reconstruct write) when mover is running
+> Forces unRaid to switch to turbo write mode (reconstruct write) when mover is running.
 
 Move files tool:
 : <select name='movefilesTool' size='1' class='narrow'>
@@ -526,7 +529,11 @@ Move files tool:
 <?=mk_option($cfg['movefilesTool'],"move","Move")?>
 </select>
 
-> This will change the tool used for moving files, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.
+<blockquote class="inline_help">
+<p>This will change the tool used for moving files with <strong>plugin filters</strong>, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.</p>
+<p><strong>Move</strong> - Use Unraid's built-in file-moving tool for moving, but continue to use <strong>Rsync</strong> for syncing files.</p>
+<p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
+</blockquote>
 
 Clean empty folders:
 : <select name='cleanFolders' size='1' class='narrow'>

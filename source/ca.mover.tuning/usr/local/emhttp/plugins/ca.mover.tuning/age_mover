@@ -610,11 +610,12 @@ getMoverSettings() {
 
 resetRunOnceMoverSettings() {
     local config_file="$1"
-    if grep -q "run-once" $1; then
-        mvlogger "Reset 'Run-once' settings to 'no' in $1"
-        sed 's|"run-once"|"no"|g' -i $1
+
+    if grep -q "run-once" "$config_file"; then
+        mvlogger "Reset 'Run-once' settings to 'no' in $config_file"
+        sed 's|"run-once"|"no"|g' -i "$config_file"
         #else
-        #mvlogger "No run-once settings to reset in $1"
+        #mvlogger "No run-once settings to reset in $config_file"
     fi
 }
 
@@ -1689,11 +1690,20 @@ start() {
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
     [ ! -e $SOFTSTOPFILE ] && decideMoveActions
+
+    # Get current time to start time counter
+    START_TIME=$(date +"%s")
+    mvlogger "Action started at: $(date -d "@$START_TIME" +"%T")"
+
     # And now.. we move! ... if needed
     [ ! -e $SOFTSTOPFILE ] && [ $TOTALFILES -gt 0 ] && processTheMoves
 
+    mvDebuglogger "processTheMoves completed" "processTheMoves END"
+
     #Write the final status just for sure
     moverStatusWrite
+
+    mvDebuglogger "moverStatusWrite completed" "moverStatusWrite END"
 
     #Run mover after script if specified.
     if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
@@ -1707,20 +1717,61 @@ start() {
         fi
     fi
 
+    mvDebuglogger "after script completed" "after script END"
+
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
         for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
-            resetRunOnceMoverSettings "$config_file"
+            # If config file exist
+            if [ -f "$config_file" ]; then
+                resetRunOnceMoverSettings "$config_file"
+            fi
         done
     fi
+
+    mvDebuglogger "Reset run-once settings completed" "run-once settings END"
 
     mvlogger "Cleaning lock and stop files"
     for file in $PIDFILE $SOFTSTOPFILE; do
         [[ -e "$file" ]] && rm -f "$file"
     done
 
+    mvDebuglogger "Cleaning lock and stop files completed" "Cleaning lock and stop files END"
+
+    # Calculate Elapsed Time
+    STOP_TIME=$(date +"%s")
+    ELAPSED_SECONDS=$((STOP_TIME - START_TIME))
+    mvlogger "Action ended at: $(date -d "@$STOP_TIME" +"%T")"
+
+    # Convert elapsed seconds to days, hours, minutes, and seconds
+    DAYS=$((ELAPSED_SECONDS / 86400))
+    HOURS=$(((ELAPSED_SECONDS % 86400) / 3600))
+    MINUTES=$(((ELAPSED_SECONDS % 3600) / 60))
+    SECONDS=$((ELAPSED_SECONDS % 60))
+
+    # Format the elapsed time
+    ELAPSED_TIME=""
+
+    if [ "$DAYS" -gt 0 ]; then
+        ELAPSED_TIME+=" ${DAYS} day$([ "$DAYS" -ne 1 ] && echo 's')"
+    fi
+
+    if [ "$HOURS" -gt 0 ]; then
+        ELAPSED_TIME+=" ${HOURS} hr$([ "$HOURS" -ne 1 ] && echo 's')"
+    fi
+
+    if [ "$MINUTES" -gt 0 ]; then
+        ELAPSED_TIME+=" ${MINUTES} min$([ "$MINUTES" -ne 1 ] && echo 's')"
+    fi
+
+    if [[ "$SECONDS" -gt 0 || "$SECONDS" -eq 0 && "$ELAPSED_SECONDS" -eq 0 ]]; then
+        ELAPSED_TIME+=" ${SECONDS} sec"
+    fi
+
+    mvlogger "Elapsed time:$ELAPSED_TIME"
+
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
-    unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin." "success"
+    unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 
@@ -1819,8 +1870,8 @@ softstop() {
 usage() {
     echo "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)"
     echo ""
-    echo "Usage: $0 start [-e <disk_name>]"
-    echo "       $0 stop|softstop|status|reset|debug"
+    echo "Usage: $0 <or> mover start [-e <disk_name>]"
+    echo "       $0 <or> mover stop|softstop|status|reset|debug"
     echo "       <disk_name> must match pattern 'disk[0-9]*' and /mnt/<disk_name> must be a mountpoint"
     echo ""
     echo "reset  - reset config file to default values and delete override config folder"
