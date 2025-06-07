@@ -35,9 +35,9 @@ function startMover(array $args)
         else if ($cron) {
             logger("Auto executed (crond)\n");
         }
-        // If run manually by button seems $argv[1] is not set (""), then log it as unknown
+        // If run manually by button, $argv[1] is not set (""), then log it as move button
         else if (empty($argv[1])) {
-            logger("Unknown executed (not set)\n");
+            logger("Manually executed (Move button)\n");
         }
     }
 
