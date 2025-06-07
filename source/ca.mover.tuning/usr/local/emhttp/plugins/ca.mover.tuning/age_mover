@@ -1753,7 +1753,7 @@ start() {
     ELAPSED_TIME=""
 
     if [ "$DAYS" -gt 0 ]; then
-        ELAPSED_TIME+="${DAYS} day$([ "$DAYS" -ne 1 ] && echo 's')"
+        ELAPSED_TIME+=" ${DAYS} day$([ "$DAYS" -ne 1 ] && echo 's')"
     fi
 
     if [ "$HOURS" -gt 0 ]; then
@@ -1764,9 +1764,11 @@ start() {
         ELAPSED_TIME+=" ${MINUTES} min$([ "$MINUTES" -ne 1 ] && echo 's')"
     fi
 
-    ELAPSED_TIME+=" ${SECONDS} sec"
+    if [[ "$SECONDS" -gt 0 || "$SECONDS" -eq 0 && "$ELAPSED_SECONDS" -eq 0 ]]; then
+        ELAPSED_TIME+=" ${SECONDS} sec"
+    fi
 
-    mvlogger "Elapsed time: $ELAPSED_TIME"
+    mvlogger "Elapsed time:$ELAPSED_TIME"
 
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
     unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
