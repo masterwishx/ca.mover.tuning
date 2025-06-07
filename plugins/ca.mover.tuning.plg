@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.06.01">
-<!ENTITY md5       "bb545b734bc5e842df91147eece649b9">
+<!ENTITY version   "2025.06.07">
+<!ENTITY md5       "3e2a08d5795c48a266968b605acac22d">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,11 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.06.07
+- fix: Fixed "mover start" from CLI freezing before the end stage at "resetRunOnceMoverSettings" function. **_(masterwishx)_**
+- fix: Fixed the mover process retrieving blank values for parent processes instead of "bash" and "crond" commands.
+- new: Added a time counter feature to calculate the elapsed time during file move operations. This enhancement provides better visibility into the performance of file moves.
+
 ###2025.06.01
 - new: Added an option "Move files tool" to select the file-moving tool between Rsync and the Unraid move utility, default file-moving tool set to Rsync. **_(masterwishx)_**
 - new: Introduced a new debug command "mover debug" to generate a diagnostics package for troubleshooting.
