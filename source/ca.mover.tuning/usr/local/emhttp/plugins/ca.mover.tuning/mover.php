@@ -4,7 +4,7 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini");
-$cron = $argv[1] == "crond"; //Not working anymore needs to be removed in future + change code below related to $cron
+$cron = $argv[1] == "crond";
 $bash = $argv[1] == "bash";
 $args = [];
 
@@ -26,17 +26,27 @@ function startMover(array $args)
         $args[] = trim($argv[2]);
     }
 
+    if ($cfg['debuglogging'] == 'yes') {
+        // If run manually by bash cli
+        if ($bash) {
+            logger("Manually executed (bash)\n");
+        }
+        // If run via crond then log it as cron
+        else if ($cron) {
+            logger("Auto executed (crond)\n");
+        }
+        // If run manually by button seems $argv[1] is not set (""), then log it as unknown
+        else if (empty($argv[1])) {
+            logger("Unknown executed (not set)\n");
+        }
+    }
+
     if (!$cron) {
         // Example usage of specific arguments
         if (isset($args[0])) {
             $option1 = $args[0];
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1: $option1\n");
-                //If run manually by bash or button then log it as bash
-                if ($bash) {
-                    // Log the manual run using bash command
-                    logger("Manually executed (bash)\n");
-                }
             }
         } else if (version_compare($vars['version'], '7.0.0', '<')) {
             $args[0] = 'start';
@@ -66,7 +76,7 @@ function startMover(array $args)
             exit();
         }
     }
-    if ($options == "force") {
+    if ($cfg['force'] == "yes") {
         $options = "";
         if ($cfg['forceParity'] == "no" && $vars['mdResyncPos']) {
             logger("Parity Check / Rebuild in Progress.  Not running forced move");
@@ -110,19 +120,6 @@ function startMover(array $args)
     }
 }
 
-// //Add this at the top of your file with other functions
-// function is_run_by_cron() {
-//     // Combines both checks for better reliability
-//     if (isset($_ENV['SHELL']) && strpos($_ENV['SHELL'], '/cron') !== false) {
-//         return true;
-//     }
-    
-//     $pppid = trim (shell_exec("ps h -o ppid= $$"));
-//     $parent_process = trim(shell_exec("ps h -o comm= $pppid"));
-//     logger ("pppid = $pppid , parent_process =  $parent_process");
-//     return $parent_process === 'cron' || $parent_process === 'crond';
-// }
-
 if ($cron && $cfg['moverDisabled'] == 'yes') {
     logger("Mover schedule disabled");
     exit();
@@ -134,19 +131,6 @@ if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
 }
 
 logger("Starting Mover ...");
-// logger("cron is: $cron");
-
-// // Add this near the top of your main script execution
-// if (is_run_by_cron()) {
-//     logger("This process was started by crond");
-//     // Handle cron-specific logic here
-//     if ($cfg['moverDisabled'] == 'yes') {
-//         logger("Mover schedule disabled when run by cron");
-//         exit();
-//     }
-// } else {
-//     logger("This process was NOT started by crond");
-// }
 
 startMover($args);
 
