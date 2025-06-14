@@ -339,6 +339,9 @@ if ! pgrep age_mover; then
   done
 fi
 
+# Renaming mover.cron.disabled to mover.cron if exists (from old cron fix)
+if [[ -e /boot/config/plugins/dynamix/mover.cron.disabled ]]; then mv -f /boot/config/plugins/dynamix/mover.cron.disabled /boot/config/plugins/dynamix/mover.cron; fi
+
 echo "Fixing permissions"
 chmod +x /usr/local/sbin/mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/*.php

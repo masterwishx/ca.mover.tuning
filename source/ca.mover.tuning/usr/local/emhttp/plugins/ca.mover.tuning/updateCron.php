@@ -32,26 +32,18 @@ if ($cfg_cronEnabled != $_POST['cronEnabled']) {
 
 // Check if value was changed
 if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
-	// If mover schedule is disabled then rename 'mover.cron' to 'mover.cron.disabled'
+	// If mover schedule is disabled
 	if ($_POST['ismoverDisabled'] == "yes") {
-		// Check if the file exists before attempting to rename it
+		// Check if the file exists
 		if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
-			if (!rename("/boot/config/plugins/dynamix/mover.cron", "/boot/config/plugins/dynamix/mover.cron.disabled")) {
-				logger("Error: Failed to rename mover cron file");
-			} else {
-				logger("Mover schedule disabled successfully.");
-			}
+			logger("Mover schedule disabled successfully.");
 		} else {
 			logger("Error: Mover cron file does not exist");
 		}
 	} else {
-		// If mover schedule is enabled then rename back
-		if (file_exists("/boot/config/plugins/dynamix/mover.cron.disabled")) {
-			if (!rename("/boot/config/plugins/dynamix/mover.cron.disabled", "/boot/config/plugins/dynamix/mover.cron")) {
-				logger("Error: Failed to rename mover cron file");
-			} else {
-				logger("Mover schedule enabled successfully.");
-			}
+		// If mover schedule is enabled
+		if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
+			logger("Mover schedule enabled successfully.");
 		} else {
 			logger("Error: Mover cron file does not exist");
 		}
