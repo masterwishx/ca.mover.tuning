@@ -32,6 +32,10 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.06.14
+    - fix: age_mover is missing the "start" parameter in the cron schedule when force move is enabled. **_(masterwishx)_**
+    - fix: remove renaming of "mover.cron" to "mover.cron.disabled". No longer necessary with previous version.
+
 - 2025.06.07
     - fix: Fixed "mover start" from CLI freezing before the end stage at "resetRunOnceMoverSettings" function. **_(masterwishx)_**
     - fix: Fixed the mover process retrieving blank values for parent processes instead of "bash" and "crond" commands.
