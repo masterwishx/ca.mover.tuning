@@ -111,6 +111,8 @@ function unraid_notify() {
         else
             mvDebuglogger "Moved Only notify mode activated. Files were moved, and notifications are enabled." "Notify Mode"
         fi
+    else
+        mvDebuglogger "Yes notify mode activated. All notifications are enabled." "Notify Mode"
     fi
     #
     # Determine the severity of the message based on the flag it received
@@ -123,7 +125,6 @@ function unraid_notify() {
     #
     # Call the Unraid notification script
     /usr/local/emhttp/webGui/scripts/notify -s "Mover Tuning Notification" -d "$message" -i "$severity" -l "/Settings/Scheduler"
-    mvDebuglogger "Yes notify mode activated. All notifications are enabled." "Notify Mode"
 }
 
 function is_zfs_mountpoint_fstype() {
