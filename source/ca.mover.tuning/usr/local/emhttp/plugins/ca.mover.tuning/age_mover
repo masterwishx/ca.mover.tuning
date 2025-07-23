@@ -93,12 +93,24 @@ function unraid_notify() {
     #
     # Check the notification_type variable
     if [[ "$NOTIFY" == "no" ]]; then
+        mvDebuglogger "No notify mode activated. Notifications are disabled." "Notify Mode"
         return 0 # Exit the function if notification_type is set to 'none'
     fi
     #
-    # If notification_type is set to 'error' and the flag is 'success', exit the function
+    # If notification_type is set to 'errorsOnly' and the flag is 'success', exit the function
     if [[ "$NOTIFY" == "errorsOnly" && "$flag" == "success" ]]; then
+        mvDebuglogger "Errors Only notify mode activated. Success notifications are disabled." "Notify Mode"
         return 0 # Do not process success messages
+    fi
+    #
+    # If notification_type is set to 'movedOnly' and the flag is 'success' and the files was NOT actually moved, exit the function
+    if [[ "$NOTIFY" == "movedOnly" && "$flag" == "success" ]]; then
+        if [[ "$TOTALFILES" -eq 0 ]]; then
+            mvDebuglogger "Moved Only notify mode activated. No files were moved, and notifications are disabled." "Notify Mode"
+            return 0 # Do not process success messages
+        else
+            mvDebuglogger "Moved Only notify mode activated. Files were moved, and notifications are enabled." "Notify Mode"
+        fi
     fi
     #
     # Determine the severity of the message based on the flag it received
@@ -111,6 +123,7 @@ function unraid_notify() {
     #
     # Call the Unraid notification script
     /usr/local/emhttp/webGui/scripts/notify -s "Mover Tuning Notification" -d "$message" -i "$severity" -l "/Settings/Scheduler"
+    mvDebuglogger "Yes notify mode activated. All notifications are enabled." "Notify Mode"
 }
 
 function is_zfs_mountpoint_fstype() {
@@ -1770,14 +1783,9 @@ start() {
 
     mvlogger "Elapsed time:$ELAPSED_TIME"
 
-    # Notify the user if notifications are enabled, or if the files was actually moved when movedOnly mode was activated.
-    if [[ "$NOTIFY" == "movedOnly" && "$TOTALFILES" -eq 0 ]]; then
-        mvlogger "Moved Only notify mode activated. No files were moved, and notifications are disabled."
-    else
-        unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
-    fi
-
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
+
+    unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
 
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
