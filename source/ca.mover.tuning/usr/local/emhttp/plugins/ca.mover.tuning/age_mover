@@ -1783,11 +1783,9 @@ start() {
     fi
 
     mvlogger "Elapsed time:$ELAPSED_TIME"
-
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
 
     unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
-
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }
 
