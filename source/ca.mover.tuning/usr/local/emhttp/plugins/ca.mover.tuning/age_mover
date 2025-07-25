@@ -798,12 +798,12 @@ createFilteredFilelist() {
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
-            elif [ "$OMOVERTHRESH" != "" ] && [ $POOLPCTUSED -gt $OMOVERTHRESH ]; then
+            elif [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Move All from Primary->Secondary shares option is selected and pool is above move all threshold percentage:  $POOLPCTUSED% > $OMOVERTHRESH%."
                 mvlogger "=> Moving all files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME"
-            elif [ $POOLPCTUSED -lt $MOVINGPCTTHRESHOLD ]; then
+            elif [ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is below moving threshold percentage: $POOLPCTUSED% < $MOVINGPCTTHRESHOLD%."
-                if [ $SYNCHRONIZECACHE = "yes" ] || [ $RESYNCHRONIZECACHE = "yes" ]; then
+                if [ "$SYNCHRONIZECACHE" = "yes" ] || [ "$RESYNCHRONIZECACHE" = "yes" ]; then
                     mvlogger "=> No file will be moved but share processed as Synchronize Primary->Secondary option is set"
                 else
                     mvlogger "=> Skipping"
