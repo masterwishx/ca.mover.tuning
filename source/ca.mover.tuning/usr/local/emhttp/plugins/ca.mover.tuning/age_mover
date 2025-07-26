@@ -481,24 +481,55 @@ getMoverSettings() {
         fi
     fi
 
-    if [ -z $(cfg synchronizeCache) ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        SYNCHRONIZECACHE=$(cfg synchronizeCache)
+        if [ -z $(cfg synchronizeCache) ]; then
             mvlogger "No Synchronize Primary to Secondary argument provided, defaulting to no"
             echo 'synchronizeCache="no"' >>$config_file
             SYNCHRONIZECACHE="no"
         fi
-    else
+    elif [ -n "$(cfg synchronizeCache)" ]; then
         SYNCHRONIZECACHE=$(cfg synchronizeCache)
-        if [ $SYNCHRONIZECACHE = "yes" ]; then
-            LASTCACHESYNC=$(cfg lastCacheSync)
-            if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-                [ -z $LASTCACHESYNC ] && LASTCACHESYNC=0
-                mvlogger "Synchronize Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
+
+    elif [ $SYNCHRONIZECACHE = "yes" ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            if [ -z $LASTCACHESYNC ]; then
+                LASTCACHESYNC=0
+                mvlogger "Synchronize global Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
             else
-                mvlogger "Synchronize Primary to Secondary: $SYNCHRONIZECACHE"
+                LASTCACHESYNC=$(cfg lastCacheSync)
+            fi
+        else
+            if [ -z $LASTCACHESYNC ]; then
+                LASTCACHESYNC=0
+                mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
+            else
+                LASTCACHESYNC=$(cfg lastCacheSync)
             fi
         fi
     fi
+
+    #if [ -z $(cfg synchronizeCache) ]; then
+    #     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+    #         mvlogger "No Synchronize Primary to Secondary argument provided, defaulting to no"
+    #         echo 'synchronizeCache="no"' >>$config_file
+    #         SYNCHRONIZECACHE="no"
+    #     # elif [ -n "$(cfg synchronizeCache)" ]; then
+    #     #     SYNCHRONIZECACHE=$(cfg synchronizeCache)
+    #     fi
+    # else
+    #     SYNCHRONIZECACHE=$(cfg synchronizeCache)
+    #     if [ $SYNCHRONIZECACHE = "yes" ]; then
+    #         LASTCACHESYNC=$(cfg lastCacheSync)
+    #         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+    #             [ -z $LASTCACHESYNC ] && LASTCACHESYNC=0
+    #             mvlogger "Synchronize global Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
+    #         else
+    #             [ -z $LASTCACHESYNC ] && LASTCACHESYNC=0
+    #             mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
+    #         fi
+    #     fi
+    # fi
 
     if [ -z $(cfg resynchronizeCache) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -1607,6 +1638,7 @@ processTheMoves() {
                 else
                     echo "lastCacheSync=$EPOCH" >>"$config_file"
                 fi
+                mvDebuglogger "Share = $SHARENAME, Sync cache = $SYNCHRONIZECACHE, lastsync = $LASTCACHESYNC, Config File: $config_file" "Set Last Sync Date to Config"
             fi
         done
     fi
