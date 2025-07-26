@@ -488,10 +488,12 @@ getMoverSettings() {
             echo 'synchronizeCache="no"' >>$config_file
             SYNCHRONIZECACHE="no"
         fi
+
     elif [ -n "$(cfg synchronizeCache)" ]; then
         SYNCHRONIZECACHE=$(cfg synchronizeCache)
+    fi
 
-    elif [ $SYNCHRONIZECACHE = "yes" ]; then
+    if [ $SYNCHRONIZECACHE = "yes" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             if [ -z $LASTCACHESYNC ]; then
                 LASTCACHESYNC=0
@@ -508,28 +510,6 @@ getMoverSettings() {
             fi
         fi
     fi
-
-    #if [ -z $(cfg synchronizeCache) ]; then
-    #     if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-    #         mvlogger "No Synchronize Primary to Secondary argument provided, defaulting to no"
-    #         echo 'synchronizeCache="no"' >>$config_file
-    #         SYNCHRONIZECACHE="no"
-    #     # elif [ -n "$(cfg synchronizeCache)" ]; then
-    #     #     SYNCHRONIZECACHE=$(cfg synchronizeCache)
-    #     fi
-    # else
-    #     SYNCHRONIZECACHE=$(cfg synchronizeCache)
-    #     if [ $SYNCHRONIZECACHE = "yes" ]; then
-    #         LASTCACHESYNC=$(cfg lastCacheSync)
-    #         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-    #             [ -z $LASTCACHESYNC ] && LASTCACHESYNC=0
-    #             mvlogger "Synchronize global Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
-    #         else
-    #             [ -z $LASTCACHESYNC ] && LASTCACHESYNC=0
-    #             mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
-    #         fi
-    #     fi
-    # fi
 
     if [ -z $(cfg resynchronizeCache) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -1630,15 +1610,17 @@ processTheMoves() {
 
         mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
         # Check main config and overrides if last sync date exist, then edit or add it to configs
-        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
+        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
             # If config file exist
-            if [ -f "$config_file" ]; then
-                if grep -q "lastCacheSync=" "$config_file"; then
-                    sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$config_file"
-                else
-                    echo "lastCacheSync=$EPOCH" >>"$config_file"
+            if [[ -f "$config_file" ]]; then
+                if grep -qs 'synchronizeCache="yes"' "$config_file"; then
+                    if grep -q "lastCacheSync=" "$config_file"; then
+                        sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$config_file"
+                    else
+                        echo "lastCacheSync=$EPOCH" >>"$config_file"
+                    fi
+                    mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previos CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
                 fi
-                mvDebuglogger "Share = $SHARENAME, Sync cache = $SYNCHRONIZECACHE, lastsync = $LASTCACHESYNC, Config File: $config_file" "Set Last Sync Date to Config"
             fi
         done
     fi
@@ -1774,7 +1756,7 @@ start() {
 
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
-        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
+        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
             # If config file exist
             if [ -f "$config_file" ]; then
                 resetRunOnceMoverSettings "$config_file"
