@@ -1596,12 +1596,19 @@ processTheMoves() {
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
-        mvlogger "Set last sync date in config file: $EPOCH = $NOW"
-        if grep -q "lastCacheSync=" "$MOVERTUNINGCFGFILE"; then
-            sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$MOVERTUNINGCFGFILE"
-        else
-            echo "lastCacheSync=$EPOCH" >>"$MOVERTUNINGCFGFILE"
-        fi
+
+        mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
+        # Check main config and overrides if last sync date exist, then edit or add it to configs
+        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
+            # If config file exist
+            if [ -f "$config_file" ]; then
+                if grep -q "lastCacheSync=" "$config_file"; then
+                    sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$config_file"
+                else
+                    echo "lastCacheSync=$EPOCH" >>"$config_file"
+                fi
+            fi
+        done
     fi
 
     if [ $ENABLETURBO = "yes" ]; then
