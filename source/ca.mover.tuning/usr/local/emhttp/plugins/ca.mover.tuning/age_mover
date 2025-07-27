@@ -59,6 +59,8 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
+# Flag if share has sync override
+overrideSyncFlag=0
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
@@ -93,12 +95,26 @@ function unraid_notify() {
     #
     # Check the notification_type variable
     if [[ "$NOTIFY" == "no" ]]; then
+        mvDebuglogger "No notify mode activated. Notifications are disabled." "Notify Mode"
         return 0 # Exit the function if notification_type is set to 'none'
     fi
     #
-    # If notification_type is set to 'error' and the flag is 'success', exit the function
+    # If notification_type is set to 'errorsOnly' and the flag is 'success', exit the function
     if [[ "$NOTIFY" == "errorsOnly" && "$flag" == "success" ]]; then
+        mvDebuglogger "Errors Only notify mode activated. Success notifications are disabled." "Notify Mode"
         return 0 # Do not process success messages
+    fi
+    #
+    # If notification_type is set to 'movedOnly' and the flag is 'success' and the files was NOT actually moved, exit the function
+    if [[ "$NOTIFY" == "movedOnly" && "$flag" == "success" ]]; then
+        if [[ "$TOTALFILES" -eq 0 ]]; then
+            mvDebuglogger "Moved Only notify mode activated. No files were moved, and notifications are disabled." "Notify Mode"
+            return 0 # Do not process success messages
+        else
+            mvDebuglogger "Moved Only notify mode activated. Files were moved, and notifications are enabled." "Notify Mode"
+        fi
+    else
+        mvDebuglogger "Yes notify mode activated. All notifications are enabled." "Notify Mode"
     fi
     #
     # Determine the severity of the message based on the flag it received
@@ -467,22 +483,30 @@ getMoverSettings() {
         fi
     fi
 
-    if [ -z $(cfg synchronizeCache) ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        SYNCHRONIZECACHE=$(cfg synchronizeCache)
+        if [ -z $(cfg synchronizeCache) ]; then
             mvlogger "No Synchronize Primary to Secondary argument provided, defaulting to no"
             echo 'synchronizeCache="no"' >>$config_file
             SYNCHRONIZECACHE="no"
         fi
-    else
+
+    elif [ -n "$(cfg synchronizeCache)" ]; then
         SYNCHRONIZECACHE=$(cfg synchronizeCache)
-        if [ $SYNCHRONIZECACHE = "yes" ]; then
-            LASTCACHESYNC=$(cfg lastCacheSync)
-            if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-                [ -z $LASTCACHESYNC ] && LASTCACHESYNC=0
-                mvlogger "Synchronize Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
-            else
-                mvlogger "Synchronize Primary to Secondary: $SYNCHRONIZECACHE"
-            fi
+    fi
+
+    if [ "$SYNCHRONIZECACHE" = "yes" ]; then
+        LASTCACHESYNC=$(cfg lastCacheSync)
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
+            mvlogger "Synchronize global Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
+        else
+            [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
+            mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
+            # Save share overrides for sync
+            overrideSyncFlag=1
+            SHARE_SYNCHRONIZECACHE="$SYNCHRONIZECACHE"
+            SHARE_LASTCACHESYNC="$LASTCACHESYNC"
         fi
     fi
 
@@ -638,7 +662,7 @@ createFilteredFilelist() {
     mvlogger "$(titleLine 'FILTERING FILES' '*')"
 
     # create a file containing the list off all shareUseCache yes or prefer whith this format:
-    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH" >"$FILTERED_FILELIST"
+    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH" >"$FILTERED_FILELIST"
 
     for SHARECFG in "$CFGPATH"/*.cfg; do
         if [ -e $SOFTSTOPFILE ]; then
@@ -784,12 +808,12 @@ createFilteredFilelist() {
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
-            elif [ "$OMOVERTHRESH" != "" ] && [ $POOLPCTUSED -gt $OMOVERTHRESH ]; then
+            elif [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Move All from Primary->Secondary shares option is selected and pool is above move all threshold percentage:  $POOLPCTUSED% > $OMOVERTHRESH%."
                 mvlogger "=> Moving all files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME"
-            elif [ $POOLPCTUSED -lt $MOVINGPCTTHRESHOLD ]; then
+            elif [ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is below moving threshold percentage: $POOLPCTUSED% < $MOVINGPCTTHRESHOLD%."
-                if [ $SYNCHRONIZECACHE = "yes" ] || [ $RESYNCHRONIZECACHE = "yes" ]; then
+                if [ "$SYNCHRONIZECACHE" = "yes" ] || [ "$RESYNCHRONIZECACHE" = "yes" ]; then
                     mvlogger "=> No file will be moved but share processed as Synchronize Primary->Secondary option is set"
                 else
                     mvlogger "=> Skipping"
@@ -1082,7 +1106,7 @@ createFilteredFilelist() {
                 previous_inode = 0
 
                 # Print new header
-                printf "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH\n"
+                printf "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH\n"
             }
 
             NR > 1 { # Main loop, skip header line
@@ -1122,12 +1146,21 @@ decideMoveActions() {
         mvlogger "------------------------------------------------------------------------"
     fi
 
+    # Restore share sync overrides if global sync disabled and share sync was enabled
+    if [[ "$SYNCHRONIZECACHE" == "no" && "$overrideSyncFlag" -eq 1 ]]; then
+        overrideSyncFlag=0
+        SYNCHRONIZECACHE="$SHARE_SYNCHRONIZECACHE"
+        if [ -n "$SHARE_LASTCACHESYNC" ]; then
+            LASTCACHESYNC="$SHARE_LASTCACHESYNC"
+        fi
+    fi
+
     ## Loop Filtered Filelist and for each file decide to move to/from the array
     mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep -c "/mnt" "$FILTERED_FILELIST") files, it can take a while..."
 
     ## Proceed with files
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
-    # $6:PRIMARYSIZETRESH $7:FILESIZE $8:SPARSENESS $9:NBLINKS $10:INODE $11:FILEPATH
+    # $6:PRIMARYSIZETHRESH $7:FILESIZE $8:SPARSENESS $9:NBLINKS $10:INODE $11:FILEPATH
 
     awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
         BEGIN {
@@ -1212,7 +1245,7 @@ decideMoveActions() {
                     if (action == "move from secondary") {
                         source = storage_path
                         destination = "/mnt/" $1
-                        if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer"))  {
+                        if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped"))  {
                             action = "sync from secondary"
                         }
                         pool_stats[$1]["files_from_secondary"] += 1
@@ -1582,12 +1615,22 @@ processTheMoves() {
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
-        mvlogger "Set last sync date in config file: $EPOCH = $NOW"
-        if grep -q "lastCacheSync=" "$MOVERTUNINGCFGFILE"; then
-            sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$MOVERTUNINGCFGFILE"
-        else
-            echo "lastCacheSync=$EPOCH" >>"$MOVERTUNINGCFGFILE"
-        fi
+
+        mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
+        # Check main config and overrides if last sync date exist, then edit or add it to configs
+        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
+            # If config file exist
+            if [[ -f "$config_file" ]]; then
+                if grep -qs 'synchronizeCache="yes"' "$config_file"; then
+                    if grep -q "lastCacheSync=" "$config_file"; then
+                        sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$config_file"
+                    else
+                        echo "lastCacheSync=$EPOCH" >>"$config_file"
+                    fi
+                    mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previos CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
+                fi
+            fi
+        done
     fi
 
     if [ $ENABLETURBO = "yes" ]; then
@@ -1721,7 +1764,7 @@ start() {
 
     #Reset run-once settings
     if [ ! -e $SOFTSTOPFILE ]; then
-        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}/*.cfg"; do
+        for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
             # If config file exist
             if [ -f "$config_file" ]; then
                 resetRunOnceMoverSettings "$config_file"
@@ -1769,8 +1812,8 @@ start() {
     fi
 
     mvlogger "Elapsed time:$ELAPSED_TIME"
-
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
+
     unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
 }

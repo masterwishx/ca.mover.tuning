@@ -178,9 +178,14 @@ Notify Mover Tuning plugin actions:
 <?=mk_option($cfg['notify'],"no",'No')?>
 <?=mk_option($cfg['notify'],"yes","Yes")?>
 <?=mk_option($cfg['notify'],"errorsOnly","Errors Only")?>
+<?=mk_option($cfg['notify'],"movedOnly","Moved Only")?>
 </select>
 
-> Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI. <strong>Errors Only</strong> will send <strong>only</strong> when an error occurs.
+<blockquote class="inline_help">
+<p>Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI.</p>
+<p><strong>Errors Only</strong> will send a notification <strong>only</strong> when an error occurs.</p>
+<p><strong>Moved Only</strong> will send a notification <strong>only</strong> when files are moved, not every time the mover is running.</p>
+</blockquote>
 
 Logs parent folder for Mover Tuning plugin:
 : <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=$cfg['loggingFolder']?>'>
@@ -561,7 +566,7 @@ Synchronize Primary files to Secondary
 <blockquote class="inline_help">
 <p>This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
 <p>Reading and modification will still occur on Primary.</p>
-<p>Only modified files since last sync are synchronized.</p>
+<p><u>Note:</u> <strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</p>
 </blockquote>
 
 Show advanced options:

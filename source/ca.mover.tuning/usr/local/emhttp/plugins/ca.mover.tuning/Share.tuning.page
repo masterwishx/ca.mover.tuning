@@ -427,6 +427,18 @@ Move All from Primary->Secondary (cache:yes) shares pool percentage:
 <p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
 </blockquote>
 
+Synchronize Primary files to Secondary
+: <select name='synchronizeCache' size='1' class='narrow'>
+<?=mk_option($cfg['synchronizeCache'],"no",'No')?>
+<?=mk_option($cfg['synchronizeCache'],"yes","Yes")?>
+</select>
+
+<blockquote class="inline_help">
+<p>This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
+<p>Reading and modification will still occur on Primary.</p>
+<p><u>Note:</u> <strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</p>
+</blockquote>
+
 </div>
 </div>
 
