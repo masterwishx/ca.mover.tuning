@@ -59,6 +59,7 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
+overrideSyncFlag=0
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
@@ -508,6 +509,10 @@ getMoverSettings() {
             else
                 LASTCACHESYNC=$(cfg lastCacheSync)
             fi
+            # Save share overrides for sync
+            overrideSyncFlag=1
+            SHARE_SYNCHRONIZECACHE="$SYNCHRONIZECACHE"
+            SHARE_LASTCACHESYNC="$LASTCACHESYNC"
         fi
     fi
 
@@ -1145,6 +1150,15 @@ decideMoveActions() {
         mvlogger "-----------------------"
         getMoverSettings "$MOVERTUNINGCFGFILE"
         mvlogger "------------------------------------------------------------------------"
+    fi
+
+    # Restore share overrides if Sync share was Enabled
+    if [ "$overrideSyncFlag" = 1 ]; then
+        overrideSyncFlag=0
+        SYNCHRONIZECACHE="$SHARE_SYNCHRONIZECACHE"
+        if [ -n "$SHARE_LASTCACHESYNC" ]; then
+            LASTCACHESYNC="$SHARE_LASTCACHESYNC"
+        fi
     fi
 
     ## Loop Filtered Filelist and for each file decide to move to/from the array
