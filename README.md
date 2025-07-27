@@ -32,6 +32,11 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.07.27
+    - new: Added a "Moved Only" notification option that allows notifications only when files are actually moved. **_(masterwishx)_**
+    - new: Debug added for synchronize and notification modes.
+    - new: Introduced a "Synchronize Primary files to Secondary" setting for shares override with cache enabled, enabling selective synchronization of modified files for backup and parity protection.
+
 - 2025.06.14
     - fix: Fix age_mover is missing the "start" parameter in the cron schedule when force move is enabled. **_(masterwishx)_**
     - fix: Remove renaming of "mover.cron" to "mover.cron.disabled". No longer necessary with previous version.
