@@ -436,7 +436,7 @@ Synchronize Primary files to Secondary
 <blockquote class="inline_help">
 <p>This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
 <p>Reading and modification will still occur on Primary.</p>
-<p><u>Note:</u> <strong>ONLY modified files</strong> since last sync are <strong>synchronized</strong>.</p>
+<p><u>Note:</u> <strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</p>
 </blockquote>
 
 </div>

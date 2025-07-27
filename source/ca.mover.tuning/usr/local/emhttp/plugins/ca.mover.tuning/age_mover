@@ -1146,8 +1146,8 @@ decideMoveActions() {
         mvlogger "------------------------------------------------------------------------"
     fi
 
-    # Restore share overrides if Sync share was Enabled
-    if [ "$overrideSyncFlag" = 1 ]; then
+    # Restore share sync overrides if global sync disabled and share sync was enabled
+    if [[ "$SYNCHRONIZECACHE" == "no" && "$overrideSyncFlag" -eq 1 ]]; then
         overrideSyncFlag=0
         SYNCHRONIZECACHE="$SHARE_SYNCHRONIZECACHE"
         if [ -n "$SHARE_LASTCACHESYNC" ]; then
