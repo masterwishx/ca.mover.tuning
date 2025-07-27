@@ -59,6 +59,7 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
+# Flag if share has sync override
 overrideSyncFlag=0
 # Variables for counts when delete folders
 LAST_DIR=""
@@ -494,21 +495,14 @@ getMoverSettings() {
         SYNCHRONIZECACHE=$(cfg synchronizeCache)
     fi
 
-    if [ $SYNCHRONIZECACHE = "yes" ]; then
+    if [ "$SYNCHRONIZECACHE" = "yes" ]; then
+        LASTCACHESYNC=$(cfg lastCacheSync)
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            if [ -z $LASTCACHESYNC ]; then
-                LASTCACHESYNC=0
-                mvlogger "Synchronize global Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
-            else
-                LASTCACHESYNC=$(cfg lastCacheSync)
-            fi
+            [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
+            mvlogger "Synchronize global Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
         else
-            if [ -z $LASTCACHESYNC ]; then
-                LASTCACHESYNC=0
-                mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
-            else
-                LASTCACHESYNC=$(cfg lastCacheSync)
-            fi
+            [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
+            mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
             # Save share overrides for sync
             overrideSyncFlag=1
             SHARE_SYNCHRONIZECACHE="$SYNCHRONIZECACHE"
