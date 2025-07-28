@@ -948,16 +948,13 @@ createFilteredFilelist() {
         fi
 
         #Add Size to find string
-        if { [ -z "$OMOVERTHRESH" ] && [ -z "$SYNC_SIZE" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SIZE" -gt 0 ]; then
-            mvlogger "Adding Size: ${SIZE}"
-            FINDSTR="$FINDSTR -size +${SIZE}M"
-        fi
-
-        #Add Sync Size to find string
-        if [[ -z "$OMOVERTHRESH" || "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]]; then
-            if [ "$SYNCHRONIZECACHE" = "yes" ] || [ "$RESYNCHRONIZECACHE" = "yes" ] && [ "$SYNC_SIZE" -gt 0 ]; then
+        if [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; then
+            if [[ "$SYNCHRONIZECACHE" = "yes" ]] || [[ "$RESYNCHRONIZECACHE" = "yes" ]] && [[ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]] && [ "$SYNC_SIZE" -gt 0 ]; then
                 mvlogger "Adding Sync Size: ${SYNC_SIZE}"
                 FINDSTR="$FINDSTR -size -${SYNC_SIZE}M"
+            elif [ "$SIZE" -gt 0 ]; then
+                mvlogger "Adding Size: ${SIZE}"
+                FINDSTR="$FINDSTR -size +${SIZE}M"
             fi
         fi
 
