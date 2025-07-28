@@ -32,6 +32,11 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.07.28
+    - new: Added a configurable option for global and share-only sync files based on maximum file size in MB. **_(masterwishx)_**
+    - new: Updated UI text to clarify size units for both moving and syncing files.
+    - new: Added explanatory text for the new sync size selection to guide users.
+
 - 2025.07.27
     - new: Added a "Moved Only" notification option that allows notifications only when files are actually moved. **_(masterwishx)_**
     - new: Debug added for synchronize and notification modes.
