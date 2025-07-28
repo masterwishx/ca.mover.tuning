@@ -409,9 +409,9 @@ Move files based on minimum size?
        <?=mk_option($cfg['sizef'],'yes','Yes')?>
 </select>
 
-> Select yes if you want to move files based on the size of the file in <strong>M</strong>.
+> Select <strong>yes</strong> if you want to move files based on their size in <strong>MB</strong>.
 
-Move files that are larger than this size (In M).
+Move files that are larger than this size (In MB).
 : <select name="sizeinM" size="1" class='narrow mysizef' <?=$sizefDisabled?>>
 	<?=mk_option($cfg['sizeinM'], 1, "1")?>
 	<?=mk_option($cfg['sizeinM'], 2, "2")?>
@@ -429,6 +429,8 @@ Move files that are larger than this size (In M).
 		<?=mk_option($cfg['sizeinM'], $ds, "$ds")?>
 	<?endfor;?>
 </select>
+
+> Select the minimum size a file has to be to get moved (in **Megabytes**).
 
 Move files off Primary (cache) based on sparseness?
 : <select name="sparsnessf" size='1' class='narrow' onchange='$(".mysparsnessf").toggleAttr("disabled")'>
