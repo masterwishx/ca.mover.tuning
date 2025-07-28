@@ -462,9 +462,24 @@ getMoverSettings() {
     else
         if [ $(cfg sizef) = "yes" ]; then
             SIZE=$(cfg sizeinM)
-            [ $SIZE -gt 0 ] && mvlogger "Size supplied: $SIZE"
+            [ $SIZE -gt 0 ] && mvlogger "Move Size supplied: $SIZE"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SIZE=0
+        fi
+    fi
+
+    if [ -z $(cfg sizefSync) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Sync Size argument provided, defaulting to no"
+            echo 'sizefSync="no"' >>$config_file
+            SYNC_SIZE=0
+        fi
+    else
+        if [ $(cfg sizefSync) = "yes" ]; then
+            SYNC_SIZE=$(cfg sizeinMSync)
+            [ $SYNC_SIZE -gt 0 ] && mvlogger "Sync Size supplied: $SYNC_SIZE"
+        else
+            [[ ! "$config_file" =~ shareOverrideConfig ]] && SYNC_SIZE=0
         fi
     fi
 
@@ -933,9 +948,17 @@ createFilteredFilelist() {
         fi
 
         #Add Size to find string
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SIZE" -gt 0 ]; then
+        if { [ -z "$OMOVERTHRESH" ] && [ -z "$SYNC_SIZE" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SIZE" -gt 0 ]; then
             mvlogger "Adding Size: ${SIZE}"
             FINDSTR="$FINDSTR -size +${SIZE}M"
+        fi
+
+        #Add Sync Size to find string
+        if [[ -z "$OMOVERTHRESH" || "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]]; then
+            if [ "$SYNCHRONIZECACHE" = "yes" ] || [ "$RESYNCHRONIZECACHE" = "yes" ] && [ "$SYNC_SIZE" -gt 0 ]; then
+                mvlogger "Adding Sync Size: ${SYNC_SIZE}"
+                FINDSTR="$FINDSTR -size -${SYNC_SIZE}M"
+            fi
         fi
 
         #Add Ignore Hidden Files to find string
