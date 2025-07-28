@@ -953,7 +953,7 @@ createFilteredFilelist() {
                 mvlogger "Adding Sync Size: ${SYNC_SIZE}"
                 FINDSTR="$FINDSTR -size -${SYNC_SIZE}M"
             elif [ "$SIZE" -gt 0 ]; then
-                mvlogger "Adding Size: ${SIZE}"
+                mvlogger "Adding Move Size: ${SIZE}"
                 FINDSTR="$FINDSTR -size +${SIZE}M"
             fi
         fi
