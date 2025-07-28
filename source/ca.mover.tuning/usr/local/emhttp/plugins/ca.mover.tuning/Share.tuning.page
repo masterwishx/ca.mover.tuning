@@ -26,6 +26,7 @@ $cfg = parse_share_cfg($plugin, $shareName);
 $overrideEnabled = ($cfg['moverOverride'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
+$sizefSyncDisabled = ($cfg['sizefSync'] != "yes") ? "disabled" : "";
 $sparsenessfDisabled = ($cfg['sparsenessf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
@@ -338,6 +339,35 @@ _(Only move files larger than this (in MB))_:
 
 <!--:mover_tuning_min_size_help:-->
 > Select the minimum size a file has to be to get moved (in **Megabytes**).
+
+Sync files based on maximum size?
+: <select name="sizefSync" size='1' class='narrow' onchange='$(".mysizefSync").toggleAttr("disabled")'>
+       <?=mk_option($cfg['sizefSync'],'no','No')?>
+       <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
+</select>
+
+> Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>.
+
+Sync files that are smaller than this size (In MB).
+: <select name="sizeinMSync" size="1" class='narrow mysizefSync' <?=$sizefSyncDisabled?>>
+	<?=mk_option($cfg['sizeinMSync'], 1, "1")?>
+	<?=mk_option($cfg['sizeinMSync'], 2, "2")?>
+	<?=mk_option($cfg['sizeinMSync'], 3, "3")?>
+	<?=mk_option($cfg['sizeinMSync'], 4, "4")?>
+	<?=mk_option($cfg['sizeinMSync'], 5, "5")?>
+  <?=mk_option($cfg['sizeinMSync'], 6, "6")?>
+  <?=mk_option($cfg['sizeinMSync'], 7, "7")?>
+  <?=mk_option($cfg['sizeinMSync'], 8, "8")?>
+  <?=mk_option($cfg['sizeinMSync'], 9, "9")?>
+  <?=mk_option($cfg['sizeinMSync'], 10, "10")?>
+  <?=mk_option($cfg['sizeinMSync'], 11, "11")?>
+
+	<?for ($ds=12;$ds<1026;$ds+=2):?>
+		<?=mk_option($cfg['sizeinMSync'], $ds, "$ds")?>
+	<?endfor;?>
+</select>
+
+> Select the maximum size a file has to be to get synched (in **Megabytes**).
 
 _(Move files based on sparseness)_:
 : <select name="sparsenessf" onchange='$(".mysparsenessf").toggleAttr("disabled")'>
