@@ -1550,19 +1550,20 @@ processTheMoves() {
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         if [ "$TESTMODE" = "no" ]; then
-                            mvlogger "Deleting empty folder ${DIR}"
-                            rmdir "${DIR}"
+                            mvlogger "Deleting empty folder: ${DIR}"
+                            # Check if empty folder exist and remove it
+                            [ -d "${DIR}" ] && rmdir "${DIR}"
 
                             # Clean top level folder if empty
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
                                 # Get the Top-Level Folder of $DIR on share
                                 top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
                                 # Count files in Top Folder
-                                top_folder_count="$(find "$top_folder" -type f | wc -l)"
+                                [ -d "$top_folder" ] && top_folder_count="$(find "$top_folder" -type f | wc -l)"
                                 if [ "$top_folder_count" -eq 0 ]; then
-                                    mvlogger "Deleting empty top-level folder $top_folder"
-                                    #rm -rf "${top_folder}"
-                                    find "$top_folder" -empty -type d -delete
+                                    mvlogger "Deleting empty top-level folder: $top_folder"
+                                    # Check if empty top-level folder exist and remove it
+                                    [ -d "$top_folder" ] && find "$top_folder" -empty -type d -delete
                                 else
                                     mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$count" != ".placeholder" ] && echo "s"): ${top_folder}"
                                 fi
