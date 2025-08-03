@@ -1558,8 +1558,13 @@ processTheMoves() {
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
                                 # Get the Top-Level Folder of $DIR on share
                                 top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
-                                # Count files in Top Folder
+                                # Set count to empty by default
+                                top_folder_count=0
+
+                                # Count files in Top Folder if exist
                                 [ -d "$top_folder" ] && top_folder_count="$(find "$top_folder" -type f | wc -l)"
+                                mvDebuglogger "Current top folder: $top_folder, Count of files in Top Folder: $top_folder_count" "Clean Top Folder - Start Loop"
+
                                 if [ "$top_folder_count" -eq 0 ]; then
                                     mvlogger "Deleting empty top-level folder: $top_folder"
                                     # Check if empty top-level folder exist and remove it
