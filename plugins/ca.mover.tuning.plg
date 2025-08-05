@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.07.28">
-<!ENTITY md5       "a400eac91ecefa15304190a36639c966">
+<!ENTITY version   "2025.08.05">
+<!ENTITY md5       "8f0d5c3236f329a037bc0be7cee6c0cf">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,13 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.08.05
+- new: Updated unraid mover code from original mover for "mover start -e" command. **_(masterwishx)_**
+- fix: Enhanced folder cleanup logic to prevent errors by checking folder existence before removal.
+- fix: Added diagnostic logging for folder cleanup operations to improve troubleshooting.
+- new: Clarified help text for the "Sync files based on maximum size?" option to specify it applies only when Synchronize or Resynchronize features are enabled.
+- new: Expanded and reformatted explanatory notes for "Synchronize Primary files to Secondary," detailing conditions for file synchronization and eligibility.
+
 ###2025.07.28
 - new: Added a configurable option for global and share-only sync files based on maximum file size in MB. **_(masterwishx)_**
 - new: Updated UI text to clarify size units for both moving and syncing files.

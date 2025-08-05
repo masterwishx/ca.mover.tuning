@@ -32,6 +32,13 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.08.05
+    - new: Updated unraid mover code from original mover for "mover start -e" command. **_(masterwishx)_**
+    - fix: Enhanced folder cleanup logic to prevent errors by checking folder existence before removal.
+    - fix: Added diagnostic logging for folder cleanup operations to improve troubleshooting.
+    - new: Clarified help text for the "Sync files based on maximum size?" option to specify it applies only when Synchronize or Resynchronize features are enabled.
+    - new: Expanded and reformatted explanatory notes for "Synchronize Primary files to Secondary," detailing conditions for file synchronization and eligibility.
+
 - 2025.07.28
     - new: Added a configurable option for global and share-only sync files based on maximum file size in MB. **_(masterwishx)_**
     - new: Updated UI text to clarify size units for both moving and syncing files.
