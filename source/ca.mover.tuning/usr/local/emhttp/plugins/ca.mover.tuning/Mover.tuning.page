@@ -439,7 +439,7 @@ Sync files based on maximum size?
        <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
 </select>
 
-> Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>.
+> Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
 
 Sync files that are smaller than this size (In MB).
 : <select name="sizeinMSync" size="1" class='narrow mysizefSync' <?=$sizefSyncDisabled?>>
@@ -597,8 +597,12 @@ Synchronize Primary files to Secondary
 
 <blockquote class="inline_help">
 <p>This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
-<p>Reading and modification will still occur on Primary.</p>
-<p><u>Note:</u> <strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</p>
+<p>Reading and modification will still occur on Primary. Sync files based on maximum size optionally can be used.</p>
+<p><u>Note:</u></p>
+<ul>
+  <li><strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</li>
+  <li><strong>ONLY files</strong> on the cache pool <strong>below</strong> moving and freeing thresholds can be <strong>synchronized</strong>.</li>
+</ul>
 </blockquote>
 
 Show advanced options:
