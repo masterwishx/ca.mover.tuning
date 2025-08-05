@@ -467,8 +467,10 @@ Synchronize Primary files to Secondary
 <p>This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
 <p>Reading and modification will still occur on Primary. Sync files based on maximum size optionally can be used.</p>
 <p><u>Note:</u></p>
-<p>- <strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</p>
-<p>- <strong>ONLY files</strong> on the cache pool <strong>below</strong> moving and freeing thresholds can be <strong>synchronized</strong>.</p>
+<ul>
+  <li><strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</li>
+  <li><strong>ONLY files</strong> on the cache pool <strong>below</strong> moving and freeing thresholds can be <strong>synchronized</strong>.</li>
+</ul>
 </blockquote>
 
 </div>
