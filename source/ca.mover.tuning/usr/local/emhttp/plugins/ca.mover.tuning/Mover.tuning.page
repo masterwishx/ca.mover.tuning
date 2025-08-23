@@ -121,12 +121,12 @@ $(function() {
 <div class='moverUpdate'></div>
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
-Disable Mover running on a schedule:
-: <select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
+_(Disable Mover running on a schedule)_:
+: <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
 <?=mk_option($cfg['moverDisabled'],"no","No")?>
 <?=mk_option($cfg['moverDisabled'],"yes","Yes")?>
 </select>
-<strong>Yes</strong> <em>- setting effectively disables the plugin schedule</em>
+<strong>Yes</strong> <em>- setting effectively disables the plugin schedule</em></span>
 
 > This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
 
@@ -661,22 +661,22 @@ Resynchronize all Primary files to Secondary:
 
 <dl>
     <dt>Plugin thread @ Unraid community</dt>
-    <dd><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank">Open</a> - Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.</dd>
+    <dd><span><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank">Open</a> - Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.</span></dd>
     <dt>Maintainers</dt>
-    <dd>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target=" _blank">masterwishx</a> | 
+    <dd><span>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target=" _blank">masterwishx</a> | 
         2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank">R3yn4ld</a> | 
         2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank">hugenbd</a> | 
-        2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></dd>
+        2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank">Andrew Zawadzki</a></span></dd>
 
     <dt>Want to support the developer and say <strong>Thank You</strong>?</dt>
-    <dd>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins with ❤️ (and a lot of ☕).
+    <dd><span>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins with ❤️ (and a lot of ☕).
         If you like the work, you can donate via <a href="https://www.paypal.com/donate/?hosted_button_id=UDXM742YK5ZV6" target="_blank"><i class="fa fa-paypal"></i> <strong>PayPal</strong></a>.
-    </dd>
+    </span></dd>
 
     <dt>GitHub repository</dt>
-    <dd><a href="https://github.com/masterwishx/ca.mover.tuning" target="_blank"><i class="fa fa-github"></i> Open</a>
+    <dd><span><a href="https://github.com/masterwishx/ca.mover.tuning" target="_blank"><i class="fa fa-github"></i> Open</a></span>
     </dd>
 
     <dt>Used IDE</dt>
-    <dd>Visual Studio Code</dd>
+    <dd><span>Visual Studio Code</span></dd>
 </dl>
