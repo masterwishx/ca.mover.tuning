@@ -483,7 +483,7 @@ Synchronize Primary files to Secondary
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
 _(Move **ALL** files from current pool (wont use mover settings))_:
-: <input type="button" id="MoveShare" value="Move Now" onclick="moveShareNow()">
+: <span><input type="button" id="MoveShare" value="Move Now" onclick="moveShareNow()"></span>
 
 > Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Primary->Secondary_** storage space, disregarding any existing mover settings.
 </div>
