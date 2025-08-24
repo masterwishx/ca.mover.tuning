@@ -674,9 +674,9 @@ Resynchronize all Primary files to Secondary:
     </span></dd>
 
     <dt>GitHub repository</dt>
-    <dd><span><a href="https://github.com/masterwishx/ca.mover.tuning" target="_blank"><i class="fa fa-github"></i> Open</a></span>
+    <dd><a href="https://github.com/masterwishx/ca.mover.tuning" target="_blank"><i class="fa fa-github"></i> Open</a>
     </dd>
 
     <dt>Used IDE</dt>
-    <dd><span>Visual Studio Code</span></dd>
+    <dd>Visual Studio Code</dd>
 </dl>

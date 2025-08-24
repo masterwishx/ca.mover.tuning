@@ -477,7 +477,9 @@ Synchronize Primary files to Secondary
 </div>
 
 &nbsp;
-: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+: <span class="buttons-spaced">
+    <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+  </span>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
 _(Move **ALL** files from current pool (wont use mover settings))_:
