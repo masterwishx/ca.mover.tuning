@@ -218,7 +218,7 @@ _(Comma separated list of file types)_:
 <!--:mover_tuning_file_type_delimited_help:-->
 > Specify the file types to be skipped, separated by a comma (e.g. **".txt,.mp3,.pdf"**).
 
-Ignore All hidden files and directories
+_(Ignore All hidden files and directories)_:
 : <select name='ignoreHidden'>
   <?= mk_option($cfg['ignoreHidden'], "no", "No") ?>
   <?= mk_option($cfg['ignoreHidden'], "yes", "Yes") ?>
@@ -404,7 +404,7 @@ _(Skip files listed in text file)_:
 > Select **Yes** to skip files which have been listed in a specified text file.
 
 _(File list path)_:
-: <input type='text' name='filelistv' class='myfilelistf' value='<?= $cfg['filelistv'] ?>' <?= $filelistfDisabled ?>>
+: <input type='text' name='filelistv' class='myfilelistf' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filelistfDisabled?>>
 
 <!--:mover_tuning_file_list_path_help:-->
 > Specify the full path to a text file that contains the list of files the mover should skip.
@@ -419,7 +419,7 @@ _(Skip file types)_:
 > Select **Yes** to skip specific file types in addition to those selected globally.
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' class='myfiletypesf' value='<?= $cfg['filetypesv'] ?>' <?= $filetypesfDisabled ?>>
+: <input type='text' name='filetypesv' class='myfiletypesf' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filetypesfDisabled?>>
 
 <!--:mover_tuning_file_type_delimited_help:-->
 > Specify the file types to be skipped, separated by a comma (e.g. **".txt,.mp3,.pdf"**).
@@ -457,7 +457,7 @@ Move All from Primary->Secondary (cache:yes) shares pool percentage:
 <p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
 </blockquote>
 
-Synchronize Primary files to Secondary
+Synchronize Primary files to Secondary:
 : <select name='synchronizeCache' size='1' class='narrow'>
 <?=mk_option($cfg['synchronizeCache'],"no",'No')?>
 <?=mk_option($cfg['synchronizeCache'],"yes","Yes")?>
