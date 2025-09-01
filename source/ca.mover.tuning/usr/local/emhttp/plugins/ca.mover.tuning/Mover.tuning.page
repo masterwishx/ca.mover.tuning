@@ -189,7 +189,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=$cfg['loggingFolder']?>'>
+: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=htmlspecialchars($cfg['loggingFolder'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 > Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 
@@ -274,7 +274,7 @@ _(Force move of all files on a schedule)_:
 > Select <strong>yes</strong> to run <strong>original mover</strong> on a custom cron schedule.
 
 _(Cron Schedule to force move all of files)_:
-: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=$cfg['cron']?>' <?=$cronDisabled?>>
+: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=htmlspecialchars($cfg['cron'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$cronDisabled?>>
 
 > Cron Schedule entry example <strong>20 4 1 * *</strong>. To run the <em>first day of the month at </em><strong>4:20 AM</strong>
 
@@ -293,12 +293,12 @@ Allow force mover schedule to run during a parity check/rebuild:
 </blockquote>
 
 Script to run before mover (No checks, always runs):
-: <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=$cfg['beforeScript']?>'>
+: <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=htmlspecialchars($cfg['beforeScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 > Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
 
 Script to run after mover (No checks, always runs):
-: <input type='text' name='afterScript' size='1' class='narrow myafter' value='<?=$cfg['afterScript']?>'>
+: <input type='text' name='afterScript' size='1' class='narrow myafter' value='<?=htmlspecialchars($cfg['afterScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 > Path to a script that will be run after mover finishes.  This script will always be run.
 
@@ -492,7 +492,7 @@ Ignore files and folders listed inside of a text file:
 </select>
 
 File list path:
-: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' value='<?=$cfg['filelistv']?>' <?=$filelistfDisabled?>>
+: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
 <p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
@@ -508,7 +508,7 @@ Ignore file types:
 </select>
 
 Comma separated list of file types:
-: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' value='<?=$cfg['filetypesv']?>' <?=$filetypesfDisabled?>>
+: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filetypesfDisabled?>>
 
 > A list of file types separated by a <strong>comma</strong>.
 
