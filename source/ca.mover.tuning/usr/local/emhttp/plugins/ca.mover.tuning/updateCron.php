@@ -6,6 +6,8 @@ $cfg = parse_plugin_cfg("ca.mover.tuning");
 
 // Get config value of forced cron
 $cfg_cronEnabled = $cfg['force'];
+// Get cron time of forced cron
+$cfg_cron = $cfg['cron'];
 // Get config value of mover disabled
 $cfg_moverDisabled = $cfg['moverDisabled'];
 
@@ -27,6 +29,14 @@ if ($cfg_cronEnabled != $_POST['cronEnabled']) {
 	} else {
 		@unlink("/boot/config/plugins/ca.mover.tuning/mover.cron");
 		logger("Unraid mover schedule disabled successfully.");
+	}
+}
+else {
+	// If cron already enabled and cron time was changed update cron file
+    if ($cfg_cronEnabled == "yes" && $cfg_cron != $_POST['cron']) {
+        $cronFile = "# Generated schedule for forced move\n" . trim($_POST['cron']) . " /usr/local/sbin/mover.old start |& logger -t move\n\n";
+		file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.cron", $cronFile);
+		logger("Unraid mover schedule time updated successfully.");
 	}
 }
 
