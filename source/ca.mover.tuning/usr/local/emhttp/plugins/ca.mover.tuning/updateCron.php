@@ -35,11 +35,10 @@ if ($cfg_cronEnabled != $_POST['cronEnabled']) {
 		@unlink("/boot/config/plugins/ca.mover.tuning/mover.cron");
 		logger("Unraid mover schedule disabled successfully.");
 	}
-}
-else {
+} else {
 	// If cron already enabled and cron time was changed update cron file
-    if ($cfg_cronEnabled == "yes" && $cfg_cron != $_POST['cron']) {
-        make_cron();
+	if ($cfg_cronEnabled == "yes" && $cfg_cron != $_POST['cron']) {
+		make_cron();
 		logger("Unraid mover schedule time updated successfully.");
 	}
 }
