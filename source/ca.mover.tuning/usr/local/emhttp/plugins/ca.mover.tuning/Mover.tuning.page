@@ -276,7 +276,7 @@ _(Force move of all files on a schedule)_:
 _(Cron Schedule to force move all of files)_:
 : <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=htmlspecialchars($cfg['cron'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$cronDisabled?>>
 
-> Cron Schedule entry example <strong>20 4 1 * *</strong>. To run the <em>first day of the month at </em><strong>4:20 AM</strong>
+> Cron Schedule entry example <strong>20 4 1 * *</strong>.&nbsp; To run the <em>first day of the month at </em><strong>4:20 AM</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank"><i class="fa fa-clock-o"></i> What Is Cron</a> 
 
 _(Allow force mover schedule to run during a parity check/rebuild)_:
 : <select name='forceParity' size='1' class='narrow mycron' <?=$cronDisabled?>>

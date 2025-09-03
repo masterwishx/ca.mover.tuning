@@ -6,8 +6,8 @@ $cfg = parse_plugin_cfg("ca.mover.tuning");
 
 // Get config value of forced cron
 $cfg_cronEnabled = $cfg['force'];
-// Get cron time of forced cron
-$cfg_cron = $cfg['cron'];
+// Get cron time of forced cron (normalized)
+$cfg_cron = trim($cfg['cron'] ?? '');
 // Get config value of mover disabled
 $cfg_moverDisabled = $cfg['moverDisabled'];
 
