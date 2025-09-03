@@ -1851,9 +1851,17 @@ start() {
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
 
     if [ "$TESTMODE" = "yes" ]; then
-        unraid_notify "TEST MODE: A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "warning"
+        if [ "$TOTALFILES" -gt 0 ]; then
+            unraid_notify "TEST MODE: A total of $TOTALFILES files representing $(bytes_to_human "$TOTALSIZE") would be moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "warning"
+        else
+            unraid_notify "TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "warning"
+        fi
     else
-        unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
+        if [ "$TOTALFILES" -gt 0 ]; then
+            unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human "$TOTALSIZE") were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
+        else
+            unraid_notify "No files were moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
+        fi
     fi
 
     [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
