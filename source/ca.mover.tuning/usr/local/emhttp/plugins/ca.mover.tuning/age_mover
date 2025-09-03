@@ -104,14 +104,14 @@ function unraid_notify() {
         return 0 # Exit the function if notification_type is set to 'none'
     fi
     #
-    # If notification_type is set to 'errorsOnly' and the flag is 'success', exit the function
-    if [[ "$NOTIFY" == "errorsOnly" && "$flag" == "success" ]]; then
-        mvDebuglogger "Errors Only notify mode activated. Success notifications are disabled." "Notify Mode"
+    # In Errors Only mode, only send 'failure', exit the function
+    if [[ "$NOTIFY" == "errorsOnly" && "$flag" != "failure" ]]; then
+        mvDebuglogger "Errors Only notify mode activated. Success/Warning notifications are disabled." "Notify Mode"
         return 0 # Do not process success messages
     fi
     #
-    # If notification_type is set to 'movedOnly' and the flag is 'success' and the files was NOT actually moved, exit the function
-    if [[ "$NOTIFY" == "movedOnly" && "$flag" == "success" ]]; then
+    # In Moved Only mode, suppress success/warning when nothing moved, exit the function
+    if [[ "$NOTIFY" == "movedOnly" ]] && [[ "$flag" == "success" || "$flag" == "warning" ]]; then
         if [[ "$TOTALFILES" -eq 0 ]]; then
             mvDebuglogger "Moved Only notify mode activated. No files were moved, and notifications are disabled." "Notify Mode"
             return 0 # Do not process success messages
