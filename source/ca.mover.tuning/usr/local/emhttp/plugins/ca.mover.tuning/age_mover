@@ -967,7 +967,7 @@ createFilteredFilelist() {
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
-            HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du -ch --files0-from=- | human_to_bytes | awk '/total$/ {print $1}')
+            HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du -ch --files0-from=- | awk '/total$/ {print $1}' | human_to_bytes)
             echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$HIDDENFILES_RESERVED_SPACE|0|0|0|/mnt/$PRIMARYSTORAGENAME/$SHARENAME hidden files" >>"$FILTERED_FILELIST"
             mvlogger "    Hidden files are using $(bytes_to_human "$HIDDENFILES_RESERVED_SPACE")"
         fi
