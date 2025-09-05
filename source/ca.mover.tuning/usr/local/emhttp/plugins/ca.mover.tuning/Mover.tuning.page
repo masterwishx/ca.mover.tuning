@@ -123,8 +123,8 @@ $(function() {
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 _(Disable Mover running on a schedule)_:
 : <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
-<?=mk_option($cfg['moverDisabled'],"no","No")?>
-<?=mk_option($cfg['moverDisabled'],"yes","Yes")?>
+<?=mk_option($cfg['moverDisabled'],"no","_(No)_")?>
+<?=mk_option($cfg['moverDisabled'],"yes","_(Yes)_")?>
 </select>
 &nbsp;&nbsp;&nbsp;<strong>Yes</strong> <em>- setting effectively disables the plugin schedule</em></span>
 
