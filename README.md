@@ -32,6 +32,17 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.09.06
+    - new: Added Unraid 7.2 responsive UI support. **_(masterwishx)_**
+    - new: Integrated multi-language options for better usability.
+    - new: Implemented broad localization for some labels and help text.
+    - fix: Corrected cron time updates when force move is enabled.
+    - new: Provided a Crontab link for easier using of the force scheduler.
+    - new: Implemented a warning notification system when test mode is enabled, along with additional improvements for notifications.
+    - fix: Adjusted size calculation to correctly ignore hidden files.
+    - new: HTML-escaped all displayed input values for security.
+    - new: Set external links with safer attributes.
+
 - 2025.08.05
     - new: Updated unraid mover code from original mover for "mover start -e" command. **_(masterwishx)_**
     - fix: Enhanced folder cleanup logic to prevent errors by checking folder existence before removal.
