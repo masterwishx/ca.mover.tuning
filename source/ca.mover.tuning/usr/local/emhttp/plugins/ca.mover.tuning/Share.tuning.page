@@ -237,7 +237,7 @@ _(Ignore All hidden files and directories)_:
   </span>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
-_(Move **ALL** files to current pool (wont use mover settings))_:
+_(Move **ALL** files to current pool (won't use mover settings))_:
 : <span><input type="button" id="MoveShare" value="_(Move Now)_" onclick="moveShareNow()"></span>
 
 > Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Secondary->Primary_** storage space, disregarding any existing mover settings.
@@ -483,10 +483,10 @@ _(Synchronize Primary files to Secondary)_:
 : <span class="buttons-spaced">
     <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
-  </span>  
+  </span>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
-_(Move **ALL** files from current pool (wont use mover settings))_:
+_(Move **ALL** files from current pool (won't use mover settings))_:
 : <span><input type="button" id="MoveShare" value="_(Move Now)_" onclick="moveShareNow()"></span>
 
 > Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Primary->Secondary_** storage space, disregarding any existing mover settings.
