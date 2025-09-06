@@ -218,7 +218,7 @@ _(Comma separated list of file types)_:
 <!--:mover_tuning_file_type_delimited_help:-->
 > Specify the file types to be skipped, separated by a comma (e.g. **".txt,.mp3,.pdf"**).
 
-Ignore All hidden files and directories
+_(Ignore All hidden files and directories)_:
 : <select name='ignoreHidden'>
   <?= mk_option($cfg['ignoreHidden'], "no", "No") ?>
   <?= mk_option($cfg['ignoreHidden'], "yes", "Yes") ?>
@@ -231,11 +231,14 @@ Ignore All hidden files and directories
 </div>
 
 &nbsp;
-: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+: <span class="buttons-spaced">
+    <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
+    <input type="button" id="DONE" value="_(Done)_" onclick="done()">
+  </span>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
-_(Move **ALL** files to current pool (wont use mover settings))_:
-: <input type="button" id="MoveShare" value="Move Now" onclick="moveShareNow()">
+_(Move **ALL** files to current pool (won't use mover settings))_:
+: <span><input type="button" id="MoveShare" value="_(Move Now)_" onclick="moveShareNow()"></span>
 
 > Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Secondary->Primary_** storage space, disregarding any existing mover settings.
 </div>
@@ -253,7 +256,7 @@ _(Override Mover Tuning settings for this share)_:
 > Select **Yes** to override the primary Mover Tuning settings for this share.
 
 <div markdown="1" id="moverSettings">
-_(Only move if above this threshold of used Primary (<em>cache</em>) space:)_
+_(Only move if above this threshold of used Primary (<em>cache</em>) space)_:
 : <select name="movingThreshold" size="1" class='narrow'>
 <?for ($t=0;$t<100;$t+=5):?>
 <?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
@@ -340,7 +343,7 @@ _(Only move files larger than this (in MB))_:
 <!--:mover_tuning_min_size_help:-->
 > Select the minimum size a file has to be to get moved (in **Megabytes**).
 
-Sync files based on maximum size?
+_(Sync files based on maximum size)_?
 : <select name="sizefSync" size='1' class='narrow' onchange='$(".mysizefSync").toggleAttr("disabled")'>
        <?=mk_option($cfg['sizefSync'],'no','No')?>
        <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
@@ -348,7 +351,7 @@ Sync files based on maximum size?
 
 > Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
 
-Sync files that are smaller than this size (In MB).
+_(Sync files that are smaller than this size (In MB))_.
 : <select name="sizeinMSync" size="1" class='narrow mysizefSync' <?=$sizefSyncDisabled?>>
 	<?=mk_option($cfg['sizeinMSync'], 1, "1")?>
 	<?=mk_option($cfg['sizeinMSync'], 2, "2")?>
@@ -404,7 +407,7 @@ _(Skip files listed in text file)_:
 > Select **Yes** to skip files which have been listed in a specified text file.
 
 _(File list path)_:
-: <input type='text' name='filelistv' class='myfilelistf' value='<?= $cfg['filelistv'] ?>' <?= $filelistfDisabled ?>>
+: <input type='text' name='filelistv' class='myfilelistf' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filelistfDisabled?>>
 
 <!--:mover_tuning_file_list_path_help:-->
 > Specify the full path to a text file that contains the list of files the mover should skip.
@@ -419,12 +422,12 @@ _(Skip file types)_:
 > Select **Yes** to skip specific file types in addition to those selected globally.
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' class='myfiletypesf' value='<?= $cfg['filetypesv'] ?>' <?= $filetypesfDisabled ?>>
+: <input type='text' name='filetypesv' class='myfiletypesf' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filetypesfDisabled?>>
 
 <!--:mover_tuning_file_type_delimited_help:-->
 > Specify the file types to be skipped, separated by a comma (e.g. **".txt,.mp3,.pdf"**).
 
-Ignore All hidden files and directories
+_(Ignore All hidden files and directories)_:
 : <select name='ignoreHidden'>
   <?= mk_option($cfg['ignoreHidden'], "no", "No") ?>
   <?= mk_option($cfg['ignoreHidden'], "yes", "Yes") ?>
@@ -433,7 +436,7 @@ Ignore All hidden files and directories
 <!--:mover_tuning_hidden_files_help:-->
 > Select **Yes** to skip all hidden files and directories (starting with **"."**).
 
-Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage:
+_(Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage)_:
 : <select name='omovercfg' size='1' class='narrow' onchange='$(".myomthresh").toggleAttr("disabled")'>
 <?=mk_option($cfg['omovercfg'],"no","No")?>
 <?=mk_option($cfg['omovercfg'],"yes","Yes")?>
@@ -444,7 +447,7 @@ Move All from Primary->Secondary (cache:yes) shares when disk is above a certain
 <p>This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.</p>
 </blockquote>
 
-Move All from Primary->Secondary (cache:yes) shares pool percentage:
+_(Move All from Primary->Secondary (cache:yes) shares pool percentage)_:
 : <select name="omoverthresh" size="1" class='narrow myomthresh' <?=$omoverthreshDisabled?>>
 <?for ($om;$om<=100;$om+=5):?>
 <?=mk_option($cfg['omoverthresh'], $om, "$om %")?>
@@ -457,7 +460,7 @@ Move All from Primary->Secondary (cache:yes) shares pool percentage:
 <p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
 </blockquote>
 
-Synchronize Primary files to Secondary
+_(Synchronize Primary files to Secondary)_:
 : <select name='synchronizeCache' size='1' class='narrow'>
 <?=mk_option($cfg['synchronizeCache'],"no",'No')?>
 <?=mk_option($cfg['synchronizeCache'],"yes","Yes")?>
@@ -477,22 +480,25 @@ Synchronize Primary files to Secondary
 </div>
 
 &nbsp;
-: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
+: <span class="buttons-spaced">
+    <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
+    <input type="button" id="DONE" value="_(Done)_" onclick="done()">
+  </span>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
-_(Move **ALL** files from current pool (wont use mover settings))_:
-: <input type="button" id="MoveShare" value="Move Now" onclick="moveShareNow()">
+_(Move **ALL** files from current pool (won't use mover settings))_:
+: <span><input type="button" id="MoveShare" value="_(Move Now)_" onclick="moveShareNow()"></span>
 
 > Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Primary->Secondary_** storage space, disregarding any existing mover settings.
 </div>
 
 <? else: ?>
 <div markdown="1" class="shade-<?=$display['theme']?>">
-_(Mover Tuning settings not available for this share.)_
+_(Mover Tuning settings not available for this share)_.
 </div>
 <? endif; ?>
 <? else: ?>
-Not Applicable (Share Does Not Exist Yet)!
+_(Not Applicable (Share Does Not Exist Yet))_!
 <? endif; ?>
 
 </form>
