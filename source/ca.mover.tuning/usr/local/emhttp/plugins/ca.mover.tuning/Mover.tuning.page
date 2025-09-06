@@ -123,8 +123,8 @@ $(function() {
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 _(Disable Mover running on a schedule)_:
 : <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
-<?=mk_option($cfg['moverDisabled'],"no",_("No"))?>
-<?=mk_option($cfg['moverDisabled'],"yes",_("Yes"))?>
+<?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
+<?=mk_option($cfg['moverDisabled'],"yes",_('Yes'))?>
 </select>
 &nbsp;&nbsp;&nbsp;<strong>Yes</strong> <em>- setting effectively disables the plugin schedule</em></span>
 
@@ -136,19 +136,22 @@ _(Disable Mover running on a schedule)_:
 _(Test Mode (dry run))_:
 : <span><select name='testmode' size='1' class='narrow'>
 <?=mk_option($cfg['testmode'],"no",_('No'))?>
-<?=mk_option($cfg['testmode'],"yes",_("Yes"))?>
+<?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
 </select>
 &nbsp;&nbsp;&nbsp;<strong>No</strong> <em>- setting effectively disables test mode</em></span>
 
+:mover_tune_testmode_plug:
 > Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
+:end
 
 _(Validate input filenames to prevent attacks)_:
 : <span><select name='validateFilenames' size='1' class='narrow'>
-<?=mk_option($cfg['validateFilenames'],"yes","_(Yes)_")?>
-<?=mk_option($cfg['validateFilenames'],"no",'No')?>
+<?=mk_option($cfg['validateFilenames'],"yes",_('Yes'))?>
+<?=mk_option($cfg['validateFilenames'],"no",_('No'))?>
 </select>
 &nbsp;&nbsp;&nbsp;<strong>No</strong> <em>- setting effectively disables validation of input filenames</em></span>
 
+:mover_tune_validate_plug:
 <blockquote class="inline_help">
 <p> <strong><em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></strong></p>
 <p> Validate input filenames will check every filename before it is processed by the Mover. This ensures that <strong>only valid</strong> filenames are accepted, <strong>reducing the risk</strong> of attacks and vulnerabilities.</p>
@@ -159,6 +162,7 @@ _(Validate input filenames to prevent attacks)_:
 <p> 3. <strong>Prevent path traversal</strong> - The filename should not contain any characters that can be used to traverse directories, such as (<strong><em> ../ </em></strong>).</p>
 <p> If one of these checks fails, the filename will be rejected.</p>
 </blockquote>
+:end
 
 _(Log Mover Tuning plugin actions)_:
 : <select name='logging' size='1' class='narrow'>
