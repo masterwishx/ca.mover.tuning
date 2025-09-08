@@ -59,6 +59,7 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
+DEFAULT_INVALID_FILE_CHARS='$ / < > : " | ? *'
 # Flag if share has sync override
 overrideSyncFlag=0
 # Variables for counts when delete folders
@@ -642,9 +643,9 @@ getMoverSettings() {
 
     if [ -z $(cfg invalidFileChars) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Invalid characters argument provided, set to default"
-            echo 'invalidFileChars="$ / < > : " | ? *"' >>$config_file                                    
-            INVALID_FILE_CHARS=$(cfg invalidFileChars)
+            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS}"
+            echo "invalidFileChars=${DEFAULT_INVALID_FILE_CHARS}" >>$config_file
+            INVALID_FILE_CHARS="${DEFAULT_INVALID_FILE_CHARS}"
         fi
     else
         INVALID_FILE_CHARS=$(cfg invalidFileChars)
