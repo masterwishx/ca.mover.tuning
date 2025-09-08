@@ -640,6 +640,17 @@ getMoverSettings() {
         mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
     fi
 
+    if [ -z $(cfg invalidFileChars) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Invalid characters argument provided, set to default"
+            echo 'invalidFileChars="$ / < > : " | ? *"' >>$config_file                                    
+            INVALID_FILE_CHARS=$(cfg invalidFileChars)
+        fi
+    else
+        INVALID_FILE_CHARS=$(cfg invalidFileChars)
+        mvlogger "Invalid characters to block: $INVALID_FILE_CHARS"
+    fi
+
     if [ -z $(cfg movefilesTool) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Move files tool argument provided, defaulting to rsync"
