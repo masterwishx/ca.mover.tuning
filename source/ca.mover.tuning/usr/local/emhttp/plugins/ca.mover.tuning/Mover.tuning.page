@@ -30,11 +30,11 @@ $sizefSyncDisabled = ($cfg['sizefSync'] != "yes") ? "disabled" : "";
 $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $version = ($cfg['version']);
 
-function mk_option_symbols($symbol, $selected) {
-    $checked = in_array($symbol, $selected) ? " selected" : "";
-    return "<option value='".htmlspecialchars($symbol, ENT_QUOTES)."'$checked>"
-    . htmlspecialchars($symbol) . "</option>";
-}
+// function mk_option_symbols($symbol, $selected) {
+//     $checked = in_array($symbol, $selected) ? " selected" : "";
+//     return "<option value='".htmlspecialchars($symbol, ENT_QUOTES)."'$checked>"
+//     . htmlspecialchars($symbol) . "</option>";
+// }
 
 ?>
 
@@ -52,13 +52,16 @@ $.fn.toggleAttr = function(attr) {
 	});
 }
 
+// <?
 // function update_invalidFileChars() {
-// if (!empty($_POST['invalidFileChars'])) {
-//     $cfg['invalidFileChars'] = implode('', $_POST['invalidFileChars']);
-// } else {
-//     $cfg['invalidFileChars'] = '';
-// }
-// }
+//     if (!empty($_POST['invalidFileChars'])) {
+//         // Join with spaces so Bash can parse it properly
+//         $cfg['invalidFileChars'] = implode(' ', $_POST['invalidFileChars']);
+//     } else {
+//         $cfg['invalidFileChars'] = '';
+//     }
+// }?>
+
 
 function updateCron() {
   var cron = $("#cronSchedule").val();
@@ -210,7 +213,7 @@ foreach ($symbols as $s) {
 ?>
 </select> -->
 
-_(Invalid characters to block)_:
+<!-- _(Invalid characters to block)_:
 : <select id="invalidChars" name="invalidFileChars[]" multiple class="narrow invalidFileChars" <?=$invalidFileCharsDisabled?>>
 <?php
 // Symbols to allow for blocking
@@ -224,8 +227,23 @@ foreach ($symbols as $s) {
     echo mk_option_symbols($s, $selected);
 }
 ?>
-</select>
+</select> -->
 
+<!-- _(Invalid characters to block)_:
+: <select id="invalidChars" name="invalidFileChars[]" multiple class="narrow invalidFileChars" <?=$invalidFileCharsDisabled?>>
+<?php
+// Symbols to allow for blocking
+$symbols = ['$', '/', '<', '>', ':', '"', '|', '?', '*'];
+
+// Load saved config (space-separated string → array)
+$selected = preg_split('/\s+/', trim($cfg['invalidFileChars'] ?? '$ / < > : " | ? *'));
+
+// Render options
+foreach ($symbols as $s) {
+    echo mk_option_symbols($s, $selected);
+}
+?>
+</select> -->
 
 <!-- <style>
 .dropdown {
@@ -263,6 +281,10 @@ foreach ($symbols as $s) {
     <label><input type="checkbox" name="invalidFilenameChars[]" value="$"> $</label><br>
   </div> -->
 
+_(Invalid characters to block)_:  
+: <input type='text' name='invalidFileChars' size='1' class='narrow invalidFileChars' value='<?=htmlspecialchars($cfg['invalidFileChars'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
+
+> The filename characters such as: <strong><em> $ </em></strong> <strong><em> / </em></strong> <strong><em> < </em></strong> <strong><em> > </em></strong> <strong><em> : </em></strong> <strong><em> " </em></strong> <strong><em> | </em></strong> <strong><em> ? </em></strong> <strong><em> * </em></strong>.
   
 _(Log Mover Tuning plugin actions)_:
 : <select name='logging' size='1' class='narrow'>
