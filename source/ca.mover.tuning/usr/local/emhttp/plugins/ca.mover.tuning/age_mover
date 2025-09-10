@@ -59,7 +59,7 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
-DEFAULT_INVALID_FILE_CHARS='$ / < > : " | ? *'
+DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '"' '|' '?' '*')
 # Flag if share has sync override
 overrideSyncFlag=0
 # Variables for counts when delete folders
@@ -172,8 +172,10 @@ function validate_filename() {
         return 1
     fi
 
-    ## Check for invalid characters
-    if [[ "$filename" =~ [\$\/\<\>\:\"\|\?\*] ]]; then
+    # Escape regex meta chars
+    pattern=$(printf '%s' "${INVALID_FILE_CHARS[@]}" | sed 's/./\\&/g')
+
+    if [[ "$filename" =~ [$pattern] ]]; then
         mvlogger "Error: Invalid characters in filename: '$filename'"
         return 1
     fi
@@ -643,13 +645,16 @@ getMoverSettings() {
 
     if [ -z $(cfg invalidFileChars) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS}"
-            echo "invalidFileChars=${DEFAULT_INVALID_FILE_CHARS}" >>$config_file
-            INVALID_FILE_CHARS="${DEFAULT_INVALID_FILE_CHARS}"
+            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]}"
+            echo "invalidFileChars=${DEFAULT_INVALID_FILE_CHARS[*]}" >>$config_file
+            # Keep DEFAULT_INVALID_FILE_CHARS as an array
+            INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
+
         fi
     else
-        INVALID_FILE_CHARS=$(cfg invalidFileChars)
-        mvlogger "Invalid characters to block: $INVALID_FILE_CHARS"
+        # Convert the string from cfg invalidFileChars to an array
+        IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
+        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]}"
     fi
 
     if [ -z $(cfg movefilesTool) ]; then
