@@ -59,7 +59,8 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
-DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '"' '|' '?' '*')
+# PHP requires escaped quotes (" -> \") for text fields
+DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Flag if share has sync override
 overrideSyncFlag=0
 # Variables for counts when delete folders
@@ -172,8 +173,8 @@ function validate_filename() {
         return 1
     fi
 
-    # Escape regex meta chars
-    pattern=$(printf '%s' "${INVALID_FILE_CHARS[@]}" | sed 's/./\\&/g')
+    # Escape regex meta chars, remove '\' from '\"' then add '\' to all characters
+    pattern=$(printf '%s' "${INVALID_FILE_CHARS[@]}" | sed -E 's/\\?"/"/g; s/./\\&/g')
 
     if [[ "$filename" =~ [$pattern] ]]; then
         mvlogger "Error: Invalid characters in filename: '$filename'"
@@ -646,10 +647,16 @@ getMoverSettings() {
     if [ -z $(cfg invalidFileChars) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]}"
-            echo "invalidFileChars=${DEFAULT_INVALID_FILE_CHARS[*]}" >>$config_file
+            #echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>$config_file
+            if grep -q '^invalidFileChars=""' "$config_file"; then
+                # Replace only if it's explicitly empty
+                sed -i "s|^invalidFileChars=\"\"|invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"|" "$config_file"
+            elif ! grep -q '^invalidFileChars=' "$config_file"; then
+                # If the key doesn't exist at all, append
+                echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>"$config_file"
+            fi
             # Keep DEFAULT_INVALID_FILE_CHARS as an array
             INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
-
         fi
     else
         # Convert the string from cfg invalidFileChars to an array
