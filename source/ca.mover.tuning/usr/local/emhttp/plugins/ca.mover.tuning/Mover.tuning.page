@@ -23,6 +23,7 @@ $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
+$invalidFileCharsDisabled = ($cfg['validateFilenames'] != "yes") ? "disabled" : "";
 $om = $cfg['movingThreshold']; $om = $om + 5;
 $f = $cfg['movingThreshold'];
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
@@ -32,9 +33,29 @@ $version = ($cfg['version']);
 
 ?>
 
-<script> 
+<script>
 $(function() {
-  $('#invalidChars').dropdownchecklist({emptyText:"_(None)_", width:166});
+  var $invalid = $('#invalidChars').dropdownchecklist({
+    emptyText:"_(None)_",
+    width:166
+    
+  });
+
+   // --- Sync initial state (from PHP "disabled" attribute) ---
+  if ($invalid.is(':disabled')) {
+    $invalid.dropdownchecklist("disable");
+  } else {
+    $invalid.dropdownchecklist("enable");
+  }
+
+  // --- Watch for validateFilenames changes ---
+  $("select[name='validateFilenames']").on("change", function() {
+    if (this.value === "yes") {
+      $invalid.prop("disabled", false).dropdownchecklist("enable");
+    } else {
+      $invalid.prop("disabled", true).dropdownchecklist("disable");
+    }
+  });
 });
 </script>
 
