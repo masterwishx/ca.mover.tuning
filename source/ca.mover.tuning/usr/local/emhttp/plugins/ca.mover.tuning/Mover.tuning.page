@@ -32,66 +32,47 @@ $version = ($cfg['version']);
 
 ?>
 
-<script>
+<script> 
 $(function() {
   $('#invalidChars').dropdownchecklist({emptyText:"_(None)_", width:166});
 });
 </script>
 
-<?php
-function save_invalidFileChars_to_cfg($config_file) {
-    // Allowed symbols (add/remove as you like)
-    $allowed = ['$', '/', '<', '>', ':', '"', '|', '?', '*', '[', ']', "'", '\\'];
+<?
+function save_invalidFileChars_to_cfg($config_file, $chars_string) {
+    // Fallback: safe inline replace or append
+    if (file_exists($config_file)) {
+        file_put_contents($config_file, "invalidFileChars=$chars_string\n");            
+    }
+}
 
-    // Get posted values
-    $vals = [];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['#apply']) && $_POST['#apply'] == "_(Apply)_") {
+    // Extract and validate selected invalid characters
+    $selected = [];
     if (isset($_POST['invalidFileChars'])) {
-        $vals = $_POST['invalidFileChars'];
-        if (!is_array($vals)) $vals = [$vals];
+        $selected = $_POST['invalidFileChars'];
+        if (!is_array($selected)) $selected = [$selected];
     }
 
-    // Sanitize: keep only allowed symbols, keep order, remove duplicates
-    $filtered = [];
-    foreach ($vals as $v) {
-        if (!is_string($v)) continue;
-        if (in_array($v, $allowed, true) && !in_array($v, $filtered, true)) {
-            $filtered[] = $v;
-        }
-    }
+    // Allowed symbols (add/remove as you like)
+    $allowed = ['$', '/', '<', '>', ':', '"', '|', '?', '*'];
+
+    // Sanitize input
+    $sanitized_vals = array_filter($selected, function($val) use ($allowed) {
+        return in_array($val, $allowed);
+    });
 
     // Build space-separated string (or empty string)
-    $chars_string = count($filtered) ? implode(' ', $filtered) : '';
+    $chars_string = count($sanitized_vals) ? implode(' ', $sanitized_vals) : '';
 
-    // Save to plugin config using Unraid helpers if present
-    if (function_exists('parse_plugin_cfg') && function_exists('write_plugin_cfg')) {
-        $cfg_arr = parse_plugin_cfg($config_file);
-        $cfg_arr['invalidFileChars'] = $chars_string;
-        write_plugin_cfg($config_file, $cfg_arr);
-    } else {
-        // Fallback: safe inline replace or append
-        if (!file_exists($config_file)) {
-            file_put_contents($config_file, "invalidFileChars=$chars_string\n");
-        } else {
-            $lines = file($config_file, FILE_IGNORE_NEW_LINES);
-            $found = false;
-            foreach ($lines as $i => $line) {
-                if (preg_match('/^invalidFileChars=/', $line)) {
-                    $lines[$i] = "invalidFileChars=$chars_string";
-                    $found = true;
-                    break;
-                }
-            }
-            if (!$found) $lines[] = "invalidFileChars=$chars_string";
-            file_put_contents($config_file, implode(PHP_EOL, $lines) . PHP_EOL);
-        }
-    }
-}?>
+    // Save the sanitized characters to the configuration file
+    save_invalidFileChars_to_cfg($config_file, $chars_string);
 
-<?
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply'])) {
-    save_invalidFileChars_to_cfg($config_file);
-    // reload $cfg if needed, or redirect back
-}?>
+    // Redirect back or reload page
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit;
+}
+?>
 
 
 <script>
