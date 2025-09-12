@@ -34,40 +34,6 @@ $version = ($cfg['version']);
 ?>
 
 <script>
-$(function() {
-  var $invalid = $('#invalidChars').dropdownchecklist({
-    emptyText:"_(None)_",
-    width:166
-    
-  });
-
-  // PHP writes the state into a JS variable
-  var validateFilenames = "<?= $cfg['validateFilenames'] ?>";
-
-  if (validateFilenames === "yes") {
-    $invalid.dropdownchecklist("enable");
-  } else {
-    $invalid.dropdownchecklist("disable");
-  }
-
-  // --- Watch for validateFilenames changes ---
-  $("select[name='validateFilenames']").on("change", function() {
-    if (this.value === "yes") {
-      $invalid.prop("disabled", false).dropdownchecklist("enable");
-    } else {
-      $invalid.prop("disabled", true).dropdownchecklist("disable");
-    }
-  });
-
-  $('form[action="/update.php"]').on('submit', function() {
-    var vals = $('#invalidChars').val() || [];
-    $('#invalidFileCharsHidden').val(vals.join(' '));
-  });
-  
-});
-</script>
-
-<script>
 $(function(){
 	if ( typeof caPluginUpdateCheck === "function" ) {
 		caPluginUpdateCheck("ca.mover.tuning.plg",{name:"Mover Tuning",element:".moverUpdate"});
@@ -156,7 +122,6 @@ $(function() {
 <div class='moverUpdate'></div>
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
-<input type="hidden" name="invalidFileChars" id="invalidFileCharsHidden" value="<?=htmlspecialchars(trim($cfg['invalidFileChars'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE)?>">
 
 _(Disable Mover running on a schedule)_:
 : <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
@@ -182,7 +147,7 @@ _(Test Mode (dry run))_:
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow'>
+: <span><select name='validateFilenames' size='1' class='narrow' onchange='$(".invalidFileChars").toggleAttr("disabled")'>
 <?=mk_option($cfg['validateFilenames'],"yes",_('Yes'))?>
 <?=mk_option($cfg['validateFilenames'],"no",_('No'))?>
 </select>
@@ -202,22 +167,7 @@ _(Validate input filenames to prevent attacks)_:
 :end
 
 _(Invalid characters to block)_:
-: <select id="invalidChars" name="invalidChars[]" size="1" multiple class="narrow invalidFileChars">
-<?php
-$symbols = ['$', '/', '<', '>', ':', '"', '|', '?', '*'];
-
-// Config string like: '$ / < > : " | ? *'
-// Convert it into an array
-$selected = preg_split('/\s+/', trim($cfg['invalidFileChars'] ?? '$ / < > : " | ? *'));
-
-foreach ($symbols as $s) {    
-    $checked = in_array($s, $selected) ? " selected" : "";
-    $escaped_value = htmlspecialchars($s, ENT_QUOTES);
-    $escaped_display = htmlspecialchars($s, ENT_QUOTES);
-    echo "<option value='$escaped_value'$checked>$escaped_display</option>";
-}
-?>
-</select>
+: <input type='text' name='invalidFileChars' size='1' class='narrow invalidFileChars' value='<?=$cfg['invalidFileChars']?>' <?=$invalidFileCharsDisabled?>>
 
 <blockquote class="inline_help">
 <p> The filename characters such as:
