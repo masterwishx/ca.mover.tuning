@@ -41,11 +41,13 @@ $(function() {
     
   });
 
-   // --- Sync initial state (from PHP "disabled" attribute) ---
-  if ($invalid.is(':disabled')) {
-    $invalid.dropdownchecklist("disable");
-  } else {
+  // PHP writes the state into a JS variable
+  var validateFilenames = "<?= $cfg['validateFilenames'] ?>";
+
+  if (validateFilenames === "yes") {
     $invalid.dropdownchecklist("enable");
+  } else {
+    $invalid.dropdownchecklist("disable");
   }
 
   // --- Watch for validateFilenames changes ---
@@ -56,45 +58,14 @@ $(function() {
       $invalid.prop("disabled", true).dropdownchecklist("disable");
     }
   });
+
+  $('form[action="/update.php"]').on('submit', function() {
+    var vals = $('#invalidChars').val() || [];
+    $('#invalidFileCharsHidden').val(vals.join(' '));
+  });
+  
 });
 </script>
-
-<?
-function save_invalidFileChars_to_cfg($config_file, $chars_string) {
-    // Fallback: safe inline replace or append
-    if (file_exists($config_file)) {
-        file_put_contents($config_file, "invalidFileChars=$chars_string\n");            
-    }
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['#apply']) && $_POST['#apply'] == "_(Apply)_") {
-    // Extract and validate selected invalid characters
-    $selected = [];
-    if (isset($_POST['invalidFileChars'])) {
-        $selected = $_POST['invalidFileChars'];
-        if (!is_array($selected)) $selected = [$selected];
-    }
-
-    // Allowed symbols (add/remove as you like)
-    $allowed = ['$', '/', '<', '>', ':', '"', '|', '?', '*'];
-
-    // Sanitize input
-    $sanitized_vals = array_filter($selected, function($val) use ($allowed) {
-        return in_array($val, $allowed);
-    });
-
-    // Build space-separated string (or empty string)
-    $chars_string = count($sanitized_vals) ? implode(' ', $sanitized_vals) : '';
-
-    // Save the sanitized characters to the configuration file
-    save_invalidFileChars_to_cfg($config_file, $chars_string);
-
-    // Redirect back or reload page
-    header("Location: " . $_SERVER['PHP_SELF']);
-    exit;
-}
-?>
-
 
 <script>
 $(function(){
@@ -185,6 +156,8 @@ $(function() {
 <div class='moverUpdate'></div>
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
+<input type="hidden" name="invalidFileChars" id="invalidFileCharsHidden" value="<?=htmlspecialchars(trim($cfg['invalidFileChars'] ?? ''), ENT_QUOTES | ENT_SUBSTITUTE)?>">
+
 _(Disable Mover running on a schedule)_:
 : <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
 <?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
@@ -229,7 +202,7 @@ _(Validate input filenames to prevent attacks)_:
 :end
 
 _(Invalid characters to block)_:
-: <select id="invalidChars" name="invalidFileChars[]" size="1" multiple class="narrow invalidFileChars" <?=$invalidFileCharsDisabled?>>
+: <select id="invalidChars" name="invalidChars[]" size="1" multiple class="narrow invalidFileChars" <?=$invalidFileCharsDisabled?>>
 <?php
 $symbols = ['$', '/', '<', '>', ':', '"', '|', '?', '*'];
 
@@ -239,7 +212,9 @@ $selected = preg_split('/\s+/', trim($cfg['invalidFileChars'] ?? '$ / < > : " | 
 
 foreach ($symbols as $s) {    
     $checked = in_array($s, $selected) ? " selected" : "";
-    echo "<option value='$s'$checked >$s</option>";
+    $escaped_value = htmlspecialchars($s, ENT_QUOTES);
+    $escaped_display = htmlspecialchars($s, ENT_QUOTES);
+    echo "<option value='$escaped_value'$checked>$escaped_display</option>";
 }
 ?>
 </select>
