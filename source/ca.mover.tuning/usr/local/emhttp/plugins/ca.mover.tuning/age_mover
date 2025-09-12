@@ -249,7 +249,12 @@ getMoverSettings() {
                 break
             }
         done <"$config_file"
-        echo "${value//\"/}" # Print value or empty string if not found, without quotes
+        #echo "${value//\"/}" # Print value or empty string if not found, without quotes
+
+        # Strip only *outer* quotes, keep inner ones
+        value="${value%\"}" # remove trailing "
+        value="${value#\"}" # remove leading "
+        echo "$value"
     }
 
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
@@ -659,7 +664,7 @@ getMoverSettings() {
             INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
         fi
     else
-        # Convert the string from cfg invalidFileChars to an array
+        # Convert the string from cfg invalidFileChars to an array        
         IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
         mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]}"
         echo "${INVALID_FILE_CHARS[*]}"
