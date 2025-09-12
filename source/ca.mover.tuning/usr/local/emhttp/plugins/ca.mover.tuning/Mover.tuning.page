@@ -182,7 +182,7 @@ _(Test Mode (dry run))_:
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow' onchange='$(".invalidFileChars").toggleAttr("disabled")'>
+: <span><select name='validateFilenames' size='1' class='narrow'>
 <?=mk_option($cfg['validateFilenames'],"yes",_('Yes'))?>
 <?=mk_option($cfg['validateFilenames'],"no",_('No'))?>
 </select>
@@ -202,7 +202,7 @@ _(Validate input filenames to prevent attacks)_:
 :end
 
 _(Invalid characters to block)_:
-: <select id="invalidChars" name="invalidChars[]" size="1" multiple class="narrow invalidFileChars" <?=$invalidFileCharsDisabled?>>
+: <select id="invalidChars" name="invalidChars[]" size="1" multiple class="narrow invalidFileChars">
 <?php
 $symbols = ['$', '/', '<', '>', ':', '"', '|', '?', '*'];
 
