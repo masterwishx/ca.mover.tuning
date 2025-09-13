@@ -651,23 +651,17 @@ getMoverSettings() {
 
     if [ -z "$(cfg invalidFileChars)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]}"
-            #echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>$config_file
-            if grep -q '^invalidFileChars=""' "$config_file"; then
-                # Replace only if it's explicitly empty
-                sed -i "s|^invalidFileChars=\"\"|invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"|" "$config_file"
-            elif ! grep -q '^invalidFileChars=' "$config_file"; then
-                # If the key doesn't exist at all, append
-                echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>"$config_file"
-            fi
+            # Print and unescape the array element \" -> "
+            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]//\\\"/\"}"
+            echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>$config_file
             # Keep DEFAULT_INVALID_FILE_CHARS as an array
             INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
         fi
     else
-        # Convert the string from cfg invalidFileChars to an array        
+        # Convert the string from cfg invalidFileChars to an array
         IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
-        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]}"
-        echo "${INVALID_FILE_CHARS[*]}"
+        # Print and unescape the array element \" -> "
+        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"        
     fi
 
     if [ -z $(cfg movefilesTool) ]; then

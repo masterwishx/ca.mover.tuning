@@ -167,7 +167,7 @@ _(Validate input filenames to prevent attacks)_:
 :end
 
 _(Invalid characters to block)_:
-: <input type='text' name='invalidFileChars' size='1' class='narrow invalidFileChars' value='<?=$cfg['invalidFileChars']?>' <?=$invalidFileCharsDisabled?>>
+: <input type='text' name='invalidFileChars' size='1' class='narrow invalidFileChars' placeholder='$ / < > : " | ? *' value='<?=$cfg['invalidFileChars']?>' <?=$invalidFileCharsDisabled?>>
 
 <blockquote class="inline_help">
 <p> The filename characters such as:
