@@ -59,6 +59,8 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
+# PHP requires escaped quotes (" -> \") for text fields
+DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Flag if share has sync override
 overrideSyncFlag=0
 # Variables for counts when delete folders
@@ -171,8 +173,10 @@ function validate_filename() {
         return 1
     fi
 
-    ## Check for invalid characters
-    if [[ "$filename" =~ [\$\/\<\>\:\"\|\?\*] ]]; then
+    # Escape regex meta chars, remove first '\' from '\"', '\\' then add '\' to all characters
+    pattern=$(printf '%s' "${DEFAULT_INVALID_FILE_CHARS[@]}" | sed 's/\\\([^[:space:]]\)/\1/g; s/./\\&/g')
+
+    if [[ "$filename" =~ [$pattern] ]]; then
         mvlogger "Error: Invalid characters in filename: '$filename'"
         return 1
     fi
@@ -245,7 +249,12 @@ getMoverSettings() {
                 break
             }
         done <"$config_file"
-        echo "${value//\"/}" # Print value or empty string if not found, without quotes
+        #echo "${value//\"/}" # Print value or empty string if not found, without quotes
+
+        # Strip only *outer* quotes, keep inner ones
+        value="${value%\"}" # remove trailing "
+        value="${value#\"}" # remove leading "
+        echo "$value"
     }
 
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
@@ -638,6 +647,21 @@ getMoverSettings() {
     else
         VALIDATE_FILENAMES=$(cfg validateFilenames)
         mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
+    fi
+
+    if [ -z "$(cfg invalidFileChars)" ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            # Print and unescape the array element \" -> "
+            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]//\\\"/\"}"
+            echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>$config_file
+            # Keep DEFAULT_INVALID_FILE_CHARS as an array
+            INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
+        fi
+    else
+        # Convert the string from cfg invalidFileChars to an array
+        IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
+        # Print and unescape the array element \" -> "
+        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"        
     fi
 
     if [ -z $(cfg movefilesTool) ]; then

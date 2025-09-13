@@ -23,6 +23,7 @@ $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
+$invalidFileCharsDisabled = ($cfg['validateFilenames'] != "yes") ? "disabled" : "";
 $om = $cfg['movingThreshold']; $om = $om + 5;
 $f = $cfg['movingThreshold'];
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
@@ -121,6 +122,7 @@ $(function() {
 <div class='moverUpdate'></div>
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
+
 _(Disable Mover running on a schedule)_:
 : <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
 <?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
@@ -145,7 +147,7 @@ _(Test Mode (dry run))_:
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow'>
+: <span><select name='validateFilenames' size='1' class='narrow' onchange='$(".invalidFileChars").toggleAttr("disabled")'>
 <?=mk_option($cfg['validateFilenames'],"yes",_('Yes'))?>
 <?=mk_option($cfg['validateFilenames'],"no",_('No'))?>
 </select>
@@ -163,6 +165,23 @@ _(Validate input filenames to prevent attacks)_:
 <p> If one of these checks fails, the filename will be rejected.</p>
 </blockquote>
 :end
+
+_(Invalid characters to block)_:
+: <input type='text' name='invalidFileChars' size='1' class='narrow invalidFileChars' placeholder='$ / < > : " | ? *' value='<?=$cfg['invalidFileChars']?>' <?=$invalidFileCharsDisabled?>>
+
+<blockquote class="inline_help">
+<p> The filename characters such as:
+  <strong><em>$</em></strong>
+  <strong><em>/</em></strong>
+  <strong><em><</em></strong>
+  <strong><em>></em></strong>
+  <strong><em>:</em></strong>
+  <strong><em>"</em></strong>
+  <strong><em>|</em></strong>
+  <strong><em>?</em></strong>
+  <strong><em>*</em></strong>.
+</p>
+</blockquote>
 
 _(Log Mover Tuning plugin actions)_:
 : <select name='logging' size='1' class='narrow'>
