@@ -23,7 +23,7 @@ $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
-$invalidFileCharsDisabled = ($cfg['validateFilenames'] != "yes") ? "disabled" : "";
+$invalidFileCharsDisabled = ($cfg['validateFilenames'] != "yes") ? "readonly" : "";
 $om = $cfg['movingThreshold']; $om = $om + 5;
 $f = $cfg['movingThreshold'];
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
@@ -147,7 +147,7 @@ _(Test Mode (dry run))_:
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow' onchange='$(".myinvalidFileChars").toggleAttr("disabled")'>
+: <span><select name='validateFilenames' size='1' class='narrow' onchange='$(".myinvalidFileChars").toggleAttr("readonly")'>
 <?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
 <?=mk_option($cfg['validateFilenames'],"no",'No')?>
 </select>
