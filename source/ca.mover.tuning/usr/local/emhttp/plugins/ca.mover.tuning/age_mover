@@ -174,7 +174,7 @@ function validate_filename() {
     fi
 
     # Escape regex meta chars, remove first '\' from '\"', '\\' then add '\' to all characters
-    pattern=$(printf '%s' "${DEFAULT_INVALID_FILE_CHARS[@]}" | sed 's/\\\([^[:space:]]\)/\1/g; s/./\\&/g')
+    pattern=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
 
     if [[ "$filename" =~ [$pattern] ]]; then
         mvlogger "Error: Invalid characters in filename: '$filename'"
@@ -661,7 +661,7 @@ getMoverSettings() {
         # Convert the string from cfg invalidFileChars to an array
         IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
         # Print and unescape the array element \" -> "
-        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"        
+        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"
     fi
 
     if [ -z $(cfg movefilesTool) ]; then
