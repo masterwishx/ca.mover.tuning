@@ -16,6 +16,7 @@ $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
 $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
 $moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
+$validateFilenames = ($cfg['validateFilenames'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
 $ctimeDisabled = ($cfg['atime'] != "yes") ? "no" : "yes";
 $atimeDisabled = ($cfg['ctime'] != "yes") ? "no" : "yes";
@@ -23,7 +24,6 @@ $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
-$invalidFileCharsDisabled = ($cfg['validateFilenames'] != "yes") ? "readonly" : "";
 $om = $cfg['movingThreshold']; $om = $om + 5;
 $f = $cfg['movingThreshold'];
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
@@ -106,11 +106,23 @@ function updateScreenMoverAdvancedOptions(option,slow) {
   }
 }
 
+function updateScreenMoverInvalidCharsToBlock(option,slow) {
+  switch (option) {
+  case 'no':
+    $('#moverInvalidCharsToBlock').hide(slow);
+    break;
+  case 'yes':
+    $('#moverInvalidCharsToBlock').show(slow);
+    break;
+  }
+}
+
 $(function() {
   updateScreenMoverTuningSettings('<? echo $moverDisabled ?>');
   updateScreenMoverAdvancedSettings('<? echo $advancedSettings ?>');
   updateScreenMoverAdvancedFilters('<? echo $advancedFilters ?>');
   updateScreenMoverAdvancedOptions('<? echo $advancedOptions ?>');
+  updateScreenMoverInvalidCharsToBlock('<? echo $validateFilenames ?>');
 });
 </script>
 
@@ -147,7 +159,7 @@ _(Test Mode (dry run))_:
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow' onchange='$(".myinvalidFileChars").toggleAttr("readonly")'>
+: <span><select name='validateFilenames' size='1' class='narrow' onchange="updateScreenMoverInvalidCharsToBlock(this.value, 'slow')">
 <?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
 <?=mk_option($cfg['validateFilenames'],"no",'No')?>
 </select>
@@ -166,8 +178,9 @@ _(Validate input filenames to prevent attacks)_:
 </blockquote>
 :end
 
+<div markdown="1" id="moverInvalidCharsToBlock">
 _(Invalid characters to block)_:
-: <input type='text' name='invalidFileChars' size='1' class='narrow myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>' <?=$invalidFileCharsDisabled?>>
+: <input type='text' name='invalidFileChars' size='1' class='narrow myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
 
 <blockquote class="inline_help">
 <p> The filename characters such as:
@@ -182,6 +195,7 @@ _(Invalid characters to block)_:
   <strong><em>*</em></strong>.
 </p>
 </blockquote>
+</div>
 
 _(Log Mover Tuning plugin actions)_:
 : <select name='logging' size='1' class='narrow'>
