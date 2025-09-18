@@ -214,7 +214,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
+: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
 
 > Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 

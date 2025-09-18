@@ -173,7 +173,7 @@ function validate_filename() {
         return 1
     fi
 
-    # Escape regex meta chars, remove first '\' from '\"', '\\' then add '\' to all characters
+    # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
     pattern=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
 
     if [[ "$filename" =~ [$pattern] ]]; then
@@ -181,10 +181,13 @@ function validate_filename() {
         return 1
     fi
 
-    ## Prevent path traversal
-    if [[ "$filename" == *"../"* ]]; then
-        mvlogger "Error: Path traversal attempt detected: '$filename'"
-        return 1
+    # Fast path traversal detection
+    if [[ "$filename" == *".."* ]]; then
+        # Only block if '..' is used as a path segment
+        if [[ "$filename" == "../"* || "$filename" == *"/.."* || "$filename" == "..\\"* || "$filename" == *"\\.."* ]]; then
+            mvlogger "Error: Path traversal attempt detected: '$filename'"
+            return 1
+        fi
     fi
 
     return 0
