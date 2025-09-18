@@ -167,7 +167,7 @@ _(Validate input filenames to prevent attacks)_:
 :end
 
 _(Invalid characters to block)_:
-: <input type='text' name='invalidFileChars' size='1' class='narrow myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=$cfg['invalidFileChars']?>' <?=$invalidFileCharsDisabled?>>
+: <input type='text' name='invalidFileChars' size='1' class='narrow myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>' <?=$invalidFileCharsDisabled?>>
 
 <blockquote class="inline_help">
 <p> The filename characters such as:
@@ -214,7 +214,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=$cfg['loggingFolder']?>'>
+: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
 
 > Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 
@@ -299,7 +299,7 @@ _(Force move of all files on a schedule)_:
 > Select <strong>yes</strong> to run <strong>original mover</strong> on a custom cron schedule.
 
 _(Cron Schedule to force move all of files)_:
-: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=$cfg['cron']?>' <?=$cronDisabled?>>
+: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
 
 > Cron Schedule entry example <strong>20 4 1 * *</strong>.&nbsp; To run the <em>first day of the month at </em><strong>4:20 AM</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> What Is Cron</a> 
 
@@ -318,12 +318,12 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 </blockquote>
 
 _(Script to run before mover (No checks, always runs))_:
-: <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=$cfg['beforeScript']?>'>
+: <input type='text' name='beforeScript' size='1' class='narrow mybefore' placeholder='/mnt/user/MyDiskNas/my_script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
 
 > Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
 
 _(Script to run after mover (No checks, always runs))_:
-: <input type='text' name='afterScript' size='1' class='narrow myafter' value='<?=$cfg['afterScript']?>'>
+: <input type='text' name='afterScript' size='1' class='narrow myafter' placeholder='/mnt/user/MyDiskNas/my_script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
 
 > Path to a script that will be run after mover finishes.  This script will always be run.
 
@@ -517,7 +517,7 @@ _(Ignore files and folders listed inside of a text file)_:
 </select>
 
 _(File list path)_:
-: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' value='<?=$cfg['filelistv']?>' <?=$filelistfDisabled?>>
+: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' placeholder='/mnt/user/MyDiskNas/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
 <p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
@@ -533,7 +533,7 @@ _(Ignore file types)_:
 </select>
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' value='<?=$cfg['filetypesv']?>' <?=$filetypesfDisabled?>>
+: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'])?>' <?=$filetypesfDisabled?>>
 
 > A list of file types separated by a <strong>comma</strong>.
 
