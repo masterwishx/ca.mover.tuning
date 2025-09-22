@@ -173,10 +173,8 @@ function validate_filename() {
         return 1
     fi
 
-    # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
-    pattern=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
-
-    if [[ "$filename" =~ [$pattern] ]]; then
+    # Invalid characters (Linux + Windows + macOS safe)
+    if [[ "$filename" == *["$INVALID_FILE_CHARS_STR"]* ]]; then
         mvlogger "Error: Invalid characters in filename: '$filename'"
         return 1
     fi
@@ -659,12 +657,16 @@ getMoverSettings() {
             echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>$config_file
             # Keep DEFAULT_INVALID_FILE_CHARS as an array
             INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
+            # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
+            INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
         fi
     else
         # Convert the string from cfg invalidFileChars to an array
         IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
         # Print and unescape the array element \" -> "
         mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"
+        # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
+        INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
     fi
 
     if [ -z $(cfg movefilesTool) ]; then
