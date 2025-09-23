@@ -187,9 +187,76 @@ function validate_filename() {
             return 1
         fi
     fi
+    test_filename
 
     return 0
 }
+
+function test_filename() {
+# Test the actual usage pattern from the code to verify if it works correctly
+
+echo "Testing the actual implementation pattern from age_mover script:"
+echo "============================================================"
+
+# Simulate the DEFAULT_INVALID_FILE_CHARS array from the code
+#DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
+
+echo "Original array: ${DEFAULT_INVALID_FILE_CHARS[*]}"
+
+# Apply the same escaping logic as in the code
+#INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
+#INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
+
+echo "Escaped string: '$INVALID_FILE_CHARS_STR'"
+echo "Length: ${#INVALID_FILE_CHARS_STR}"
+
+echo -e "\nTesting bash glob pattern matching (as used in validate_filename):"
+echo "Pattern: [\"$INVALID_FILE_CHARS_STR\"]"
+
+# Test various filenames with invalid characters
+test_files=(
+    "test\$file.txt"
+    "test$file.txt"
+    "test/file.txt" 
+    "test\file.txt" 
+    "test<file.txt"
+    "test>file.txt"
+    "test:file.txt"
+    'test"file.txt'
+    "test|file.txt"
+    "test?file.txt"
+    "test*file.txt"
+    "test[file.txt"
+    "test]file.txt"
+    "test'file.txt"
+    "validfile.txt"
+)
+
+echo -e "\nTesting files:"
+for filename in "${test_files[@]}"; do
+    if [[ "$filename" == *["$INVALID_FILE_CHARS_STR"]* ]]; then
+        result="INVALID (contains blocked chars)"
+    else
+        result="VALID"
+    fi
+    echo "  '$filename' -> $result"
+done
+
+echo -e "\nTesting the escaping more thoroughly:"
+echo "Each character individually:"
+for char in "${INVALID_FILE_CHARS[@]}"; do
+    escaped_char=$(printf '%s' "$char" | sed 's/./\\&/g')
+    test_filename="test${char}file"
+    if [[ "$test_filename" == *["$escaped_char"]* ]]; then
+        result="MATCHED"
+    else
+        result="NO MATCH"
+    fi
+    echo "  Char: '$char' -> Escaped: '$escaped_char' -> Test: $result"
+done
+}
+
+
 
 # Function for verbose output and logging
 mvlogger() {
