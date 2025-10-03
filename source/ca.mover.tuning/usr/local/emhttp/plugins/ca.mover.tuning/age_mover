@@ -1186,7 +1186,6 @@ decideMoveActions() {
 
     #If overrideFLag set restore settings
     if [ $overrideFlag = 1 ]; then
-        mvDebuglogger "overrideFlag= $overrideFlag" "overrideFlag"
         overrideFlag=0
         #Get Mover Tuning Settings
         mvlogger "Restore global settings"
@@ -1214,7 +1213,6 @@ decideMoveActions() {
 
             # Init variables for track last share for Sync overrides
             prev_share = ""
-            prev_sync  = "no"
             global_sync = SYNCHRONIZECACHE
 
             # Print new header
