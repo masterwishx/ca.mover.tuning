@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.09.06">
-<!ENTITY md5       "ddc1e3f198ef1c2b33e27ae7056b00c7">
+<!ENTITY version   "2025.10.03">
+<!ENTITY md5       "45bc4ae3f6131b8c5dc7d1baf091d7c3">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,13 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.10.03
+- new: Configurable blocked-filename characters with sensible defaults, persisted across runs. **_(masterwishx)_**
+- new: Input and placeholders for invalid-character list and several path/script fields for clearer configuration.
+- new: More accurate path-traversal and filename validation to better block unsafe paths.
+- new: Improved filename and path validation to better detect and block unsafe names and traversal patterns.
+- fix: Per-share sync override awareness for share-specific behavior.
+
 ###2025.09.06
 - new: Added Unraid 7.2 responsive UI support. **_(masterwishx)_**
 - new: Integrated multi-language options for better usability.
