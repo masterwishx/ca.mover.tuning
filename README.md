@@ -32,6 +32,13 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.10.03
+    - new: Configurable blocked-filename characters with sensible defaults, persisted across runs. **_(masterwishx)_**
+    - new: Input and placeholders for invalid-character list and several path/script fields for clearer configuration.
+    - new: More accurate path-traversal and filename validation to better block unsafe paths.
+    - new: Improved filename and path validation to better detect and block unsafe names and traversal patterns.
+    - fix: Per-share sync override awareness for share-specific behavior.
+
 - 2025.09.06
     - new: Added Unraid 7.2 responsive UI support. **_(masterwishx)_**
     - new: Integrated multi-language options for better usability.
