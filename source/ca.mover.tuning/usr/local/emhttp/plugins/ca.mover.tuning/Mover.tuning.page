@@ -16,6 +16,7 @@ $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
 $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
 $moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
+$validateFilenames = ($cfg['validateFilenames'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
 $ctimeDisabled = ($cfg['atime'] != "yes") ? "no" : "yes";
 $atimeDisabled = ($cfg['ctime'] != "yes") ? "no" : "yes";
@@ -105,11 +106,23 @@ function updateScreenMoverAdvancedOptions(option,slow) {
   }
 }
 
+function updateScreenMoverInvalidCharsToBlock(option,slow) {
+  switch (option) {
+  case 'no':
+    $('#moverInvalidCharsToBlock').hide(slow);
+    break;
+  case 'yes':
+    $('#moverInvalidCharsToBlock').show(slow);
+    break;
+  }
+}
+
 $(function() {
   updateScreenMoverTuningSettings('<? echo $moverDisabled ?>');
   updateScreenMoverAdvancedSettings('<? echo $advancedSettings ?>');
   updateScreenMoverAdvancedFilters('<? echo $advancedFilters ?>');
   updateScreenMoverAdvancedOptions('<? echo $advancedOptions ?>');
+  updateScreenMoverInvalidCharsToBlock('<? echo $validateFilenames ?>');
 });
 </script>
 
@@ -121,6 +134,7 @@ $(function() {
 <div class='moverUpdate'></div>
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
+
 _(Disable Mover running on a schedule)_:
 : <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
 <?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
@@ -145,9 +159,9 @@ _(Test Mode (dry run))_:
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow'>
-<?=mk_option($cfg['validateFilenames'],"yes",_('Yes'))?>
-<?=mk_option($cfg['validateFilenames'],"no",_('No'))?>
+: <span><select name='validateFilenames' size='1' class='narrow' onchange="updateScreenMoverInvalidCharsToBlock(this.value, 'slow')">
+<?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
+<?=mk_option($cfg['validateFilenames'],"no",'No')?>
 </select>
 &nbsp;&nbsp;&nbsp;<strong>No</strong> <em>- setting effectively disables validation of input filenames</em></span>
 
@@ -163,6 +177,25 @@ _(Validate input filenames to prevent attacks)_:
 <p> If one of these checks fails, the filename will be rejected.</p>
 </blockquote>
 :end
+
+<div markdown="1" id="moverInvalidCharsToBlock">
+_(Invalid characters to block)_:
+: <input type='text' name='invalidFileChars' size='1' class='narrow myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
+
+<blockquote class="inline_help">
+<p> The filename characters such as:
+  <strong><em>$</em></strong>
+  <strong><em>/</em></strong>
+  <strong><em><</em></strong>
+  <strong><em>></em></strong>
+  <strong><em>:</em></strong>
+  <strong><em>"</em></strong>
+  <strong><em>|</em></strong>
+  <strong><em>?</em></strong>
+  <strong><em>*</em></strong>.
+</p>
+</blockquote>
+</div>
 
 _(Log Mover Tuning plugin actions)_:
 : <select name='logging' size='1' class='narrow'>
@@ -195,7 +228,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' value='<?=htmlspecialchars($cfg['loggingFolder'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
+: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
 
 > Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 
@@ -280,7 +313,7 @@ _(Force move of all files on a schedule)_:
 > Select <strong>yes</strong> to run <strong>original mover</strong> on a custom cron schedule.
 
 _(Cron Schedule to force move all of files)_:
-: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=htmlspecialchars($cfg['cron'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$cronDisabled?>>
+: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
 
 > Cron Schedule entry example <strong>20 4 1 * *</strong>.&nbsp; To run the <em>first day of the month at </em><strong>4:20 AM</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> What Is Cron</a> 
 
@@ -299,12 +332,12 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 </blockquote>
 
 _(Script to run before mover (No checks, always runs))_:
-: <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=htmlspecialchars($cfg['beforeScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
+: <input type='text' name='beforeScript' size='1' class='narrow mybefore' placeholder='/mnt/user/MyDiskNas/my_script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
 
 > Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
 
 _(Script to run after mover (No checks, always runs))_:
-: <input type='text' name='afterScript' size='1' class='narrow myafter' value='<?=htmlspecialchars($cfg['afterScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
+: <input type='text' name='afterScript' size='1' class='narrow myafter' placeholder='/mnt/user/MyDiskNas/my_script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
 
 > Path to a script that will be run after mover finishes.  This script will always be run.
 
@@ -498,7 +531,7 @@ _(Ignore files and folders listed inside of a text file)_:
 </select>
 
 _(File list path)_:
-: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filelistfDisabled?>>
+: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' placeholder='/mnt/user/MyDiskNas/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
 <p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
@@ -514,7 +547,7 @@ _(Ignore file types)_:
 </select>
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filetypesfDisabled?>>
+: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'])?>' <?=$filetypesfDisabled?>>
 
 > A list of file types separated by a <strong>comma</strong>.
 

@@ -59,8 +59,8 @@ REMAININGUNATTENDEDFILES=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
-# Flag if share has sync override
-overrideSyncFlag=0
+# PHP requires escaped quotes (" -> \") for text fields
+DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
@@ -171,16 +171,19 @@ function validate_filename() {
         return 1
     fi
 
-    ## Check for invalid characters
-    if [[ "$filename" =~ [\$\/\<\>\:\"\|\?\*] ]]; then
+    # Invalid characters (Linux + Windows + macOS safe)
+    if [[ "$filename" == *["$INVALID_FILE_CHARS_STR"]* ]]; then
         mvlogger "Error: Invalid characters in filename: '$filename'"
         return 1
     fi
 
-    ## Prevent path traversal
-    if [[ "$filename" == *"../"* ]]; then
-        mvlogger "Error: Path traversal attempt detected: '$filename'"
-        return 1
+    # Fast path traversal detection
+    if [[ "$filename" == *".."* ]]; then
+        # Only block if '..' is used as a path segment
+        if [[ "$filename" == "../"* || "$filename" == *"/.."* || "$filename" == "..\\"* || "$filename" == *"\\.."* ]]; then
+            mvlogger "Error: Path traversal attempt detected: '$filename'"
+            return 1
+        fi
     fi
 
     return 0
@@ -245,7 +248,12 @@ getMoverSettings() {
                 break
             }
         done <"$config_file"
-        echo "${value//\"/}" # Print value or empty string if not found, without quotes
+        #echo "${value//\"/}" # Print value or empty string if not found, without quotes
+
+        # Strip only *outer* quotes, keep inner ones
+        value="${value%\"}" # remove trailing "
+        value="${value#\"}" # remove leading "
+        echo "$value"
     }
 
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
@@ -473,21 +481,6 @@ getMoverSettings() {
         fi
     fi
 
-    if [ -z $(cfg sizefSync) ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Sync Size argument provided, defaulting to no"
-            echo 'sizefSync="no"' >>$config_file
-            SYNC_SIZE=0
-        fi
-    else
-        if [ $(cfg sizefSync) = "yes" ]; then
-            SYNC_SIZE=$(cfg sizeinMSync)
-            [ $SYNC_SIZE -gt 0 ] && mvlogger "Sync Size supplied: $SYNC_SIZE"
-        else
-            [[ ! "$config_file" =~ shareOverrideConfig ]] && SYNC_SIZE=0
-        fi
-    fi
-
     if [ -z $(cfg sparsnessf) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Sparness argument provided, defaulting to no"
@@ -523,10 +516,6 @@ getMoverSettings() {
         else
             [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
             mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
-            # Save share overrides for sync
-            overrideSyncFlag=1
-            SHARE_SYNCHRONIZECACHE="$SYNCHRONIZECACHE"
-            SHARE_LASTCACHESYNC="$LASTCACHESYNC"
         fi
     fi
 
@@ -542,6 +531,21 @@ getMoverSettings() {
             mvlogger "Resynchronize Primary to Secondary: $RESYNCHRONIZECACHE"
         fi
         [ $RESYNCHRONIZECACHE = "run-once" ] && RESYNCHRONIZECACHE="yes"
+    fi
+
+    if [ -z $(cfg sizefSync) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Sync Size argument provided, defaulting to no"
+            echo 'sizefSync="no"' >>$config_file
+            SYNC_SIZE=0
+        fi
+    else
+        if [ $(cfg sizefSync) = "yes" ]; then
+            SYNC_SIZE=$(cfg sizeinMSync)
+            [ $SYNCHRONIZECACHE == "yes" ] || [ $RESYNCHRONIZECACHE == "yes" ] && [ $SYNC_SIZE -gt 0 ] && mvlogger "Sync Size supplied: $SYNC_SIZE"
+        else
+            [[ ! "$config_file" =~ shareOverrideConfig ]] && SYNC_SIZE=0
+        fi
     fi
 
     if [ -z $(cfg testmode) ]; then
@@ -638,6 +642,25 @@ getMoverSettings() {
     else
         VALIDATE_FILENAMES=$(cfg validateFilenames)
         mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
+    fi
+
+    if [ -z "$(cfg invalidFileChars)" ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            # Print and unescape the array element \" -> "
+            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]//\\\"/\"}"
+            echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>$config_file
+            # Keep DEFAULT_INVALID_FILE_CHARS as an array
+            INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
+            # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
+            INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
+        fi
+    else
+        # Convert the string from cfg invalidFileChars to an array
+        IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
+        # Print and unescape the array element \" -> "
+        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"
+        # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
+        INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
     fi
 
     if [ -z $(cfg movefilesTool) ]; then
@@ -1171,15 +1194,6 @@ decideMoveActions() {
         mvlogger "------------------------------------------------------------------------"
     fi
 
-    # Restore share sync overrides if global sync disabled and share sync was enabled
-    if [[ "$SYNCHRONIZECACHE" == "no" && "$overrideSyncFlag" -eq 1 ]]; then
-        overrideSyncFlag=0
-        SYNCHRONIZECACHE="$SHARE_SYNCHRONIZECACHE"
-        if [ -n "$SHARE_LASTCACHESYNC" ]; then
-            LASTCACHESYNC="$SHARE_LASTCACHESYNC"
-        fi
-    fi
-
     ## Loop Filtered Filelist and for each file decide to move to/from the array
     mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep -c "/mnt" "$FILTERED_FILELIST") files, it can take a while..."
 
@@ -1187,7 +1201,7 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
     # $6:PRIMARYSIZETHRESH $7:FILESIZE $8:SPARSENESS $9:NBLINKS $10:INODE $11:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
+    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v cfgdir="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
         BEGIN {
             FS = OFS = "|"
 
@@ -1196,6 +1210,10 @@ decideMoveActions() {
             }
             # Initialize previous inode and dictionary for pool sums
             previous_inode = 0
+
+            # Init variables for track last share for Sync overrides
+            prev_share = ""
+            global_sync = SYNCHRONIZECACHE
 
             # Print new header
             printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH\n"
@@ -1228,9 +1246,47 @@ decideMoveActions() {
                 }
             }
 
-
             # Update pool sum (use pool_sums[$1])
             pool_sums[$1] += $7
+
+            ### Check if share has Sync override ###
+            # Set current sharename
+            sharename = $3
+            
+            # Check at the start using previous state
+            if (global_sync == "no" && sharename != prev_share) {
+
+            # Initialize for this share
+            cfgfile = cfgdir "/" sharename ".cfg"
+            SYNCHRONIZECACHE = "no"
+            LASTCACHESYNC = ""
+            moverOverride = 0
+            synchronizeCache = 0
+
+            # Check file exists
+            if ((getline test < cfgfile) > 0) {
+                close(cfgfile)
+
+                # parse the file
+                while ((getline line < cfgfile) > 0) {
+                    if (line ~ /moverOverride="yes"/)
+                        moverOverride = 1
+                    if (line ~ /synchronizeCache="yes"/)
+                        synchronizeCache = 1
+                    if (match(line, /lastCacheSync="([^"]+)"/, m))
+                        LASTCACHESYNC = m[1]
+                }
+                close(cfgfile)
+
+                if (moverOverride && synchronizeCache) {
+                    SYNCHRONIZECACHE = "yes"
+                }
+            }
+
+            # remember current state for next record
+            prev_share = sharename
+            }
+            ### ###
 
             # Take decision
             if (storage_pool == $1) {
