@@ -1274,15 +1274,14 @@ decideMoveActions() {
             # Update pool sum (use pool_sums[$1])
             pool_sums[$1] += $7
 
-            # Check if sync for share
+            # Check if sync override for share
             sharename = $3
             cfgfile = cfgdir "/" sharename ".cfg"
             
             # Check at the start using previous state
-            if (global_sync == "no" || prev_sync == "no" && sharename != prev_share) {
+            if (global_sync == "no" || sharename != prev_share) {
 
             # Initialize for this share
-            overrideSyncFlag = 0
             SYNCHRONIZECACHE = "no"
             LASTCACHESYNC = ""
             moverOverride = 0
@@ -1304,14 +1303,12 @@ decideMoveActions() {
                 close(cfgfile)
 
                 if (moverOverride && synchronizeCache) {
-                    overrideSyncFlag = 1
                     SYNCHRONIZECACHE = "yes"
                 }
             }
 
             # remember current state for next record
-            prev_share = sharename
-            prev_sync  = SYNCHRONIZECACHE
+            prev_share = sharename            
             }
 
             # Take decision
