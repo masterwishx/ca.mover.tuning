@@ -1283,12 +1283,23 @@ decideMoveActions() {
                     cmd2 = "grep -qs \"synchronizeCache=\\\"yes\\\"\" \"" cfgfile "\""
                     if (system(cmd2) == 0) {
                         overrideSyncFlag = 1
+                            # now extract lastCacheSync value if present
+                            cmd3 = "grep -o \"lastCacheSync=\\\"[^\\\"]*\\\"\" \"" cfgfile "\""
+                            while ((cmd3 | getline line) > 0) {
+                                if (match(line, /lastCacheSync="([^"]+)"/, m)) {
+                                    LASTCACHESYNC = m[1]
+                                }
+                            }
+                            close(cmd3)
+                        }                        
                     }
                 }
                 if (overrideSyncFlag == 1){
                    SYNCHRONIZECACHE = "yes"
-                   overrideSyncFlag = 0
                 }
+                else {
+                   SYNCHRONIZECACHE = "no"
+                }                               
             }
 
             # Take decision
