@@ -1256,7 +1256,7 @@ decideMoveActions() {
             sharename = $3
             
             # Check at the start using previous state
-            if (global_sync == "no" || sharename != prev_share) {
+            if (global_sync == "no" && sharename != prev_share) {
 
             # Initialize for this share
             cfgfile = cfgdir "/" sharename ".cfg"
