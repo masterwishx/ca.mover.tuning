@@ -1235,6 +1235,11 @@ decideMoveActions() {
             # Initialize previous inode and dictionary for pool sums
             previous_inode = 0
 
+            # Track last share for Sync
+            prev_share = ""
+            prev_sync  = "no"            
+            global_sync = SYNCHRONIZECACHE
+
             # Print new header
             printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH\n"
         }
@@ -1272,34 +1277,41 @@ decideMoveActions() {
             # Check if sync for share
             sharename = $3
             cfgfile = cfgdir "/" sharename ".cfg"
-            overrideSyncFlag = 0
+            
+            # Check at the start using previous state
+            if (global_sync == "no" || prev_sync == "no" && sharename != prev_share) {
 
-            # Check only if file exists
-            if (system("[ -f \"" cfgfile "\" ]") == 0) {
-                # check moverOverride="yes"
-                cmd = "grep -qs \"moverOverride=\\\"yes\\\"\" \"" cfgfile "\""
-                if (system(cmd) == 0) {
-                    # then check synchronizeCache="yes"
-                    cmd2 = "grep -qs \"synchronizeCache=\\\"yes\\\"\" \"" cfgfile "\""
-                    if (system(cmd2) == 0) {
-                        overrideSyncFlag = 1
-                            # now extract lastCacheSync value if present
-                            cmd3 = "grep -o \"lastCacheSync=\\\"[^\\\"]*\\\"\" \"" cfgfile "\""
-                            while ((cmd3 | getline line) > 0) {
-                                if (match(line, /lastCacheSync="([^"]+)"/, m)) {
-                                    LASTCACHESYNC = m[1]
-                                }
-                            }
-                            close(cmd3)
-                        }                        
-                    }
+            # Initialize for this share
+            overrideSyncFlag = 0
+            SYNCHRONIZECACHE = "no"
+            LASTCACHESYNC = ""
+            moverOverride = 0
+            synchronizeCache = 0
+
+            # Check file exists
+            if ((getline test < cfgfile) > 0) {
+                close(cfgfile)
+
+                # parse the file
+                while ((getline line < cfgfile) > 0) {
+                    if (line ~ /moverOverride="yes"/)
+                        moverOverride = 1
+                    if (line ~ /synchronizeCache="yes"/)
+                        synchronizeCache = 1
+                    if (match(line, /lastCacheSync="([^"]+)"/, m))
+                        LASTCACHESYNC = m[1]
                 }
-                if (overrideSyncFlag == 1){
-                   SYNCHRONIZECACHE = "yes"
+                close(cfgfile)
+
+                if (moverOverride && synchronizeCache) {
+                    overrideSyncFlag = 1
+                    SYNCHRONIZECACHE = "yes"
                 }
-                else {
-                   SYNCHRONIZECACHE = "no"
-                }                               
+            }
+
+            # remember current state for next record
+            prev_share = sharename
+            prev_sync  = SYNCHRONIZECACHE
             }
 
             # Take decision
