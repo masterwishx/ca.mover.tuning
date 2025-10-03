@@ -61,8 +61,6 @@ COUNT_SECONDARY_FILES=0
 overrideFlag=0
 # PHP requires escaped quotes (" -> \") for text fields
 DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
-# Flag if share has sync override
-overrideSyncFlag=0
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
@@ -518,10 +516,6 @@ getMoverSettings() {
         else
             [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
             mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
-            # Save share overrides for sync
-            # overrideSyncFlag=1
-            SHARE_SYNCHRONIZECACHE="$SYNCHRONIZECACHE"
-            SHARE_LASTCACHESYNC="$LASTCACHESYNC"
         fi
     fi
 
@@ -731,10 +725,6 @@ createFilteredFilelist() {
         if [ -f "${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg" ]; then
             SHARETUNINGFILE="${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg"
             if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
-                # Flag if share has sync override
-                if grep -qs 'synchronizeCache="yes"' "$SHARETUNINGFILE"; then
-                    overrideSyncFlag=1
-                fi
                 overrideFlag=1
                 mvlogger "Settings override:"
                 mvlogger "------------------"
@@ -744,7 +734,6 @@ createFilteredFilelist() {
         elif [ $overrideFlag = 1 ]; then
             #else if overrideFLag set from previous loop then restore global settings
             overrideFlag=0
-            overrideSyncFlag=0
             #Get Mover Tuning Settings
             mvlogger "Restore global settings"
             mvlogger "-----------------------"
@@ -1206,18 +1195,6 @@ decideMoveActions() {
         mvlogger "------------------------------------------------------------------------"
     fi
 
-    # Restore share sync overrides if global sync disabled and share sync was enabled
-    # if [[ "$SYNCHRONIZECACHE" == "no" && "$overrideSyncFlag" -eq 1 ]]; then
-    mvDebuglogger "overrideSyncFlag= $overrideSyncFlag" "overrideSyncFlag"
-    if [[ "$overrideSyncFlag" -eq 1 ]]; then
-        mvDebuglogger "overrideSyncFlag= $overrideSyncFlag" "overrideSyncFlag"
-        overrideSyncFlag=0
-        # # SYNCHRONIZECACHE="$SHARE_SYNCHRONIZECACHE"
-        # # if [ -n "$SHARE_LASTCACHESYNC" ]; then
-        # #     LASTCACHESYNC="$SHARE_LASTCACHESYNC"
-        # fi
-    fi
-
     ## Loop Filtered Filelist and for each file decide to move to/from the array
     mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep -c "/mnt" "$FILTERED_FILELIST") files, it can take a while..."
 
@@ -1235,9 +1212,9 @@ decideMoveActions() {
             # Initialize previous inode and dictionary for pool sums
             previous_inode = 0
 
-            # Track last share for Sync
+            # Init variables for track last share for Sync overrides
             prev_share = ""
-            prev_sync  = "no"            
+            prev_sync  = "no"
             global_sync = SYNCHRONIZECACHE
 
             # Print new header
@@ -1274,14 +1251,15 @@ decideMoveActions() {
             # Update pool sum (use pool_sums[$1])
             pool_sums[$1] += $7
 
-            # Check if sync override for share
+            ### Check if share has Sync override ###
+            # Set current sharename
             sharename = $3
-            cfgfile = cfgdir "/" sharename ".cfg"
             
             # Check at the start using previous state
             if (global_sync == "no" || sharename != prev_share) {
 
             # Initialize for this share
+            cfgfile = cfgdir "/" sharename ".cfg"
             SYNCHRONIZECACHE = "no"
             LASTCACHESYNC = ""
             moverOverride = 0
@@ -1308,8 +1286,9 @@ decideMoveActions() {
             }
 
             # remember current state for next record
-            prev_share = sharename            
+            prev_share = sharename
             }
+            ### ###
 
             # Take decision
             if (storage_pool == $1) {
