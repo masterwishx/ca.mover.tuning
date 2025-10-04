@@ -1215,6 +1215,10 @@ decideMoveActions() {
             prev_share = ""
             global_sync = SYNCHRONIZECACHE
 
+            # Fast check if cfgdir exists
+            cfgdir_exist = ((getline t < cfgdir "/.") >= 0)
+            close(cfgdir "/.")
+
             # Print new header
             printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH\n"
         }
@@ -1254,7 +1258,7 @@ decideMoveActions() {
             sharename = $3
             
             # Check at the start using previous state
-            if (global_sync == "no" && sharename != prev_share) {
+            if (cfgdir_exist && global_sync == "no" && sharename != prev_share) {
 
             # Initialize for this share
             cfgfile = cfgdir "/" sharename ".cfg"
