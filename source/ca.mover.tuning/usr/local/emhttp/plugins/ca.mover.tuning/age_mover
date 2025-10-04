@@ -1201,7 +1201,7 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
     # $6:PRIMARYSIZETHRESH $7:FILESIZE $8:SPARSENESS $9:NBLINKS $10:INODE $11:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v cfgdir="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
+    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
         BEGIN {
             FS = OFS = "|"
 
@@ -1215,9 +1215,9 @@ decideMoveActions() {
             prev_share = ""
             global_sync = SYNCHRONIZECACHE
 
-            # Fast check if cfgdir exists
-            cfgdir_exist = ((getline t < cfgdir "/.") >= 0)
-            close(cfgdir "/.")
+            # Fast check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
+            shareOverrideConfig_exist = ((getline t < MOVERTUNING_OVERRIDE_CFGFOLDER "/.") >= 0)
+            close(MOVERTUNING_OVERRIDE_CFGFOLDER "/.")
 
             # Print new header
             printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH\n"
@@ -1258,10 +1258,10 @@ decideMoveActions() {
             sharename = $3
             
             # Check at the start using previous state
-            if (cfgdir_exist && global_sync == "no" && sharename != prev_share) {
+            if (shareOverrideConfig_exist && global_sync == "no" && sharename != prev_share) {
 
             # Initialize for this share
-            cfgfile = cfgdir "/" sharename ".cfg"
+            cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" sharename ".cfg"
             SYNCHRONIZECACHE = "no"
             LASTCACHESYNC = ""
             moverOverride = 0
