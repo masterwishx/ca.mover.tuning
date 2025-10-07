@@ -550,9 +550,9 @@ getMoverSettings() {
 
     if [ -z $(cfg testmode) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Test Mode argument provided, defaulting to yes"
-            echo 'testmode="yes"' >>$config_file
-            TESTMODE="yes"
+            mvlogger "No Test Mode argument provided, defaulting to no"
+            echo 'testmode="no"' >>$config_file
+            TESTMODE="no"
         fi
     else
         TESTMODE=$(cfg testmode)
@@ -1216,8 +1216,9 @@ decideMoveActions() {
             global_sync = SYNCHRONIZECACHE
 
             # Fast check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
-            shareOverrideConfig_exist = ((getline t < MOVERTUNING_OVERRIDE_CFGFOLDER "/.") >= 0)
-            close(MOVERTUNING_OVERRIDE_CFGFOLDER "/.")
+            # shareOverrideCfgDir_exist = ((getline t < MOVERTUNING_OVERRIDE_CFGFOLDER "/.") >= 0)
+            # close(MOVERTUNING_OVERRIDE_CFGFOLDER "/.")
+            shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
 
             # Print new header
             printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH\n"
@@ -1258,7 +1259,7 @@ decideMoveActions() {
             sharename = $3
             
             # Check at the start using previous state
-            if (shareOverrideConfig_exist && global_sync == "no" && sharename != prev_share) {
+            if (shareOverrideCfgDir_exist && global_sync == "no" && sharename != prev_share) {
 
             # Initialize for this share
             cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" sharename ".cfg"
