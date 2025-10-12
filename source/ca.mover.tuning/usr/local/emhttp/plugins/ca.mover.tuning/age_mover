@@ -917,6 +917,8 @@ createFilteredFilelist() {
         #Base Find String
         # Alterate SHAREPATH when RebalanceShare=true
         if [[ "$REBALANCESHARES" = "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
+            # Initialize FINDSTR with the base find command
+            FINDSTR="find"
             # Iterate over each unattended storage pool
             for dir in $UNATTENDEDSTORAGE; do
                 # Skip if the share folder doesn't exist in this dir
