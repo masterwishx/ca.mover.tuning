@@ -917,15 +917,11 @@ createFilteredFilelist() {
         #Base Find String
         # Alterate SHAREPATH when RebalanceShare=true
         if [[ "$REBALANCESHARES" = "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
-            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            # Initialize FINDSTR with the base find command
-            FINDSTR="find"
-            # Iterate over all directories in /mnt/*
-            for dir in /mnt/*; do
-                # Check if the directory contains a subdirectory named $SHARENAME
-                if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* ]]; then
-                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                    FINDSTR+=" \"$dir/$SHARENAME\""
+            # Iterate over each unattended storage pool
+            for dir in $UNATTENDEDSTORAGE; do
+                # Skip if the share folder doesn't exist in this dir
+                if [[ -d "/mnt/$dir/$SHARENAME" ]]; then
+                    FINDSTR+=" \"/mnt/$dir/$SHARENAME\""
                 fi
             done
             # Add the depth option at the end
