@@ -310,7 +310,7 @@ _(Force move of all files on a schedule)_:
 <?=mk_option($cfg['force'],"yes","Yes")?>
 </select>
 
-> Select <strong>yes</strong> to run <strong>original mover</strong> on a custom cron schedule.
+> Select <strong>yes</strong> to run <strong>original mover</strong> on a custom cron schedule (ignores plug-in filters).
 
 _(Cron Schedule to force move all of files)_:
 : <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
@@ -347,7 +347,7 @@ _(Move Now button follows plug-in filters)_:
 <?=mk_option($cfg['movenow'],"yes","Yes")?>
 </select>
 
-> Select <strong>Yes</strong> to to follow plug-in filters, <strong>No</strong> to run original mover from button.
+> Select <strong>Yes</strong> to follow plug-in filters, <strong>No</strong> to run original mover from button.
 </div>
 
 <div class="title"><span class="center"><i class="fa fa-filter title"></i>Mover Tuning - Filters</span></div>

@@ -550,9 +550,9 @@ getMoverSettings() {
 
     if [ -z $(cfg testmode) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Test Mode argument provided, defaulting to yes"
-            echo 'testmode="yes"' >>$config_file
-            TESTMODE="yes"
+            mvlogger "No Test Mode argument provided, defaulting to no"
+            echo 'testmode="no"' >>$config_file
+            TESTMODE="no"
         fi
     else
         TESTMODE=$(cfg testmode)
@@ -798,20 +798,22 @@ createFilteredFilelist() {
         mvlogger "Primary storage: $PRIMARYSTORAGENAME - size: $(bytes_to_human $POOLSIZE) - used: $POOLPCTUSED % ($(bytes_to_human $POOLBYTEUSED))"
         mvlogger "Secondary storage: $SECONDARYSTORAGENAME"
 
-        # Count number of storage pools on system for this share:
-        if [ "$PRIMARYSTORAGENAME" = "user0" ] || [ "$SECONDARYSTORAGENAME" = "user0" ]; then
-            UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
-                -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
-                -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
-                -not -path "/mnt/user*" \
-                -not -path "/mnt/disk*" \
-                -maxdepth 2 | cut -d'/' -f3)
-        else
-            UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
-                -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
-                -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
-                -not -path "/mnt/user*" \
-                -maxdepth 2 | cut -d'/' -f3)
+        # Find unattended storage for a share when rebalancing shares
+        if [ "$REBALANCESHARES" = "yes" ]; then
+            if [ "$PRIMARYSTORAGENAME" = "user0" ] || [ "$SECONDARYSTORAGENAME" = "user0" ]; then
+                UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
+                    -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
+                    -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
+                    -not -path "/mnt/user*" \
+                    -not -path "/mnt/disk*" \
+                    -maxdepth 2 | cut -d'/' -f3)
+            else
+                UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
+                    -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
+                    -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
+                    -not -path "/mnt/user*" \
+                    -maxdepth 2 | cut -d'/' -f3)
+            fi
         fi
 
         # Determine sharepath
@@ -909,53 +911,63 @@ createFilteredFilelist() {
         fi
 
         # Do not process this pool if Share path is /mnt/cache
-        if [ "$SHAREPATH" = "/mnt/cache" ]; then
+        if [[ "$SHAREPATH" == "/mnt/cache" ]]; then
             mvlogger "Skipping processing for /mnt/cache"
             continue # Move to the next iteration of the loop
         fi
 
-        #Base Find String
+        # Initialize FINDSTR with the base find command
+        FINDSTR="find"
         # Alterate SHAREPATH when RebalanceShare=true
-        if [[ "$REBALANCESHARES" = "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
-            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            # Initialize FINDSTR with the base find command
-            FINDSTR="find"
-            # Iterate over all directories in /mnt/*
-            for dir in /mnt/*; do
-                # Check if the directory contains a subdirectory named $SHARENAME
-                if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* ]]; then
-                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                    FINDSTR+=" \"$dir/$SHARENAME\""
+        if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
+            # Iterate over each unattended storage pool
+            for dir in $UNATTENDEDSTORAGE; do
+                # Skip if the share folder doesn't exist in this dir
+                if [[ -d "/mnt/$dir/$SHARENAME" ]]; then
+                    FINDSTR+=" \"/mnt/$dir/$SHARENAME\""
                 fi
             done
-            # Add the depth option at the end
-            FINDSTR+=" -type f -depth"
-        # Alterate SHAREPATH on Cache=prefer
-        elif [ "$SHAREUSECACHE" = "prefer" ]; then
-            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            COUNT_SECONDARY_FILES=0
-            # Initialize FINDSTR with the base find command
-            FINDSTR="find"
-            # Iterate over all directories in /mnt/*
-            for dir in /mnt/*; do
-                # Check if the directory contains a subdirectory named $SHARENAME
-                if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* ]]; then
-                    # If the directory contains a secondary storage
-                    if [[ "$SECONDARYSTORAGENAME" != "user0" && "$dir/$SHARENAME" = "/mnt/$SECONDARYSTORAGENAME"* ]] || [[ "$SECONDARYSTORAGENAME" = "user0" && "$dir/$SHARENAME" = "/mnt/disk"* ]]; then
-                        # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                        FINDSTR+=" \"$dir/$SHARENAME\""
-                        # Count the number of files in the secondary storage directory
-                        tmp=$(find "$dir/$SHARENAME" -type f -depth | wc -l)
-                        COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
-                    fi
-                fi
-            done
-            # Add the depth option at the end
-            FINDSTR+=" -type f -depth"
-        # Alterate SHAREPATH on Cache=yes
-        else
-            FINDSTR="find \"${SHAREPATH}\" -type f -depth"
         fi
+
+        # Alterate SHAREPATH on Cache=prefer
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
+            COUNT_SECONDARY_FILES=0
+
+            if [[ -n "$SECONDARYSTORAGENAME" ]]; then
+                # Case 1: Secondary is a specific pool
+                if [[ "$SECONDARYSTORAGENAME" != "user0" ]]; then
+                    SECONDARY_PATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
+                    if [[ -d "$SECONDARY_PATH" ]]; then
+                        # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
+                        FINDSTR+=" \"$SECONDARY_PATH\""
+                        # Count the number of files in the secondary storage directory
+                        tmp=$(find "$SECONDARY_PATH" -type f -depth | wc -l)
+                        COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
+                    else
+                        continue # Move to the next iteration of the loop
+                    fi
+
+                # Case 2: Secondary is the array (user0)
+                else
+                    for SHAREPATH in /mnt/disk[0-9]/"$SHARENAME"/ /mnt/disk[1-9][0-9]/"$SHARENAME"/; do
+                        if [[ -d "$SHAREPATH" ]]; then
+                            # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
+                            FINDSTR+=" \"$SHAREPATH\""
+                            # Count the number of files in the secondary storage directory
+                            tmp=$(find "$SHAREPATH" -type f -depth | wc -l)
+                            COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
+                        fi
+                    done
+                fi
+            fi
+
+        # Alter SHAREPATH on Cache=yes
+        else
+            FINDSTR+=" \"${SHAREPATH}\""
+        fi
+
+        # Add a search files option for the shares at the end
+        FINDSTR+=" -type f"
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         #Add Age variables to find string
@@ -1201,7 +1213,7 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
     # $6:PRIMARYSIZETHRESH $7:FILESIZE $8:SPARSENESS $9:NBLINKS $10:INODE $11:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v cfgdir="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
+    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
         BEGIN {
             FS = OFS = "|"
 
@@ -1214,6 +1226,11 @@ decideMoveActions() {
             # Init variables for track last share for Sync overrides
             prev_share = ""
             global_sync = SYNCHRONIZECACHE
+
+            # Fast check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
+            # shareOverrideCfgDir_exist = ((getline t < MOVERTUNING_OVERRIDE_CFGFOLDER "/.") >= 0)
+            # close(MOVERTUNING_OVERRIDE_CFGFOLDER "/.")
+            shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
 
             # Print new header
             printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH\n"
@@ -1254,10 +1271,10 @@ decideMoveActions() {
             sharename = $3
             
             # Check at the start using previous state
-            if (global_sync == "no" && sharename != prev_share) {
+            if (shareOverrideCfgDir_exist && global_sync == "no" && sharename != prev_share) {
 
             # Initialize for this share
-            cfgfile = cfgdir "/" sharename ".cfg"
+            cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" sharename ".cfg"
             SYNCHRONIZECACHE = "no"
             LASTCACHESYNC = ""
             moverOverride = 0
