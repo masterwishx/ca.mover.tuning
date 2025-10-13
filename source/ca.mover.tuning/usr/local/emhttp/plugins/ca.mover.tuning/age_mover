@@ -909,16 +909,15 @@ createFilteredFilelist() {
         fi
 
         # Do not process this pool if Share path is /mnt/cache
-        if [ "$SHAREPATH" = "/mnt/cache" ]; then
+        if [[ "$SHAREPATH" == "/mnt/cache" ]]; then
             mvlogger "Skipping processing for /mnt/cache"
             continue # Move to the next iteration of the loop
         fi
 
-        #Base Find String
+        # Initialize FINDSTR with the base find command
+        FINDSTR="find"
         # Alterate SHAREPATH when RebalanceShare=true
-        if [[ "$REBALANCESHARES" = "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
-            # Initialize FINDSTR with the base find command
-            FINDSTR="find"
+        if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
             # Iterate over each unattended storage pool
             for dir in $UNATTENDEDSTORAGE; do
                 # Skip if the share folder doesn't exist in this dir
@@ -926,20 +925,18 @@ createFilteredFilelist() {
                     FINDSTR+=" \"/mnt/$dir/$SHARENAME\""
                 fi
             done
-            # Add the depth option at the end
-            FINDSTR+=" -type f -depth"
+        fi
+
         # Alterate SHAREPATH on Cache=prefer
-        elif [ "$SHAREUSECACHE" = "prefer" ]; then
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
             # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
             COUNT_SECONDARY_FILES=0
-            # Initialize FINDSTR with the base find command
-            FINDSTR="find"
             # Iterate over all directories in /mnt/*
             for dir in /mnt/*; do
                 # Check if the directory contains a subdirectory named $SHARENAME
                 if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* ]]; then
                     # If the directory contains a secondary storage
-                    if [[ "$SECONDARYSTORAGENAME" != "user0" && "$dir/$SHARENAME" = "/mnt/$SECONDARYSTORAGENAME"* ]] || [[ "$SECONDARYSTORAGENAME" = "user0" && "$dir/$SHARENAME" = "/mnt/disk"* ]]; then
+                    if { [[ "$SECONDARYSTORAGENAME" != "user0" && "$dir/$SHARENAME" == "/mnt/$SECONDARYSTORAGENAME"* ]] || [[ "$SECONDARYSTORAGENAME" == "user0" && "$dir/$SHARENAME" == "/mnt/disk"* ]]; }; then
                         # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
                         FINDSTR+=" \"$dir/$SHARENAME\""
                         # Count the number of files in the secondary storage directory
@@ -948,12 +945,13 @@ createFilteredFilelist() {
                     fi
                 fi
             done
-            # Add the depth option at the end
-            FINDSTR+=" -type f -depth"
-        # Alterate SHAREPATH on Cache=yes
+        # Alter SHAREPATH on Cache=yes
         else
-            FINDSTR="find \"${SHAREPATH}\" -type f -depth"
+            FINDSTR+=" \"${SHAREPATH}\""
         fi
+
+        # Add a search files option for the shares at the end
+        FINDSTR+=" -type f"
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         #Add Age variables to find string
