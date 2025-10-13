@@ -933,10 +933,12 @@ createFilteredFilelist() {
             COUNT_SECONDARY_FILES=0
             # Iterate over all directories in /mnt/*
             for dir in /mnt/*; do
+                # Skip virtual mounts
+                [[ "$dir" == /mnt/user* ]] && continue
                 # Check if the directory contains a subdirectory named $SHARENAME
-                if [[ -d "$dir/$SHARENAME" && "$dir/$SHARENAME" != "/mnt/user"* ]]; then
-                    # If the directory contains a secondary storage
-                    if { [[ "$SECONDARYSTORAGENAME" != "user0" && "$dir/$SHARENAME" == "/mnt/$SECONDARYSTORAGENAME"* ]] || [[ "$SECONDARYSTORAGENAME" == "user0" && "$dir/$SHARENAME" == "/mnt/disk"* ]]; }; then
+                if [[ -d "$dir/$SHARENAME" ]]; then
+                    # If the directory contains a secondary storage                    
+                    if [[ "$SECONDARYSTORAGENAME" != "user0" && "$dir/$SHARENAME" == "/mnt/$SECONDARYSTORAGENAME/$SHARENAME" ]] || [[ "$SECONDARYSTORAGENAME" == "user0" && "$dir/$SHARENAME" == "/mnt/disk"* ]]; then
                         # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
                         FINDSTR+=" \"$dir/$SHARENAME\""
                         # Count the number of files in the secondary storage directory
