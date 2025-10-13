@@ -798,20 +798,22 @@ createFilteredFilelist() {
         mvlogger "Primary storage: $PRIMARYSTORAGENAME - size: $(bytes_to_human $POOLSIZE) - used: $POOLPCTUSED % ($(bytes_to_human $POOLBYTEUSED))"
         mvlogger "Secondary storage: $SECONDARYSTORAGENAME"
 
-        # Count number of storage pools on system for this share:
-        if [ "$PRIMARYSTORAGENAME" = "user0" ] || [ "$SECONDARYSTORAGENAME" = "user0" ]; then
-            UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
-                -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
-                -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
-                -not -path "/mnt/user*" \
-                -not -path "/mnt/disk*" \
-                -maxdepth 2 | cut -d'/' -f3)
-        else
-            UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
-                -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
-                -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
-                -not -path "/mnt/user*" \
-                -maxdepth 2 | cut -d'/' -f3)
+        # Find unattended storage for a share when rebalancing shares
+        if [ "$REBALANCESHARES" = "yes" ]; then
+            if [ "$PRIMARYSTORAGENAME" = "user0" ] || [ "$SECONDARYSTORAGENAME" = "user0" ]; then
+                UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
+                    -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
+                    -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
+                    -not -path "/mnt/user*" \
+                    -not -path "/mnt/disk*" \
+                    -maxdepth 2 | cut -d'/' -f3)
+            else
+                UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
+                    -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
+                    -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
+                    -not -path "/mnt/user*" \
+                    -maxdepth 2 | cut -d'/' -f3)
+            fi
         fi
 
         # Determine sharepath
