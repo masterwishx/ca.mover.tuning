@@ -833,9 +833,54 @@ createFilteredFilelist() {
             continue # Move to the next iteration of the loop
         fi
 
-        if [ "$SHAREUSECACHE" = "prefer" ] || { [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; }; then
-            SHAREPATH="/mnt/*/$SHARENAME"
+        # Alterate SHAREPATH when RebalanceShare=true
+        if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
+            UNATTENDEDSTORAGE_SHAREPATH=""
+            # Iterate over each unattended storage pool
+            for dir in $UNATTENDEDSTORAGE; do
+                # Skip if the share folder doesn't exist in this dir
+                if [[ -d "/mnt/$dir/$SHARENAME" ]]; then
+                    UNATTENDEDSTORAGE_SHAREPATH+=" \"/mnt/$dir/$SHARENAME\""
+                fi
+            done
         fi
+
+        # Alterate SHAREPATH on Cache=prefer
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
+            COUNT_SECONDARY_FILES=0
+            PREFER_SHAREPATH=""
+
+            if [[ -n "$SECONDARYSTORAGENAME" ]]; then
+                # Case 1: Secondary is a specific pool
+                if [[ "$SECONDARYSTORAGENAME" != "user0" ]]; then
+                    PREFER_SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
+                    if [[ -d "$PREFER_SHAREPATH" ]]; then
+                        # Count the number of files in the secondary storage directory
+                        tmp=$(find "$PREFER_SHAREPATH" -type f -depth | wc -l)
+                        COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
+                    else
+                        # Do not process this pool if path does not exist
+                        mvlogger "$PREFER_SHAREPATH share on secondary storage does not exist yet."
+                        mvlogger "=> Skipping"
+                        continue # Move to the next iteration of the loop
+                    fi
+
+                # Case 2: Secondary is the array (user0)
+                else
+                    for SHAREPATH in /mnt/disk[0-9]/"$SHARENAME"/ /mnt/disk[1-9][0-9]/"$SHARENAME"/; do
+                        if [[ -d "$SHAREPATH" ]]; then
+                            # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
+                            PREFER_SHAREPATH+=" \"$SHAREPATH\""
+                            # Count the number of files in the secondary storage directory
+                            tmp=$(find "$SHAREPATH" -type f -depth | wc -l)
+                            COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
+                        fi
+                    done
+                fi
+                SHAREPATH="$PREFER_SHAREPATH"
+            fi
+        fi
+
         mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
 
         # Give information according to cache mode and thresholds
@@ -918,53 +963,13 @@ createFilteredFilelist() {
 
         # Initialize FINDSTR with the base find command
         FINDSTR="find"
-        # Alterate SHAREPATH when RebalanceShare=true
+        # # Alterate SHAREPATH when RebalanceShare=true
         if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
-            # Iterate over each unattended storage pool
-            for dir in $UNATTENDEDSTORAGE; do
-                # Skip if the share folder doesn't exist in this dir
-                if [[ -d "/mnt/$dir/$SHARENAME" ]]; then
-                    FINDSTR+=" \"/mnt/$dir/$SHARENAME\""
-                fi
-            done
+            FINDSTR+=" \"${UNATTENDEDSTORAGE_SHAREPATH}\""
         fi
 
-        # Alterate SHAREPATH on Cache=prefer
-        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
-            COUNT_SECONDARY_FILES=0
-
-            if [[ -n "$SECONDARYSTORAGENAME" ]]; then
-                # Case 1: Secondary is a specific pool
-                if [[ "$SECONDARYSTORAGENAME" != "user0" ]]; then
-                    SECONDARY_PATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
-                    if [[ -d "$SECONDARY_PATH" ]]; then
-                        # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                        FINDSTR+=" \"$SECONDARY_PATH\""
-                        # Count the number of files in the secondary storage directory
-                        tmp=$(find "$SECONDARY_PATH" -type f -depth | wc -l)
-                        COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
-                    else
-                        continue # Move to the next iteration of the loop
-                    fi
-
-                # Case 2: Secondary is the array (user0)
-                else
-                    for SHAREPATH in /mnt/disk[0-9]/"$SHARENAME"/ /mnt/disk[1-9][0-9]/"$SHARENAME"/; do
-                        if [[ -d "$SHAREPATH" ]]; then
-                            # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                            FINDSTR+=" \"$SHAREPATH\""
-                            # Count the number of files in the secondary storage directory
-                            tmp=$(find "$SHAREPATH" -type f -depth | wc -l)
-                            COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
-                        fi
-                    done
-                fi
-            fi
-
-        # Alter SHAREPATH on Cache=yes
-        else
-            FINDSTR+=" \"${SHAREPATH}\""
-        fi
+        # Alter SHAREPATH on Cache=yes,prefer
+        FINDSTR+=" \"${SHAREPATH}\""
 
         # Add a search files option for the shares at the end
         FINDSTR+=" -type f"
