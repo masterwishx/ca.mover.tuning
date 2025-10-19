@@ -816,7 +816,11 @@ createFilteredFilelist() {
             fi
         fi
 
-        # Determine sharepath
+        ##
+        mvlogger "UNATTENDEDSTORAGE storage: $UNATTENDEDSTORAGE" 
+        ##
+
+        # Determine sharepath !! to check when  REBALANCE (user0 primary)!!
         SHAREPATH="/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
 
         if [ ! -d "$SHAREPATH" ]; then # && [ $SHAREUSECACHE != "no" ]
@@ -846,28 +850,30 @@ createFilteredFilelist() {
         fi
 
         # Alterate SHAREPATH on Cache=prefer
-        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then 
             COUNT_SECONDARY_FILES=0
             PREFER_SHAREPATH=""
+            PRIMARY_SHARE_PATH="$SHAREPATH"
 
             if [[ -n "$SECONDARYSTORAGENAME" ]]; then
                 # Case 1: Secondary is a specific pool
                 if [[ "$SECONDARYSTORAGENAME" != "user0" ]]; then
-                    PREFER_SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
-                    if [[ -d "$PREFER_SHAREPATH" ]]; then
+                    SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
+                    PREFER_SHAREPATH+=" \"$SHAREPATH\""
+                    if [[ -d "$SHAREPATH" ]]; then
                         # Count the number of files in the secondary storage directory
-                        tmp=$(find "$PREFER_SHAREPATH" -type f -depth | wc -l)
+                        tmp=$(find "$SHAREPATH" -type f -depth | wc -l)
                         COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                     else
                         # Do not process this pool if path does not exist
-                        mvlogger "$PREFER_SHAREPATH share on secondary storage does not exist yet."
+                        mvlogger "$PRIMARY_SHARE_PATH exist but $SHAREPATH does not exist. Is the secondary share not created yet?."
                         mvlogger "=> Skipping"
                         continue # Move to the next iteration of the loop
                     fi
 
                 # Case 2: Secondary is the array (user0)
                 else
-                    for SHAREPATH in /mnt/disk[0-9]/"$SHARENAME"/ /mnt/disk[1-9][0-9]/"$SHARENAME"/; do
+                    for SHAREPATH in /mnt/disk[0-9]/"$SHARENAME" /mnt/disk[1-9][0-9]/"$SHARENAME"; do
                         if [[ -d "$SHAREPATH" ]]; then
                             # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
                             PREFER_SHAREPATH+=" \"$SHAREPATH\""
@@ -877,7 +883,6 @@ createFilteredFilelist() {
                         fi
                     done
                 fi
-                SHAREPATH="$PREFER_SHAREPATH"
             fi
         fi
 
@@ -965,11 +970,17 @@ createFilteredFilelist() {
         FINDSTR="find"
         # # Alterate SHAREPATH when RebalanceShare=true
         if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
-            FINDSTR+=" \"${UNATTENDEDSTORAGE_SHAREPATH}\""
+            FINDSTR+=" ${UNATTENDEDSTORAGE_SHAREPATH}"
         fi
 
-        # Alter SHAREPATH on Cache=yes,prefer
-        FINDSTR+=" \"${SHAREPATH}\""
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
+            # Alter SHAREPATH on Cache=prefer
+            FINDSTR+=" $PREFER_SHAREPATH"
+        else
+            # Alter SHAREPATH on Cache=yes
+            #When rebalance
+            FINDSTR+=" \"${SHAREPATH}\""
+        fi
 
         # Add a search files option for the shares at the end
         FINDSTR+=" -type f"
