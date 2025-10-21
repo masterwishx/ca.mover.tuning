@@ -1243,7 +1243,7 @@ decideMoveActions() {
             prev_share = ""
             global_sync = SYNCHRONIZECACHE
 
-            # Check if MOVERTUNING_OVERRIDE_CFGFOLDER exists            
+            # Check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
 
             # Print new header

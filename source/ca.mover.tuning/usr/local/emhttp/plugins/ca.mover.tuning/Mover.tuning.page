@@ -310,7 +310,7 @@ _(Force move of all files on a schedule)_:
 <?=mk_option($cfg['force'],"yes","Yes")?>
 </select>
 
-> Select <strong>yes</strong> to run <strong>original mover</strong> on a custom cron schedule (ignores plug-in filters).
+> Select <strong>Yes</strong> to run <strong>original mover</strong> on a custom cron schedule (ignores plugin filters).
 
 _(Cron Schedule to force move all of files)_:
 : <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
@@ -347,7 +347,7 @@ _(Move Now button follows plug-in filters)_:
 <?=mk_option($cfg['movenow'],"yes","Yes")?>
 </select>
 
-> Select <strong>Yes</strong> to follow plug-in filters, <strong>No</strong> to run original mover from button.
+> Select <strong>Yes</strong> to follow plugin filters, <strong>No</strong> to run original mover (ignores plugin filters) from the button.
 </div>
 
 <div class="title"><span class="center"><i class="fa fa-filter title"></i>Mover Tuning - Filters</span></div>
@@ -662,7 +662,7 @@ _(Rebalance shares)_:
 </select>
 
 <blockquote class="inline_help">
-<p>Moves files from shares to their primary or secondary storage if they are spread across Unattended Storage.</p>
+<p>Moves files from shares to their primary and/or secondary storage if they are spread across <strong><em>Unattended Storage</em></strong> (disks/pools not assigned as a share's Primary or Secondary).</p>
 <p>May move older files from <strong><em>Primary->Secondary</em></strong> or <strong><em>Secondary->Primary</em></strong> if allowed (cache:prefer, cache:yes, cache:only) to free up space.</p>
 <p>Run-once setting will reset back to <strong>No</strong> after next run.</p>
 </blockquote>
