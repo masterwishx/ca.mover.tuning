@@ -463,7 +463,8 @@ getMoverSettings() {
         fi
     else
         REBALANCESHARES=$(cfg rebalanceShares)
-        [ $REBALANCESHARES = "yes" ] && mvlogger "Rebalance shares: $REBALANCESHARES"
+        [ $REBALANCESHARES != "no" ] && mvlogger "Rebalance shares: $REBALANCESHARES"
+        [ $REBALANCESHARES = "run-once" ] && REBALANCESHARES="yes"
     fi
 
     if [ -z $(cfg sizef) ]; then
@@ -1242,9 +1243,7 @@ decideMoveActions() {
             prev_share = ""
             global_sync = SYNCHRONIZECACHE
 
-            # Fast check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
-            # shareOverrideCfgDir_exist = ((getline t < MOVERTUNING_OVERRIDE_CFGFOLDER "/.") >= 0)
-            # close(MOVERTUNING_OVERRIDE_CFGFOLDER "/.")
+            # Check if MOVERTUNING_OVERRIDE_CFGFOLDER exists            
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
 
             # Print new header
