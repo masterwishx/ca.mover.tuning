@@ -657,12 +657,14 @@ _(Show advanced options)_:
 _(Rebalance shares)_:
 : <select name='rebalanceShares' size='1' class='narrow'>
 <?=mk_option($cfg['rebalanceShares'],"no",'No')?>
+<?=mk_option($cfg['rebalanceShares'],"run-once","Run once")?>
 <?=mk_option($cfg['rebalanceShares'],"yes","Yes")?>
 </select>
 
 <blockquote class="inline_help">
-<p>This will move files from shares to their primary and secondary storage if spread elsewhere.
-<p>May imply moving older files from <strong><em>Primary->Secondary</em></strong> or <strong><em>Secondary->Primary</em></strong> if allowed (cache:prefer or cache:yes) to free some space.
+<p>Moves files from shares to their primary or secondary storage if they are spread across Unattended Storage.</p>
+<p>May move older files from <strong><em>Primary->Secondary</em></strong> or <strong><em>Secondary->Primary</em></strong> if allowed (cache:prefer, cache:yes, cache:only) to free up space.</p>
+<p>Run-once setting will reset back to <strong>No</strong> after next run.</p>
 </blockquote>
 
 _(Resynchronize all Primary files to Secondary)_:
@@ -673,9 +675,9 @@ _(Resynchronize all Primary files to Secondary)_:
 </select>
 
 <blockquote class="inline_help">
-<p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.
-<p>All files will be synchronized again independently of modification time.
-<p>This can be a long operation. Run-once setting will reset back to No after next run.
+<p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
+<p>All files will be synchronized again independently of modification time.</p>
+<p>This can be a long operation. Run-once setting will reset back to <strong>No</strong> after next run.</p>
 </blockquote>
 
 </div>

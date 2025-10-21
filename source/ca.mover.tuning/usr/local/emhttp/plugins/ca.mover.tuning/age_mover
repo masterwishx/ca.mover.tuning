@@ -806,19 +806,19 @@ createFilteredFilelist() {
                     -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
                     -not -path "/mnt/user*" \
                     -not -path "/mnt/disk*" \
-                    -maxdepth 2 | cut -d'/' -f3)
+                    -maxdepth 2 | cut -d'/' -f3 | tr '\n' ' ')
             else
                 UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
                     -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
                     -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
                     -not -path "/mnt/user*" \
-                    -maxdepth 2 | cut -d'/' -f3)
+                    -maxdepth 2 | cut -d'/' -f3 | tr '\n' ' ')
             fi
         fi
 
-        ##
-        mvlogger "UNATTENDEDSTORAGE storage: $UNATTENDEDSTORAGE" 
-        ##
+        if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
+            mvlogger "Unattended storage: $UNATTENDEDSTORAGE"
+        fi
 
         # Determine sharepath !! to check when  REBALANCE (user0 primary)!!
         SHAREPATH="/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
@@ -850,7 +850,7 @@ createFilteredFilelist() {
         fi
 
         # Alterate SHAREPATH on Cache=prefer
-        if [[ "$SHAREUSECACHE" == "prefer" ]]; then 
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
             COUNT_SECONDARY_FILES=0
             PREFER_SHAREPATH=""
             PRIMARY_SHARE_PATH="$SHAREPATH"
@@ -862,11 +862,11 @@ createFilteredFilelist() {
                     PREFER_SHAREPATH+=" \"$SHAREPATH\""
                     if [[ -d "$SHAREPATH" ]]; then
                         # Count the number of files in the secondary storage directory
-                        tmp=$(find "$SHAREPATH" -type f -depth | wc -l)
+                        tmp=$(find "$SHAREPATH" -type f | wc -l)
                         COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                     else
                         # Do not process this pool if path does not exist
-                        mvlogger "$PRIMARY_SHARE_PATH exist but $SHAREPATH does not exist. Is the secondary share not created yet?."
+                        mvlogger "$PRIMARY_SHARE_PATH exist but $SHAREPATH does not exist. Is the secondary share not created yet?"
                         mvlogger "=> Skipping"
                         continue # Move to the next iteration of the loop
                     fi
@@ -878,7 +878,7 @@ createFilteredFilelist() {
                             # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
                             PREFER_SHAREPATH+=" \"$SHAREPATH\""
                             # Count the number of files in the secondary storage directory
-                            tmp=$(find "$SHAREPATH" -type f -depth | wc -l)
+                            tmp=$(find "$SHAREPATH" -type f | wc -l)
                             COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                         fi
                     done
@@ -968,17 +968,16 @@ createFilteredFilelist() {
 
         # Initialize FINDSTR with the base find command
         FINDSTR="find"
-        # # Alterate SHAREPATH when RebalanceShare=true
+        # Alterate SHAREPATH when RebalanceShare=true
         if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
             FINDSTR+=" ${UNATTENDEDSTORAGE_SHAREPATH}"
         fi
 
+        # Alter SHAREPATH on Cache=prefer
         if [[ "$SHAREUSECACHE" == "prefer" ]]; then
-            # Alter SHAREPATH on Cache=prefer
             FINDSTR+=" $PREFER_SHAREPATH"
-        else
-            # Alter SHAREPATH on Cache=yes
-            #When rebalance
+        # Alter SHAREPATH on Cache=yes
+        elif [[ "$SHAREUSECACHE" == "yes" ]]; then
             FINDSTR+=" \"${SHAREPATH}\""
         fi
 
