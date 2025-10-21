@@ -1405,7 +1405,7 @@ decideMoveActions() {
             }
 
             # Write statistics header line
-            printf "PRIMARYSTORAGENAME|FILES_FROM_PRIMARY|SIZE_FROM_PRIMARY|FILES_FROM_SECONDARY|SIZE_FROM_SECONDARY\n" > "'"${STATS_FILE}"'"
+            printf "PRIMARYSTORAGENAME|FILES_FROM_PRIMARY|SIZE_FROM_PRIMARY|FILES_FROM_SECONDARY|SIZE_FROM_SECONDARY|FILES_FROM_UNATTENDED|SIZE_FROM_UNATTENDED\n" > "'"${STATS_FILE}"'"
 
             # Loop through pool_stats and write data to stats_file
             total_files_from_primary = 0
@@ -1433,7 +1433,7 @@ decideMoveActions() {
             }
 
             # Print overall totals to stats file
-            printf("TOTAL|%d|%d|%d|%d|%d|%d\n", total_files_from_primary, total_size_from_primary, total_files_from_secondary, size_from_secondary, total_files_from_unattended, size_from_unattended) >> "'"${STATS_FILE}"'"
+            printf("TOTAL|%d|%d|%d|%d|%d|%d\n", total_files_from_primary, total_size_from_primary, total_files_from_secondary, total_size_from_secondary, total_files_from_unattended, total_size_from_unattended) >> "'"${STATS_FILE}"'"
 
     }' "$FILTERED_FILELIST" >"$MOVER_ACTIONLIST"
     if [ -e $SOFTSTOPFILE ]; then
