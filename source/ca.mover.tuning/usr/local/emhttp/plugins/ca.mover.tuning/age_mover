@@ -1515,6 +1515,8 @@ processTheMoves() {
     REMAINING_ARRAY_FILES=$TOTALSECONDARYFILES
     REMAINING_CACHE_SIZE=$TOTALPRIMARYSIZE
     REMAINING_CACHE_FILES=$TOTALPRIMARYFILES
+    REMAINING_UNATTENDED_SIZE=$TOTALUNATTENDEDSIZE
+    REMAINING_UNATTENDED_FILES=$TOTALUNATTENDEDFILES
 
     # Dry mode info:
     if [ $TESTMODE = "yes" ]; then
@@ -1732,13 +1734,33 @@ processTheMoves() {
 
             # Setting mover status
             if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
-                REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - FILESIZE))
-                REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
-                mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array  $(bytes_to_human $REMAINING_CACHE_SIZE)"
+                if [[ "$ACTION" =~ "unattended to secondary" ]]; then
+                    REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
+                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
+                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to secondary ($(bytes_to_human $REMAINING_UNATTENDED_SIZE))"
+                elif [[ "$ACTION" =~ "unattended to primary" ]]; then
+                    REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
+                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
+                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to primary ($(bytes_to_human $REMAINING_UNATTENDED_SIZE))"
+                else
+                    REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - FILESIZE))
+                    REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
+                    mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human $REMAINING_CACHE_SIZE))"
+                fi
             else
-                REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
-                REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
-                mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches $(bytes_to_human $REMAINING_ARRAY_SIZE)"
+                if [[ "$ACTION" =~ "unattended to primary" ]]; then
+                    REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
+                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
+                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to primary ($(bytes_to_human $REMAINING_UNATTENDED_SIZE))"
+                elif [[ "$ACTION" =~ "unattended to secondary" ]]; then
+                    REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
+                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
+                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to secondary ($(bytes_to_human $REMAINING_UNATTENDED_SIZE))"
+                else
+                    REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
+                    REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
+                    mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human $REMAINING_ARRAY_SIZE))"
+                fi
             fi
             moverStatusWrite
         done <<<"$(eval "$GREP_CMD")"
