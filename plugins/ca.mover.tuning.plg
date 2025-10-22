@@ -398,7 +398,7 @@ fi
 if [[ ! -f "$config_file" ]]; then
   echo "Creating file $config_file with default configuration."
   # Create the file with some default values
-  echo 'testmode="yes"' > $config_file
+  echo 'testmode="no"' > $config_file
   echo 'logging="yes"' >> $config_file
   echo 'movenow="yes"' >> $config_file
   echo 'version="&version;"' >> "$config_file"
