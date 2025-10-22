@@ -821,7 +821,7 @@ createFilteredFilelist() {
             mvlogger "Unattended storage: $UNATTENDEDSTORAGE"
         fi
 
-        # Determine sharepath !! to check when  REBALANCE (user0 primary)!!
+        # Determine sharepath
         SHAREPATH="/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
 
         if [ ! -d "$SHAREPATH" ]; then # && [ $SHAREUSECACHE != "no" ]
@@ -859,15 +859,15 @@ createFilteredFilelist() {
             if [[ -n "$SECONDARYSTORAGENAME" ]]; then
                 # Case 1: Secondary is a specific pool
                 if [[ "$SECONDARYSTORAGENAME" != "user0" ]]; then
-                    SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
-                    PREFER_SHAREPATH+=" \"$SHAREPATH\""
                     if [[ -d "$SHAREPATH" ]]; then
+                        SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
+                        PREFER_SHAREPATH+=" \"$SHAREPATH\""
                         # Count the number of files in the secondary storage directory
                         tmp=$(find "$SHAREPATH" -type f | wc -l)
                         COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                     else
                         # Do not process this pool if path does not exist
-                        mvlogger "$PRIMARY_SHARE_PATH exist but $SHAREPATH does not exist. Is the secondary share not created yet?"
+                        mvlogger "$PRIMARY_SHARE_PATH exist but $SHAREPATH does not exist. Is the share on secondary storage not created yet?"
                         mvlogger "=> Skipping"
                         continue # Move to the next iteration of the loop
                     fi
