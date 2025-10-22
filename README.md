@@ -32,6 +32,35 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.10.22
+    - new: Test mode now defaults to "no" - moves will execute immediately unless explicitly set to test mode. **_(masterwishx)_**
+    - new: Per-share override support: per-share configs are detected and applied when present.
+    - new: Rebalance activation treats any non-"no" value as active and normalizes "run-once".
+    - new: Stats and headers now include unattended totals and per-share metrics.
+    - fix: Clarified UI help text and fixed wording.
+    - new: Added "run-once" option - automatically resets to "no" after execution.
+    - new: Improved unattended storage detection during rebalancing.
+    - new: Enhanced logging for attended/unattended pools.
+    - new: Impact: More granular control over rebalancing operations.
+    - new: Reads per-share configs from MOVERTUNING_OVERRIDE_CFGFOLDER/sharename.cfg.
+    - new: Enhanced AWK logic to apply per-share configurations.
+    - new: Global defaults preserved when overrides not present.
+    - new: Impact: Each share can have custom routing rules, preventing misrouting.
+    - new: Added "(ignores plugin filters)" clarifications for Force move and Move Now.
+    - new: Added "Run once" option for rebalance shares.
+    - new: Fixed duplicate wording errors.
+    - new: Updated help text for Unattended Storage and cache conditions.
+    - new: Impact: Better user understanding of filter behavior.
+    - new: Added unattended storage metrics: FILES_FROM_UNATTENDED, SIZE_FROM_UNATTENDED.
+    - new: Extended status output with per-share metrics.
+    - new: Improved rebalance operation logging.
+    - new: Impact: Better visibility into mover operations.
+    - new: Files are routed according to per-share configurations.
+    - new: Plugin paths are properly filtered and not sent to cache root.
+    - new: Share-specific rules prevent creation of unintended shares.
+    - new: Unattended storage is properly detected and handled.
+    - new: Fully reworked cache:prefer share path detection and handling.
+
 - 2025.10.03
     - new: Configurable blocked-filename characters with sensible defaults, persisted across runs. **_(masterwishx)_**
     - new: Input and placeholders for invalid-character list and several path/script fields for clearer configuration.
