@@ -662,7 +662,7 @@ _(Rebalance shares)_:
 </select>
 
 <blockquote class="inline_help">
-<p>Moves files from shares to their primary and/or secondary storage if they are spread across <strong><em>Unattended Storage</em></strong> (disks/pools not assigned as a share's Primary or Secondary).</p>
+<p>Moves files from shares to their Primary and/or Secondary storage if they are spread across <strong><em>Unattended Storage</em></strong> (disks/pools not assigned as a share's Primary or Secondary).</p>
 <p>May move older files from <strong><em>Primary->Secondary</em></strong> or <strong><em>Secondary->Primary</em></strong> if allowed (cache:prefer, cache:yes, cache:only) to free up space.</p>
 <p>Run-once setting will reset back to <strong>No</strong> after next run.</p>
 </blockquote>
