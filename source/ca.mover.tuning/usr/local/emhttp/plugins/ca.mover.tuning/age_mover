@@ -692,12 +692,22 @@ moverStatusWrite() {
     #Writes to file /usr/local/emhttp/state/mover.ini GUI update variables
     echo "TotalToSecondary=${TOTALPRIMARYSIZE}" >$MOVER_STATUS
     echo "RemainToSecondary=${REMAININGPRIMARYSIZE}" >>$MOVER_STATUS
+
     echo "TotalFromSecondary=${TOTALSECONDARYSIZE}" >>$MOVER_STATUS
     echo "RemainFromSecondary=${REMAININGSECONDARYSIZE}" >>$MOVER_STATUS
-    echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}" >$MOVER_STATUS
+
+    echo "TotalFromUnattended=${TOTALUNATTENDEDSIZE}" >>$MOVER_STATUS
+    echo "RemainFromUnattended=${REMAININGUNATTENDEDSIZE}" >>$MOVER_STATUS
+
+    echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}" >>$MOVER_STATUS
     echo "RemainFilesToSecondary=${REMAININGPRIMARYFILES}" >>$MOVER_STATUS
+
     echo "TotalFilesFromSecondary=${TOTALSECONDARYFILES}" >>$MOVER_STATUS
     echo "RemainFilesFromSecondary=${REMAININGSECONDARYFILES}" >>$MOVER_STATUS
+
+    echo "TotalFilesFromUnattended=${TOTALUNATTENDEDFILES}" >>$MOVER_STATUS
+    echo "RemainFilesFromUnattended=${REMAININGUNATTENDEDFILES}" >>$MOVER_STATUS
+
     echo "File=${GUI_CURRENT_FILE}" >>$MOVER_STATUS
     echo "Action=${GUI_ACTION}" >>$MOVER_STATUS
 }
