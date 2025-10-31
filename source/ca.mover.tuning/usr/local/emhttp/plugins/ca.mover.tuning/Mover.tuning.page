@@ -156,7 +156,7 @@ _(Test Mode (dry run))_:
 </select>
 &nbsp;<strong>No</strong> <em>- disables test mode</em>
 &nbsp;<span id="testmode_warning" style="display:<?=($cfg['testmode'] == 'yes') ? 'inline' : 'none'?>; color:orange; font-style:italic;">
-⚠ Test Mode enabled - no files will be moved.
+⚠ Test Mode - no files will be moved/synced.
 </span></span>
 
 <script>
