@@ -136,11 +136,12 @@ $(function() {
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 
 _(Disable Mover running on a schedule)_:
-: <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
 <?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
 <?=mk_option($cfg['moverDisabled'],"yes",_('Yes'))?>
 </select>
-&nbsp;&nbsp;&nbsp;<strong>Yes</strong> <em>- setting effectively disables the plugin schedule</em></span>
+&nbsp;<strong>Yes</strong> <em>- disables the plugin's schedule</em></span>
 
 :mover_tune_disable_plug:
 > This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
@@ -148,22 +149,33 @@ _(Disable Mover running on a schedule)_:
 
 <div markdown="1" id="moverTuningSettings">
 _(Test Mode (dry run))_:
-: <span><select name='testmode' size='1' class='narrow'>
-<?=mk_option($cfg['testmode'],"no",_('No'))?>
-<?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='testmode' size='1' id='testmode' class='narrow' onchange="toggleTestModeWarning(this.value)">
+    <?=mk_option($cfg['testmode'],"no",_('No'))?>
+    <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
 </select>
-&nbsp;&nbsp;&nbsp;<strong>No</strong> <em>- setting effectively disables test mode</em></span>
+&nbsp;<strong>No</strong> <em>– disables test mode</em>
+&nbsp;<span id="testmode_warning" style="display:<?=($cfg['testmode'] == 'yes') ? 'inline' : 'none'?>; color:orange; font-style:italic;">
+⚠ Test Mode enabled - no files will be moved.
+</span></span>
+
+<script>
+function toggleTestModeWarning(val) {
+    document.getElementById('testmode_warning').style.display = (val === 'yes' ? 'block' : 'none');
+}
+</script>
 
 :mover_tune_testmode_plug:
 > Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow' onchange="updateScreenMoverInvalidCharsToBlock(this.value, 'slow')">
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='validateFilenames' size='1' class='narrow' onchange="updateScreenMoverInvalidCharsToBlock(this.value, 'slow')">
 <?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
 <?=mk_option($cfg['validateFilenames'],"no",'No')?>
 </select>
-&nbsp;&nbsp;&nbsp;<strong>No</strong> <em>- setting effectively disables validation of input filenames</em></span>
+&nbsp;<strong>No</strong> <em>- disables validation of input filenames</em></span>
 
 :mover_tune_validate_plug:
 <blockquote class="inline_help">
