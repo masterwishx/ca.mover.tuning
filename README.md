@@ -32,6 +32,12 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.10.31
+    - fix: Added guard to skip cache:prefer pools when no valid secondary paths exist to avoid erroneous processing. **_(masterwishx)_**
+    - new: Improved handling of secondary storage in cache-prefer mode for accurate counts, presence checks, path selection and clearer error/log messages.
+    - new: Dynamic Test Mode warning that displays when Test Mode is enabled.
+    - new: Refreshed option layout, wording and help text for clearer presentation and consistency.
+
 - 2025.10.22
     - new: Test mode now defaults to "no" - moves will execute immediately unless explicitly set to test mode. **_(masterwishx)_**
     - new: Per-share override support: per-share configs are detected and applied when present.
