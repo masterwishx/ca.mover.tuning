@@ -864,40 +864,54 @@ createFilteredFilelist() {
         if [[ "$SHAREUSECACHE" == "prefer" ]]; then
             COUNT_SECONDARY_FILES=0
             PREFER_SHAREPATH=""
-            PRIMARY_SHARE_PATH="$SHAREPATH"
+            PRIMARY_SHAREPATH="$SHAREPATH"
 
             if [[ -n "$SECONDARYSTORAGENAME" ]]; then
+                # Set the share path from the secondary storage share
+                SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
                 # Case 1: Secondary is a specific pool
                 if [[ "$SECONDARYSTORAGENAME" != "user0" ]]; then
-                    if [[ -d "$SHAREPATH" ]]; then
-                        SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
-                        PREFER_SHAREPATH+=" \"$SHAREPATH\""
+                    # Set the share path from the secondary storage share
+                    SECONDARY_SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
+                    if [[ -d "$SECONDARY_SHAREPATH" ]]; then
+                        PREFER_SHAREPATH+=" \"$SECONDARY_SHAREPATH\""
                         # Count the number of files in the secondary storage directory
-                        tmp=$(find "$SHAREPATH" -type f | wc -l)
+                        tmp=$(find "$SECONDARY_SHAREPATH" -type f | wc -l)
                         COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                     else
                         # Do not process this pool if path does not exist
-                        mvlogger "$PRIMARY_SHARE_PATH exist but $SHAREPATH does not exist. Is the share on secondary storage not created yet?"
+                        mvlogger "$PRIMARY_SHAREPATH exist but $SECONDARY_SHAREPATH does not exist. Is the share on secondary storage not created yet?"
                         mvlogger "=> Skipping"
                         continue # Move to the next iteration of the loop
                     fi
 
                 # Case 2: Secondary is the array (user0)
                 else
-                    for SHAREPATH in /mnt/disk[0-9]/"$SHARENAME" /mnt/disk[1-9][0-9]/"$SHARENAME"; do
-                        if [[ -d "$SHAREPATH" ]]; then
+                    for SECONDARY_SHAREPATH in /mnt/disk[0-9]/"$SHARENAME" /mnt/disk[1-9][0-9]/"$SHARENAME"; do
+                        if [[ -d "$SECONDARY_SHAREPATH" ]]; then
                             # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                            PREFER_SHAREPATH+=" \"$SHAREPATH\""
+                            PREFER_SHAREPATH+=" \"$SECONDARY_SHAREPATH\""
                             # Count the number of files in the secondary storage directory
-                            tmp=$(find "$SHAREPATH" -type f | wc -l)
+                            tmp=$(find "$SECONDARY_SHAREPATH" -type f | wc -l)
                             COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                         fi
                     done
+                    # Check if no paths were found
+                    if [[ -z "$PREFER_SHAREPATH" ]]; then
+                        # Do not process this pool if path does not exist
+                        mvlogger "$PRIMARY_SHAREPATH exist but no disk paths found for $SHARENAME in $SECONDARYSTORAGENAME. Is the share on secondary storage not created yet?"
+                        mvlogger "=> Skipping"
+                        continue # Move to the next iteration of the loop
+                    fi
                 fi
             fi
         fi
 
-        mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
+            mvlogger "Share Information: Name: $SHARENAME - Path: $PRIMARY_SHAREPATH"
+        else
+            mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
+        fi
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
@@ -956,7 +970,7 @@ createFilteredFilelist() {
                         CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
                     fi
                 fi
-                echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}" >>"$FILTERED_FILELIST"
+                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}" >>"$FILTERED_FILELIST"
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human $CACHESHARERESERVEDSPACE)"
                 continue
             fi
@@ -1029,7 +1043,7 @@ createFilteredFilelist() {
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
             HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du -ch --files0-from=- | awk '/total$/ {print $1}' | human_to_bytes)
-            echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$HIDDENFILES_RESERVED_SPACE|0|0|0|/mnt/$PRIMARYSTORAGENAME/$SHARENAME hidden files" >>"$FILTERED_FILELIST"
+            echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$HIDDENFILES_RESERVED_SPACE|0|0|0|${SHAREPATH}/ hidden files" >>"$FILTERED_FILELIST"
             mvlogger "    Hidden files are using $(bytes_to_human "$HIDDENFILES_RESERVED_SPACE")"
         fi
         #Add skipped files and folders
@@ -1067,7 +1081,7 @@ createFilteredFilelist() {
                 fi
 
                 if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
-                    echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>"$FILTERED_FILELIST"
+                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
                 else
                     mvlogger "Error calculating size for $skipped_path"
@@ -1084,7 +1098,7 @@ createFilteredFilelist() {
                 FINDSTR="$FINDSTR -not -name '*.$ext'"
                 SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"
                 if [ $? -eq 0 ]; then
-                    echo "$PRIMARYSTORAGENAME|$PRIMARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
+                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
                     mvlogger "Error calculating size for ${globalSkipFileTypes}"
@@ -2071,13 +2085,21 @@ softstop() {
 # Function to display usage
 usage() {
     echo "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)"
-    echo ""
-    echo "Usage: $0 <or> mover start [-e <disk_name>]"
-    echo "       $0 <or> mover stop|softstop|status|reset|debug"
-    echo "       <disk_name> must match pattern 'disk[0-9]*' and /mnt/<disk_name> must be a mountpoint"
-    echo ""
-    echo "reset  - reset config file to default values and delete override config folder"
-    echo "debug  - creating plugin diagnostics file at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
+    echo
+    echo "Usage:"
+    echo "  $0 | mover start [-e <disk_name>]"
+    echo "  $0 | mover stop | softstop | status | reset | debug"
+    echo
+    echo "Notes:"
+    echo "  <disk_name> must match the pattern 'disk[0-9]*' and /mnt/<disk_name> must be a mounted disk."
+    echo
+    echo "Commands:"
+    echo "  start    - Start mover. Use 'start -e <disk_name>' to empty a disk."
+    echo "  stop     - Forced stop mover."
+    echo "  softstop - Soft stop mover. (Recommended)"
+    echo "  status    - Check if the mover is running."
+    echo "  reset    - Reset plugin config to default values and delete the override config folder."
+    echo "  debug    - Create plugin diagnostics ZIP at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
     exit 1
 }
 

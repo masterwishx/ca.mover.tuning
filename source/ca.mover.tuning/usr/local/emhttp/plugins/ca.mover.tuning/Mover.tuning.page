@@ -136,11 +136,12 @@ $(function() {
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 
 _(Disable Mover running on a schedule)_:
-: <span><select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
 <?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
 <?=mk_option($cfg['moverDisabled'],"yes",_('Yes'))?>
 </select>
-&nbsp;&nbsp;&nbsp;<strong>Yes</strong> <em>- setting effectively disables the plugin schedule</em></span>
+&nbsp;<strong>Yes</strong> <em>- disables the plugin's schedule</em></span>
 
 :mover_tune_disable_plug:
 > This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
@@ -148,22 +149,33 @@ _(Disable Mover running on a schedule)_:
 
 <div markdown="1" id="moverTuningSettings">
 _(Test Mode (dry run))_:
-: <span><select name='testmode' size='1' class='narrow'>
-<?=mk_option($cfg['testmode'],"no",_('No'))?>
-<?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='testmode' size='1' id='testmode' class='narrow' onchange="toggleTestModeWarning(this.value)">
+    <?=mk_option($cfg['testmode'],"no",_('No'))?>
+    <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
 </select>
-&nbsp;&nbsp;&nbsp;<strong>No</strong> <em>- setting effectively disables test mode</em></span>
+&nbsp;<strong>No</strong> <em>- disables test mode</em>
+&nbsp;<span id="testmode_warning" style="display:<?=($cfg['testmode'] == 'yes') ? 'inline' : 'none'?>; color:orange; font-style:italic;">
+⚠ Test Mode - no files will be moved/synced.
+</span></span>
+
+<script>
+function toggleTestModeWarning(val) {
+    document.getElementById('testmode_warning').style.display = (val === 'yes' ? 'block' : 'none');
+}
+</script>
 
 :mover_tune_testmode_plug:
 > Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
 :end
 
 _(Validate input filenames to prevent attacks)_:
-: <span><select name='validateFilenames' size='1' class='narrow' onchange="updateScreenMoverInvalidCharsToBlock(this.value, 'slow')">
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='validateFilenames' size='1' class='narrow' onchange="updateScreenMoverInvalidCharsToBlock(this.value, 'slow')">
 <?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
 <?=mk_option($cfg['validateFilenames'],"no",'No')?>
 </select>
-&nbsp;&nbsp;&nbsp;<strong>No</strong> <em>- setting effectively disables validation of input filenames</em></span>
+&nbsp;<strong>No</strong> <em>- disables validation of input filenames</em></span>
 
 :mover_tune_validate_plug:
 <blockquote class="inline_help">
@@ -353,12 +365,13 @@ _(Move Now button follows plug-in filters)_:
 <div class="title"><span class="center"><i class="fa fa-filter title"></i>Mover Tuning - Filters</span></div>
 
 _(Only move if above this threshold of used Primary (<em>cache</em>) space)_:
-: <span><select name="movingThreshold" size="1" class='narrow'>
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="movingThreshold" size="1" class='narrow'>
 <?for ($t=95;$t>=0;$t-=5):?>
 <?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
 <?endfor;?>
 </select>
-&nbsp;&nbsp;&nbsp;<em>Cache → Array</em></span>
+&nbsp;<em>Cache → Array</em></span>
 
 <blockquote class="inline_help">
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.</p>
@@ -367,12 +380,13 @@ _(Only move if above this threshold of used Primary (<em>cache</em>) space)_:
 </blockquote>
 
 _(Free down/prime up to this level of used Primary (<em>cache</em>) space)_:
-: <span><select name="freeingThreshold" size="1" class='narrow'>
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="freeingThreshold" size="1" class='narrow'>
 <?for ($f=$f;$f>=0;$f-=5):?>
 <?=mk_option($cfg['freeingThreshold'], $f, "$f %")?>
 <?endfor;?>
 </select>
-&nbsp;&nbsp;&nbsp;<em>Cache → Array</em></span>
+&nbsp;<em>Cache → Array</em></span>
 
 <blockquote class="inline_help">
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.</p>
@@ -381,12 +395,13 @@ _(Free down/prime up to this level of used Primary (<em>cache</em>) space)_:
 </blockquote>
 
 _(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
-: <span><select name="fillupThreshold" size="1" class='narrow'>
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="fillupThreshold" size="1" class='narrow'>
 <?for ($c=95;$c>=0;$c-=5):?>
 <?=mk_option($cfg['fillupThreshold'], $c, "$c %")?>
 <?endfor;?>
 </select>
-&nbsp;&nbsp;&nbsp;<em>Array → Cache</em></span>
+&nbsp;<em>Array → Cache</em></span>
 
 > Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive after the mover has completed its run. Setting this to (<strong><em>95%</em></strong>) means that the mover will continue until <strong><em>95%</em></strong> of the cache pool is filled.
 
@@ -399,7 +414,8 @@ _(Move files off Primary (<em>cache</em>) based on age)_?
 > Select if you want to move files off of the Primary (cache) based on their age - days old.
 
 _(Move files that are greater than this many days old)_:
-: <span><select name="daysold" size="1" class='narrow myage' <?=$ageDisabled?>>
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="daysold" size="1" class='narrow myage' <?=$ageDisabled?>>
 <?=mk_option($cfg['daysold'], -1, "Auto")?>
 <?=mk_option($cfg['daysold'], 1, "1")?>
 <?=mk_option($cfg['daysold'], 2, "2")?>
@@ -414,7 +430,7 @@ _(Move files that are greater than this many days old)_:
 <?=mk_option($cfg['daysold'], $dt, "$dt")?>
 <?endfor;?>
 </select>
-&nbsp;&nbsp;&nbsp;<strong>Auto</strong> <em>- setting enable smart caching</em></span>
+&nbsp;<strong>Auto</strong> <em>- enable smart caching</em></span>
 
 > Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
