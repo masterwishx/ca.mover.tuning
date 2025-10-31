@@ -869,8 +869,9 @@ createFilteredFilelist() {
             if [[ -n "$SECONDARYSTORAGENAME" ]]; then
                 # Case 1: Secondary is a specific pool
                 if [[ "$SECONDARYSTORAGENAME" != "user0" ]]; then
+                    # Set the share path from the secondary storage share
+                    SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
                     if [[ -d "$SHAREPATH" ]]; then
-                        SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
                         PREFER_SHAREPATH+=" \"$SHAREPATH\""
                         # Count the number of files in the secondary storage directory
                         tmp=$(find "$SHAREPATH" -type f | wc -l)
@@ -893,11 +894,22 @@ createFilteredFilelist() {
                             COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
                         fi
                     done
+                    # Check if no paths were found
+                    if [[ -z "$PREFER_SHAREPATH" ]]; then
+                        # Do not process this pool if path does not exist
+                        mvlogger "$PRIMARY_SHARE_PATH exist but $SECONDARYSTORAGENAME does not exist. Is the share on secondary storage not created yet?"
+                        mvlogger "=> Skipping"
+                        continue # Move to the next iteration of the loop
+                    fi
                 fi
             fi
         fi
 
-        mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
+        if [[ "$SHAREUSECACHE" == "prefer" ]]; then
+            mvlogger "Share Information: Name: $SHARENAME - Path: $PRIMARY_SHARE_PATH"
+        else
+            mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
+        fi
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
