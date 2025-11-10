@@ -16,13 +16,13 @@ about: Create a report to help me improve
 <!-- Add any other context about the problem here. If applicable, add screenshots to help explain your problem. -->
 
 **How to reproduce?**
-<!-- Tell me how to reproduce this issue. How can someone who is starting from scratch reproduce this behaviour as minimally as possible? -->
+<!-- Tell me how to reproduce this issue. How can someone who is starting from scratch reproduce this behavior as minimally as possible? -->
 
 **Files**
 <!-- A list of relevant files for this issue. Large files can be uploaded one-by-one or in a tarball/zipfile. -->
 
 **Debug Information**
 <!-- To assist me in diagnosing the issue, please follow these steps:
-1. Enable the Debug Log setting.
-2. Click on the "Mover Tuning Debug Package (.zip)" button in the Help Menu and download the package.
-3. Paste the contents of the downloaded file here. -->
+1. Enable Log and Debug Log in the settings.
+2. Click on the "Mover Tuning Debug Package (.zip)" button in the Help Menu or run `mover debug` in the CLI to generate a debug package.
+3. Upload the downloaded file "ca.mover.tuning-debug-<date-time>.zip" here. -->
