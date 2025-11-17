@@ -1010,7 +1010,7 @@ createFilteredFilelist() {
         FINDSTR+=" -type f"
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
-        #Add Age variables to find string
+        # Add Age variables to find string
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$AGE" -ge 1 ]; then
             mvlogger "Adding Age"
             RAGE=$((AGE - 1))
@@ -1027,7 +1027,7 @@ createFilteredFilelist() {
             fi
         fi
 
-        #Add Size to find string
+        # Add Size to find string
         if [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; then
             if [[ "$SYNCHRONIZECACHE" = "yes" ]] || [[ "$RESYNCHRONIZECACHE" = "yes" ]] && [[ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]] && [ "$SYNC_SIZE" -gt 0 ]; then
                 mvlogger "Adding Sync Size: ${SYNC_SIZE}"
@@ -1038,7 +1038,7 @@ createFilteredFilelist() {
             fi
         fi
 
-        #Add Ignore Hidden Files to find string
+        # Add Ignore Hidden Files to find string
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
@@ -1046,15 +1046,22 @@ createFilteredFilelist() {
             echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$HIDDENFILES_RESERVED_SPACE|0|0|0|${SHAREPATH}/ hidden files" >>"$FILTERED_FILELIST"
             mvlogger "    Hidden files are using $(bytes_to_human "$HIDDENFILES_RESERVED_SPACE")"
         fi
-        #Add skipped files and folders
-        #FINDSTR+=" -not -name \".placeholder\"" #do not move placeholders
-        #
+
+        # Add skipped files and folders        
         FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
-        #
+
         # Add files from ignore list
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && grep -q "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" "$SKIPFILESLIST"; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
             mvlogger "List Path: ${SKIPFILESLIST}:"
+
+            # Fix CRLF in skip list file
+            if grep -q $'\r' "${SKIPFILESLIST}"; then
+                mvlogger "Warning: Windows-style CRLF line endings detected in ${SKIPFILESLIST}. Converting to LF..."
+                mvDebuglogger  "Detected Windows CRLF endings in skip file ${SKIPFILESLIST}. Converting to LF..." "Prepair Skipped Path"
+                sed -i 's/\r$//' "${SKIPFILESLIST}"
+            fi
+
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
             while IFS= read -r skipped_path; do
                 SKIPPED_PATH_RESERVED_SPACE=""

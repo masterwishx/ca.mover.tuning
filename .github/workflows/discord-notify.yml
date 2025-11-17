@@ -8,7 +8,7 @@ on:
   issues:
     types: [opened, closed, reopened]
   workflow_run:
-    workflows: ["Auto Build & Release Fish Slackware Package"]
+    workflows: ["Maybe in future"]
     types: [completed]
   workflow_dispatch:
 
