@@ -1,6 +1,6 @@
 <?PHP
 
-exec("timeout -s9 30 /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover", $debug_result);
+exec("timeout -s9 90 /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover 2>&1", $debug_result);
 
 if(!empty($debug_result)) {
     if(strpos(end($debug_result), "DONE:") !== false) {
