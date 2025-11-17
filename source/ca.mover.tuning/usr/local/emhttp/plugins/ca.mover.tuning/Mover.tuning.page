@@ -155,9 +155,8 @@ _(Test Mode (dry run))_:
     <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
 </select>
 &nbsp;<strong>No</strong> <em>- disables test mode</em>
-&nbsp;<span id="testmode_warning" style="display:<?=($cfg['testmode'] == 'yes') ? 'inline' : 'none'?>; color:orange; font-style:italic;">
-⚠ Test Mode - no files will be moved/synced.
-</span></span>
+&nbsp;<span id="testmode_warning" class="orange-text" style="display:<?= ($cfg['testmode'] == 'yes') ? 'inline' : 'none' ?>; font-style:italic;">
+  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced.') ?> </span></span>
 
 <script>
 function toggleTestModeWarning(val) {
