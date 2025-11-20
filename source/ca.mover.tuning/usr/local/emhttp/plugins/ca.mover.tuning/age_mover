@@ -222,18 +222,20 @@ mvDebuglogger() {
 
     if [ $DEBUGLEVEL = 1 ]; then
         if [ -t 1 ]; then # running from terminal, echoing date
-            echo "$(titleLine "Debugging $2" '-')"
+            printf '%s\n' "$(titleLine "Debugging $2" '-')"
             echo "$(date +"%T.%3N") $1"
-            echo "$(titleLine " " ' ')"
+            printf '%s\n' "$(titleLine " " ' ')"
         else # running from cron
-            echo "$(titleLine "Debugging $2" '-')"
+            printf '%s\n' "$(titleLine "Debugging $2" '-')"
             echo "$1"
-            echo "$(titleLine " " ' ')"
+            printf '%s\n' "$(titleLine " " ' ')"
         fi
 
-        echo "$(titleLine "Debugging $2" '-')" >>$MOVER_DEBUG_LOG
-        echo "$(date +"%T.%3N") $1" >>$MOVER_DEBUG_LOG
-        echo "$(titleLine " " ' ')" >>$MOVER_DEBUG_LOG
+        {
+        printf '%s\n' "$(titleLine "Debugging $2" '-')"
+        echo "$(date +"%T.%3N") $1"
+        printf '%s\n' "$(titleLine " " ' ')"
+        } >> "$MOVER_DEBUG_LOG"
         #echo "$(titleLine "end" '-')" >>$MOVER_DEBUG_LOG
     fi
 }
@@ -974,7 +976,7 @@ createFilteredFilelist() {
                     fi
                 fi
                 echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}" >>"$FILTERED_FILELIST"
-                mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human $CACHESHARERESERVEDSPACE)"
+                mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human "$CACHESHARERESERVEDSPACE")"
                 continue
             fi
         elif [ "$SHAREUSECACHE" = "no" ]; then
