@@ -147,6 +147,7 @@ function titleLine() {
     local line_length=71
     local padding_left=$((line_length - ${#title} / 2))
     local padding_right=$((padding_left - ${#title} % 2 - 1))
+    local left_padding right_padding
     left_padding=$(printf "%*s" "$padding_left" "" | tr ' ' "$padding_char")
     right_padding=$(printf "%*s" "$padding_right" "" | tr ' ' "$padding_char")
     echo "${left_padding}$padding_char $title $padding_char${right_padding}"
