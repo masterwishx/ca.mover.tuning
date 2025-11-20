@@ -147,10 +147,7 @@ function titleLine() {
     local line_length=71
     local padding_left=$((line_length - ${#title} / 2))
     local padding_right=$((padding_left - ${#title} % 2 - 1))
-    local left_padding right_padding
-    local left_padding
     left_padding=$(printf "%*s" "$padding_left" "" | tr ' ' "$padding_char")
-    local right_padding
     right_padding=$(printf "%*s" "$padding_right" "" | tr ' ' "$padding_char")
     echo "${left_padding}$padding_char $title $padding_char${right_padding}"
 }
@@ -232,10 +229,10 @@ mvDebuglogger() {
         fi
 
         {
-        printf '%s\n' "$(titleLine "Debugging $2" '-')"
-        echo "$(date +"%T.%3N") $1"
-        printf '%s\n' "$(titleLine " " ' ')"
-        } >> "$MOVER_DEBUG_LOG"
+            printf '%s\n' "$(titleLine "Debugging $2" '-')"
+            echo "$(date +"%T.%3N") $1"
+            printf '%s\n' "$(titleLine " " ' ')"
+        } >>"$MOVER_DEBUG_LOG"
         #echo "$(titleLine "end" '-')" >>$MOVER_DEBUG_LOG
     fi
 }
@@ -1052,7 +1049,7 @@ createFilteredFilelist() {
             mvlogger "    Hidden files are using $(bytes_to_human "$HIDDENFILES_RESERVED_SPACE")"
         fi
 
-        # Add skipped files and folders        
+        # Add skipped files and folders
         FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
 
         # Add files from ignore list
@@ -1063,7 +1060,7 @@ createFilteredFilelist() {
             # Fix CRLF in skip list file
             if grep -q $'\r' "${SKIPFILESLIST}"; then
                 mvlogger "Warning: Windows-style CRLF line endings detected in ${SKIPFILESLIST}. Converting to LF..."
-                mvDebuglogger  "Detected Windows CRLF endings in skip file ${SKIPFILESLIST}. Converting to LF..." "Prepare Skipped Path"
+                mvDebuglogger "Detected Windows CRLF endings in skip file ${SKIPFILESLIST}. Converting to LF..." "Prepare Skipped Path"
                 sed -i 's/\r$//' "${SKIPFILESLIST}"
             fi
 
