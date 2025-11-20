@@ -217,7 +217,6 @@ mvlogger() {
 # $2 is the name of debug message
 mvDebuglogger() {
     if [ "$DEBUGLEVEL" = 1 ]; then
-
         local msg="$1"
         local tag="$2"
 
