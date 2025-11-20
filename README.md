@@ -1,5 +1,7 @@
 # Mover Tuning
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/d193c6f9f545432c90f3ac2f946347bd)](https://app.codacy.com/gh/masterwishx/ca.mover.tuning?utm_source=github.com&utm_medium=referral&utm_content=masterwishx/ca.mover.tuning&utm_campaign=Badge_Grade)
+
 ## About
 
 This is a simple [Unraid](https://unraid.net/) plugin that will let you fine-tune the operation of the [mover](https://docs.unraid.net/unraid-os/manual/additional-settings/#mover).
