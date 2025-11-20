@@ -216,24 +216,28 @@ mvlogger() {
 # $1 is the debug message to log
 # $2 is the name of debug message
 mvDebuglogger() {
+    if [ "$DEBUGLEVEL" = 1 ]; then
 
-    if [ $DEBUGLEVEL = 1 ]; then
-        if [ -t 1 ]; then # running from terminal, echoing date
-            printf '%s\n' "$(titleLine "Debugging $2" '-')"
-            echo "$(date +"%T.%3N") $1"
+        local msg="$1"
+        local tag="$2"
+
+        # Terminal output
+        if [ -t 1 ]; then # interactive terminal ⇒ show timestamp
+            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
+            printf '%s\n' "$(date +"%T.%3N") $msg"
             printf '%s\n' "$(titleLine " " ' ')"
-        else # running from cron
-            printf '%s\n' "$(titleLine "Debugging $2" '-')"
-            echo "$1"
+        else # cron/non-interactive ⇒ plain echo
+            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
+            printf '%s\n' "$msg"
             printf '%s\n' "$(titleLine " " ' ')"
         fi
 
+        # Log file output (always with timestamp)
         {
-            printf '%s\n' "$(titleLine "Debugging $2" '-')"
-            echo "$(date +"%T.%3N") $1"
+            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
+            printf '%s\n' "$(date +"%T.%3N") $msg"
             printf '%s\n' "$(titleLine " " ' ')"
         } >>"$MOVER_DEBUG_LOG"
-        #echo "$(titleLine "end" '-')" >>$MOVER_DEBUG_LOG
     fi
 }
 
