@@ -68,11 +68,11 @@ LAST_COUNT=-1
 DEBUGGING=""
 CFGPATH="/boot/config/shares"
 move() {
-    find "$1" -depth 2>/dev/null | /usr/libexec/unraid/move $2 $DEBUGGING
+    find "$1" -depth 2>/dev/null | /usr/libexec/unraid/move $DEBUGGING
     # second pass to clean up leftover empty directories
-    find "$1" -depth -type d 2>/dev/null | /usr/libexec/unraid/move $2 $DEBUGGING
+    find "$1" -depth -type d 2>/dev/null | /usr/libexec/unraid/move $DEBUGGING
 }
-#
+###
 
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -220,6 +220,11 @@ mvDebuglogger() {
     if [ "$DEBUGLEVEL" = 1 ]; then
         local msg="$1"
         local tag="$2"
+
+        if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
+            echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
+            mkdir -p "${LOGFOLDER}/ca.mover.tuning"
+        fi
 
         # Terminal output
         if [ -t 1 ]; then # interactive terminal ⇒ show timestamp
@@ -655,7 +660,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             # Print and unescape the array element \" -> "
             mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]//\\\"/\"}"
-            echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>$config_file
+            echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>"$config_file"
             # Keep DEFAULT_INVALID_FILE_CHARS as an array
             INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
             # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
@@ -674,7 +679,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Move files tool argument provided, defaulting to rsync"
             MOVE_FILES_TOOL="rsync"
-            echo 'movefilesTool="rsync"' >>$config_file
+            echo 'movefilesTool="rsync"' >>"$config_file"
         fi
     else
         MOVE_FILES_TOOL=$(cfg movefilesTool)
@@ -2077,7 +2082,7 @@ empty() {
     for SHAREPATH in /mnt/$DISK/*; do
         SHARE=$(basename "$SHAREPATH")
         if [[ -d "$SHAREPATH" && -f "$CFGPATH/$SHARE.cfg" ]]; then
-            move "$SHAREPATH" "-e"
+            move "$SHAREPATH"
         fi
     done
 
