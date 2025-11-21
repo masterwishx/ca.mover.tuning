@@ -1044,8 +1044,8 @@ createFilteredFilelist() {
         fi
 
         # Add a search files option for the shares at the end
-        #FINDSTR+=" -type f"
-        FINDSTR+=" \( -type f -o -type d -empty \)"
+        FINDSTR+=" -type f"
+        #FINDSTR+=" \( -type f -o -type d -empty \)"
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
