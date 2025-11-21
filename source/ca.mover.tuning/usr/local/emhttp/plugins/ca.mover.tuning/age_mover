@@ -693,6 +693,32 @@ resetRunOnceMoverSettings() {
     fi
 }
 
+unraid_empty_disks() {
+
+    # maybe empty an array disk
+    EMPTYING=$(grep '^shareUserEmptying=' /boot/config/share.cfg | cut -d'"' -f2)
+    IFS=',' read -ra arr <<<"$EMPTYING"
+    for DISK in "${arr[@]}"; do
+        # we can only empty share directories
+        for SHAREPATH in /mnt/$DISK/*; do
+            SHARE=$(basename "$SHAREPATH")
+            if [[ -d "$SHAREPATH" && -f "$CFGPATH/$SHARE.cfg" ]]; then
+                move "$SHAREPATH"
+            fi
+        done
+
+        # output list of files which could not be moved
+        # use 'find' in case huge number of files left in /mnt/$DISK
+        count=$(find /mnt/$DISK -mindepth 1 | wc -l)
+        if [ "$count" -gt 0 ]; then
+            find /mnt/$DISK -mindepth 1 -depth -printf 'move: %p Not moved\n' | head -n 100
+            if [ "$count" -gt 100 ]; then
+                echo "[output truncated to first 100 entries]"
+            fi
+        fi
+    done
+}
+
 moverStatusWrite() {
     #echo "test write"
     #Writes to file /usr/local/emhttp/state/mover.ini GUI update variables
@@ -1918,10 +1944,15 @@ start() {
 
     mvDebuglogger "processTheMoves completed" "processTheMoves END"
 
-    #Write the final status just for sure
+    # Write the final status just for sure
     moverStatusWrite
 
     mvDebuglogger "moverStatusWrite completed" "moverStatusWrite END"
+
+    # Empty Disks if needed
+    unraid_empty_disks
+
+    mvDebuglogger "moverEmptyDisks completed" "moverEmptyDisks END"
 
     #Run mover after script if specified.
     if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
