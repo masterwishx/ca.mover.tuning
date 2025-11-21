@@ -1065,7 +1065,9 @@ createFilteredFilelist() {
             if grep -q $'\r' "${SKIPFILESLIST}"; then
                 mvlogger "Warning: Windows-style CRLF line endings detected in ${SKIPFILESLIST}. Converting to LF..."
                 mvDebuglogger "Detected Windows CRLF endings in skip file ${SKIPFILESLIST}. Converting to LF..." "Prepare Skipped Path"
-                sed -i 's/\r$//' "${SKIPFILESLIST}"
+                if ! sed -i 's/\r$//' "${SKIPFILESLIST}"; then
+                    mvlogger "Error: Failed to convert CRLF line endings in ${SKIPFILESLIST}. Check file permissions." "failure"
+                fi
             fi
 
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
