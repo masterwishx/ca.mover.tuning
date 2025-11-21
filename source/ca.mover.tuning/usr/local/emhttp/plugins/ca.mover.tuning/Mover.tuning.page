@@ -17,7 +17,7 @@ $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
 $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
 $moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
 $validateFilenames = ($cfg['validateFilenames'] != "yes") ? "no" : "yes";
-$ageDisabled  = ($cfg['age']  != "yes") ? "disabled" : "";
+$ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
 $ctimeDisabled = ($cfg['ctime'] != "yes") ? "disabled" : "";
 $atimeDisabled = ($cfg['atime'] != "yes") ? "disabled" : "";
 $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
