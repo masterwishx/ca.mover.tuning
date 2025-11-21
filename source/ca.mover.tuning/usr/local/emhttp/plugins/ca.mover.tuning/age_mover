@@ -1157,7 +1157,7 @@ createFilteredFilelist() {
         #Add Size to find string and pass to awk to modify some fields
         #FINDSTR+=" -printf '%T@|%s|%S|%n|%i|%p|\0' | awk -v RS='\0' -v FS='|' -v SPARSENESS=\$SPARSENESS -v PRIMARYSTORAGENAME=\$PRIMARYSTORAGENAME -v SECONDARYSTORAGENAME=\$SECONDARYSTORAGENAME -v SHARENAME=\$SHARENAME -v SHAREUSECACHE=\$SHAREUSECACHE -v PRIMARYSIZETHRESH=\$PRIMARYSIZETHRESH"
         # Fix shares space issue but same code as above
-        FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|%y|\0'"
+        FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|\0'"
         FINDSTR="$FINDSTR | awk -v RS='\0' -v FS='|' \
         -v SPARSENESS='$SPARSENESS' \
         -v PRIMARYSTORAGENAME='$PRIMARYSTORAGENAME' \
@@ -1201,7 +1201,7 @@ createFilteredFilelist() {
         #                \$2 = result;
         #            "
         #        fi
-        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6, \$12}'"
+        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6}'"
 
         # Send FINDSTR to debug
         mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
@@ -1253,7 +1253,7 @@ createFilteredFilelist() {
                 previous_inode = 0
 
                 # Print new header
-                printf "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILETYPE|FILEPATH\n"
+                printf "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH\n"
             }
 
             NR > 1 { # Main loop, skip header line
@@ -1265,7 +1265,7 @@ createFilteredFilelist() {
                 # Handle duplicates
                 key = $3 "|" $5 "|" $7 "|" file_path
                 if (! is_duplicate(key)) {
-                    printf "%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+                    printf "%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
                 }
             }' >"$FILTERED_FILELIST"
         mvlogger "Sorting"
@@ -1401,7 +1401,6 @@ decideMoveActions() {
                         action = "sync from primary"
                         destination = "/mnt/" $2
                         pool_stats[$1]["files_from_primary"] += 1
-                          #pool_stats[$1]["folders_from_primary"] += 1
                         pool_stats[$1]["total_size_from_primary"] += $7
                     } else {
                         destination = "none"
@@ -1481,40 +1480,31 @@ decideMoveActions() {
 
             # Loop through pool_stats and write data to stats_file
             total_files_from_primary = 0
-            total_folders_from_primary = 0
             total_size_from_primary = 0
             total_files_from_secondary = 0
-            total_folders_from_secondary = 0
             total_size_from_secondary = 0
             total_files_from_unattended = 0
-            total_folders_from_unattended = 0
             total_size_from_unattended = 0
 
             for (poolname in pool_stats) {
                 files_from_primary = pool_stats[poolname]["files_from_primary"]
-                folders_from_primary = pool_stats[poolname]["folders_from_primary"]
                 size_from_primary = pool_stats[poolname]["total_size_from_primary"]
                 files_from_secondary = pool_stats[poolname]["files_from_secondary"]
-                folders_from_secondary = pool_stats[poolname]["folders_from_secondary"]
                 size_from_secondary = pool_stats[poolname]["total_size_from_secondary"]
                 files_from_unattended = pool_stats[poolname]["files_from_unattended"]
-                folders_from_unattended = pool_stats[poolname]["folders_from_unattended"]
                 size_from_unattended = pool_stats[poolname]["total_size_from_unattended"]
 
                 total_files_from_primary += files_from_primary
-                total_folders_from_primary += folders_from_primary
                 total_files_from_secondary += files_from_secondary
-                total_folders_from_secondary += folders_from_secondary
                 total_size_from_primary += size_from_primary
                 total_size_from_secondary += size_from_secondary
                 total_files_from_unattended += files_from_unattended
-                total_folders_from_unattended += folders_from_unattended
                 total_size_from_unattended += size_from_unattended
-                printf("%s|%d|%d|%d|%d|%d|%d|%d|%d|%d\n", poolname, files_from_primary, size_from_primary, folders_from_primary, files_from_secondary, size_from_secondary, folders_from_secondary, files_from_unattended, size_from_unattended, folders_from_unattended) >> "'"${STATS_FILE}"'"
+                printf("%s|%d|%d|%d|%d|%d|%d\n", poolname, files_from_primary, size_from_primary, files_from_secondary, size_from_secondary, files_from_unattended, size_from_unattended) >> "'"${STATS_FILE}"'"
             }
 
             # Print overall totals to stats file
-            printf("TOTAL|%d|%d|%d|%d|%d|%d|%d|%d|%d\n", total_files_from_primary, total_size_from_primary, total_folders_from_primary, total_files_from_secondary, total_size_from_secondary, total_folders_from_secondary, total_files_from_unattended, total_size_from_unattended, total_folders_from_unattended) >> "'"${STATS_FILE}"'"
+            printf("TOTAL|%d|%d|%d|%d|%d|%d\n", total_files_from_primary, total_size_from_primary, total_files_from_secondary, total_size_from_secondary, total_files_from_unattended, total_size_from_unattended) >> "'"${STATS_FILE}"'"
 
     }' "$FILTERED_FILELIST" >"$MOVER_ACTIONLIST"
     if [ -e $SOFTSTOPFILE ]; then
@@ -1617,11 +1607,13 @@ processTheMoves() {
             if [ -z "$NBLINKS" ] || [ -z "$FILESIZE" ] || [ -z "$ACTION" ] || [ -z "$FILEPATH" ]; then
                 continue
             fi
+
             # Skip filesize = 0 (hardlinks already handled in a previous loop)
             NBLINKS="${NBLINKS:-0}"
-            if [ "$NBLINKS" -gt 1 ] && [ "$FILESIZE" = 0 ]; then
+            if [ "$NBLINKS" -gt 1 ] && [ "$FILESIZE" = 0 ] && [ -f "$FILEPATH" ]; then
                 continue
             fi
+
             #Prepare RSYNC_CMD
             RSYNC_CMD="rsync --archive --xattrs --relative --hard-links"
 
@@ -1649,7 +1641,7 @@ processTheMoves() {
 
             # Check if list is complete
             NBFILES=$(($(echo "$SYNCED_FILES" | grep -o '" "' | wc -l) + 1))
-            if [ $NBFILES != "$NBLINKS" ]; then
+            if [ $NBFILES != "$NBLINKS" ] && [ -f "$FILEPATH" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 continue
             fi
