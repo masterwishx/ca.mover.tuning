@@ -714,6 +714,8 @@ unraid_empty_disks() {
 
         IFS=',' read -ra arr <<<"$EMPTYING"
         for DISK in "${arr[@]}"; do
+            # ignore empty tokens defensively
+            [ -z "$DISK" ] && continue
             # we can only empty share directories
             for SHAREPATH in /mnt/"$DISK"/*; do
                 SHARE=$(basename "$SHAREPATH")
@@ -1166,8 +1168,7 @@ createFilteredFilelist() {
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name '*.$ext'"
-                SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"
-                if [ $? -eq 0 ]; then
+                if SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"; then
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext|f" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
@@ -1196,7 +1197,7 @@ createFilteredFilelist() {
             FINDSTR="$FINDSTR ' {"
         fi
         # Get Birthtime with stat if CTIME option enabled
-        if [ $CTIME == "yes" ]; then
+        if [ "$CTIME" == "yes" ]; then
             FINDSTR="$FINDSTR cmd=\"stat -c%W \\\"\"\$6\"\\\"\";
                 cmd | getline result;
                 close(cmd);
@@ -1206,7 +1207,7 @@ createFilteredFilelist() {
         fi
 
         # Get Birthtime with stat if ATIME option enabled
-        if [ $ATIME == "yes" ]; then
+        if [ "$ATIME" == "yes" ]; then
             FINDSTR="$FINDSTR cmd=\"stat -c%X \\\"\"\$6\"\\\"\";
                 cmd | getline result;
                 close(cmd);
@@ -1587,8 +1588,8 @@ decideMoveActions() {
     if [ $TOTALFILES -gt 0 ]; then
         mvlogger "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) will be moved/synced:"
         if [ "$TOTALPRIMARYFILES" -gt 0 ]; then
-            # Read data line by line using while loop
-            while IFS="|" read -r PRIMARYSTORAGENAME PRIMARYFILES PRIMARYSIZE PRIMARYFOLDERS SECONDARYFILES SECONDARYSIZE; do
+            # Read data line by line using while loop, unused: _ _ _ _ _ _ = SECONDARYFILES SECONDARYSIZE ...
+            while IFS="|" read -r PRIMARYSTORAGENAME PRIMARYFILES PRIMARYSIZE PRIMARYFOLDERS _ _ _ _ _ _; do
                 if [ -e $SOFTSTOPFILE ]; then
                     [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
                     break
