@@ -1,58 +1,97 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
-<!ENTITY author    "Andrew Zawadzki">
-<!ENTITY version   "2019.08.23">
-<!ENTITY md5       "dc528983b671748ecb3e94aff848c1c4">
+<!ENTITY author    "hugenbdd">
+<!ENTITY version   "2023.12.19">
+<!ENTITY md5       "9a97a2257926ea7cd2b1619903f21fa8">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
-<!ENTITY github    "Squidly271/ca.mover.tuning">
+<!ENTITY github    "hugenbd/ca.mover.tuning">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/plugins/&name;.plg">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="music">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="music" min="6.9.0-rc2">
 
 <CHANGES>
-###2019.08.23
-- Respect mover logging setting in Mover Settings
+###2023.12.19
+- Change "while read" lines in age_mover to "while IFS= read -r" to fix trailing white spaces (Swarles)
+- Fix where sometimes mover would not run to mover.old scrip (Swarles)
+- Log if "share.cfg" doesn't exists to help trouble shooting (Swarles)
+- Check for ca.mover.tuning.cfg file and additional logging. (Swarles)
 
-###2019.07.07
-- Add in help text to priority settings
+###2023.08.22
+- Fixed Cron Job entry
+- Modified ignore command to include folders (Swarles)
+- Updated mover cmdline functions (Hugenbdd)
 
-###2019.06.23a
-- Add in option to set I/O priority
+###2023.07.03
+- Add check and creation of link to new binary move location. (Allows the plugin to survive a reboot)
+- Fix first time save on scheduler page. (Swarles/Yamraid 6/21)
+- Change "move all" default setting to No to not confuse new installs/users. (Swarles)
+- Custom mover tuning settings for individual shares. Located at “Shares>[click share]>Mover Tuning”. Includes age, size, sparseness, file list, file types, hidden files/directories, move all override. (Swarles 6/2023)
 
-###2019.06.23
-- Add in option to set priority
-- Utilize CA update check
+###2023.06.21
+- Fix spaces in before script file path (Swarles 6-18-2023)
+- Fix spaces in after script file path (Swarles 6-18-2023)
+- Fix spaces in ignore file list path (Swarles 6-18-2023)
+- Add check before moving to make sure file or directory exists to avoid binary mover lstat error. (DontWorryScro 6-19-2023)
 
-###2019.01.17
-- Add option to force turbo write mode during mover
+###2023.06.16
+- Fix no empty directories file
+- Fix missing echo statement on hardlinks area. (Foux 6-16-2023)
 
-###2019.01.13
-- Update icons
+###2023.06.15
+- Delete empty directories
+- Add Softlink for binary mover file change if on 6.12 RC8 in install script. (CS01-HS Found 6/13)
+- Add function for compatibility with RC8+ with zfs % full (a632079 - 6/3)
+   
+###2023.05.23
+- Fixed Hardlinks issue.  
+- If hardlinks detected in fileslit.
+   - No GUI update is available.
+   - No Soft Stop available.
+   
+###2023.05.18
+- Fixed a issue where SED was seeing [] and {} inside of the filepath string, by double quoting the echo'd variable.
+- Added softstop as a command to gracefully exit the mover from the command line.  Checks for a file under /var/run/moversoft.stop.  
+   before sending each file to the binary mover.  Will exit the loop if the file exists and mover will stop once the current file is 
+   done moving.
+     Example: /usr/local/emhttp/plugins/ca.mover.tuning/age_mover softstop
+     
+###2023.05.16
+- Changed to a file list instead of piping the output from the find command to the binary mover. (excludes share mover button)
+- Moved logs to /tmp/Mover/
+- Supports GUI update to allow percent complete, and number of files complete. (customized files needed for this can be found in my github)
+     - ArrayOperation.page, nchan/parity_list
+    
+### See previous releases for earlier notes...
 
-###2018.12.24
-- Change text on disabling mover running on a schedule for clarity
-
-###2018.12.01
-- Accept Stop parameter on command line
-
-###2018.10.19
-- Fix broken pipe
-
-###2018.04.14
-- Add in forced mover schedule
-
-###2018.04.12
-- Fix logic error on freespace calculation
-- Prevent mover running again if move already in progress
-- Allow mover to stop (mover stop)
-
-###2018.04.08
-- Initial Release
 </CHANGES>
 
+<!-- The 'pre-install' script. -->
+<FILE Run="/usr/bin/php">
+<INLINE>
+<![CDATA[
+<?
+  $version = parse_ini_file("/etc/unraid-version");
+  $displayversion = $version['version'];
+  echo "$displayversion \n";
+
+  if ( version_compare($version['version'],"6.9.0-rc2", "<") )
+  {
+    echo "********************************************************************\n";
+    echo "\n";
+    echo "CA Mover Tuning Requires unRaid version 6.9.0-rc2 or greater to run\n";
+    echo "\n";
+    echo "********************************************************************\n";
+    exit(1);
+  }
+ ?>
+]]>
+</INLINE>
+</FILE>
+ 
+ 
 <FILE Run="/bin/bash">
 <INLINE>
 # Remove old 'source' files
@@ -73,8 +112,16 @@ The 'post-install' script
 -->
 <FILE Run="/bin/bash">
 <INLINE>
+echo "Backup current mover binary, command may fail depending on version of unRAID"
 if [[ ! -f /usr/local/sbin/mover.old ]]; then mv /usr/local/sbin/mover /usr/local/sbin/mover.old; fi
 cp /usr/local/emhttp/plugins/&name;/mover /usr/local/sbin/mover
+   
+if [[ ! -f /usr/local/bin/mover.old ]]; then mv /usr/local/bin/mover /usr/local/bin/mover.old; fi
+cp /usr/local/emhttp/plugins/&name;/mover /usr/local/bin/mover
+
+echo "Creating Soft link for 6.12 RC8 or newer since /usr/local/sbin/move is now lcoated in /usr/local/bin/move"
+if [[ ! -e /usr/local/sbin/move ]]; then ln -s /usr/local/bin/move /usr/local/sbin/move; fi
+   
 echo ""
 echo "----------------------------------------------------"
 echo " &name; has been installed."

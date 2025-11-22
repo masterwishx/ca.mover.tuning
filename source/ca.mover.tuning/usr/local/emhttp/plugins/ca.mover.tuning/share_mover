@@ -1,0 +1,112 @@
+#!/bin/bash
+
+PIDFILE="/var/run/mover.pid"
+CFGFILE="/boot/config/share.cfg"
+LOGLEVEL=0
+
+mvlogger () {
+
+        if [ $LOGLEVEL = 1 ] ; then
+                echo "mvlogger: $1"
+        fi
+
+}
+
+if [ -f $CFGFILE ] ; then
+        if ! grep -qs 'shareCacheEnabled="yes"' $CFGFILE ; then
+                echo "mover: cache not enabled"
+                exit 2
+        fi
+        if grep -qs 'shareMoverLogging="yes"' $CFGFILE ; then
+                LOGLEVEL=1
+                mvlogger "Log Level: $LOGLEVEL"
+        fi
+fi
+
+
+mvlogger  "*********************************MOVER -SHARE- START*******************************"
+NOW=`date`
+mvlogger "$NOW" 
+
+
+#Test input variables
+if [ -z "$1" ] ; then
+        mvlogger "No Share Argument Supplied"
+        exit 2
+else
+        mvlogger "Share supplied $1"
+        SHARE=$1
+        SHARECFG="/boot/config/shares/${SHARE}.cfg"
+fi
+
+#Test Mode
+  TESTMODE=`sed -r 's/[[:alnum:]]+=/\n&/g' /boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg| awk -F= '$1=="testmode"{print $2}' | sed 's/^.//;s/.$//'`
+  if [ "$TESTMODE" != "yes" ] ; then
+        $TESTMODE="no"
+  fi
+
+  if [ -f $PIDFILE ] ; then
+    if ps h $(cat $PIDFILE) | grep mover ; then
+        echo "mover: already running"
+        exit 1
+    fi
+  fi
+
+  # Only start if cache enabled and present
+  if ! grep -qs 'shareCacheEnabled="yes"' $CFGFILE ; then
+    echo "mover: cache not enabled"
+    exit 2
+  fi
+
+  if ! mountpoint -q /mnt/user0 ; then
+    echo "mover: cache not present, or only cache present"
+    exit 3
+  fi
+
+
+  echo $$ >/var/run/mover.pid
+
+  shopt -s nullglob
+
+  if grep -qs 'shareUseCache="yes"' "$SHARECFG" ; then
+        echo "Sharecfg: $SHARECFG"
+        CACHEPOOLNAME=`cat "$SHARECFG" | grep shareCachePool | cut -d'=' -f 2 | tr -d '"' | tr -d '\r'`
+        mvlogger "Cache Pool Name: $CACHEPOOLNAME "
+
+        if [ -z "$CACHEPOOLNAME" ] ; then
+                mvlogger "No shareCachePool entry found in config file, defaulting to cache"
+                CACHEPOOLNAME="cache"
+        fi
+
+        SHAREPATH="/mnt/$CACHEPOOLNAME/$SHARE"
+        mvlogger "Share Path: $SHAREPATH"
+
+        if [ "$SHAREPATH" = "/mnt/cache" ] ; then
+                echo "Exiting, can't determine cache name used"
+                exit 2
+        else
+                if [ -d $SHAREPATH ] ; then
+                        FINDSTR="find \"$SHAREPATH\" -depth"
+
+                        if [ "$TESTMODE" = "yes" ] ; then
+                                mvlogger "Running in Test Mode: $FINDSTR"
+                                eval "$FINDSTR"
+                        else
+                                #Add Mover to find string
+                                FINDSTR+=" | /usr/local/sbin/move -d $LOGLEVEL"
+                                mvlogger "Complete Mover Command: $FINDSTR"
+                                eval " $FINDSTR"
+                        fi
+                else
+                        mvlogger "Directory does not exist: $SHAREPATH"
+                fi
+        fi
+
+
+  fi
+
+rm -f $PIDFILE
+$NOW=`date`
+mvlogger "$NOW"
+mvlogger "********************************Mover Finished*****************************"
+
