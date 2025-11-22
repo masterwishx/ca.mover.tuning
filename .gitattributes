@@ -1,5 +1,5 @@
 # Auto detect text files and perform LF normalization
-* text=auto
+* text=auto eol=lf
 
 # Custom for Visual Studio
 *.cs     diff=csharp
@@ -15,3 +15,6 @@
 *.PDF	 diff=astextplain
 *.rtf	 diff=astextplain
 *.RTF	 diff=astextplain
+
+# Custom for PHP files with syntax highlighting
+*.page   text eol=lf lang=php

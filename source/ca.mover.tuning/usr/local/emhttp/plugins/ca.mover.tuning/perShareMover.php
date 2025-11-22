@@ -33,7 +33,7 @@ function getShareSettings($shareName)
     $cfg = parse_share_cfg("ca.mover.tuning", $shareName);
 
     $mover_opt_str = "override"; #Place holder because $1 is not used
-    $threshold = $cfg['threshold'];
+    $threshold = $cfg['moveThreshold'];
     $ageLevel = $cfg['daysold'];
     $sizeLevel = $cfg['sizeinM'];
     $sparsnessLevel = $cfg['sparsnessv'];

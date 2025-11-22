@@ -1,49 +1,327 @@
 <?xml version='1.0' standalone='yes'?>
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
-<!ENTITY author    "hugenbdd">
-<!ENTITY version   "2023.12.19">
-<!ENTITY md5       "9a97a2257926ea7cd2b1619903f21fa8">
+<!ENTITY author    "masterwishx">
+<!ENTITY version   "2025.10.31">
+<!ENTITY md5       "394567cc6ca2e22d8faed4f04219fd28">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
-<!ENTITY github    "hugenbd/ca.mover.tuning">
+<!ENTITY github    "masterwishx/ca.mover.tuning">
+<!ENTITY branch    "master">
+<!ENTITY upgrade   "minor">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/plugins/&name;.plg">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="music" min="6.9.0-rc2">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.10.31
+- fix: Added guard to skip cache:prefer pools when no valid secondary paths exist to avoid erroneous processing. **_(masterwishx)_**
+- new: Improved handling of secondary storage in cache-prefer mode for accurate counts, presence checks, path selection and clearer error/log messages.
+- new: Dynamic Test Mode warning that displays when Test Mode is enabled.
+- new: Refreshed option layout, wording and help text for clearer presentation and consistency.
+
+###2025.10.22
+- new: Test mode now defaults to "no" - moves will execute immediately unless explicitly set to test mode. **_(masterwishx)_**
+- new: Per-share override support: per-share configs are detected and applied when present.
+- new: Rebalance activation treats any non-"no" value as active and normalizes "run-once".
+- new: Stats and headers now include unattended totals and per-share metrics.
+- fix: Clarified UI help text and fixed wording.
+- new: Added "run-once" option - automatically resets to "no" after execution.
+- new: Improved unattended storage detection during rebalancing.
+- new: Enhanced logging for attended/unattended pools.
+- new: Impact: More granular control over rebalancing operations.
+- new: Reads per-share configs from MOVERTUNING_OVERRIDE_CFGFOLDER/sharename.cfg.
+- new: Enhanced AWK logic to apply per-share configurations.
+- new: Global defaults preserved when overrides not present.
+- new: Impact: Each share can have custom routing rules, preventing misrouting.
+- new: Added "(ignores plugin filters)" clarifications for Force move and Move Now.
+- new: Added "Run once" option for rebalance shares.
+- new: Fixed duplicate wording errors.
+- new: Updated help text for Unattended Storage and cache conditions.
+- new: Impact: Better user understanding of filter behavior.
+- new: Added unattended storage metrics: FILES_FROM_UNATTENDED, SIZE_FROM_UNATTENDED.
+- new: Extended status output with per-share metrics.
+- new: Improved rebalance operation logging.
+- new: Impact: Better visibility into mover operations.
+- new: Files are routed according to per-share configurations.
+- new: Plugin paths are properly filtered and not sent to cache root.
+- new: Share-specific rules prevent creation of unintended shares.
+- new: Unattended storage is properly detected and handled.
+- new: Fully reworked cache:prefer share path detection and handling.
+
+###2025.10.03
+- new: Configurable blocked-filename characters with sensible defaults, persisted across runs. **_(masterwishx)_**
+- new: Input and placeholders for invalid-character list and several path/script fields for clearer configuration.
+- new: More accurate path-traversal and filename validation to better block unsafe paths.
+- new: Improved filename and path validation to better detect and block unsafe names and traversal patterns.
+- fix: Per-share sync override awareness for share-specific behavior.
+
+###2025.09.06
+- new: Added Unraid 7.2 responsive UI support. **_(masterwishx)_**
+- new: Integrated multi-language options for better usability.
+- new: Implemented broad localization for some labels and help text.
+- fix: Corrected cron time updates when force move is enabled.
+- new: Provided a Crontab link for easier using of the force scheduler.
+- new: Implemented a warning notification system when test mode is enabled, along with additional improvements for notifications.
+- fix: Adjusted size calculation to correctly ignore hidden files.
+- new: HTML-escaped all displayed input values for security.
+- new: Set external links with safer attributes.
+
+###2025.08.05
+- new: Updated unraid mover code from original mover for "mover start -e" command. **_(masterwishx)_**
+- fix: Enhanced folder cleanup logic to prevent errors by checking folder existence before removal.
+- fix: Added diagnostic logging for folder cleanup operations to improve troubleshooting.
+- new: Clarified help text for the "Sync files based on maximum size?" option to specify it applies only when Synchronize or Resynchronize features are enabled.
+- new: Expanded and reformatted explanatory notes for "Synchronize Primary files to Secondary," detailing conditions for file synchronization and eligibility.
+
+###2025.07.28
+- new: Added a configurable option for global and share-only sync files based on maximum file size in MB. **_(masterwishx)_**
+- new: Updated UI text to clarify size units for both moving and syncing files.
+- new: Added explanatory text for the new sync size selection to guide users.
+
+###2025.07.27
+- new: Added a "Moved Only" notification option that allows notifications only when files are actually moved. **_(masterwishx)_**
+- new: Debug added for synchronize and notification modes.
+- new: Introduced a "Synchronize Primary files to Secondary" setting for shares override with cache enabled, enabling selective synchronization of modified files for backup and parity protection.
+
+###2025.06.14
+- fix: Fix age_mover is missing the "start" parameter in the cron schedule when force move is enabled. **_(masterwishx)_**
+- fix: Remove renaming of "mover.cron" to "mover.cron.disabled". No longer necessary with previous version.
+
+###2025.06.07
+- fix: Fixed "mover start" from CLI freezing before the end stage at "resetRunOnceMoverSettings" function. **_(masterwishx)_**
+- fix: Fixed the mover process retrieving blank values for parent processes instead of "bash" and "crond" commands.
+- new: Added a time counter feature to calculate the elapsed time during file move operations. This enhancement provides better visibility into the performance of file moves.
+
+###2025.06.01
+- new: Added an option "Move files tool" to select the file-moving tool between Rsync and the Unraid move utility, default file-moving tool set to Rsync. **_(masterwishx)_**
+- new: Introduced a new debug command "mover debug" to generate a diagnostics package for troubleshooting.
+- fix: Enhanced logging and debug information for file move operations.
+- fix: Updated debug package creation to copy the diagnostics ZIP to the system boot logs directory.
+
+###2025.05.23
+- fix: Fixed "mover start" issue that was scheduled without the "start" parameter by unRaid 6.x. **_(masterwishx)_**
+- new: Added "Top Folder" option for the Clean empty folders feature to remove top-level empty folders on shares.
+- fix: Removed warning message when thresholds are equal and both set to 0%.
+- fix: Enhanced README and plugin with clearer descriptions of plugin functionality, including expanded options and improved usage explanations.
+- fix: Improved disk validation to ensure only mounted disks matching the required pattern are accepted, with clearer error messages and usage instructions.
+
+###2025.05.04
+- fix: Fix for initialized PREFER_MOVINGPCTTHRESHOLD to 0. Thanks to AdamLeyshon for reported this issue. **_(masterwishx)_**
+- new: A warning will be added when in test mode and thresholds are either identical or have a small gap between them.
+- new: Debug download added that collect all data from plugin and save them to a file for debugging purposes. Thanks to Rysz from forums for the code example.
+- fix: Fix issue where "shareOverrideConfig" with spaces was not working with "grep".
+- fix: Fix for enabling/disabling Mover running on a schedule.
+
+###2025.04.24a
+- fix: version number in default.cfg file. **_(masterwishx)_**
+
+###2025.04.24
+- fix: Fix cli arguments when running "mover command" in cli mode for pass them to age_mover script or original mover. **_(masterwishx)_**
+- new: Add "mover start -e diskX" option for age_mover from original mover for empty an array disk.
+- new: Added "mover reset" command to reset all settings in the plugin. This will delete also override existing settings.
+- new: Added a "Defaults" button in the GUI that resets all settings to their default values. This action triggers "age_mover reset" via "reset.php".
+- fix: Updated plugin version handling to ensure it is stored in the config with quotes and displayed correctly in both the console and logs.
+- fix: Schedule option to force move all files by unraid mover now logs output via syslog instead of being unlogged. Thanks to williechan91 for reported this issue.
+- fix: Fix the calculation of PRIMARYSIZETHRESH in cache prefer cases where the threshold can become negative due to freeing thresholds without moving any files. Thanks to AdamLeyshon for reported this issue.
+
+###2025.04.05
+- fix: Fix for Logs parent folder can be empty instead of /tmp when no value is provided. Thanks to niwmik2 from forums for reported this issue. **_(masterwishx)_**
+- fix: Fixed an issue where (cache:prefer) was generating unnecessary lists for files that should remain on the primary pool.
+- fix: Only generate updated filtered filelist for (cache:prefer) if we have files on secondary storage.
+- new: Added Help block to the plugin page, including useful links and a donation link for support. Thanks to KluthR from forums for the code example.
+
+###2025.03.30
+- new: Added new settings: Logs parent folder, age for mover Log,txt and List files. Thanks to Renegade605 and jimlei from forums for the idea. **_(masterwishx)_**
+- fix: Log Mover Tuning plugin actions setting when set to No, will not post to syslog and Mover_tuning_xxx.log file.
+- fix: Added a counter when deleting folders and datasets to speed up the counting of files after moving a large number of files. Thanks to Dor from the forums for the idea.
+- fix: Ensure Folders are always deleted when setting "yes" to clean folders after moving.
+- new: Added debug when deleting folders and datasets in order to get more information about the process.
+
+###2025.03.20a
+- fix: Exclude primary storage from find in Move now button in cache:prefer share page , when moving all data from array to cache pool by unraid mover. **_(masterwishx)_**
+
+###2025.03.20
+- fix: Added zfs cache:only share calculation when share is folder instead of dataset. Thanks to Sak from forums for the bug report. **_(masterwishx)_**
+- fix: Added remove potential trailing ( /, *, /* ) characters from the skipped folder path in ignore file list path.
+- fix: Fixed issue when thresholds for cache:prefer was applyed to cache:yes shares. Tnanks to Ichthus and other users from forum for the bug report.
+- new: Added fillup (%) global setting threshold option and override for cache:prefer shares.
+- new: Move now button in cache:prefer share page , moving all data from array to cache pool by unraid mover.
+
+###2025.03.11
+- Fixed zfs cache pool percent calculation. Thanks to Renegade605 from forums for the bug report. **_(masterwishx)_**
+- Array -> Cache (cache:prefer) now moves data to the cache pool from the array only until reaching a fillup limit of 95%.
+    - Thanks to alturismo and Renegade605 from forums, who helped clarify how this feature should work.
+    - Disabled override setting for mover tuning if shareUseCache="prefer" (Array -> Cache) is set.
+- Format global and share settings help text descriptions add more clear description for mover thresholds.
+- Fixed ignore file list path setting when folder in list file contains (left square bracket). Thanks to JamieBriers from forums for the PR and fix.
+
+###2025.03.04
+- Added option for users can enable/disable Validation (Sanitize) check for input filenames to prevent attacks future added befor. **_(masterwishx)_**
+- Fixed Debug = yes/no instead of 0/1 in mover logs.
+- Fixed primary cache prefer not to move data. Set fixed moving threshold to 99% freeing threshold to 0% for skip moving.
+  when chache is full set freeing to 98% to move some data. Maybe better fix will be later.
+
+###2025.03.01
+- Fix for (*) in path when cache prefers or RebalanceShare. Thanks to (tehg) from the forums for identifying the bug. **_(masterwishx)_**
+- Fix for Clean empty ZFS datset when enabled but Clean empty Folders is disabled.
+- Added Sanitize check for input filenames to prevent attacks. Thanks to (AEnterprise) from forums for identifying the bug.
+- Plugin icon changed.
+
+###2025.02.24
+- Added log message when no share avalible on cache for ZFS dataset. **_(masterwishx)_**
+- Added option with Notifications to Unraid GUI for error and success messages.
+- Fixed issue with (') symbol in ignore File list. Thanks to JayBriers from forums.
+- ATIME option is now added for based on age option.
+- Debug Logging option added (To print find command and ignored folders/files)
+
+###2025.02.18.1752
+- Check parent empty ZFS dataset for children empty datasets before destroy it. **_(masterwishx)_**
+- Shell Check Fixes + speedup `if` checks.
+- Better help text cosmetic with Bold and italic + added note for Test Mode and some changes in config page.
+- Skip cache pool size calculation when only one share found in cache pool.
+- Changed minimum threshold of used Primary (cache) space from 5% to 0%.
+
+###2025.02.12.1707
+- Fix issue for shares with spaces.Thanks DToX_ from forums. **_(masterwishx)_**
+- Add option to clean ZFS datasets.
+
+###2024.09.05.0222
+- Fix find not finding hidden files. Thanks solidno8 from forums. [R3yn4ld]
+2024.09.05.0115
+- Add compatibility with unraid 7.x for share_mover [R3yn4ld]
+- Fix "integer expression expected" thanks to [RonaldJerez]
+- Fix "0: command not found" bugs [R3yn4ld]
+
+###2024.08.18
+- Fix blank grep to rsync loop causing "Warning no action for; integer expected; unary operator expected" errors [R3yn4ld]
+
+###2024.08.17
+- Fix settings override not reverting [R3yn4ld]
+
+###2024.08.15
+- Fix ignore list reserved space double quoting (Thanks silver226) [R3yn4ld]
+- Better empty folder cleaner  [R3yn4ld]
+  - Rewritten to rmdir parent directory of a moved file if empty (drawbacks: will let multidirectory dirs  alive)
+  - Added option to enable/disable empty folder cleaner added in Settings UI
+  - UI improvements, settings sorted
+- Even better cache priming (hopefully) [R3yn4ld]
+  - Rewriten Ignore filelist from file and filetypes filtering functions (major)
+  - Improve calculating size of filtered files and filetypes
+  - Update calculation from basic/bc to numfmt. Removed bc option 
+  - Added verification for not breaking hardlinks when an hardlinked file is filtered
+- Added testmode to cleaning empty folder function, and a min depth of 2.
+- Fixed ctime bug
+
+###2024.08.12
+- Add bc (un)install option [R3yn4ld]
+- Force test mode only on major upgrade, keep on minor. [R3yn4ld]
+- Repair/optimize cache priming.
+- Adding check to bc (un)installation routine
+- Add bc (un)install option
+- Force test mode only on major upgrade, keep on minor.
+
+###2024.08.11
+- Allow-operation-without-array-if-multiple-pools [R3yn4ld]: Fixed fatal error bug
+- Fixed error message about mover.pid and softstop file when installing the plugin or booting Unraid [R3yn4ld]
+
+###2024.08.10
+- Better filtering with ctime=no [R3yn4ld]
+- Improved Synchronization [R3yn4ld]:
+  - Improve synchronization by looking for files on cache first
+  - Do not count synchronized files twice (freeing/priming target were half achieved)
+  - Optimize Filtering File and Decision loops regarding Rebalance and Synchronize
+- Moved test mode on top of Mover Tuning Page [R3yn4ld]
+- Add check for primary storage not existing (dust config files) [R3yn4ld]
+
+###2024.08.07
+- Fix bug introduced by "Allow operation without array if multiple pools" preventing mover to run if less than 2 pools installed.
+- Allow operation without array if multiple pools [R3yn4ld]. Unraid 7.0.0.beta2 may be required for this to work (6.x gui might not allow to have pool as Primary and Secondary)
+- Add cleanup empty folder function[R3yn4ld]
+
+###2024.08.06
+- Bug fixes [R3yn4ld]: 
+  - Resynchronize not working for share below moving threshold.
+  - Internal mover moving files from Secondary to Primary instead of syncing (you may Resynchronize to correct the effect)
+- Added Resynchronize all Primary files to Secondary option [R3yn4ld]: Resynchronize all Primary files to Secondary. This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected. All files will be synchronized again independently of modification time. This can be a long operation. Run-once setting will reset back to No after next run
+- Minor bug fixes and improvements [R3yn4ld]
+
+###2024.08.05
+- Enhance previous "Repair Primary" option. Renamed it "Rebalance shares". This will move files from shares to their primary and secondary storage if spread elsewhere. May imply moving older files from Primary->Secondary or Secondary->Primary if allowed (cache:prefer or cache:yes) to free some space.   [R3yn4ld]
+- Bug fixes [R3yn4ld]
+
+###2024.08.04
+- Unraid 7.0.0 beta2 Secondary storage Compatibility: minor enhancements (6.12 mover action naming) and... can now move between pools (tested on 7.0.0-beta2) !
+- Fix find not ignoring hidden files [R3yn4ld] (Thanks to helpful-tune3401)
+- Fix default Settings handling causing a "Unrary operator" bug [R3yn4ld] (thanks to Alturismo)
+- Add freeing threshold option [R3yn4ld]
+
+###2024.08.01
+- Deleted share error control [R3yn4ld]
+- SoftStop improvement [R3yn4ld]
+
+###2024.07.30
+- Update to repair broken installation from previous bugs [R3yn4ld]
+- Enhance internal mover function [R3yn4ld]
+- Fixed "cache=yes" shares not moving above threshold [R3yn4ld]
+
+###2024.07.29b
+- Various bug fixes [R3yn4ld], [Freender]
+
+###2024.07.29
+- Complete rewrite of file listing functions (find, decide to move..) [R3yn4ld]
+- Internal moving/syncing engine [R3yn4ld]
+- Fix an issue with inaccurate capacity when raid z1 is used. Updated zfs functions getting usage of a pool [Freender]
+- Added cache mode "prefer" smart moving in "Automatic age" mode [R3yn4ld]
+- Added option to "repair" Cache:Only (moving everything on share to cache) and Cache:No (moving everything on share to array) shares [R3yn4ld]
+- Added option to synchronize Cache:Yes and Cache:Prefer shares to array so data are parity protected [R3yn4ld]
+- Turbo write mode forcing improvement to not wake spinners if not needed [R3yn4ld]
+- UI improvements [R3yn4ld]
+
+###2024.07.10
+- Unraid 7.0.0 compatibility (/ 6.x bug?): original mover now works with "Move Now button follows plug-in filters" set to off [R3yn4ld]
+
+###2024.07.07
+- Unraid 7.0.0 compatibility [R3yn4ld]
+
+###2024-06-30
+- Automatic age threshold and plugin cleaning [R3yn4ld]
+- Minor spelling corrections and README [Dphelan]
+- Merge share skipfiletypes [Davendsai] (add/merge per share skipfilestype to global skips)
+- Update Mover.tuning.page [Squid]
+
 ###2023.12.19
-- Change "while read" lines in age_mover to "while IFS= read -r" to fix trailing white spaces (Swarles)
-- Fix where sometimes mover would not run to mover.old scrip (Swarles)
-- Log if "share.cfg" doesn't exists to help trouble shooting (Swarles)
-- Check for ca.mover.tuning.cfg file and additional logging. (Swarles)
+- Change "while read" lines in age_mover to "while IFS= read -r" to fix trailing white spaces [Swarles]
+- Fix where sometimes mover would not run to mover.old scrip [Swarles]
+- Log if "share.cfg" doesn't exists to help trouble shooting [Swarles]
+- Check for ca.mover.tuning.cfg file and additional logging. [Swarles]
 
 ###2023.08.22
 - Fixed Cron Job entry
-- Modified ignore command to include folders (Swarles)
-- Updated mover cmdline functions (Hugenbdd)
+- Modified ignore command to include folders [Swarles]
+- Updated mover cmdline functions [Hugenbdd]
 
 ###2023.07.03
 - Add check and creation of link to new binary move location. (Allows the plugin to survive a reboot)
-- Fix first time save on scheduler page. (Swarles/Yamraid 6/21)
-- Change "move all" default setting to No to not confuse new installs/users. (Swarles)
-- Custom mover tuning settings for individual shares. Located at “Shares>[click share]>Mover Tuning”. Includes age, size, sparseness, file list, file types, hidden files/directories, move all override. (Swarles 6/2023)
+- Fix first time save on scheduler page. [Swarles/Yamraid 6/21]
+- Change "move all" default setting to No to not confuse new installs/users. [Swarles]
+- Custom mover tuning settings for individual shares. Located at “Shares>[click share]>Mover Tuning”. Includes age, size, sparseness, file list, file types, hidden files/directories, move all override. [Swarles 6/2023]
 
 ###2023.06.21
-- Fix spaces in before script file path (Swarles 6-18-2023)
-- Fix spaces in after script file path (Swarles 6-18-2023)
-- Fix spaces in ignore file list path (Swarles 6-18-2023)
-- Add check before moving to make sure file or directory exists to avoid binary mover lstat error. (DontWorryScro 6-19-2023)
+- Fix spaces in before script file path [Swarles 6-18-2023]
+- Fix spaces in after script file path [Swarles 6-18-2023]
+- Fix spaces in ignore file list path [Swarles 6-18-2023]
+- Add check before moving to make sure file or directory exists to avoid binary mover lstat error. [DontWorryScro 6-19-2023]
 
 ###2023.06.16
 - Fix no empty directories file
-- Fix missing echo statement on hardlinks area. (Foux 6-16-2023)
+- Fix missing echo statement on hardlinks area. [Foux 6-16-2023]
 
 ###2023.06.15
 - Delete empty directories
-- Add Softlink for binary mover file change if on 6.12 RC8 in install script. (CS01-HS Found 6/13)
-- Add function for compatibility with RC8+ with zfs % full (a632079 - 6/3)
+- Add Softlink for binary mover file change if on 6.12 RC8 in install script. [CS01-HS Found 6/13]
+- Add function for compatibility with RC8+ with zfs % full [a632079 - 6/3]
    
 ###2023.05.23
 - Fixed Hardlinks issue.  
@@ -62,7 +340,7 @@
 - Changed to a file list instead of piping the output from the find command to the binary mover. (excludes share mover button)
 - Moved logs to /tmp/Mover/
 - Supports GUI update to allow percent complete, and number of files complete. (customized files needed for this can be found in my github)
-     - ArrayOperation.page, nchan/parity_list
+- ArrayOperation.page, nchan/parity_list
     
 ### See previous releases for earlier notes...
 
@@ -72,7 +350,7 @@
 <FILE Run="/usr/bin/php">
 <INLINE>
 <![CDATA[
-<?
+<?php
   $version = parse_ini_file("/etc/unraid-version");
   $displayversion = $version['version'];
   echo "$displayversion \n";
@@ -103,7 +381,7 @@ rm -f $(ls /boot/config/plugins/&name;/&name;*.txz 2>/dev/null &#124; grep -v '&
 The 'source' file.
 -->
 <FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz" Run="upgradepkg --install-new">
-<URL>https://raw.github.com/&github;/master/archive/&name;-&version;-x86_64-1.txz</URL>
+<URL>https://github.com/&github;/raw/&branch;/archive/&name;-&version;-x86_64-1.txz</URL>
 <MD5>&md5;</MD5>
 </FILE>
 
@@ -112,20 +390,94 @@ The 'post-install' script
 -->
 <FILE Run="/bin/bash">
 <INLINE>
-echo "Backup current mover binary, command may fail depending on version of unRAID"
-if [[ ! -f /usr/local/sbin/mover.old ]]; then mv /usr/local/sbin/mover /usr/local/sbin/mover.old; fi
+echo ""
+if [[ -e /usr/local/sbin/mover ]]; then
+   if [[ ! -f /usr/local/sbin/mover.old ]]; then
+     echo "Backing up current /usr/local/sbin/mover script"
+     mv /usr/local/sbin/mover /usr/local/sbin/mover.old
+   fi
+elif [[ -e /usr/local/bin/mover ]]; then
+  if [[ ! -f /usr/local/bin/mover.old ]]; then 
+    echo "Backing up current /usr/local/bin/mover script"
+    mv /usr/local/bin/mover /usr/local/bin/mover.old
+  fi
+fi
+echo "Installing tuned mover script"
 cp /usr/local/emhttp/plugins/&name;/mover /usr/local/sbin/mover
-   
-if [[ ! -f /usr/local/bin/mover.old ]]; then mv /usr/local/bin/mover /usr/local/bin/mover.old; fi
-cp /usr/local/emhttp/plugins/&name;/mover /usr/local/bin/mover
 
-echo "Creating Soft link for 6.12 RC8 or newer since /usr/local/sbin/move is now lcoated in /usr/local/bin/move"
-if [[ ! -e /usr/local/sbin/move ]]; then ln -s /usr/local/bin/move /usr/local/sbin/move; fi
-   
+# Cleaning eventual leftovers
+if ! pgrep age_mover; then
+  echo "Cleaning lock and stop files"
+  for file in mover.pid moversoft.stop; do
+    if [[ -e "/var/run/$file" ]]; then rm -f "/var/run/$file"; fi
+  done
+fi
+
+# Renaming mover.cron.disabled to mover.cron if exists (from old cron fix)
+if [[ -e /boot/config/plugins/dynamix/mover.cron.disabled ]]; then mv -f /boot/config/plugins/dynamix/mover.cron.disabled /boot/config/plugins/dynamix/mover.cron; fi
+
+echo "Fixing permissions"
+chmod +x /usr/local/sbin/mover
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/*.php
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/mover
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover
+chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover
+
+# Config file
+config_file=/boot/config/plugins/&name;/&name;.cfg;
+
+if [[ $(cat $config_file | wc -l) -eq 1 ]]; then
+  rm $config_file
+fi
+if [[ ! -f "$config_file" ]]; then
+  echo "Creating file $config_file with default configuration."
+  # Create the file with some default values
+  echo 'testmode="no"' > $config_file
+  echo 'logging="yes"' >> $config_file
+  echo 'movenow="yes"' >> $config_file
+  echo 'version="&version;"' >> "$config_file"
+else  
+  echo "Updating config file"
+  if [ &upgrade; = "major" ]; then
+    echo "- Major upgrade, forcing test mode"
+    if grep -q "testmode" "$config_file"; then
+      sed -i "s/testmode=.*$/testmode=\"yes\"/" "$config_file"
+    else
+      echo 'testmode="yes"' >> "$config_file"
+    fi
+  else
+    echo "- Minor upgrade, not forcing test mode"
+  fi
+  echo "- Updating version number"
+  if grep -q "version" "$config_file"; then
+    sed -i "s/version=.*$/version=\"&version;\"/" "$config_file"
+  else
+    echo "version=\"&version;\"" >> "$config_file"
+  fi
+  if grep -q "threshold=" $config_file; then
+    echo "- Updating movingThreshold"
+    sed "s/threshold=/movingThreshold=/" -i "$config_file"
+  fi
+  if grep -q 'freeingThreshold=""' "$config_file"; then
+      echo "- Updating freeingThreshold"
+      thresh=$(grep "movingThreshold=" $config_file | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+      sed "s/freeingThreshold=.*$/freeingThreshold=$thresh/" -i "$config_file"
+  fi
+  if ! grep -q 'freeingThreshold=' $config_file; then
+    echo "- Updating freeingThreshold"
+    grep 'movingThreshold=' "$config_file" | sed 's/movingThreshold/freeingThreshold/' >> "$config_file"
+  fi
+fi
+
 echo ""
 echo "----------------------------------------------------"
 echo " &name; has been installed."
-echo " Copyright 2018, Andrew Zawadzki"
+echo " Copyright (C)"
+echo "       2018 - Andrew Zawadzki"
+echo "       2023 - hugenbd"
+echo "       2024 - R3yn4ld"
+echo "       2025 - masterwishx"
 echo " Version: &version;"
 echo "----------------------------------------------------"
 echo ""
@@ -137,7 +489,8 @@ The 'remove' script.
 -->
 <FILE Run="/bin/bash" Method="remove">
 <INLINE>
-mv /usr/local/sbin/mover.old /usr/local/sbin/mover
+if [[ -e /usr/local/sbin/mover.old ]]; then mv -f /usr/local/sbin/mover.old /usr/local/sbin/mover; fi
+if [[ -e /usr/local/bin/mover.old ]]; then mv -f /usr/local/bin/mover.old /usr/local/bin/mover; fi
 removepkg &name;-&version;-x86_64-1
 rm -rf &plugdir;
 rm -rf /boot/config/plugins/&name;

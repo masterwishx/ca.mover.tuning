@@ -1,27 +1,38 @@
 Menu="Scheduler:2a"
-Title="Mover Tuning w/Age - Days Old"
+Title="Mover Tuning"
 Tag="gear"
 ---
-<?
+<?PHP
 if ($var['shareCacheEnabled']!='yes') {
   echo "<p class='notice'>Cache disk not enabled!</p>";
 } elseif ($var['shareUser']=='-') {
   echo "<p class='notice'>User shares not enabled!</p>";
 }
-$plugin='ca.mover.tuning';
+$plugin = 'ca.mover.tuning';
+$config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
+$config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
 $cfg = parse_plugin_cfg($plugin);
-$cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
+$advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
+$advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
+$advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
+$moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
+$validateFilenames = ($cfg['validateFilenames'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
-$sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
-$sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
-$filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
+$ctimeDisabled = ($cfg['atime'] != "yes") ? "no" : "yes";
+$atimeDisabled = ($cfg['ctime'] != "yes") ? "no" : "yes";
+$cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
+$filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
-$om = $cfg['threshold'];
-$om = $om + 5;
-
+$om = $cfg['movingThreshold']; $om = $om + 5;
+$f = $cfg['movingThreshold'];
+$sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
+$sizefSyncDisabled = ($cfg['sizefSync'] != "yes") ? "disabled" : "";
+$sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
+$version = ($cfg['version']);
 
 ?>
+
 <script>
 $(function(){
 	if ( typeof caPluginUpdateCheck === "function" ) {
@@ -39,65 +50,373 @@ $.fn.toggleAttr = function(attr) {
 function updateCron() {
   var cron = $("#cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
-	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron});
+  var ismoverDisabled = $("#moverDisabled").val();
+	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,ismoverDisabled:ismoverDisabled});
 }
 
 function moveNow() {
-	$.post("/plugins/ca.mover.tuning/moveNow.php");
+	$.post("/plugins/ca.mover.tuning/mover.php crond start");
 }
 
-sizef.toggleAttr("disabled")
-sparsnessf.toggleAttr("disabled")
-filelistv.toggleAttr("disabled")
+function resetDefaults() { 
+  $.post("/plugins/ca.mover.tuning/reset.php");
+}
 
+function updateScreenMoverTuningSettings(option,slow) {
+  switch (option) {
+  case 'yes':
+    $('#moverTuningSettings').hide(slow);
+    break;
+  case 'no':
+    $('#moverTuningSettings').show(slow);
+    break;
+  }
+}
+
+function updateScreenMoverAdvancedSettings(option,slow) {
+  switch (option) {
+  case 'no':
+    $('#moverAdvancedSettings').hide(slow);
+    break;
+  case 'yes':
+    $('#moverAdvancedSettings').show(slow);
+    break;
+  }
+}
+
+function updateScreenMoverAdvancedFilters(option,slow) {
+  switch (option) {
+  case 'no':
+    $('#moverAdvancedFilters').hide(slow);
+    break;
+  case 'yes':
+    $('#moverAdvancedFilters').show(slow);
+    break;
+  }
+}
+ 
+function updateScreenMoverAdvancedOptions(option,slow) {
+  switch (option) {
+  case 'no':
+    $('#moverAdvancedOptions').hide(slow);
+    break;
+  case 'yes':
+    $('#moverAdvancedOptions').show(slow);
+    break;
+  }
+}
+
+function updateScreenMoverInvalidCharsToBlock(option,slow) {
+  switch (option) {
+  case 'no':
+    $('#moverInvalidCharsToBlock').hide(slow);
+    break;
+  case 'yes':
+    $('#moverInvalidCharsToBlock').show(slow);
+    break;
+  }
+}
+
+$(function() {
+  updateScreenMoverTuningSettings('<? echo $moverDisabled ?>');
+  updateScreenMoverAdvancedSettings('<? echo $advancedSettings ?>');
+  updateScreenMoverAdvancedFilters('<? echo $advancedFilters ?>');
+  updateScreenMoverAdvancedOptions('<? echo $advancedOptions ?>');
+  updateScreenMoverInvalidCharsToBlock('<? echo $validateFilenames ?>');
+});
 </script>
+
+<div class="title">
+<span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
+<span class="right">Version: <?=$version?></span>
+</div>
+
 <div class='moverUpdate'></div>
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
-Disable Mover running on a schedule:
-: <select name='moverDisabled' size='1' class='narrow'>
-<?=mk_option($cfg['moverDisabled'],"no","No")?>
-<?=mk_option($cfg['moverDisabled'],"yes","Yes")?>
+
+_(Disable Mover running on a schedule)_:
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='moverDisabled' size='1' id='moverDisabled' class='narrow' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
+<?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
+<?=mk_option($cfg['moverDisabled'],"yes",_('Yes'))?>
 </select>
-*Note that setting this to yes effectively disables this plugin
+&nbsp;<strong>Yes</strong> <em>- disables the plugin's schedule</em></span>
 
-> This will prevent mover from running at the schedule set in Mover Settings.  You will only be able to run mover by manually invoking it.
+:mover_tune_disable_plug:
+> This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
+:end
 
-Priority for mover process
+<div markdown="1" id="moverTuningSettings">
+_(Test Mode (dry run))_:
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='testmode' size='1' id='testmode' class='narrow' onchange="toggleTestModeWarning(this.value)">
+    <?=mk_option($cfg['testmode'],"no",_('No'))?>
+    <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
+</select>
+&nbsp;<strong>No</strong> <em>- disables test mode</em>
+&nbsp;<span id="testmode_warning" style="display:<?=($cfg['testmode'] == 'yes') ? 'inline' : 'none'?>; color:orange; font-style:italic;">
+⚠ Test Mode - no files will be moved/synced.
+</span></span>
+
+<script>
+function toggleTestModeWarning(val) {
+    document.getElementById('testmode_warning').style.display = (val === 'yes' ? 'block' : 'none');
+}
+</script>
+
+:mover_tune_testmode_plug:
+> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
+:end
+
+_(Validate input filenames to prevent attacks)_:
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name='validateFilenames' size='1' class='narrow' onchange="updateScreenMoverInvalidCharsToBlock(this.value, 'slow')">
+<?=mk_option($cfg['validateFilenames'],"yes","Yes")?>
+<?=mk_option($cfg['validateFilenames'],"no",'No')?>
+</select>
+&nbsp;<strong>No</strong> <em>- disables validation of input filenames</em></span>
+
+:mover_tune_validate_plug:
+<blockquote class="inline_help">
+<p> <strong><em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></strong></p>
+<p> Validate input filenames will check every filename before it is processed by the Mover. This ensures that <strong>only valid</strong> filenames are accepted, <strong>reducing the risk</strong> of attacks and vulnerabilities.</p>
+<p> Disable <strong>Only</strong> if you have many files to move and you are <strong>sure</strong> that all filenames are <strong>valid</strong> and do not contain any potential security risks.</p>
+<p> 1. <strong>Check filename length</strong> - If the filename exceeds 255 characters, it will be rejected.</p>
+<p> 2. <strong>Check for invalid characters</strong> - The filename should not contain any characters that are considered invalid for filenames, such as 
+(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> | </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>).</p>
+<p> 3. <strong>Prevent path traversal</strong> - The filename should not contain any characters that can be used to traverse directories, such as (<strong><em> ../ </em></strong>).</p>
+<p> If one of these checks fails, the filename will be rejected.</p>
+</blockquote>
+:end
+
+<div markdown="1" id="moverInvalidCharsToBlock">
+_(Invalid characters to block)_:
+: <input type='text' name='invalidFileChars' size='1' class='narrow myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
+
+<blockquote class="inline_help">
+<p> The filename characters such as:
+  <strong><em>$</em></strong>
+  <strong><em>/</em></strong>
+  <strong><em><</em></strong>
+  <strong><em>></em></strong>
+  <strong><em>:</em></strong>
+  <strong><em>"</em></strong>
+  <strong><em>|</em></strong>
+  <strong><em>?</em></strong>
+  <strong><em>*</em></strong>.
+</p>
+</blockquote>
+</div>
+
+_(Log Mover Tuning plugin actions)_:
+: <select name='logging' size='1' class='narrow'>
+<?=mk_option($cfg['logging'],"no",'No')?>
+<?=mk_option($cfg['logging'],"yes","Yes")?>
+</select>
+
+> Enables or disables logging from this plugin. Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> by default.
+
+_(Debug Log Mover Tuning plugin actions)_:
+: <select name='debuglogging' size='1' class='narrow'>
+<?=mk_option($cfg['debuglogging'],"no",'No')?>
+<?=mk_option($cfg['debuglogging'],"yes","Yes")?>
+</select>
+
+> Enables or disables debug logging from this plugin. Debug Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong> by default.
+
+_(Notify Mover Tuning plugin actions)_:
+: <select name='notify' size='1' class='narrow'>
+<?=mk_option($cfg['notify'],"no",'No')?>
+<?=mk_option($cfg['notify'],"yes","Yes")?>
+<?=mk_option($cfg['notify'],"errorsOnly","Errors Only")?>
+<?=mk_option($cfg['notify'],"movedOnly","Moved Only")?>
+</select>
+
+<blockquote class="inline_help">
+<p>Enables or disables notifications from this plugin. Notifications are displayed in Unriad GUI.</p>
+<p><strong>Errors Only</strong> will send a notification <strong>only</strong> when an error occurs.</p>
+<p><strong>Moved Only</strong> will send a notification <strong>only</strong> when files are moved, not every time the mover is running.</p>
+</blockquote>
+
+_(Logs parent folder for Mover Tuning plugin)_:
+: <input type='text' name='loggingFolder' size='1' class='narrow loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
+
+> Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
+
+_(Delete Mover Log files over than this days old)_:
+: <select name="logfilesDaysold" size="1" class='narrow logfilesDaysold' value='<?=$cfg['logfilesDaysold']?>'>
+<?=mk_option($cfg['logfilesDaysold'], 1, "1")?>
+<?=mk_option($cfg['logfilesDaysold'], 2, "2")?>
+<?=mk_option($cfg['logfilesDaysold'], 3, "3")?>
+<?=mk_option($cfg['logfilesDaysold'], 4, "4")?>
+<?=mk_option($cfg['logfilesDaysold'], 5, "5")?>
+<?=mk_option($cfg['logfilesDaysold'], 6, "6")?>
+<?=mk_option($cfg['logfilesDaysold'], 7, "7")?>
+<?=mk_option($cfg['logfilesDaysold'], 8, "8")?>
+<?=mk_option($cfg['logfilesDaysold'], 9, "9")?>
+<?for ($ldt=10;$ldt<=60;$ldt+=5):?>
+<?=mk_option($cfg['logfilesDaysold'], $ldt, "$ldt")?>
+<?endfor;?>
+</select>
+
+> Select the number of **days old** for Mover Tuning plugin to delete log files **_*.log_** and text files **_*.txt_**.
+
+_(Delete Mover helper files over than this days old)_:
+: <select name="listfilesDaysold" size="1" class='narrow listfilesDaysold' value='<?=$cfg['listfilesDaysold']?>'>
+<?=mk_option($cfg['listfilesDaysold'], 1, "1")?>
+<?=mk_option($cfg['listfilesDaysold'], 2, "2")?>
+<?=mk_option($cfg['listfilesDaysold'], 3, "3")?>
+<?=mk_option($cfg['listfilesDaysold'], 4, "4")?>
+<?=mk_option($cfg['listfilesDaysold'], 5, "5")?>
+<?=mk_option($cfg['listfilesDaysold'], 6, "6")?>
+<?=mk_option($cfg['listfilesDaysold'], 7, "7")?>
+<?=mk_option($cfg['listfilesDaysold'], 8, "8")?>
+<?=mk_option($cfg['listfilesDaysold'], 9, "9")?>
+<?for ($ldt=10;$ldt<=60;$ldt+=5):?>
+<?=mk_option($cfg['listfilesDaysold'], $ldt, "$ldt")?>
+<?endfor;?>
+</select>
+
+> Select the number of **days old** for Mover Tuning plugin to delete list files **<em>*.list</em>**.
+
+_(Show advanced settings)_:
+: <select name='advancedSettings' size='1' class='narrow' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
+<?=mk_option($cfg['advancedSettings'],"no","No")?>
+<?=mk_option($cfg['advancedSettings'],"yes","Yes")?>
+</select>
+
+> Show advanced settings options. Please note that these settings are active if set even if not shown.
+
+<div markdown="1" id="moverAdvancedSettings">
+_(Let scheduled mover run during a parity check / rebuild)_:
+: <select name='parity' size='1' class='narrow'>
+  <?=mk_option($cfg['parity'],'yes','Yes')?>
+	<?=mk_option($cfg['parity'],'no','No')?>
+</select>
+
+> If a parity check or disk rebuild is in progress, this will prevent mover from running.
+
+_(Priority for mover process)_:
 : <select name='moverNice' size='1' class='narrow'>
 <?=mk_option($cfg['moverNice'],"0","Normal")?>
 <?=mk_option($cfg['moverNice'],"5","Low")?>
 <?=mk_option($cfg['moverNice'],"19","Very Low")?>
 </select>
 
-Priority for disk I/O
+_(Priority for disk I/O)_:
 : <select name='moverIO' size='1' class='narrow'>
 <?=mk_option($cfg['moverIO'],"-c 2 -n 0","Normal")?>
 <?=mk_option($cfg['moverIO'],"-c 2 -n 7","Low")?>
 <?=mk_option($cfg['moverIO'],"-c 3","Idle")?>
 </select>
 
-> The above two options set the priority for the mover process.  Setting these options may help with circumstances where when mover runs other applications may pause or buffer.  Note that moving the files may take longer when setting these options
+<blockquote class="inline_help">
+<p>The above two options set the priority for the mover process. Setting these options may help with circumstances where when mover runs other applications may pause or buffer.</p>
+<p>Note that moving the files may take <strong>longer</strong> when setting these options.</p>
+</blockquote>
 
-Only move at this threshold of used cache space:
-: <select name="threshold" size="1" class='narrow'>
-<?for ($t=0;$t<100;$t+=5):?>
-<?=mk_option($cfg['threshold'], $t, "$t %")?>
-<?endfor;?>
+_(Force move of all files on a schedule)_:
+: <select name='force' size='1' id='forceCron' class='narrow' onchange='$(".mycron").toggleAttr("disabled")'>
+<?=mk_option($cfg['force'],"no",'No')?>
+<?=mk_option($cfg['force'],"yes","Yes")?>
 </select>
 
-> Set to the amount of disk space used on the cache drive for mover to run.
+> Select <strong>Yes</strong> to run <strong>original mover</strong> on a custom cron schedule (ignores plugin filters).
 
-Move files off cache based on age?
+_(Cron Schedule to force move all of files)_:
+: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
+
+> Cron Schedule entry example <strong>20 4 1 * *</strong>.&nbsp; To run the <em>first day of the month at </em><strong>4:20 AM</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> What Is Cron</a> 
+
+_(Allow force mover schedule to run during a parity check/rebuild)_:
+: <select name='forceParity' size='1' class='narrow mycron' <?=$cronDisabled?>>
+<?=mk_option($cfg['forceParity'],"yes","Yes")?>
+<?=mk_option($cfg['forceParity'],"no","No")?>
+</select>
+
+<blockquote class="inline_help">
+<p>Setting a cron schedule to force a move will run mover on that schedule.</p>
+<p>Example: In Mover Settings you would have a schedule of Hourly. During that schedule the rules above are followed.</p>
+<p>The cron schedule for a force move could be set to <strong>30 03 * * *</strong> which would force all files to be moved at <strong>3:30 AM</strong> every day regardless of the rules</p>
+<p>The forceParity setting allows you to override this behavior and force all files to be moved regardless of the rules.</p>
+<p>Note that no error checking is done on the cron schedule. It must be a valid entry.</p>
+</blockquote>
+
+_(Script to run before mover (No checks, always runs))_:
+: <input type='text' name='beforeScript' size='1' class='narrow mybefore' placeholder='/mnt/user/MyDiskNas/my_script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
+
+> Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
+
+_(Script to run after mover (No checks, always runs))_:
+: <input type='text' name='afterScript' size='1' class='narrow myafter' placeholder='/mnt/user/MyDiskNas/my_script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
+
+> Path to a script that will be run after mover finishes.  This script will always be run.
+
+_(Move Now button follows plug-in filters)_:
+: <select name='movenow' size='1' id='movenowbtn' class='narrow'>
+<?=mk_option($cfg['movenow'],"no",'No')?>
+<?=mk_option($cfg['movenow'],"yes","Yes")?>
+</select>
+
+> Select <strong>Yes</strong> to follow plugin filters, <strong>No</strong> to run original mover (ignores plugin filters) from the button.
+</div>
+
+<div class="title"><span class="center"><i class="fa fa-filter title"></i>Mover Tuning - Filters</span></div>
+
+_(Only move if above this threshold of used Primary (<em>cache</em>) space)_:
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="movingThreshold" size="1" class='narrow'>
+<?for ($t=95;$t>=0;$t-=5):?>
+<?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
+<?endfor;?>
+</select>
+&nbsp;<em>Cache → Array</em></span>
+
+<blockquote class="inline_help">
+<p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.</p>
+<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>higher moving threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
+<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
+</blockquote>
+
+_(Free down/prime up to this level of used Primary (<em>cache</em>) space)_:
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="freeingThreshold" size="1" class='narrow'>
+<?for ($f=$f;$f>=0;$f-=5):?>
+<?=mk_option($cfg['freeingThreshold'], $f, "$f %")?>
+<?endfor;?>
+</select>
+&nbsp;<em>Cache → Array</em></span>
+
+<blockquote class="inline_help">
+<p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.</p>
+<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>lower freeing threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
+<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
+</blockquote>
+
+_(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="fillupThreshold" size="1" class='narrow'>
+<?for ($c=95;$c>=0;$c-=5):?>
+<?=mk_option($cfg['fillupThreshold'], $c, "$c %")?>
+<?endfor;?>
+</select>
+&nbsp;<em>Array → Cache</em></span>
+
+> Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive after the mover has completed its run. Setting this to (<strong><em>95%</em></strong>) means that the mover will continue until <strong><em>95%</em></strong> of the cache pool is filled.
+
+_(Move files off Primary (<em>cache</em>) based on age)_?
 : <select name="age" size='1' class='narrow' onchange='$(".myage").toggleAttr("disabled")'>
        <?=mk_option($cfg['age'],'no','No')?>
        <?=mk_option($cfg['age'],'yes','Yes')?>
 </select>
 
-> Select if you want to move files off of the cache based on their age - days old.
+> Select if you want to move files off of the Primary (cache) based on their age - days old.
 
-Move files that are greater than this many days old:
-: <select name="daysold" size="1" class='narrow myage' <?=$ageDisabled?>>
+_(Move files that are greater than this many days old)_:
+: <span style="display:flex; align-items:center; gap:4px;">
+<select name="daysold" size="1" class='narrow myage' <?=$ageDisabled?>>
+<?=mk_option($cfg['daysold'], -1, "Auto")?>
 <?=mk_option($cfg['daysold'], 1, "1")?>
 <?=mk_option($cfg['daysold'], 2, "2")?>
 <?=mk_option($cfg['daysold'], 3, "3")?>
@@ -111,53 +430,102 @@ Move files that are greater than this many days old:
 <?=mk_option($cfg['daysold'], $dt, "$dt")?>
 <?endfor;?>
 </select>
+&nbsp;<strong>Auto</strong> <em>- enable smart caching</em></span>
 
-> Select the number of days old a file has to be in order to move (Up To 1 year).
+> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
-Use CTIME:
-: <select name="ctime" size='1' class='narrow myage' <?=$ageDisabled?> >
+_(Show advanced filters)_:
+: <select name='advancedFilters' size='1' class='narrow' onchange="updateScreenMoverAdvancedFilters(this.value, 'slow')">
+<?=mk_option($cfg['advancedFilters'],"no","No")?>
+<?=mk_option($cfg['advancedFilters'],"yes","Yes")?>
+</select>
+
+> Show advanced filter options. Please note that these filters are active if set even if not shown.
+
+<div markdown="1" id="moverAdvancedFilters">
+_(Use CTIME)_:
+: <select name="ctime" size='1' class='narrow myage ctime' <?=$ageDisabled?> <?=$ctimeDisabled?> onchange='$(".atime").toggleAttr("disabled")'>
        <?=mk_option($cfg['ctime'],'no','No')?>
        <?=mk_option($cfg['ctime'],'yes','Yes')?>
 </select>
 
-> Use CTIME instead of MTIME in the find command.
+> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
-Move files based on minimum size?
+_(Use ATIME)_:
+: <select name="atime" size='1' class='narrow myage atime' <?=$ageDisabled?> <?=$atimeDisabled?> onchange='$(".ctime").toggleAttr("disabled")'>
+       <?=mk_option($cfg['atime'],'no','No')?>
+       <?=mk_option($cfg['atime'],'yes','Yes')?>
+</select>
+
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+
+_(Move files based on minimum size)_?
 : <select name="sizef" size='1' class='narrow' onchange='$(".mysizef").toggleAttr("disabled")'>
        <?=mk_option($cfg['sizef'],'no','No')?>
        <?=mk_option($cfg['sizef'],'yes','Yes')?>
 </select>
 
-> Select yes if you want to move files based on the size of the file in M.
+> Select <strong>yes</strong> if you want to move files based on their size in <strong>MB</strong>.
 
-Move files that are larger than this size (In M).
+_(Move files that are larger than this size (In MB))_.
 : <select name="sizeinM" size="1" class='narrow mysizef' <?=$sizefDisabled?>>
 	<?=mk_option($cfg['sizeinM'], 1, "1")?>
 	<?=mk_option($cfg['sizeinM'], 2, "2")?>
 	<?=mk_option($cfg['sizeinM'], 3, "3")?>
 	<?=mk_option($cfg['sizeinM'], 4, "4")?>
 	<?=mk_option($cfg['sizeinM'], 5, "5")?>
-        <?=mk_option($cfg['sizeinM'], 6, "6")?>
-        <?=mk_option($cfg['sizeinM'], 7, "7")?>
-        <?=mk_option($cfg['sizeinM'], 8, "8")?>
-        <?=mk_option($cfg['sizeinM'], 9, "9")?>
-        <?=mk_option($cfg['sizeinM'], 10, "10")?>
-        <?=mk_option($cfg['sizeinM'], 11, "11")?>
+  <?=mk_option($cfg['sizeinM'], 6, "6")?>
+  <?=mk_option($cfg['sizeinM'], 7, "7")?>
+  <?=mk_option($cfg['sizeinM'], 8, "8")?>
+  <?=mk_option($cfg['sizeinM'], 9, "9")?>
+  <?=mk_option($cfg['sizeinM'], 10, "10")?>
+  <?=mk_option($cfg['sizeinM'], 11, "11")?>
 
 	<?for ($ds=12;$ds<1026;$ds+=2):?>
 		<?=mk_option($cfg['sizeinM'], $ds, "$ds")?>
 	<?endfor;?>
 </select>
 
-Move files off cache based on sparseness?
+> Select the minimum size a file has to be to get moved (in **Megabytes**).
+
+_(Sync files based on maximum size)_?
+: <select name="sizefSync" size='1' class='narrow' onchange='$(".mysizefSync").toggleAttr("disabled")'>
+       <?=mk_option($cfg['sizefSync'],'no','No')?>
+       <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
+</select>
+
+> Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
+
+_(Sync files that are smaller than this size (In MB))_.
+: <select name="sizeinMSync" size="1" class='narrow mysizefSync' <?=$sizefSyncDisabled?>>
+	<?=mk_option($cfg['sizeinMSync'], 1, "1")?>
+	<?=mk_option($cfg['sizeinMSync'], 2, "2")?>
+	<?=mk_option($cfg['sizeinMSync'], 3, "3")?>
+	<?=mk_option($cfg['sizeinMSync'], 4, "4")?>
+	<?=mk_option($cfg['sizeinMSync'], 5, "5")?>
+  <?=mk_option($cfg['sizeinMSync'], 6, "6")?>
+  <?=mk_option($cfg['sizeinMSync'], 7, "7")?>
+  <?=mk_option($cfg['sizeinMSync'], 8, "8")?>
+  <?=mk_option($cfg['sizeinMSync'], 9, "9")?>
+  <?=mk_option($cfg['sizeinMSync'], 10, "10")?>
+  <?=mk_option($cfg['sizeinMSync'], 11, "11")?>
+
+	<?for ($ds=12;$ds<1026;$ds+=2):?>
+		<?=mk_option($cfg['sizeinMSync'], $ds, "$ds")?>
+	<?endfor;?>
+</select>
+
+> Select the maximum size a file has to be to get synched (in **Megabytes**).
+
+_(Move files off Primary (cache) based on sparseness)_?
 : <select name="sparsnessf" size='1' class='narrow' onchange='$(".mysparsnessf").toggleAttr("disabled")'>
        <?=mk_option($cfg['sparsnessf'],'no','No')?>
        <?=mk_option($cfg['sparsnessf'],'yes','Yes')?>
 </select>
 
-> Select the sparseness size.  Any file with a sparseness larger will be moved.
+> Select the sparseness size. Any file with a sparseness larger will be moved.
 
-Move files that are greather than this sparseness:
+_(Move files that are greather than this sparseness)_:
 : <select name="sparsnessv" size="1" class='narrow mysparsnessf' <?=$sparsnessfDisabled?>>
 	<?=mk_option($cfg['sparsnessv'], 1, ".1")?>
 	<?=mk_option($cfg['sparsnessv'], 2, ".2")?>
@@ -172,139 +540,200 @@ Move files that are greather than this sparseness:
 
 > Select the sparseness size greater than that will be moved.
 
-
-Ignore files listed inside of a text file:
+_(Ignore files and folders listed inside of a text file)_:
 : <select name='filelistf' size='1' class='narrow' onchange='$(".myfilelistf").toggleAttr("disabled")'>
 <?=mk_option($cfg['filelistf'],"no",'No')?>
 <?=mk_option($cfg['filelistf'],"yes","Yes")?>
 </select>
 
-File list path:
-: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' value='<?=$cfg['filelistv']?>' <?=$filelistfDisabled?>>
+_(File list path)_:
+: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' placeholder='/mnt/user/MyDiskNas/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
 
-> Full path to a file that contains a list of files you want ignored from being moved off the cache pool.
+<blockquote class="inline_help">
+<p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
+<p> File List example: <strong><em>/mnt/user/MyDiskNas/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
+<p> Folder example: <strong><em>/mnt/cache_ssd/Files/MyFiles</em></strong> , Do <strong>NOT</strong> put (<strong><em> * </em></strong>) or (<strong><em> / </em></strong>) at the end of the line.</p>
+<p> File example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
+</blockquote>
 
-
-Ignore file types:
+_(Ignore file types)_:
 : <select name='filetypesf' size='1' class='narrow' onchange='$(".myfiletypesf").toggleAttr("disabled")'>
 <?=mk_option($cfg['filetypesf'],"no",'No')?>
 <?=mk_option($cfg['filetypesf'],"yes","Yes")?>
 </select>
 
-Comma seperated list of file types:
-: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' value='<?=$cfg['filetypesv']?>' <?=$filetypesfDisabled?>>
+_(Comma separated list of file types)_:
+: <input type='text' name='filetypesv' size='1' class='narrow myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'])?>' <?=$filetypesfDisabled?>>
 
-> A list of file types seperated by a comma.
+> A list of file types separated by a <strong>comma</strong>.
 
-
-Let scheduled mover run during a parity check / rebuild:
-: <select name='parity' size='1' class='narrow'>
-  <?=mk_option($cfg['parity'],'yes','Yes')?>
-	<?=mk_option($cfg['parity'],'no','No')?>
-</select>
-
-> If a parity check or disk rebuild is in progress, this will prevent mover from running
-
-Force turbo write on during mover:
-: <select name='enableTurbo' size='1' class='narrow'>
-<?=mk_option($cfg['enableTurbo'],"no","No")?>
-<?=mk_option($cfg['enableTurbo'],"yes","Yes")?>
-</select>
-
-> Forces unRaid to switch to turbo write mode (reconstruct write) when mover is running
-
-Log when not moving due to rules:
-: <select name='logging' size='1' class='narrow'>
-<?=mk_option($cfg['logging'],"no",'No')?>
-<?=mk_option($cfg['logging'],"yes","Yes")?>
-</select>
-
-> Enables or disables logging from this plugin
-
-Force move of all files on a schedule:
-: <select name='force' size='1' id='forceCron' class='narrow' onchange='$(".mycron").toggleAttr("disabled")'>
-<?=mk_option($cfg['force'],"no",'No')?>
-<?=mk_option($cfg['force'],"yes","Yes")?>
-</select>
-
-> Select yes to run original mover on a custom cron schedule.
-
-Cron Schedule to force move all of files:
-: <input type='text' id='cronSchedule' name='cron' size='1' class='narrow mycron' value='<?=$cfg['cron']?>' <?=$cronDisabled?>>
-
-> Cron Schedule entry example 20 4 1 * *   To run the first day of the month at 4:20 AM  
-
-Allow force mover schedule to run during a parity check/rebuild:
-: <select name='forceParity' size='1' class='narrow mycron' <?=$cronDisabled?>>
-<?=mk_option($cfg['forceParity'],"yes","Yes")?>
-<?=mk_option($cfg['forceParity'],"no","No")?>
-</select>
-
-> Setting a cron schedule to force a move will run mover on that schedule.
-> <br>Example: In Mover Settings you would have a schedule of Hourly.  During that schedule the rules above are followed.  The cron schedule for a force move could be set to <strong>30 03 * * *</strong> which would force all files to be moved at 3:30 AM every day regardless of the rules
-> <br>Note that no error checking is done on the cron schedule.  It must be a valid entry.
-
-Ignore All hiden files and directories
+_(Ignore All hidden files and directories)_:
 : <select name='ignoreHidden' size='1' class='narrow' >
 <?=mk_option($cfg['ignoreHidden'],"no","No")?>
 <?=mk_option($cfg['ignoreHidden'],"yes","Yes")?>
 </select>
 
-> Very few will use this, keep set to No.
-> Removes any files or directories that start with a .
-> Adds -not -path '*/\.*' to the end of the find command.
+<blockquote class="inline_help">
+<p>Very few will use this, keep set to No.</p>
+<p>Removes any files or directories that start with a (<strong><em> . </em></strong>).</p>
+<p>Adds (<strong><em> -not -path '*/\.*' </em></strong>) to the end of the find command.</p>
+</blockquote>
 
-
-Script to run before mover (No checks, always runs):
-: <input type='text' name='beforeScript' size='1' class='narrow mybefore' value='<?=$cfg['beforeScript']?>'>
-
-> Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
-
-
-Script to run after mover (No checks, always runs):
-: <input type='text' name='afterScript' size='1' class='narrow myafter' value='<?=$cfg['afterScript']?>'>
-
-> Path to a script that will be run after mover finishes.  This script will always be run.
-
-Move All from Cache-Yes shares when disk is above a certain percentage:
+_(Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage)_:
 : <select name='omovercfg' size='1' class='narrow' onchange='$(".myomthresh").toggleAttr("disabled")'>
 <?=mk_option($cfg['omovercfg'],"no","No")?>
 <?=mk_option($cfg['omovercfg'],"yes","Yes")?>
 </select>
 
-> Set to "Yes" if you want to move all files from a Cache-Yes share to the array if the percentage below is exceeded.  This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.
+<blockquote class="inline_help">
+<p>Set to <strong>Yes</strong> if you want to move all files from a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share to the array if the percentage below is exceeded.</p>
+<p>This is similar to the original mover and does not apply any filters from this plug-in to the find command sent to the mover binary.</p>
+</blockquote>
 
-Move All from Cache-yes shares pool percentage:
-
+_(Move All from Primary->Secondary shares pool percentage)_:
 : <select name="omoverthresh" size="1" class='narrow myomthresh' <?=$omoverthreshDisabled?>>
 <?for ($om;$om<=100;$om+=5):?>
 <?=mk_option($cfg['omoverthresh'], $om, "$om %")?>
 <?endfor;?>
 </select>
 
-> Set to the amount of disk space used on the cache pool to initiate a move of all files in a cache-yes share.  Filters will still run after, for any remaining pool's that do not meet this threshold.  This threshold should at a minimum be 5% larger than "Only move at this threshold of used cache space:" above. 
+<blockquote class="inline_help">
+<p>Set to the amount of disk space used on the Primary pool to initiate a move of all files in a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share.</p>
+<p>Filters will still run after, for any remaining pool's that do not meet this threshold.</p>
+<p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
+</blockquote>
 
+</div>
 
-Move Now button follows plug-in filters:
-: <select name='movenow' size='1' id='movenowbtn' class='narrow'>
-<?=mk_option($cfg['movenow'],"no",'No')?>
-<?=mk_option($cfg['movenow'],"yes","Yes")?>
+<div class="title"><span class="center"><i class="fa fa-files-o title"></i>Mover Tuning - Options</span></div>
+
+_(Force turbo write during mover)_:
+: <select name='enableTurbo' size='1' class='narrow'>
+<?=mk_option($cfg['enableTurbo'],"no","No")?>
+<?=mk_option($cfg['enableTurbo'],"yes","Yes")?>
 </select>
 
-> Select yes to to follow plug-in filters, no to run original mover from button.
+> Forces unRaid to switch to turbo write mode (reconstruct write) when mover is running.
 
-Test Mode:
-: <select name='testmode' size='1' class='narrow'>
-<?=mk_option($cfg['testmode'],"no",'No')?>
-<?=mk_option($cfg['testmode'],"yes","Yes")?>
+_(Move files tool)_:
+: <select name='movefilesTool' size='1' class='narrow'>
+<?=mk_option($cfg['movefilesTool'],"rsync",'Rsync')?>
+<?=mk_option($cfg['movefilesTool'],"move","Move")?>
 </select>
 
-> Test Mode will not run mover but output the custom find command the results.  Caution - If you have "Move Now button follows plug-in filters" set to no, Original Mover will still run.  
+<blockquote class="inline_help">
+<p>This will change the tool used for moving files with <strong>plugin filters</strong>, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.</p>
+<p><strong>Move</strong> - Use Unraid's built-in file-moving tool for moving, but continue to use <strong>Rsync</strong> for syncing files.</p>
+<p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
+</blockquote>
 
+_(Clean empty folders)_:
+: <select name='cleanFolders' size='1' class='narrow'>
+<?=mk_option($cfg['cleanFolders'],"no",'No')?>
+<?=mk_option($cfg['cleanFolders'],"yes","Yes")?>
+<?=mk_option($cfg['cleanFolders'],"topFolder","Top Folder")?>
+</select>
 
+> This will remove the parent folder <strong>only of moved</strong> files. <strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.
+
+_(Clean empty ZFS datasets)_:
+: <select name='cleanDatasets' size='1' class='narrow'>
+<?=mk_option($cfg['cleanDatasets'],"no",'No')?>
+<?=mk_option($cfg['cleanDatasets'],"yes","Yes")?>
+</select>
+
+> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
+
+_(Synchronize Primary files to Secondary)_:
+: <select name='synchronizeCache' size='1' class='narrow'>
+<?=mk_option($cfg['synchronizeCache'],"no",'No')?>
+<?=mk_option($cfg['synchronizeCache'],"yes","Yes")?>
+</select>
+
+<blockquote class="inline_help">
+<p>This will synchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
+<p>Reading and modification will still occur on Primary. Sync files based on maximum size optionally can be used.</p>
+<p><u>Note:</u></p>
+<ul>
+  <li><strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</li>
+  <li><strong>ONLY files</strong> on the cache pool <strong>below</strong> moving and freeing thresholds can be <strong>synchronized</strong>.</li>
+</ul>
+</blockquote>
+
+_(Show advanced options)_:
+: <select name='advancedOptions' size='1' class='narrow' onchange="updateScreenMoverAdvancedOptions(this.value, 'slow')">
+<?=mk_option($cfg['advancedOptions'],"no","No")?>
+<?=mk_option($cfg['advancedOptions'],"yes","Yes")?>
+</select>
+
+> Show advanced options. Please note that these options are active if set even if not shown.
+
+<div markdown="1" id="moverAdvancedOptions">
+
+_(Rebalance shares)_:
+: <select name='rebalanceShares' size='1' class='narrow'>
+<?=mk_option($cfg['rebalanceShares'],"no",'No')?>
+<?=mk_option($cfg['rebalanceShares'],"run-once","Run once")?>
+<?=mk_option($cfg['rebalanceShares'],"yes","Yes")?>
+</select>
+
+<blockquote class="inline_help">
+<p>Moves files from shares to their Primary and/or Secondary storage if they are spread across <strong><em>Unattended Storage</em></strong> (disks/pools not assigned as a share's Primary or Secondary).</p>
+<p>May move older files from <strong><em>Primary->Secondary</em></strong> or <strong><em>Secondary->Primary</em></strong> if allowed (cache:prefer, cache:yes, cache:only) to free up space.</p>
+<p>Run-once setting will reset back to <strong>No</strong> after next run.</p>
+</blockquote>
+
+_(Resynchronize all Primary files to Secondary)_:
+: <select name='resynchronizeCache' size='1' class='narrow'>
+<?=mk_option($cfg['resynchronizeCache'],"no",'No')?>
+<?=mk_option($cfg['resynchronizeCache'],"run-once","Run once")?>
+<?=mk_option($cfg['resynchronizeCache'],"yes","Yes")?>
+</select>
+
+<blockquote class="inline_help">
+<p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
+<p>All files will be synchronized again independently of modification time.</p>
+<p>This can be a long operation. Run-once setting will reset back to <strong>No</strong> after next run.</p>
+</blockquote>
+
+</div>
+</div>
 
 &nbsp;
-: <input type="submit" name="#apply" value="Apply" id='Apply'><input type="button" id="DONE" value="Done" onclick="done()">
-<a style='float:right' href='https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7M7CBCVU732XG' target='_blank'><img src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif"></a></center>
+: <span class="buttons-spaced">
+    <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
+    <input type="button" id="DONE" value="_(Done)_" onclick="done()">
+    <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
+  </span>
+
 </form>
 <span id='test'></span>
+
+<div class="title"><span class="left"><i class="fa fa-info-circle title"></i>Mover Tuning - Help</span></div>
+<p>If you need assistance, you can ask in the Unraid community for help.</p>
+
+<div style="font-size:x-small;font-weight:bold;">
+    <i class="fa fa-download"></i> <a href="/plugins/ca.mover.tuning/debug.php">Mover Tuning Debug Package (.zip)</a>
+</div>
+
+<dl>
+    <dt>Plugin thread @ Unraid community</dt>
+    <dd><span><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank" rel="noopener noreferrer">Open</a> - Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.</span></dd>
+    <dt>Maintainers</dt>
+    <dd><span>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
+        2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank" rel="noopener noreferrer">R3yn4ld</a> | 
+        2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank" rel="noopener noreferrer">hugenbd</a> | 
+        2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank" rel="noopener noreferrer">Andrew Zawadzki</a></span></dd>
+
+    <dt>Want to support the developer and say <strong>Thank You</strong>?</dt>
+    <dd><span>You're welcome! 😊 Thanks for using! <abbr title="All community developers">We</abbr> make those plugins with ❤️ (and a lot of ☕).
+        If you like the work, you can donate via <a href="https://www.paypal.com/donate/?hosted_button_id=UDXM742YK5ZV6" target="_blank" rel="noopener noreferrer"><i class="fa fa-paypal"></i> <strong>PayPal</strong></a>.
+    </span></dd>
+
+    <dt>GitHub repository</dt>
+    <dd><a href="https://github.com/masterwishx/ca.mover.tuning" target="_blank" rel="noopener noreferrer"><i class="fa fa-github"></i> Open</a>
+    </dd>
+
+    <dt>Used IDE</dt>
+    <dd>Visual Studio Code</dd>
+</dl>
