@@ -46,16 +46,22 @@ MOVERTUNING_DEFAULT_CFGFILE="/usr/local/emhttp/plugins/ca.mover.tuning/default.c
 LOGLEVEL=1
 DEBUGLEVEL=1
 TOTALPRIMARYFILES=0
+TOTALPRIMARYFOLDERS=0
 REMAININGPRIMARYFILES=0
+REMAININGPRIMARYFOLDERS=0
 TOTALPRIMARYSIZE=0
 REMAININGPRIMARYSIZE=0
 TOTALSECONDARYFILES=0
+TOTALSECONDARYFOLDERS=0
 REMAININGSECONDARYFILES=0
+REMAININGSECONDARYFOLDERS=0
 TOTALSECONDARYSIZE=0
 REMAININGSECONDARYSIZE=0
 TOTALUNATTENDEDFILES=0
+TOTALUNATTENDEDFOLDERS=0
 TOTALUNATTENDEDSIZE=0
 REMAININGUNATTENDEDFILES=0
+REMAININGUNATTENDEDFOLDERS=0
 REMAININGUNATTENDEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
@@ -728,25 +734,36 @@ moverStatusWrite() {
     #echo "test write"
     #Writes to file /usr/local/emhttp/state/mover.ini GUI update variables
     echo "TotalToSecondary=${TOTALPRIMARYSIZE}" >$MOVER_STATUS
-    echo "RemainToSecondary=${REMAININGPRIMARYSIZE}" >>$MOVER_STATUS
+    {
+    echo "RemainToSecondary=${REMAININGPRIMARYSIZE}"
 
-    echo "TotalFromSecondary=${TOTALSECONDARYSIZE}" >>$MOVER_STATUS
-    echo "RemainFromSecondary=${REMAININGSECONDARYSIZE}" >>$MOVER_STATUS
+    echo "TotalFromSecondary=${TOTALSECONDARYSIZE}"
+    echo "RemainFromSecondary=${REMAININGSECONDARYSIZE}"
 
-    echo "TotalFromUnattended=${TOTALUNATTENDEDSIZE}" >>$MOVER_STATUS
-    echo "RemainFromUnattended=${REMAININGUNATTENDEDSIZE}" >>$MOVER_STATUS
+    echo "TotalFromUnattended=${TOTALUNATTENDEDSIZE}"
+    echo "RemainFromUnattended=${REMAININGUNATTENDEDSIZE}"
 
-    echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}" >>$MOVER_STATUS
-    echo "RemainFilesToSecondary=${REMAININGPRIMARYFILES}" >>$MOVER_STATUS
+    echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}"
+    echo "RemainFilesToSecondary=${REMAININGPRIMARYFILES}"
 
-    echo "TotalFilesFromSecondary=${TOTALSECONDARYFILES}" >>$MOVER_STATUS
-    echo "RemainFilesFromSecondary=${REMAININGSECONDARYFILES}" >>$MOVER_STATUS
+    echo "TotalFoldersToSecondary=${TOTALPRIMARYFOLDERS}"
+    echo "RemainFoldersToSecondary=${REMAININGPRIMARYFOLDERS}"
 
-    echo "TotalFilesFromUnattended=${TOTALUNATTENDEDFILES}" >>$MOVER_STATUS
-    echo "RemainFilesFromUnattended=${REMAININGUNATTENDEDFILES}" >>$MOVER_STATUS
+    echo "TotalFilesFromSecondary=${TOTALSECONDARYFILES}"
+    echo "RemainFilesFromSecondary=${REMAININGSECONDARYFILES}"
 
-    echo "File=${GUI_CURRENT_FILE}" >>$MOVER_STATUS
-    echo "Action=${GUI_ACTION}" >>$MOVER_STATUS
+    echo "TotalFoldersFromSecondary=${TOTALSECONDARYFOLDERS}"
+    echo "RemainFoldersFromSecondary=${REMAININGSECONDARYFOLDERS}"
+
+    echo "TotalFilesFromUnattended=${TOTALUNATTENDEDFILES}"
+    echo "RemainFilesFromUnattended=${REMAININGUNATTENDEDFILES}"
+
+    echo "TotalFoldersFromUnattended=${TOTALUNATTENDEDFOLDERS}"
+    echo "RemainFoldersFromUnattended=${REMAININGUNATTENDEDFOLDERS}"
+
+    echo "File=${GUI_CURRENT_FILE}"
+    echo "Action=${GUI_ACTION}"
+    } >>$MOVER_STATUS
 }
 
 createFilteredFilelist() {
@@ -1396,14 +1413,17 @@ decideMoveActions() {
                 # Make decision to move or keep:
                 action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && (pool_sums[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
 
-                if (action == "keep on primary")  {
+                if (action == "keep on primary") {
                     source = storage_path
-                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC || RESYNCHRONIZECACHE == "yes"))  {
+                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC || RESYNCHRONIZECACHE == "yes")) {
                         action = "sync from primary"
                         destination = "/mnt/" $2
-                        pool_stats[$1]["files_from_primary"] += 1
-                          #pool_stats[$1]["folders_from_primary"] += 1
-                        pool_stats[$1]["total_size_from_primary"] += $7
+                        if ($12 == "d") {
+                            pool_stats[$1]["folders_from_primary"] += 1
+                        } else {
+                            pool_stats[$1]["files_from_primary"] += 1
+                        }
+                            pool_stats[$1]["total_size_from_primary"] += $7
                     } else {
                         destination = "none"
                     }
@@ -1413,7 +1433,11 @@ decideMoveActions() {
                 if (action == "move from primary") {
                     source = storage_path
                     destination = "/mnt/" $2
-                    pool_stats[$1]["files_from_primary"] += 1
+                    if ($12 == "d") {
+                        pool_stats[$1]["folders_from_primary"] += 1
+                    } else {
+                        pool_stats[$1]["files_from_primary"] += 1
+                    }
                     pool_stats[$1]["total_size_from_primary"] += $7
                 }
             } else {
@@ -1430,19 +1454,27 @@ decideMoveActions() {
                     if (action == "move from secondary") {
                         source = storage_path
                         destination = "/mnt/" $1
-                        if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped"))  {
+                        if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped")) {
                             action = "sync from secondary"
                         }
-                        pool_stats[$1]["files_from_secondary"] += 1
+                        if ($12 == "d") {
+                            pool_stats[$1]["folders_from_primary"] += 1
+                        } else {
+                            pool_stats[$1]["files_from_secondary"] += 1
+                        }
                         pool_stats[$1]["total_size_from_secondary"] += $7
                     }
                 } else {
                     if (REBALANCESHARES == "yes") {
                         action = ($4 == "only" || ($4 == "prefer" && pool_sums[$1] <= $6)) ? "move unattended to primary" : "move unattended to secondary"
-                        if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" )  {
+                        if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
                             destination = "/mnt/" $1
-                            pool_stats[$1]["files_from_unattended"] += 1
+                            if ($12 == "d") {
+                                pool_stats[$1]["folders_from_unattended"] += 1
+                            } else {
+                                pool_stats[$1]["files_from_unattended"] += 1
+                            }
                             pool_stats[$1]["total_size_from_unattended"] += $7
                             # Add a line in mover_action as intermediary step
                             printf "%s|%s|%s|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $7, pool_sums[$1], $6, $9, $10, action, source, destination, file_path, $12
@@ -1459,7 +1491,11 @@ decideMoveActions() {
                                 destination = "/mnt/" $2
                             }
                         }
-                        pool_stats[$1]["files_from_unattended"] += 1
+                        if ($12 == "d") {
+                            pool_stats[$1]["folders_from_unattended"] += 1
+                        } else {
+                            pool_stats[$1]["files_from_unattended"] += 1
+                        }    
                         pool_stats[$1]["total_size_from_unattended"] += $7
                     } else {
                         action="keep misplaced" #If not on primary nor secondary, file will be tagged misplaced                
@@ -1558,11 +1594,20 @@ decideMoveActions() {
                 fi
             done <"$STATS_FILE"
         fi
+        if [ "$TOTALPRIMARYFOLDERS" -gt 0 ]; then
+            mvlogger "- $TOTALPRIMARYFOLDERS empty folders representing $(bytes_to_human $PRIMARYSIZE) will be moved/sync from $PRIMARYSTORAGENAME to secondary"
+        fi
         if [ "$TOTALSECONDARYFILES" -gt 0 ]; then
             mvlogger "- $TOTALSECONDARYFILES new files representing $(bytes_to_human $TOTALSECONDARYSIZE) will then be moved/synced from secondary to primary"
         fi
+        if [ "$TOTALSECONDARYFOLDERS" -gt 0 ]; then
+            mvlogger "- $TOTALSECONDARYFOLDERS empty folders representing $(bytes_to_human $TOTALSECONDARYSIZE) will then be moved/synced from secondary to primary"
+        fi
         if [ "$TOTALUNATTENDEDFILES" -gt 0 ]; then
             mvlogger "- $TOTALUNATTENDEDFILES files from unattended storage and representing $(bytes_to_human $TOTALUNATTENDEDSIZE) will then be rebalanced from unattended shares to primary and/or secondary"
+        fi
+        if [ "$TOTALUNATTENDEDFOLDERS" -gt 0 ]; then
+            mvlogger "- $TOTALUNATTENDEDFOLDERS empty folders from unattended storage and representing $(bytes_to_human $TOTALUNATTENDEDSIZE) will then be rebalanced from unattended shares to primary and/or secondary"
         fi
     else
         mvlogger "No new files will be moved/synced from primary to secondary"
@@ -1588,10 +1633,13 @@ processTheMoves() {
     #Initialise stats:
     REMAINING_ARRAY_SIZE=$TOTALSECONDARYSIZE
     REMAINING_ARRAY_FILES=$TOTALSECONDARYFILES
+    REMAINING_ARRAY_FOLDERS=$TOTALSECONDARYFOLDERS
     REMAINING_CACHE_SIZE=$TOTALPRIMARYSIZE
     REMAINING_CACHE_FILES=$TOTALPRIMARYFILES
+    REMAINING_CACHE_FOLDERS=$TOTALPRIMARYFOLDERS
     REMAINING_UNATTENDED_SIZE=$TOTALUNATTENDEDSIZE
     REMAINING_UNATTENDED_FILES=$TOTALUNATTENDEDFILES
+    REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
 
     # Dry mode info:
     if [ $TESTMODE = "yes" ]; then
@@ -1812,7 +1860,12 @@ processTheMoves() {
             # Setting mover status
             if [[ "$ACTION" =~ "unattended" ]]; then
                 REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
-                REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
+                # Check if there are any files or folders left
+                if [[ "$FILETYPE" = "f" ]]; then
+                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
+                else
+                    REMAINING_UNATTENDED_FOLDERS=$((REMAINING_UNATTENDED_FOLDERS - NBLINKS))
+                fi
 
                 if [[ "$ACTION" =~ "unattended to secondary" ]]; then
                     mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to secondary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
@@ -1822,11 +1875,21 @@ processTheMoves() {
             else
                 if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
                     REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - FILESIZE))
-                    REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
+                    # Check if there are any files or folders left
+                    if [[ "$FILETYPE" = "f" ]]; then
+                        REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
+                    else
+                        REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - NBLINKS))
+                    fi
                     mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                 else
                     REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
-                    REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
+                    # Check if there are any files or folders left 
+                    if [[ "$FILETYPE" = "f" ]]; then
+                        REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
+                    else
+                        REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - NBLINKS))
+                    fi
                     mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                 fi
             fi
