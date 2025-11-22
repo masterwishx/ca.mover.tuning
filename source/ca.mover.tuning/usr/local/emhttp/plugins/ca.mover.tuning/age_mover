@@ -1682,6 +1682,15 @@ processTheMoves() {
                 continue
             fi
 
+            # Temp Fix for not move Empty Folders that in skip List !
+            # If Empty Folder
+            if [[ "$FILETYPE" == "d" && "$ACTION" =~ "move" ]]; then
+                # Skip if Empty Folder exist in skiplist
+                if qrep -q "${SOURCE}/${FILEPATH}" "${SKIPFILESLIST}"; then
+                    continue
+                fi
+            fi
+
             #Prepare RSYNC_CMD
             RSYNC_CMD="rsync --archive --xattrs --relative --hard-links"
 
