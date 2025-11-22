@@ -995,9 +995,8 @@ createFilteredFilelist() {
                     mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
                     if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                         mvlogger "Calculating zfs share usage..."
-                        CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME")
                         # if error on command then share can be a folder instead dataset
-                        if [ $? -ne 0 ]; then
+                        if ! CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME"); then
                             mvlogger "Warning: Share is currently a folder. Convert it to a dataset for better performance."
                             mvlogger "Calculating share usage... (can take a moment)"
                             CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
@@ -1784,15 +1783,15 @@ processTheMoves() {
                                 dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
                                 if [ "${dataset_file_count}" -eq 0 ]; then
                                     mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
-                                    zfs unmount "${DATASET}"
-                                    if [ $? -ne 0 ]; then
+                                    # Unmount the ZFS dataset
+                                    if ! zfs unmount "${DATASET}"; then
                                         mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
                                         break
                                     else
                                         mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
                                     fi
-                                    zfs destroy "${DATASET}"
-                                    if [ $? -ne 0 ]; then
+                                    # Destroy the ZFS dataset
+                                    if ! zfs destroy "${DATASET}"; then
                                         mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
                                         break
                                     else
