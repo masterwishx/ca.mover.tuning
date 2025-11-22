@@ -708,26 +708,31 @@ unraid_empty_disks() {
 
     # maybe empty an array disk
     EMPTYING=$(grep '^shareUserEmptying=' /boot/config/share.cfg | cut -d'"' -f2)
-    IFS=',' read -ra arr <<<"$EMPTYING"
-    for DISK in "${arr[@]}"; do
-        # we can only empty share directories
-        for SHAREPATH in /mnt/$DISK/*; do
-            SHARE=$(basename "$SHAREPATH")
-            if [[ -d "$SHAREPATH" && -f "$CFGPATH/$SHARE.cfg" ]]; then
-                move "$SHAREPATH"
+    if [ -z "$EMPTYING" ]; then
+        mvDebuglogger "No disks configured in shareUserEmptying - skipping unraid_empty_disks()" "Empty Disks"
+    else
+
+        IFS=',' read -ra arr <<<"$EMPTYING"
+        for DISK in "${arr[@]}"; do
+            # we can only empty share directories
+            for SHAREPATH in /mnt/"$DISK"/*; do
+                SHARE=$(basename "$SHAREPATH")
+                if [[ -d "$SHAREPATH" && -f "$CFGPATH/$SHARE.cfg" ]]; then
+                    move "$SHAREPATH"
+                fi
+            done
+
+            # output list of files which could not be moved
+            # use 'find' in case huge number of files left in /mnt/$DISK
+            count=$(find "/mnt/$DISK" -mindepth 1 | wc -l)
+            if [ "$count" -gt 0 ]; then
+                find "/mnt/$DISK" -mindepth 1 -depth -printf 'move: %p Not moved\n' | head -n 100
+                if [ "$count" -gt 100 ]; then
+                    echo "[output truncated to first 100 entries]"
+                fi
             fi
         done
-
-        # output list of files which could not be moved
-        # use 'find' in case huge number of files left in /mnt/$DISK
-        count=$(find /mnt/$DISK -mindepth 1 | wc -l)
-        if [ "$count" -gt 0 ]; then
-            find /mnt/$DISK -mindepth 1 -depth -printf 'move: %p Not moved\n' | head -n 100
-            if [ "$count" -gt 100 ]; then
-                echo "[output truncated to first 100 entries]"
-            fi
-        fi
-    done
+    fi
 }
 
 moverStatusWrite() {
@@ -1458,7 +1463,7 @@ decideMoveActions() {
                             action = "sync from secondary"
                         }
                         if ($12 == "d") {
-                            pool_stats[$1]["folders_from_primary"] += 1
+                            pool_stats[$1]["folders_from_secondary"] += 1
                         } else {
                             pool_stats[$1]["files_from_secondary"] += 1
                         }
@@ -1514,7 +1519,7 @@ decideMoveActions() {
             }
 
             # Write statistics header line
-            printf "PRIMARYSTORAGENAME|FILES_FROM_PRIMARY|SIZE_FROM_PRIMARY|FILES_FROM_SECONDARY|SIZE_FROM_SECONDARY|FILES_FROM_UNATTENDED|SIZE_FROM_UNATTENDED\n" > "'"${STATS_FILE}"'"
+            printf "PRIMARYSTORAGENAME|FILES_FROM_PRIMARY|SIZE_FROM_PRIMARY|FOLDERS_FROM_PRIMARY|FILES_FROM_SECONDARY|SIZE_FROM_SECONDARY|FOLDERS_FROM_SECONDARY|FILES_FROM_UNATTENDED|SIZE_FROM_UNATTENDED|FOLDERS_FROM_UNATTENDED\n" > "'"${STATS_FILE}"'"
 
             # Loop through pool_stats and write data to stats_file
             total_files_from_primary = 0
@@ -1864,7 +1869,7 @@ processTheMoves() {
                 if [[ "$FILETYPE" = "f" ]]; then
                     REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
                 else
-                    REMAINING_UNATTENDED_FOLDERS=$((REMAINING_UNATTENDED_FOLDERS - NBLINKS))
+                    REMAINING_UNATTENDED_FOLDERS=$((REMAINING_UNATTENDED_FOLDERS - 1))
                 fi
 
                 if [[ "$ACTION" =~ "unattended to secondary" ]]; then
@@ -1879,7 +1884,7 @@ processTheMoves() {
                     if [[ "$FILETYPE" = "f" ]]; then
                         REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
                     else
-                        REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - NBLINKS))
+                        REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - 1))
                     fi
                     mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                 else
@@ -1888,7 +1893,7 @@ processTheMoves() {
                     if [[ "$FILETYPE" = "f" ]]; then
                         REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
                     else
-                        REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - NBLINKS))
+                        REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - 1))
                     fi
                     mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                 fi
