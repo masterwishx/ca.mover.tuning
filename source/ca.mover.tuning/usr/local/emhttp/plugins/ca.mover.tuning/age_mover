@@ -735,34 +735,34 @@ moverStatusWrite() {
     #Writes to file /usr/local/emhttp/state/mover.ini GUI update variables
     echo "TotalToSecondary=${TOTALPRIMARYSIZE}" >$MOVER_STATUS
     {
-    echo "RemainToSecondary=${REMAININGPRIMARYSIZE}"
+        echo "RemainToSecondary=${REMAININGPRIMARYSIZE}"
 
-    echo "TotalFromSecondary=${TOTALSECONDARYSIZE}"
-    echo "RemainFromSecondary=${REMAININGSECONDARYSIZE}"
+        echo "TotalFromSecondary=${TOTALSECONDARYSIZE}"
+        echo "RemainFromSecondary=${REMAININGSECONDARYSIZE}"
 
-    echo "TotalFromUnattended=${TOTALUNATTENDEDSIZE}"
-    echo "RemainFromUnattended=${REMAININGUNATTENDEDSIZE}"
+        echo "TotalFromUnattended=${TOTALUNATTENDEDSIZE}"
+        echo "RemainFromUnattended=${REMAININGUNATTENDEDSIZE}"
 
-    echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}"
-    echo "RemainFilesToSecondary=${REMAININGPRIMARYFILES}"
+        echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}"
+        echo "RemainFilesToSecondary=${REMAININGPRIMARYFILES}"
 
-    echo "TotalFoldersToSecondary=${TOTALPRIMARYFOLDERS}"
-    echo "RemainFoldersToSecondary=${REMAININGPRIMARYFOLDERS}"
+        echo "TotalFoldersToSecondary=${TOTALPRIMARYFOLDERS}"
+        echo "RemainFoldersToSecondary=${REMAININGPRIMARYFOLDERS}"
 
-    echo "TotalFilesFromSecondary=${TOTALSECONDARYFILES}"
-    echo "RemainFilesFromSecondary=${REMAININGSECONDARYFILES}"
+        echo "TotalFilesFromSecondary=${TOTALSECONDARYFILES}"
+        echo "RemainFilesFromSecondary=${REMAININGSECONDARYFILES}"
 
-    echo "TotalFoldersFromSecondary=${TOTALSECONDARYFOLDERS}"
-    echo "RemainFoldersFromSecondary=${REMAININGSECONDARYFOLDERS}"
+        echo "TotalFoldersFromSecondary=${TOTALSECONDARYFOLDERS}"
+        echo "RemainFoldersFromSecondary=${REMAININGSECONDARYFOLDERS}"
 
-    echo "TotalFilesFromUnattended=${TOTALUNATTENDEDFILES}"
-    echo "RemainFilesFromUnattended=${REMAININGUNATTENDEDFILES}"
+        echo "TotalFilesFromUnattended=${TOTALUNATTENDEDFILES}"
+        echo "RemainFilesFromUnattended=${REMAININGUNATTENDEDFILES}"
 
-    echo "TotalFoldersFromUnattended=${TOTALUNATTENDEDFOLDERS}"
-    echo "RemainFoldersFromUnattended=${REMAININGUNATTENDEDFOLDERS}"
+        echo "TotalFoldersFromUnattended=${TOTALUNATTENDEDFOLDERS}"
+        echo "RemainFoldersFromUnattended=${REMAININGUNATTENDEDFOLDERS}"
 
-    echo "File=${GUI_CURRENT_FILE}"
-    echo "Action=${GUI_ACTION}"
+        echo "File=${GUI_CURRENT_FILE}"
+        echo "Action=${GUI_ACTION}"
     } >>$MOVER_STATUS
 }
 
@@ -1583,7 +1583,7 @@ decideMoveActions() {
         mvlogger "A total of $TOTALFILES files representing $(bytes_to_human $TOTALSIZE) will be moved/synced:"
         if [ "$TOTALPRIMARYFILES" -gt 0 ]; then
             # Read data line by line using while loop
-            while IFS="|" read -r PRIMARYSTORAGENAME PRIMARYFILES PRIMARYSIZE SECONDARYFILES SECONDARYSIZE; do
+            while IFS="|" read -r PRIMARYSTORAGENAME PRIMARYFILES PRIMARYSIZE PRIMARYFOLDERS SECONDARYFILES SECONDARYSIZE; do
                 if [ -e $SOFTSTOPFILE ]; then
                     [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
                     break
@@ -1591,23 +1591,23 @@ decideMoveActions() {
                 # Check if line is not the total line nor the header line
                 if [ "$PRIMARYSTORAGENAME" != "TOTAL" ] && [ "$PRIMARYSTORAGENAME" != "PRIMARYSTORAGENAME" ]; then
                     mvlogger "- $PRIMARYFILES files representing $(bytes_to_human $PRIMARYSIZE) will be moved/sync from $PRIMARYSTORAGENAME to secondary"
+                    if [ "$PRIMARYFOLDERS" -gt 0 ]; then
+                        mvlogger "- $PRIMARYFOLDERS empty folders will be moved/sync from $PRIMARYSTORAGENAME to secondary"
+                    fi
                 fi
             done <"$STATS_FILE"
-        fi
-        if [ "$TOTALPRIMARYFOLDERS" -gt 0 ]; then
-            mvlogger "- $TOTALPRIMARYFOLDERS empty folders representing $(bytes_to_human $PRIMARYSIZE) will be moved/sync from $PRIMARYSTORAGENAME to secondary"
         fi
         if [ "$TOTALSECONDARYFILES" -gt 0 ]; then
             mvlogger "- $TOTALSECONDARYFILES new files representing $(bytes_to_human $TOTALSECONDARYSIZE) will then be moved/synced from secondary to primary"
         fi
         if [ "$TOTALSECONDARYFOLDERS" -gt 0 ]; then
-            mvlogger "- $TOTALSECONDARYFOLDERS empty folders representing $(bytes_to_human $TOTALSECONDARYSIZE) will then be moved/synced from secondary to primary"
+            mvlogger "- $TOTALSECONDARYFOLDERS empty folders will then be moved/synced from secondary to primary"
         fi
         if [ "$TOTALUNATTENDEDFILES" -gt 0 ]; then
             mvlogger "- $TOTALUNATTENDEDFILES files from unattended storage and representing $(bytes_to_human $TOTALUNATTENDEDSIZE) will then be rebalanced from unattended shares to primary and/or secondary"
         fi
         if [ "$TOTALUNATTENDEDFOLDERS" -gt 0 ]; then
-            mvlogger "- $TOTALUNATTENDEDFOLDERS empty folders from unattended storage and representing $(bytes_to_human $TOTALUNATTENDEDSIZE) will then be rebalanced from unattended shares to primary and/or secondary"
+            mvlogger "- $TOTALUNATTENDEDFOLDERS empty folders from unattended storage will then be rebalanced from unattended shares to primary and/or secondary"
         fi
     else
         mvlogger "No new files will be moved/synced from primary to secondary"
@@ -1884,7 +1884,7 @@ processTheMoves() {
                     mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                 else
                     REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
-                    # Check if there are any files or folders left 
+                    # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
                         REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
                     else
