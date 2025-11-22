@@ -1682,12 +1682,13 @@ processTheMoves() {
                 continue
             fi
 
-            # Temp Fix for not move Empty Folders that in skip List !
-            # If Empty Folder
+            # Temporary fix: prevent moving empty directories that are in the skip list (still need to remove them from lists)
+            # Applies only to empty directories scheduled to be moved
             if [[ "$FILETYPE" == "d" && "$ACTION" =~ "move" ]]; then
-                # Skip if Empty Folder exist in skiplist
-                if qrep -q "${SOURCE}/${FILEPATH}" "${SKIPFILESLIST}"; then
-                    continue
+                # If the directory is listed in the skiplist, skip it
+                if grep -q "${SOURCE}/${FILEPATH}" "${SKIPFILESLIST}"; then                    
+                    mvlogger "Skipping empty folder \"${SOURCE}/${FILEPATH}\" as it is listed in the skip list."
+                    continue # do not move this folder
                 fi
             fi
 
