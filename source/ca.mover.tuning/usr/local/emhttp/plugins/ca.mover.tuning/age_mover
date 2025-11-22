@@ -1761,8 +1761,8 @@ processTheMoves() {
                 fi
             fi
 
-            # Clean parent folder if empty
-            if [[ "$ACTION" =~ "move" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
+            # Clean parent folder of files if empty
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
                 # Define a function to handle the directory cleanup logic
                 while IFS= read -r FILE; do
                     DIR=$(dirname "$FILE")
@@ -1829,7 +1829,7 @@ processTheMoves() {
             fi
 
             # Clean parent ZFS dataset if empty
-            if [[ "$ACTION" =~ "move" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
                 # Check counter if equal to 0 then check datasets
                 if [ "$LAST_COUNT" -eq 0 ]; then
                     # Count files in share
