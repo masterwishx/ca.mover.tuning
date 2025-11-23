@@ -1067,9 +1067,8 @@ createFilteredFilelist() {
             FINDSTR+=" \"${SHAREPATH}\""
         fi
 
-        # Add a search files option for the shares at the end
-        #FINDSTR+=" -type f"
-        FINDSTR+=" \( -type f -o -type d -empty \)"
+        # Only search inside the share (skip the share root): files + empty dirs
+        FINDSTR+=" -mindepth 1 \( -type f -o -type d -empty \)"
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
