@@ -1192,7 +1192,7 @@ createFilteredFilelist() {
 
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
-            FINDSTR="$FINDSTR ' \$3 > 0.SPARSENESS ' {"
+            FINDSTR="$FINDSTR ' \$7 == \"d\" || \$3 > 0.SPARSENESS ' {"
         else
             FINDSTR="$FINDSTR ' {"
         fi
