@@ -77,7 +77,7 @@ function getShareSettings($shareName)
         $mover_opt_str = "$mover_opt_str $ctime";
     }
 
-    if (empty($atime)) {
+    if (empty($atime) === true) {
         $mover_opt_str = "$mover_opt_str ''";
     } else {
         $mover_opt_str = "$mover_opt_str $atime";
