@@ -47,22 +47,22 @@ LOGLEVEL=1
 DEBUGLEVEL=1
 TOTALPRIMARYFILES=0
 TOTALPRIMARYFOLDERS=0
-REMAININGPRIMARYFILES=0
-REMAININGPRIMARYFOLDERS=0
+REMAINING_CACHE_FILES=0
+REMAINING_CACHE_FOLDERS=0
 TOTALPRIMARYSIZE=0
-REMAININGPRIMARYSIZE=0
+REMAINING_CACHE_SIZE=0
 TOTALSECONDARYFILES=0
 TOTALSECONDARYFOLDERS=0
-REMAININGSECONDARYFILES=0
-REMAININGSECONDARYFOLDERS=0
+REMAINING_ARRAY_FILES=0
+REMAINING_ARRAY_FOLDERS=0
 TOTALSECONDARYSIZE=0
-REMAININGSECONDARYSIZE=0
+REMAINING_ARRAY_SIZE=0
 TOTALUNATTENDEDFILES=0
 TOTALUNATTENDEDFOLDERS=0
 TOTALUNATTENDEDSIZE=0
-REMAININGUNATTENDEDFILES=0
-REMAININGUNATTENDEDFOLDERS=0
-REMAININGUNATTENDEDSIZE=0
+REMAINING_UNATTENDED_FILES=0
+REMAINING_UNATTENDED_FOLDERS=0
+REMAINING_UNATTENDED_SIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
 # PHP requires escaped quotes (" -> \") for text fields
@@ -165,7 +165,8 @@ function bytes_to_human() {
 }
 
 function human_to_bytes() {
-    numfmt --from=iec $1
+    local input="${1:-$(cat)}"
+    numfmt --from=iec "$input"
 }
 
 # Sanitize input filename to prevent attacks
@@ -742,31 +743,31 @@ moverStatusWrite() {
     #Writes to file /usr/local/emhttp/state/mover.ini GUI update variables
     echo "TotalToSecondary=${TOTALPRIMARYSIZE}" >$MOVER_STATUS
     {
-        echo "RemainToSecondary=${REMAININGPRIMARYSIZE}"
+        echo "RemainToSecondary=${REMAINING_CACHE_SIZE}"
 
         echo "TotalFromSecondary=${TOTALSECONDARYSIZE}"
-        echo "RemainFromSecondary=${REMAININGSECONDARYSIZE}"
+        echo "RemainFromSecondary=${REMAINING_ARRAY_SIZE}"
 
         echo "TotalFromUnattended=${TOTALUNATTENDEDSIZE}"
-        echo "RemainFromUnattended=${REMAININGUNATTENDEDSIZE}"
+        echo "RemainFromUnattended=${REMAINING_UNATTENDED_SIZE}"
 
         echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}"
-        echo "RemainFilesToSecondary=${REMAININGPRIMARYFILES}"
+        echo "RemainFilesToSecondary=${REMAINING_CACHE_FILES}"
 
         echo "TotalFoldersToSecondary=${TOTALPRIMARYFOLDERS}"
-        echo "RemainFoldersToSecondary=${REMAININGPRIMARYFOLDERS}"
+        echo "RemainFoldersToSecondary=${REMAINING_CACHE_FOLDERS}"
 
         echo "TotalFilesFromSecondary=${TOTALSECONDARYFILES}"
-        echo "RemainFilesFromSecondary=${REMAININGSECONDARYFILES}"
+        echo "RemainFilesFromSecondary=${REMAINING_ARRAY_FILES}"
 
         echo "TotalFoldersFromSecondary=${TOTALSECONDARYFOLDERS}"
-        echo "RemainFoldersFromSecondary=${REMAININGSECONDARYFOLDERS}"
+        echo "RemainFoldersFromSecondary=${REMAINING_ARRAY_FOLDERS}"
 
         echo "TotalFilesFromUnattended=${TOTALUNATTENDEDFILES}"
-        echo "RemainFilesFromUnattended=${REMAININGUNATTENDEDFILES}"
+        echo "RemainFilesFromUnattended=${REMAINING_UNATTENDED_FILES}"
 
         echo "TotalFoldersFromUnattended=${TOTALUNATTENDEDFOLDERS}"
-        echo "RemainFoldersFromUnattended=${REMAININGUNATTENDEDFOLDERS}"
+        echo "RemainFoldersFromUnattended=${REMAINING_UNATTENDED_FOLDERS}"
 
         echo "File=${GUI_CURRENT_FILE}"
         echo "Action=${GUI_ACTION}"
@@ -1678,7 +1679,7 @@ processTheMoves() {
 
             # Skip filesize = 0 (hardlinks already handled in a previous loop)
             NBLINKS="${NBLINKS:-0}"
-            if [ -f "$FILEPATH" ] && [ "$NBLINKS" -gt 1 ] && [ "$FILESIZE" = 0 ]; then
+            if [ -f "${SOURCE}/${FILEPATH}" ] && [ "$NBLINKS" -gt 1 ] && [ "$FILESIZE" = 0 ]; then
                 continue
             fi
 
@@ -1719,7 +1720,7 @@ processTheMoves() {
 
             # Check if list is complete
             NBFILES=$(($(echo "$SYNCED_FILES" | grep -o '" "' | wc -l) + 1))
-            if [ -f "$FILEPATH" ] && [ $NBFILES != "$NBLINKS" ]; then
+            if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 continue
             fi
