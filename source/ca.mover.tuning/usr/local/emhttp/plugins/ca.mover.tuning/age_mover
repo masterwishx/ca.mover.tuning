@@ -1850,16 +1850,18 @@ processTheMoves() {
                                     # Unmount the ZFS dataset
                                     if ! zfs unmount "${DATASET}"; then
                                         mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
-                                        break
+                                        continue
                                     else
-                                        mvlogger "ZFS dataset [${DATASET}] has been successfully unmounted."
+                                        mvlogger "ZFS dataset [${DATASET}] successfully unmounted."
                                     fi
+
                                     # Destroy the ZFS dataset
                                     if ! zfs destroy "${DATASET}"; then
-                                        mvlogger "Failed to destroy ZFS dataset [${DATASET}]" "failure"
-                                        break
+                                        mvlogger "Failed to destroy ZFS dataset [${DATASET}] — attempting to remount." "failure"
+                                        zfs mount "${DATASET}" 2>/dev/null || mvlogger "Failed to remount dataset [${DATASET}]" "warning"
+                                        continue
                                     else
-                                        mvlogger "ZFS dataset [${DATASET}] has been successfully destroyed."
+                                        mvlogger "ZFS dataset [${DATASET}] successfully destroyed."
                                     fi
                                 else
                                     mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
