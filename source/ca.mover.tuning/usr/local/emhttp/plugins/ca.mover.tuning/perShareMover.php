@@ -40,6 +40,7 @@ function getShareSettings($shareName)
     $filelistLevel = $cfg['filelistv'];
     $filetypesLevel = $cfg['filetypesv'];
     $ctime = $cfg['ctime'];
+    $atime = $cfg['atime'];
 
     #build age_mover command for all options.
     if ($cfg['age'] == "yes") {
@@ -74,6 +75,12 @@ function getShareSettings($shareName)
         $mover_opt_str = "$mover_opt_str ''";
     } else {
         $mover_opt_str = "$mover_opt_str $ctime";
+    }
+
+    if (empty($atime) === true) {
+        $mover_opt_str = "$mover_opt_str ''";
+    } else {
+        $mover_opt_str = "$mover_opt_str $atime";
     }
 
     $mover_opt_str = "$mover_opt_str '' ''"; #Required for spacing, defaults mover threshold and testmode to empty.

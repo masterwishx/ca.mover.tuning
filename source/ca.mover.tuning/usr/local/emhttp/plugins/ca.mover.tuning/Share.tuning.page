@@ -24,7 +24,9 @@ $shareName = $_GET['name'];
 $shareCFG = "/boot/config/plugins/$plugin/shareOverrideConfig/$shareName.cfg";
 $cfg = parse_share_cfg($plugin, $shareName);
 $overrideEnabled = ($cfg['moverOverride'] != "yes") ? "no" : "yes";
-$ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
+$ageDisabled  = ($cfg['age']  != "yes") ? "disabled" : "";
+$ctimeDisabled = ($cfg['ctime'] != "yes") ? "disabled" : "";
+$atimeDisabled = ($cfg['atime'] != "yes") ? "disabled" : "";
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
 $sizefSyncDisabled = ($cfg['sizefSync'] != "yes") ? "disabled" : "";
 $sparsenessfDisabled = ($cfg['sparsenessf'] != "yes") ? "disabled" : "";
@@ -124,13 +126,22 @@ _(Only move files that are older than this (in days))_:
 > Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
 _(Use CTIME)_:
-: <select name="ctime" class='myage' <?= $ageDisabled ?>>
-  <?= mk_option($cfg['ctime'], 'no', 'No') ?>
-  <?= mk_option($cfg['ctime'], 'yes', 'Yes') ?>
+: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $ctimeDisabled ?> onchange='$(".atime").toggleAttr("disabled")'>
+  <?=mk_option($cfg['ctime'],'no','No')?>
+  <?=mk_option($cfg['ctime'],'yes','Yes')?>
   </select>
 
 <!--:mover_tuning_ctime_help:-->
-> Select **Yes** to use CTIME instead of MTIME in the find command.
+> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+
+_(Use ATIME)_:
+: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $atimeDisabled ?> onchange='$(".ctime").toggleAttr("disabled")'>
+  <?=mk_option($cfg['atime'],'no','No')?>
+  <?=mk_option($cfg['atime'],'yes','Yes')?>
+  </select>
+
+<!--:mover_tuning_atime_help:-->
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Move files based on size)_:
 : <select name="sizef" onchange='$(".mysizef").toggleAttr("disabled")'>
@@ -304,13 +315,22 @@ _(Only move files that are older than this (in days))_:
 > Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
 _(Use CTIME)_:
-: <select name="ctime" class='myage' <?= $ageDisabled ?>>
-  <?= mk_option($cfg['ctime'], 'no', 'No') ?>
-  <?= mk_option($cfg['ctime'], 'yes', 'Yes') ?>
+: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $ctimeDisabled ?> onchange='$(".atime").toggleAttr("disabled")'>
+  <?=mk_option($cfg['ctime'],'no','No')?>
+  <?=mk_option($cfg['ctime'],'yes','Yes')?>
   </select>
 
 <!--:mover_tuning_ctime_help:-->
-> Select **Yes** to use CTIME instead of MTIME in the find command.
+> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+
+_(Use ATIME)_:
+: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $atimeDisabled ?> onchange='$(".ctime").toggleAttr("disabled")'>
+  <?=mk_option($cfg['atime'],'no','No')?>
+  <?=mk_option($cfg['atime'],'yes','Yes')?>
+  </select>
+
+<!--:mover_tuning_atime_help:-->
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Move files based on size)_:
 : <select name="sizef" onchange='$(".mysizef").toggleAttr("disabled")'>

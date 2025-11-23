@@ -18,8 +18,8 @@ $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
 $moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
 $validateFilenames = ($cfg['validateFilenames'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
-$ctimeDisabled = ($cfg['atime'] != "yes") ? "no" : "yes";
-$atimeDisabled = ($cfg['ctime'] != "yes") ? "no" : "yes";
+$ctimeDisabled = ($cfg['ctime'] != "yes") ? "disabled" : "";
+$atimeDisabled = ($cfg['atime'] != "yes") ? "disabled" : "";
 $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
@@ -155,9 +155,8 @@ _(Test Mode (dry run))_:
     <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
 </select>
 &nbsp;<strong>No</strong> <em>- disables test mode</em>
-&nbsp;<span id="testmode_warning" style="display:<?=($cfg['testmode'] == 'yes') ? 'inline' : 'none'?>; color:orange; font-style:italic;">
-⚠ Test Mode - no files will be moved/synced.
-</span></span>
+&nbsp;<span id="testmode_warning" class="orange-text" style="display:<?= ($cfg['testmode'] == 'yes') ? 'inline' : 'none' ?>; font-style:italic;">
+  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced.') ?> </span></span>
 
 <script>
 function toggleTestModeWarning(val) {
@@ -344,12 +343,12 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 </blockquote>
 
 _(Script to run before mover (No checks, always runs))_:
-: <input type='text' name='beforeScript' size='1' class='narrow mybefore' placeholder='/mnt/user/MyDiskNas/my_script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
+: <input type='text' name='beforeScript' size='1' class='narrow mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
 
 > Path to a script that will be run before mover starts.  This script will always be run even if the filters don't find anything to move.
 
 _(Script to run after mover (No checks, always runs))_:
-: <input type='text' name='afterScript' size='1' class='narrow myafter' placeholder='/mnt/user/MyDiskNas/my_script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
+: <input type='text' name='afterScript' size='1' class='narrow myafter' placeholder='/mnt/user/Files/script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
 
 > Path to a script that will be run after mover finishes.  This script will always be run.
 
@@ -547,11 +546,11 @@ _(Ignore files and folders listed inside of a text file)_:
 </select>
 
 _(File list path)_:
-: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' placeholder='/mnt/user/MyDiskNas/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
+: <input type='text' name='filelistv' size='1' class='narrow myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
 <p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
-<p> File List example: <strong><em>/mnt/user/MyDiskNas/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
+<p> File List example: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
 <p> Folder example: <strong><em>/mnt/cache_ssd/Files/MyFiles</em></strong> , Do <strong>NOT</strong> put (<strong><em> * </em></strong>) or (<strong><em> / </em></strong>) at the end of the line.</p>
 <p> File example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
 </blockquote>
