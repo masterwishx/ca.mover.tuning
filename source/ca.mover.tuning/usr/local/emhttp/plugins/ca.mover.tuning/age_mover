@@ -1682,7 +1682,7 @@ processTheMoves() {
                 continue
             fi
 
-            # Temporary fix: prevent moving empty directories that are in the skip list (still need to remove them from lists)
+            # Temporary fix: prevent moving empty directories that are in the skip list (better to remove duplicate empty folders from the lists instead?)
             # Applies only to empty directories scheduled to be moved
             if [[ "$FILETYPE" == "d" && "$ACTION" =~ "move" ]]; then
                 # If the directory is listed in the skiplist, skip it
@@ -1854,7 +1854,6 @@ processTheMoves() {
                                     else
                                         mvlogger "ZFS dataset [${DATASET}] successfully unmounted."
                                     fi
-
                                     # Destroy the ZFS dataset
                                     if ! zfs destroy "${DATASET}"; then
                                         mvlogger "Failed to destroy ZFS dataset [${DATASET}] — attempting to remount." "failure"
@@ -1942,7 +1941,6 @@ processTheMoves() {
         mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
         [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
     fi
-
 }
 
 start() {
