@@ -161,11 +161,11 @@ function titleLine() {
 
 # Function to convert byte size to human-readable format
 function bytes_to_human() {
-    echo "$(numfmt $1 --to=iec-i)B"
+    printf "%sB" "$(numfmt --to=iec-i "$1")"
 }
 
 function human_to_bytes() {
-    echo "$(numfmt $1 --from=iec)"
+    numfmt --from=iec $1
 }
 
 # Sanitize input filename to prevent attacks
