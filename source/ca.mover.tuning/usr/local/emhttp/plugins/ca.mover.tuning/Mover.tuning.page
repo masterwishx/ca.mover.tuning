@@ -626,8 +626,8 @@ _(Move files tool)_:
 <p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
 </blockquote>
 
-: <select name='moveEmptyFolders' size='1' class='narrow'>
 _(Move empty folders)_:
+: <select name='moveEmptyFolders' size='1' class='narrow'>
 <?=mk_option($cfg['moveEmptyFolders'],"no",'No')?>
 <?=mk_option($cfg['moveEmptyFolders'],"yes","Yes")?>
 </select>
