@@ -1894,7 +1894,7 @@ processTheMoves() {
                 DIR="${SOURCE}/${FILEPATH}"
 
                 if [ -d "$DIR" ]; then
-                    mvDebuglogger "Current folder: $DIR" "Clean Empty Moved Folder - Start Loop"
+                    mvDebuglogger "Current folder: $DIR, Count of all empty folders: $((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))" "Clean Empty Moved Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         file_count=".placeholder"
