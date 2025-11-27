@@ -1874,6 +1874,26 @@ processTheMoves() {
                 fi
             fi
 
+            # Clean moved empty folders
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]]; then
+                if [ -d "${SOURCE}/${FILEPATH}" ]; then
+                    DIR="${SOURCE}/${FILEPATH}"
+                    mvDebuglogger "Current folder: $FILEPATH" "Clean Empty Moved Folder - Start Loop"
+
+                    if [ -e "${DIR}/.placeholder" ]; then
+                        fodler_file_count=0 # Assume no files if .placeholder exists
+                    else
+                        fodler_file_count=$(find "${DIR}" -type f | wc -l)
+                    fi
+
+                    if [ "$fodler_file_count" -eq 0 ] && [ "$TESTMODE" = "no" ]; then
+                        mvlogger "Deleting empty folder: ${DIR}"
+                        # Check if empty folder exists and remove it
+                        [ -d "${DIR}" ] && rmdir "${DIR}"
+                    fi
+                fi
+            fi
+
             # Setting mover status
             if [[ "$ACTION" =~ "unattended" ]]; then
                 REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
@@ -1885,9 +1905,19 @@ processTheMoves() {
                 fi
 
                 if [[ "$ACTION" =~ "unattended to secondary" ]]; then
-                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to secondary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    # Check if there are any files or folders left
+                    if [[ "$FILETYPE" = "f" ]]; then
+                        mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to secondary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    else
+                        mvlogger "$REMAINING_UNATTENDED_FOLDERS folders remaining from unattended to secondary"
+                    fi
                 elif [[ "$ACTION" =~ "unattended to primary" ]]; then
-                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to primary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    # Check if there are any files or folders left
+                    if [[ "$FILETYPE" = "f" ]]; then
+                        mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to primary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    else
+                        mvlogger "$REMAINING_UNATTENDED_FOLDERS folders remaining from unattended to primary"
+                    fi
                 fi
             else
                 if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
@@ -1895,19 +1925,21 @@ processTheMoves() {
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
                         REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
+                        mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                     else
                         REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - 1))
+                        mvlogger "$REMAINING_CACHE_FOLDERS folders remaining from caches to array"
                     fi
-                    mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                 else
                     REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
                         REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
+                        mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                     else
                         REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - 1))
+                        mvlogger "$REMAINING_ARRAY_FOLDERS folders remaining from array to caches"
                     fi
-                    mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                 fi
             fi
             moverStatusWrite
