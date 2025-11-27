@@ -702,7 +702,7 @@ getMoverSettings() {
     else
         MOVE_EMPTY_FOLDERS=$(cfg moveEmptyFolders)
         mvlogger "Move empty folders: $MOVE_EMPTY_FOLDERS"
-    fi        
+    fi
 }
 
 resetRunOnceMoverSettings() {
@@ -1078,8 +1078,12 @@ createFilteredFilelist() {
             FINDSTR+=" \"${SHAREPATH}\""
         fi
 
-        # Only search inside the share (skip the share root): files + empty dirs
-        FINDSTR+=" -mindepth 1 \( -type f -o -type d -empty \)"
+        if [[ "$MOVE_EMPTY_FOLDERS" == "yes" ]]; then
+            # Only search inside the share (skip the share root): files + empty dirs
+            FINDSTR+=" -mindepth 1 \( -type f -o -type d -empty \)"
+        else
+            FINDSTR+=" -type f"
+        fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
@@ -1886,7 +1890,7 @@ processTheMoves() {
             fi
 
             # Clean moved empty folders
-            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]]; then
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ]; then
                 DIR="${SOURCE}/${FILEPATH}"
 
                 if [ -d "$DIR" ]; then
