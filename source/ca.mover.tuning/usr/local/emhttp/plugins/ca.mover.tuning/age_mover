@@ -1648,7 +1648,7 @@ processTheMoves() {
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
 
     # Dry mode info:
-    if [ $TESTMODE = "yes" ]; then
+    if [ "$TESTMODE" = "yes" ]; then
         mvlogger "Warning: Test Mode: yes, running $MOVE_FILES_TOOL in dry-mode for moving $([ "$MOVE_FILES_TOOL" = "rsync" ] && echo 'and syncing')"
     fi
 
@@ -1876,20 +1876,28 @@ processTheMoves() {
 
             # Clean moved empty folders
             if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]]; then
-                if [ -d "${SOURCE}/${FILEPATH}" ]; then
-                    DIR="${SOURCE}/${FILEPATH}"
-                    mvDebuglogger "Current folder: $FILEPATH" "Clean Empty Moved Folder - Start Loop"
+                DIR="${SOURCE}/${FILEPATH}"
+
+                if [ -d "$DIR" ]; then
+                    mvDebuglogger "Current folder: $DIR" "Clean Empty Moved Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
-                        fodler_file_count=0 # Assume no files if .placeholder exists
+                        file_count=".placeholder"
                     else
-                        fodler_file_count=$(find "${DIR}" -type f | wc -l)
+                        file_count=$(find "$DIR" -type f | wc -l)
                     fi
+                    # Count subdirectories
+                    dir_count=$(find "$DIR" -mindepth 1 -type d | wc -l)
 
-                    if [ "$fodler_file_count" -eq 0 ] && [ "$TESTMODE" = "no" ]; then
-                        mvlogger "Deleting empty folder: ${DIR}"
-                        # Check if empty folder exists and remove it
-                        [ -d "${DIR}" ] && rmdir "${DIR}"
+                    if [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ] && [ "$file_count" != ".placeholder" ]; then
+                        if [ "$TESTMODE" = "no" ]; then
+                            mvlogger "Deleting moved empty folder: ${DIR}"
+                            rmdir "$DIR"
+                        else
+                            mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
+                        fi
+                    else
+                        mvlogger "Not deleting folder: contains $file_count file(s), $dir_count subfolder(s): $DIR"
                     fi
                 fi
             fi
