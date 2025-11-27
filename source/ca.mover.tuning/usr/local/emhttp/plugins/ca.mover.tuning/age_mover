@@ -692,6 +692,17 @@ getMoverSettings() {
         MOVE_FILES_TOOL=$(cfg movefilesTool)
         mvlogger "Move files tool: $MOVE_FILES_TOOL"
     fi
+
+    if [ -z $(cfg moveEmptyFolders) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Move empty folders argument provided, defaulting to yes"
+            MOVE_EMPTY_FOLDERS="yes"
+            echo 'moveEmptyFolders="yes"' >>"$config_file"
+        fi
+    else
+        MOVE_EMPTY_FOLDERS=$(cfg moveEmptyFolders)
+        mvlogger "Move empty folders: $MOVE_EMPTY_FOLDERS"
+    fi        
 }
 
 resetRunOnceMoverSettings() {
@@ -1889,7 +1900,7 @@ processTheMoves() {
                     # Count subdirectories
                     dir_count=$(find "$DIR" -mindepth 1 -type d | wc -l)
 
-                    if [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ] && [ "$file_count" != ".placeholder" ]; then
+                    if [ "$file_count" != ".placeholder" ] && [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ]; then
                         if [ "$TESTMODE" = "no" ]; then
                             mvlogger "Deleting moved empty folder: ${DIR}"
                             rmdir "$DIR"

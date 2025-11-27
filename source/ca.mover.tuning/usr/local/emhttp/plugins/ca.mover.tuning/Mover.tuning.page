@@ -626,6 +626,14 @@ _(Move files tool)_:
 <p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
 </blockquote>
 
+: <select name='moveEmptyFolders' size='1' class='narrow'>
+_(Move empty folders)_:
+<?=mk_option($cfg['moveEmptyFolders'],"no",'No')?>
+<?=mk_option($cfg['moveEmptyFolders'],"yes","Yes")?>
+</select>
+
+> This will also move <strong>empty folders</strong> in the share, including those that are not related to the files that were moved.
+
 _(Clean empty folders)_:
 : <select name='cleanFolders' size='1' class='narrow'>
 <?=mk_option($cfg['cleanFolders'],"no",'No')?>
