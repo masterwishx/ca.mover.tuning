@@ -625,7 +625,7 @@ _(Move empty folders)_:
 <?=mk_option($cfg['moveEmptyFolders'],"yes","Yes")?>
 </select>
 
-> This will also move <strong>empty folders</strong> in the share, including those that are not related to the files that were moved.
+> This will also move <strong>empty folders</strong> on a share, including those that are not related to the files that were moved.
 
 _(Clean empty folders)_:
 : <select name='cleanFolders' size='1'>
