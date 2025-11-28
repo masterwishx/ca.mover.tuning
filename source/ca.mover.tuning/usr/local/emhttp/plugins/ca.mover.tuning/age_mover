@@ -70,6 +70,7 @@ DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
+LAST_FOLDER_COUNT=-1
 # Variables from unraid mover.old empty() function
 DEBUGGING=""
 CFGPATH="/boot/config/shares"
@@ -692,6 +693,17 @@ getMoverSettings() {
         MOVE_FILES_TOOL=$(cfg movefilesTool)
         mvlogger "Move files tool: $MOVE_FILES_TOOL"
     fi
+
+    if [ -z $(cfg moveEmptyFolders) ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Move empty folders argument provided, defaulting to yes"
+            MOVE_EMPTY_FOLDERS="yes"
+            echo 'moveEmptyFolders="yes"' >>"$config_file"
+        fi
+    else
+        MOVE_EMPTY_FOLDERS=$(cfg moveEmptyFolders)
+        mvlogger "Move empty folders: $MOVE_EMPTY_FOLDERS"
+    fi
 }
 
 resetRunOnceMoverSettings() {
@@ -1067,8 +1079,12 @@ createFilteredFilelist() {
             FINDSTR+=" \"${SHAREPATH}\""
         fi
 
-        # Only search inside the share (skip the share root): files + empty dirs
-        FINDSTR+=" -mindepth 1 \( -type f -o -type d -empty \)"
+        if [[ "$MOVE_EMPTY_FOLDERS" == "yes" ]]; then
+            # Only search inside the share (skip the share root): files + empty dirs
+            FINDSTR+=" -mindepth 1 \( -type f -o -type d -empty \)"
+        else
+            FINDSTR+=" -type f"
+        fi
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
@@ -1648,7 +1664,7 @@ processTheMoves() {
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
 
     # Dry mode info:
-    if [ $TESTMODE = "yes" ]; then
+    if [ "$TESTMODE" = "yes" ]; then
         mvlogger "Warning: Test Mode: yes, running $MOVE_FILES_TOOL in dry-mode for moving $([ "$MOVE_FILES_TOOL" = "rsync" ] && echo 'and syncing')"
     fi
 
@@ -1795,9 +1811,9 @@ processTheMoves() {
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         if [ "$TESTMODE" = "no" ]; then
-                            mvlogger "Deleting empty folder: ${DIR}"
                             # Check if empty folder exist and remove it
                             [ -d "${DIR}" ] && rmdir "${DIR}"
+                            mvlogger "Deleting empty folder: ${DIR}"
 
                             # Clean top level folder if empty
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
@@ -1807,20 +1823,17 @@ processTheMoves() {
                                 if [ -e "${top_folder}/.placeholder" ]; then
                                     top_folder_count=".placeholder"
                                 else
-                                    # Set count to empty by default
-                                    top_folder_count=0
+                                    # Count files in Top Folder if exist
+                                    [ -d "$top_folder" ] && top_folder_count="$(find "$top_folder" -type f | wc -l)"
+                                    mvDebuglogger "Current top folder: $top_folder, Count of files in Top Folder: $top_folder_count" "Clean Top Folder - Start Loop"
                                 fi
 
-                                # Count files in Top Folder if exist
-                                [ -d "$top_folder" ] && top_folder_count="$(find "$top_folder" -type f | wc -l)"
-                                mvDebuglogger "Current top folder: $top_folder, Count of files in Top Folder: $top_folder_count" "Clean Top Folder - Start Loop"
-
                                 if [[ "$top_folder_count" != ".placeholder" && "$top_folder_count" -eq 0 ]]; then
-                                    mvlogger "Deleting empty top-level folder: $top_folder"
                                     # Check if empty top-level folder exist and remove it
                                     [ -d "$top_folder" ] && find "$top_folder" -empty -type d -delete
+                                    mvlogger "Deleting empty top-level folder: $top_folder"
                                 else
-                                    mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$count" != ".placeholder" ] && echo "s"): ${top_folder}"
+                                    mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$top_folder_count" != ".placeholder" ] && echo "s"): ${top_folder}"
                                 fi
                             fi
                         fi
@@ -1874,6 +1887,36 @@ processTheMoves() {
                 fi
             fi
 
+            # Clean moved empty folders
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ]; then
+                DIR="${SOURCE}/${FILEPATH}"
+
+                if [ -d "$DIR" ]; then
+                    LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
+                    mvDebuglogger "Current folder: $DIR, Count of all empty folders: $LAST_FOLDER_COUNT" "Clean Empty Moved Folder - Start Loop"
+
+                    if [ -e "${DIR}/.placeholder" ]; then
+                        file_count=".placeholder"
+                    else
+                        file_count=$(find "$DIR" -type f | wc -l)
+                    fi
+                    # Count subdirectories
+                    dir_count=$(find "$DIR" -mindepth 1 -type d | wc -l)
+
+                    if [ "$file_count" != ".placeholder" ] && [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ]; then
+                        if [ "$TESTMODE" = "no" ]; then
+                            mvlogger "Deleting moved empty folder: ${DIR}"
+                            rmdir "$DIR"
+                        else
+                            mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
+                        fi
+                        mvDebuglogger "Cycle of delete empty folder, Previous count: $LAST_FOLDER_COUNT, Count of folders: $((LAST_FOLDER_COUNT - 1))" "Clean Empty Moved Folder - End Loop"
+                    else
+                        mvlogger "Not deleting folder: contains $file_count file(s), $dir_count subfolder(s): $DIR"
+                    fi
+                fi
+            fi
+
             # Setting mover status
             if [[ "$ACTION" =~ "unattended" ]]; then
                 REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
@@ -1885,9 +1928,19 @@ processTheMoves() {
                 fi
 
                 if [[ "$ACTION" =~ "unattended to secondary" ]]; then
-                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to secondary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    # Check if there are any files or folders left
+                    if [[ "$FILETYPE" = "f" ]]; then
+                        mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to secondary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    else
+                        mvlogger "$REMAINING_UNATTENDED_FOLDERS folders remaining from unattended to secondary"
+                    fi
                 elif [[ "$ACTION" =~ "unattended to primary" ]]; then
-                    mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to primary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    # Check if there are any files or folders left
+                    if [[ "$FILETYPE" = "f" ]]; then
+                        mvlogger "$REMAINING_UNATTENDED_FILES files remaining from unattended to primary ($(bytes_to_human "$REMAINING_UNATTENDED_SIZE"))"
+                    else
+                        mvlogger "$REMAINING_UNATTENDED_FOLDERS folders remaining from unattended to primary"
+                    fi
                 fi
             else
                 if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
@@ -1895,19 +1948,21 @@ processTheMoves() {
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
                         REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
+                        mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                     else
                         REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - 1))
+                        mvlogger "$REMAINING_CACHE_FOLDERS folders remaining from caches to array"
                     fi
-                    mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                 else
                     REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
                         REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
+                        mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                     else
                         REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - 1))
+                        mvlogger "$REMAINING_ARRAY_FOLDERS folders remaining from array to caches"
                     fi
-                    mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                 fi
             fi
             moverStatusWrite

@@ -88,7 +88,7 @@ _(Override Mover Tuning settings for this share)_:
 
 <div markdown="1" id="moverSettings">
 _(Fill up to this level of used Primary (<em>cache</em>) space)_:
-: <select name="fillupThreshold" size="1" class='narrow'>
+: <select name="fillupThreshold" size="1">
 <?for ($c=95;$c>=0;$c-=5):?>
 <?=mk_option($cfg['fillupThreshold'], $c, "$c %")?>
 <?endfor;?>
@@ -268,7 +268,7 @@ _(Override Mover Tuning settings for this share)_:
 
 <div markdown="1" id="moverSettings">
 _(Only move if above this threshold of used Primary (<em>cache</em>) space)_:
-: <select name="movingThreshold" size="1" class='narrow'>
+: <select name="movingThreshold" size="1">
 <?for ($t=0;$t<100;$t+=5):?>
 <?=mk_option($cfg['movingThreshold'], $t, "$t %")?>
 <?endfor;?>
@@ -277,7 +277,7 @@ _(Only move if above this threshold of used Primary (<em>cache</em>) space)_:
 > Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.
 
 _(Free down to this level of used Primary (<em>cache</em>) space)_:
-: <select name="freeingThreshold" size="1" class='narrow'>
+: <select name="freeingThreshold" size="1">
 <?for ($f=$f;$f>=0;$f-=5):?>
 <?=mk_option($cfg['freeingThreshold'], $f, "$f %")?>
 <?endfor;?>
@@ -364,7 +364,7 @@ _(Only move files larger than this (in MB))_:
 > Select the minimum size a file has to be to get moved (in **Megabytes**).
 
 _(Sync files based on maximum size)_?
-: <select name="sizefSync" size='1' class='narrow' onchange='$(".mysizefSync").toggleAttr("disabled")'>
+: <select name="sizefSync" size='1' onchange='$(".mysizefSync").toggleAttr("disabled")'>
        <?=mk_option($cfg['sizefSync'],'no','No')?>
        <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
 </select>
@@ -372,7 +372,7 @@ _(Sync files based on maximum size)_?
 > Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
 
 _(Sync files that are smaller than this size (In MB))_.
-: <select name="sizeinMSync" size="1" class='narrow mysizefSync' <?=$sizefSyncDisabled?>>
+: <select name="sizeinMSync" size="1" class='mysizefSync' <?=$sizefSyncDisabled?>>
 	<?=mk_option($cfg['sizeinMSync'], 1, "1")?>
 	<?=mk_option($cfg['sizeinMSync'], 2, "2")?>
 	<?=mk_option($cfg['sizeinMSync'], 3, "3")?>
@@ -457,7 +457,7 @@ _(Ignore All hidden files and directories)_:
 > Select **Yes** to skip all hidden files and directories (starting with **"."**).
 
 _(Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage)_:
-: <select name='omovercfg' size='1' class='narrow' onchange='$(".myomthresh").toggleAttr("disabled")'>
+: <select name='omovercfg' size='1' onchange='$(".myomthresh").toggleAttr("disabled")'>
 <?=mk_option($cfg['omovercfg'],"no","No")?>
 <?=mk_option($cfg['omovercfg'],"yes","Yes")?>
 </select>
@@ -468,7 +468,7 @@ _(Move All from Primary->Secondary (cache:yes) shares when disk is above a certa
 </blockquote>
 
 _(Move All from Primary->Secondary (cache:yes) shares pool percentage)_:
-: <select name="omoverthresh" size="1" class='narrow myomthresh' <?=$omoverthreshDisabled?>>
+: <select name="omoverthresh" size="1" class='myomthresh' <?=$omoverthreshDisabled?>>
 <?for ($om;$om<=100;$om+=5):?>
 <?=mk_option($cfg['omoverthresh'], $om, "$om %")?>
 <?endfor;?>
@@ -481,7 +481,7 @@ _(Move All from Primary->Secondary (cache:yes) shares pool percentage)_:
 </blockquote>
 
 _(Synchronize Primary files to Secondary)_:
-: <select name='synchronizeCache' size='1' class='narrow'>
+: <select name='synchronizeCache' size='1'>
 <?=mk_option($cfg['synchronizeCache'],"no",'No')?>
 <?=mk_option($cfg['synchronizeCache'],"yes","Yes")?>
 </select>
