@@ -35,6 +35,16 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.11.28
+    - new: Added "Move empty folders" option to the WebUI (moveEmptyFolders="yes" by default) to control whether empty directories are moved along with files. *(masterwishx)*
+    - new: Automatic empty-folder cleanup for rsync, removing source directories that become empty after file moves (when enabled).
+    - new: Enhanced logging: Added separate logging for files and folders throughout the move process to improve visibility.
+    - new: Improved UI layout by removing unnecessary style wrappers and adding informational icons.
+    - new: Added responsive WebGUI behavior by removing "narrow" CSS classes from multiple select elements, improving styling consistency for Mover.tuning and Share.tuning pages.
+    - new: Updated filter logic in createFilteredFilelist() to properly handle inclusion/exclusion of empty folders.
+    - new: Updated and clarified Test Mode warnings and notification behavior.
+    - fix: General bug fixes and minor improvements.
+
 - 2025.11.23
     - new: Added support for moving empty folders from primary storage when the mover runs. *(masterwishx)*
     - new: Added automatic disk-emptying using code from the stock Unraid mover after custom mover operations.

@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.11.23">
-<!ENTITY md5       "17ce65627e94c574ffa5b4b698211c6a">
+<!ENTITY version   "2025.11.28">
+<!ENTITY md5       "80d8a5af5b4bca25dd0da7bcf77385dd">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/ca.mover.tuning">
@@ -15,6 +15,16 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2025.11.28
+- new: Added "Move empty folders" option to the WebUI (moveEmptyFolders="yes" by default) to control whether empty directories are moved along with files. *(masterwishx)*
+- new: Automatic empty-folder cleanup for rsync, removing source directories that become empty after file moves (when enabled).
+- new: Enhanced logging: Added separate logging for files and folders throughout the move process to improve visibility.
+- new: Improved UI layout by removing unnecessary style wrappers and adding informational icons.
+- new: Added responsive WebGUI behavior by removing "narrow" CSS classes from multiple select elements, improving styling consistency for Mover.tuning and Share.tuning pages.
+- new: Updated filter logic in createFilteredFilelist() to properly handle inclusion/exclusion of empty folders.
+- new: Updated and clarified Test Mode warnings and notification behavior.
+- fix: General bug fixes and minor improvements.
+
 ###2025.11.23
 - new: Added support for moving empty folders from primary storage when the mover runs. *(masterwishx)*
 - new: Added automatic disk-emptying using code from the stock Unraid mover after custom mover operations.
