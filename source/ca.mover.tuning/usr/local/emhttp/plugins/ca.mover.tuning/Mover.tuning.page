@@ -188,7 +188,7 @@ _(Validate input filenames to prevent attacks)_:
 
 <div markdown="1" id="moverInvalidCharsToBlock">
 _(Invalid characters to block)_:
-: <input type='text' name='invalidFileChars' size='1' myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
+: <input type='text' name='invalidFileChars' size='1' class='myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
 
 <blockquote class="inline_help">
 <p> The filename characters such as:
