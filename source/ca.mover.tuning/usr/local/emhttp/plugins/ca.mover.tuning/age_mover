@@ -70,6 +70,7 @@ DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
+LAST_FOLDER_COUNT=-1
 # Variables from unraid mover.old empty() function
 DEBUGGING=""
 CFGPATH="/boot/config/shares"
@@ -1894,7 +1895,8 @@ processTheMoves() {
                 DIR="${SOURCE}/${FILEPATH}"
 
                 if [ -d "$DIR" ]; then
-                    mvDebuglogger "Current folder: $DIR, Count of all empty folders: $((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))" "Clean Empty Moved Folder - Start Loop"
+                    LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
+                    mvDebuglogger "Current folder: $DIR, Count of all empty folders: $LAST_FOLDER_COUNT" "Clean Empty Moved Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         file_count=".placeholder"
@@ -1911,6 +1913,7 @@ processTheMoves() {
                         else
                             mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
                         fi
+                        mvDebuglogger "Cycle of delete empty folder, Previous count: $LAST_FOLDER_COUNT, Count of folders: $((LAST_FOLDER_COUNT - 1))" "Clean Empty Moved Folder - End Loop"
                     else
                         mvlogger "Not deleting folder: contains $file_count file(s), $dir_count subfolder(s): $DIR"
                     fi
