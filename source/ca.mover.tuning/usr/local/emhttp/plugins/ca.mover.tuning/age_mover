@@ -1811,9 +1811,9 @@ processTheMoves() {
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         if [ "$TESTMODE" = "no" ]; then
-                            mvlogger "Deleting empty folder: ${DIR}"
                             # Check if empty folder exist and remove it
                             [ -d "${DIR}" ] && rmdir "${DIR}"
+                            mvlogger "Deleting empty folder: ${DIR}"
 
                             # Clean top level folder if empty
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
@@ -1829,9 +1829,9 @@ processTheMoves() {
                                 fi
 
                                 if [[ "$top_folder_count" != ".placeholder" && "$top_folder_count" -eq 0 ]]; then
-                                    mvlogger "Deleting empty top-level folder: $top_folder"
                                     # Check if empty top-level folder exist and remove it
                                     [ -d "$top_folder" ] && find "$top_folder" -empty -type d -delete
+                                    mvlogger "Deleting empty top-level folder: $top_folder"
                                 else
                                     mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$top_folder_count" != ".placeholder" ] && echo "s"): ${top_folder}"
                                 fi
