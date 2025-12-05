@@ -90,7 +90,11 @@ function startMover()
     if ($cfg['movenow'] == "yes") {
         $mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover";
     } else {
-        $mover_str = "/usr/local/sbin/mover.old";
+        if (version_compare($vars['version'], '7.2.1', '<')) {
+            $mover_str = "/usr/local/sbin/mover.old";
+        } else {
+            $mover_str = "/usr/local/sbin/mover";
+        }
     }
 
     if ($options == "stop") {
@@ -117,13 +121,18 @@ function startMover()
         //Default "move now" button has been hit.
         $niceLevel = $cfg['moverNice'] ?: "0";
         $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
+        if (version_compare($vars['version'], '7.2.1', '<')) {
         logger("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover.old $options");
         passthru("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover.old $options");
+        } else {
+        logger("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover $options");
+        passthru("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover $options");
+        }
     }
 }
 
 if ($cron && $cfg['moverDisabled'] == 'yes') {
-    logger("Mover schedule disabled");
+    logger("Mover Tuning schedule disabled");
     exit();
 }
 
@@ -132,7 +141,7 @@ if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
     exit();
 }
 
-logger("Starting Mover ...");
+logger("Starting Mover Tuning ...");
 
 startMover();
 
