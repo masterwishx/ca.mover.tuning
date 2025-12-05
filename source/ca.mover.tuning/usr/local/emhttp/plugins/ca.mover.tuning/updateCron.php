@@ -26,7 +26,7 @@ function logger($string)
 function make_tune_cron()
 {
 	global $vars;
-	if (!empty($var['shareMoverSchedule'])) {
+	if (!empty($vars['shareMoverSchedule'])) {
 		// Disable Unraid mover
 		$vars['shareMoverSchedule'] = "";
 	}

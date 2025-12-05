@@ -151,7 +151,7 @@ _(Disable Mover running on a schedule)_:
 <div markdown="1" id="moverTuningSettings">
 <?php if (version_compare($vars['version'], '7.2.1', '>=')): ?>
 _(Mover Tuning schedule)_:
-: <input type='text' id='tune_cronSchedule' name='cron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'])?>'>
+: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'])?>'>
 
 <blockquote class="inline_help">
 <p>Runs the <strong><code>age_mover</code></strong> schedule from the Mover Tuning plugin using your custom cron entry (includes all plugin filters).</p>
