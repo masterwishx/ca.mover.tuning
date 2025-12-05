@@ -4,6 +4,7 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini") ?: [];
+$file = "/var/local/emhttp/var.ini";
 
 // Get config value of forced cron
 $cfg_cronEnabled = $cfg['force'];
@@ -25,15 +26,27 @@ function logger($string)
 
 function make_tune_cron()
 {
-	global $vars;
+	global $vars,$file;
 	if (!empty($vars['shareMoverSchedule'])) {
 		// Disable Unraid mover
 		$vars['shareMoverSchedule'] = "";
+		// Read the file into an array of lines
+		$lines = file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+		// Loop through each line and replace the target
+		foreach ($lines as &$line) {
+			if (strpos($line, 'shareMoverSchedule=') === 0) {
+				$line = 'shareMoverSchedule=""'; // change value
+			}
+		}
+
+		// Write the updated lines back to the file
+		file_put_contents($file, implode("\n", $lines) . "\n");
 	}
 
 	$tuneCron = isset($_POST['tune_cron']) ? trim($_POST['tune_cron']) : '';
 	$cronTuneFile = "# Generated schedule for Mover Tuning move\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |& logger -t move\n\n";
-	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tune.cron", $cronTuneFile);
+	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron", $cronTuneFile);
 }
 
 function make_cron()
