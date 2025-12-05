@@ -103,7 +103,7 @@ if ($cfg_moverTuneCron != $_POST['tune_cron']) {
 		make_tune_cron();
 		logger("Mover Tuning cron schedule updated successfully.");
 	} else {
-		@unlink("/boot/config/plugins/ca.mover.tuning/mover.tune.cron");
+		@unlink("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron");
 		logger("Mover Tuning cron schedule removed.");
 	}
 }
