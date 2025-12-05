@@ -8,6 +8,7 @@ if ($var['shareCacheEnabled']!='yes') {
 } elseif ($var['shareUser']=='-') {
   echo "<p class='notice'>User shares not enabled!</p>";
 }
+$vars = @parse_ini_file("/var/local/emhttp/var.ini");
 $plugin = 'ca.mover.tuning';
 $config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 $config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
@@ -49,9 +50,10 @@ $.fn.toggleAttr = function(attr) {
 
 function updateCron() {
   var cron = $("#cronSchedule").val();
+  var tune_cron = $("#tune_cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
   var ismoverDisabled = $("#moverDisabled").val();
-	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,ismoverDisabled:ismoverDisabled});
+	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled});
 }
 
 function moveNow() {
@@ -147,6 +149,16 @@ _(Disable Mover running on a schedule)_:
 :end
 
 <div markdown="1" id="moverTuningSettings">
+<?php if (version_compare($vars['version'], '7.2.1', '>=')): ?>
+_(Mover Tuning schedule)_:
+: <input type='text' id='tune_cronSchedule' name='cron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'])?>'>
+
+<blockquote class="inline_help">
+<p>Runs the <strong><code>age_mover</code></strong> schedule from the Mover Tuning plugin using your custom cron entry (includes all plugin filters).</p>
+<p> Cron Schedule entry example <strong>0 */4 * * *</strong>.&nbsp; To run at <em>every</em><strong> 4 hours</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> What Is Cron</a></p>
+</blockquote>
+<?php endif; ?>
+
 _(Test Mode (dry run))_:
 : <select name='testmode' size='1' id='testmode' onchange="toggleTestModeWarning(this.value)">
     <?=mk_option($cfg['testmode'],"no",_('No'))?>
