@@ -3,7 +3,7 @@
 require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
-$vars = @parse_ini_file("/var/local/emhttp/var.ini");
+$vars = @parse_ini_file("/var/local/emhttp/var.ini") ?: [];
 
 // Get config value of forced cron
 $cfg_cronEnabled = $cfg['force'];
@@ -31,18 +31,18 @@ function make_tune_cron()
 		$vars['shareMoverSchedule'] = "";
 	}
 
-	$cronTuneFile = "# Generated schedule for Mover Tuning move\n" . trim($_POST['tune_cron']) . " /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |& logger -t move\n\n";
+	$tuneCron = isset($_POST['tune_cron']) ? trim($_POST['tune_cron']) : '';
+	$cronTuneFile = "# Generated schedule for Mover Tuning move\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |& logger -t move\n\n";
 	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tune.cron", $cronTuneFile);
 }
 
 function make_cron()
 {
 	global $vars;
-	if (version_compare($vars['version'], '7.2.1', '<')) {
-		$cronFile = "# Generated schedule for forced move\n" . trim($_POST['cron']) . " /usr/local/sbin/mover.old start |& logger -t move\n\n";
-	} else {
-		$cronFile = "# Generated schedule for forced move\n" . trim($_POST['cron']) . " /usr/local/sbin/mover start |& logger -t move\n\n";
-	}
+	$version = $vars['version'] ?? '0.0.0';
+	$mover = version_compare($version, '7.2.1', '<') ? '/usr/local/sbin/mover.old' : '/usr/local/sbin/mover';
+	$cron = isset($_POST['cron']) ? trim($_POST['cron']) : '';
+	$cronFile = "# Generated schedule for forced move\n{$cron} {$mover} start |& logger -t move\n\n";
 	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.cron", $cronFile);
 }
 

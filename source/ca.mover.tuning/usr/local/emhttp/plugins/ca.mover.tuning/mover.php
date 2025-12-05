@@ -128,13 +128,8 @@ function startMover()
         //Default "move now" button has been hit.
         $niceLevel = $cfg['moverNice'] ?: "0";
         $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
-        if (version_compare($vars['version'], '7.2.1', '<')) {
-        logger("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover.old $options");
-        passthru("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover.old $options");
-        } else {
-        logger("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover $options");
-        passthru("ionice $ioLevel nice -n $niceLevel /usr/local/sbin/mover $options");
-        }
+        logger("ionice $ioLevel nice -n $niceLevel $mover_str $options");
+        passthru("ionice $ioLevel nice -n $niceLevel $mover_str $options");
     }
 }
 

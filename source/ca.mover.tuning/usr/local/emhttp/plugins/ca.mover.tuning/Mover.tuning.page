@@ -722,7 +722,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
     <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
     <?if ($showMoverButton):?>
-      <input type="button" name="StartTuneMover" value="_(Move now)_" onclick="startTuneMover(); location.reload()"<?if ($moverRunning):?> disabled<?endif;?>>
+      <input type="button" name="StartTuneMover" value="_(Move now)_" onclick="startTuneMover(); location.reload()" title="Run Mover Tuning ..."<?if ($moverRunning):?> disabled<?endif;?>>
       <?if ($moverRunning):?><span>_(Mover is running)_</span><?endif;?>
     <?endif;?>
   </span>
