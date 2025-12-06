@@ -29,7 +29,7 @@ function make_unraid_cron()
 	global $vars;
 
 	if (!empty($vars['shareMoverSchedule'])) {
-		$moverCron = isset($vars['shareMoverSchedule']) ? trim($vars['shareMoverSchedule']) : '';
+		$moverCron = trim($vars['shareMoverSchedule']);
 		$cronMoverFile = "# Generated mover schedule:\n" . $moverCron . " /usr/local/sbin/mover start |& logger -t move\n\n";
 		file_put_contents("/boot/config/plugins/dynamix/mover.cron", $cronMoverFile);
 	}
@@ -38,8 +38,6 @@ function make_unraid_cron()
 // Mover Tuning cron for unraid v7.2.1+
 function make_tune_cron()
 {
-	global $vars;
-
 	$tuneCron = isset($_POST['tune_cron']) ? trim($_POST['tune_cron']) : '';
 	$cronTuneFile = "# Generated schedule for Mover Tuning move:\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |& logger -t move\n\n";
 	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron", $cronTuneFile);
@@ -115,9 +113,9 @@ if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 }
 
 // Handle Mover Tuning custom cron schedule
-if ($cfg_moverTuneCron != $_POST['tune_cron']) {
-
-	if (trim($_POST['tune_cron']) != "") {
+$postTuneCron = isset($_POST['tune_cron']) ? $_POST['tune_cron'] : '';
+if ($cfg_moverTuneCron !== $postTuneCron) {
+	if (trim($postTuneCron) !== "") {
 		make_tune_cron();
 		logger("Mover Tuning cron schedule updated successfully.");
 	} else {
