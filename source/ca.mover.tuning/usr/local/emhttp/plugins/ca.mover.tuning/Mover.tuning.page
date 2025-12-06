@@ -143,22 +143,28 @@ $(function() {
 </span>
 
 <!-- Breaking changes notice for Unraid 7.2.1+ -->
-<span id="mover_tuning_breaking_notice" class="green-text"
-      style="display:<?= (version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>;
-             font-style:italic;
-             font-weight:bold;
-             font-size:1.5rem;
-             line-height:1.4em;
-             position:relative;
-             padding-right:25px;">
-    <i class="fa fa-info-circle"></i>
-    <?= _(' Important: Starting with Unraid 7.2.1+, the Mover Tuning plugin behavior has changed:') ?>
+<div id="mover_tuning_breaking_notice" 
+     style="display:<?= (version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>;
+            position:relative;
+            background-color: var(--title-header-background-color);
+            border: 1px solid var(--inverse-border-color);
+            border-radius:5px;
+            box-shadow: var(--small-shadow);
+            padding:15px 40px 15px 15px;
+            margin-bottom:10px;
+            font-style:italic;
+            font-weight:bold;
+            color:var(--ui-info);
+            font-size:1.5rem;
+            line-height:1.5em;">
+    <i class="fa fa-info-circle" style="margin-right:5px;"></i>
+    <?= _('Important: Starting with Unraid 7.2.1, Mover Tuning plugin behavior has changed:') ?>
     <br><br>
     <?= _('• The plugin is now separated from the built-in Unraid mover.') ?>
     <br>
-    <?= _('• “Move Now” in the main Mover Settings runs the Unraid mover only.') ?>
+    <?= _('• “Move Now” in the main Mover Settings runs the built-in Unraid mover.') ?>
     <br>
-    <?= _('• “Move” on the Main page also runs the built-in Unraid mover (not Mover Tuning).') ?>
+    <?= _('• “Move” on the Main page also runs the built-in Unraid mover.') ?>
     <br>
     <?= _('• “Move Now” in Mover Tuning → Options runs the plugin age_mover (Mover Tuning).') ?>
     <br>
@@ -166,8 +172,27 @@ $(function() {
     <br>
     <?= _('• Use the “Mover Tuning Schedule” in the plugin settings to schedule Mover Tuning instead.') ?>
     <br>
-    <?= _('• The built-in Unraid mover can still be triggered using “Force move all files on a schedule” (Cron schedule) in the plugin settings if needed.') ?>
-</span>
+    <?= _('• The built-in Unraid mover can still be triggered using “Force move all files on a schedule” (Cron schedule) in Plugin Settings if needed.') ?>
+
+    <!-- Close button -->
+    <span id="close_mover_notice" 
+          style="position:absolute; top:5px; right:10px; cursor:pointer; font-weight:bold; font-size:1.2rem;" 
+          title="Close">&times;</span>
+</div>
+
+<script>
+document.getElementById('close_mover_notice').addEventListener('click', function() {
+    var notice = document.getElementById('mover_tuning_breaking_notice');
+    notice.style.display = 'none';
+    localStorage.setItem('mover_notice_closed', 'yes');
+});
+
+// Hide automatically if previously closed
+if (localStorage.getItem('mover_notice_closed') === 'yes') {
+    var notice = document.getElementById('mover_tuning_breaking_notice');
+    notice.style.display = 'none';
+}
+</script>
 
 <div class="title">
 <span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
