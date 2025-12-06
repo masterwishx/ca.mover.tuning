@@ -3,6 +3,7 @@
 require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
+$vars = @parse_ini_file("/var/local/emhttp/var.ini") ?: [];
 
 // Get config value of forced cron
 $cfg_cronEnabled = $cfg['force'];
@@ -10,6 +11,8 @@ $cfg_cronEnabled = $cfg['force'];
 $cfg_cron = trim($cfg['cron'] ?? '');
 // Get config value of mover disabled
 $cfg_moverDisabled = $cfg['moverDisabled'];
+// Get Mover Tuning cron time (normalized)
+$cfg_moverTuneCron = trim($cfg['moverTuneCron'] ?? $vars['shareMoverSchedule'] ?? '');
 
 function logger($string)
 {
@@ -20,9 +23,34 @@ function logger($string)
 	}
 }
 
+// Unraid Mover cron for unraid v7.2.1+
+function make_unraid_cron()
+{
+	global $vars;
+
+	if (!empty($vars['shareMoverSchedule'])) {
+		$moverCron = trim($vars['shareMoverSchedule']);
+		$cronMoverFile = "# Generated mover schedule:\n" . $moverCron . " /usr/local/sbin/mover start |& logger -t move\n\n";
+		file_put_contents("/boot/config/plugins/dynamix/mover.cron", $cronMoverFile);
+	}
+}
+
+// Mover Tuning cron for unraid v7.2.1+
+function make_tune_cron()
+{
+	$tuneCron = isset($_POST['tune_cron']) ? trim($_POST['tune_cron']) : '';
+	$cronTuneFile = "# Generated schedule for Mover Tuning move:\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |& logger -t move\n\n";
+	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron", $cronTuneFile);
+}
+
+// Cron for forced move (unraid mover)
 function make_cron()
 {
-	$cronFile = "# Generated schedule for forced move\n" . trim($_POST['cron']) . " /usr/local/sbin/mover.old start |& logger -t move\n\n";
+	global $vars;
+	$version = $vars['version'] ?? '0.0.0';
+	$mover = version_compare($version, '7.2.1', '<') ? '/usr/local/sbin/mover.old' : '/usr/local/sbin/mover';
+	$cron = isset($_POST['cron']) ? trim($_POST['cron']) : '';
+	$cronFile = "# Generated schedule for forced move:\n{$cron} {$mover} start |& logger -t move\n\n";
 	file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.cron", $cronFile);
 }
 
@@ -45,21 +73,54 @@ if ($cfg_cronEnabled != $_POST['cronEnabled']) {
 
 // Check if value was changed
 if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
+	global $vars;
 	// If mover schedule is disabled
 	if ($_POST['ismoverDisabled'] == "yes") {
 		// Check if the file exists
 		if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
+			@unlink("/boot/config/plugins/dynamix/mover.cron");
 			logger("Mover schedule disabled successfully.");
 		} else {
 			logger("Error: Mover cron file does not exist");
 		}
+		if (version_compare($vars['version'], '7.2.1', '>=')) {
+			// Check if the file exists
+			if (file_exists("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron")) {
+				@unlink("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron");
+				logger("Mover Tuning schedule disabled successfully.");
+			} else {
+				logger("Error: Mover Tuning cron file does not exist");
+			}
+		}
 	} else {
 		// If mover schedule is enabled
-		if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
+		if (!file_exists("/boot/config/plugins/dynamix/mover.cron")) {
+			make_unraid_cron();
 			logger("Mover schedule enabled successfully.");
 		} else {
-			logger("Error: Mover cron file does not exist");
+			logger("Error: Unable to create mover cron file — schedule not updated.");
 		}
+		if (version_compare($vars['version'], '7.2.1', '>=')) {
+			// Check if the file exists
+			if (!file_exists("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron")) {
+				make_tune_cron();
+				logger("Mover Tuning schedule enabled successfully.");
+			} else {
+				logger("Error: Unable to create Mover Tuning cron file — schedule not updated.");
+			}
+		}
+	}
+}
+
+// Handle Mover Tuning custom cron schedule
+$postTuneCron = isset($_POST['tune_cron']) ? $_POST['tune_cron'] : '';
+if ($cfg_moverTuneCron !== $postTuneCron) {
+	if (trim($postTuneCron) !== "") {
+		make_tune_cron();
+		logger("Mover Tuning cron schedule updated successfully.");
+	} else {
+		@unlink("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron");
+		logger("Mover Tuning cron schedule removed.");
 	}
 }
 
