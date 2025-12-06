@@ -148,8 +148,8 @@ $(function() {
             position:relative;
             background-color: var(--title-header-background-color);
             border: 1px solid var(--inverse-border-color);
-            border-radius:5px;
-            box-shadow: var(--small-shadow);
+            border-radius:10px;
+            box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);            
             padding:15px 40px 15px 15px;
             margin-bottom:10px;
             font-style:italic;
