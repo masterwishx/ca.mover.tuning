@@ -143,26 +143,30 @@ $(function() {
 </span>
 
 <!-- Breaking changes notice for Unraid 7.2.1+ -->
-<span id="mover_tuning_breaking_notice" class="green-text" 
-      style="display:<?= (version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>; 
-             font-style:italic; 
-             font-weight:bold; font-size:1.5rem;">
+<span id="mover_tuning_breaking_notice" class="green-text"
+      style="display:<?= (version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>;
+             font-style:italic;
+             font-weight:bold;
+             font-size:1.5rem;
+             line-height:1.4em;
+             position:relative;
+             padding-right:25px;">
     <i class="fa fa-info-circle"></i>
-    <?= _('Important: Starting with Unraid 7.2.1+, Mover Tuning plugin behavior has changed.') ?>
+    <?= _(' Important: Starting with Unraid 7.2.1+, the Mover Tuning plugin behavior has changed:') ?>
+    <br><br>
+    <?= _('• The plugin is now separated from the built-in Unraid mover.') ?>
     <br>
-    <?= _('- The plugin is now separated from the built-in Unraid mover.') ?>
+    <?= _('• “Move Now” in the main Mover Settings runs the Unraid mover only.') ?>
     <br>
-    <?= _('- “Move Now” button in the main Mover Settings will only run the Unraid mover.') ?>
+    <?= _('• “Move” on the Main page also runs the built-in Unraid mover (not Mover Tuning).') ?>
     <br>
-    <?= _('- “Move” button on the Main page also runs the built-in Unraid mover (not Mover Tuning).') ?>
+    <?= _('• “Move Now” in Mover Tuning → Options runs the plugin age_mover (Mover Tuning).') ?>
     <br>
-    <?= _('- “Move Now” button in Mover Tuning → Options will run the plugin age_mover (Mover Tuning).') ?>
+    <?= _('• To disable the built-in Unraid mover schedule, set “Mover schedule” in Mover Settings to Disabled.') ?>
     <br>
-    <?= _('- To disable the built-in Unraid mover schedule, set “Mover schedule” in Mover Settings to Disabled.') ?>
+    <?= _('• Use the “Mover Tuning Schedule” in the plugin settings to schedule Mover Tuning instead.') ?>
     <br>
-    <?= _('- Use the “Mover Tuning Schedule” in the plugin settings to schedule Mover Tuning instead.') ?>
-    <br>
-    <?= _('- The built-in Unraid mover can still be run via the “Force move all files on a schedule” (Cron schedule) option in Plugin Settings if needed.') ?>
+    <?= _('• The built-in Unraid mover can still be triggered using “Force move all files on a schedule” (Cron schedule) in the plugin settings if needed.') ?>
 </span>
 
 <div class="title">
