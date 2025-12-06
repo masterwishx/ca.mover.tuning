@@ -133,6 +133,38 @@ $(function() {
 });
 </script>
 
+<!-- Condition A: Unraid native Mover schedule enabled -->
+<span id="mover_schedule_warning" class="orange-text" 
+      style="display:<?= (!empty($vars['shareMoverSchedule']) && version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>; font-style:italic;">
+    <i class="fa fa-warning"></i>
+    <?= _('Unraid Mover schedule is currently') ?> <b>enabled</b>
+    (<?= htmlspecialchars($vars['shareMoverSchedule']) ?>). &nbsp;
+    <?= _('If you want Mover Tuning to fully manage scheduling, disable it in Mover Settings.') ?>
+</span>
+
+<!-- Breaking changes notice for Unraid 7.2.1+ -->
+<span id="mover_tuning_breaking_notice" class="green-text" 
+      style="display:<?= (version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>; 
+             font-style:italic; 
+             font-weight:bold; font-size:1.5rem;">
+    <i class="fa fa-info-circle"></i>
+    <?= _('Important: Starting with Unraid 7.2.1+, Mover Tuning plugin behavior has changed.') ?>
+    <br>
+    <?= _('- The plugin is now separated from the built-in Unraid mover.') ?>
+    <br>
+    <?= _('- “Move Now” button in the main Mover Settings will only run the Unraid mover.') ?>
+    <br>
+    <?= _('- “Move” button on the Main page also runs the built-in Unraid mover (not Mover Tuning).') ?>
+    <br>
+    <?= _('- “Move Now” button in Mover Tuning → Options will run the plugin age_mover (Mover Tuning).') ?>
+    <br>
+    <?= _('- To disable the built-in Unraid mover schedule, set “Mover schedule” in Mover Settings to Disabled.') ?>
+    <br>
+    <?= _('- Use the “Mover Tuning Schedule” in the plugin settings to schedule Mover Tuning instead.') ?>
+    <br>
+    <?= _('- The built-in Unraid mover can still be run via the “Force move all files on a schedule” (Cron schedule) option in Plugin Settings if needed.') ?>
+</span>
+
 <div class="title">
 <span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
 <span class="right">Version: <?=$version?></span>
