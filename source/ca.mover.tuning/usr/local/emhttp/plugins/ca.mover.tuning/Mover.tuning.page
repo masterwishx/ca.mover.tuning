@@ -8,7 +8,7 @@ if ($var['shareCacheEnabled']!='yes') {
 } elseif ($var['shareUser']=='-') {
   echo "<p class='notice'>User shares not enabled!</p>";
 }
-$vars = @parse_ini_file("/var/local/emhttp/var.ini");
+$vars = @parse_ini_file("/var/local/emhttp/var.ini") ?: [];
 $plugin = 'ca.mover.tuning';
 $config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 $config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
