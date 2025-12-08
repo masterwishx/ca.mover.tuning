@@ -48,19 +48,21 @@ function startMover()
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1: $option1\n");
             }
-        // Fix for Unraid v6.x that emhttp run mover without "start" parametr
+            // Fix for Unraid v6.x that emhttp run mover without "start" parametr
         } else if (version_compare($vars['version'], '7.0.0', '<')) {
             $args[0] = 'start';
             $option1 = $args[0];
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1 set to 'start' due to version < 7.0.0\n");
             }
-        }
-        // For Unraid v7.2.1+, use $_POST for pressed move now button in plugin page
-        else if (version_compare($vars['version'], '7.2.1', '>=')) {
+            // For Unraid v7.2.1+, use $_POST for pressed move now button in plugin page
+        } else if (version_compare($vars['version'], '7.2.1', '>=')) {
             if (isset($_POST['cmdStartTuneMover'])) {
                 $args[0] = 'start';
-                $option1 = $args[0];         
+                $option1 = $args[0];
+                if ($cfg['debuglogging'] == 'yes') {
+                    logger("Option 1 set to 'start' due to version >= 7.2.1\n");
+                }
             }
         }
 
