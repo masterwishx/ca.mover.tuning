@@ -435,6 +435,9 @@ The 'post-install' script
 <INLINE>
 echo ""
 
+# Config file
+config_file=/boot/config/plugins/&name;/&name;.cfg;
+
 # Read Unraid version
 UNRAID_VERSION=$(grep '^version=' /etc/unraid-version | cut -d'"' -f2)
 
@@ -520,9 +523,6 @@ chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover
-
-# Config file
-config_file=/boot/config/plugins/&name;/&name;.cfg;
 
 if [[ $(cat $config_file | wc -l) -eq 1 ]]; then
   rm $config_file
