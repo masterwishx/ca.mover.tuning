@@ -402,23 +402,18 @@
   }
 
   // NEW: Breaking-changes notice for Unraid >= 7.2.1
-  if ( version_compare($version['version'], "7.2.1", ">=") )
-  {
-    echo "=============================================================\n";
-    echo " IMPORTANT: Starting with Unraid 7.2.1, Mover Tuning behavior\n";
-    echo " has changed:\n";
-    echo " ------------------------------------------------------------\n";
-    echo " • The plugin is now separated from the built-in Unraid mover.\n";
-    echo " • “Move Now” in Mover Settings runs the built-in Unraid mover.\n";
-    echo " • “Move” on the Main page also runs the Unraid mover.\n";
-    echo " • “Move Now” in Mover Tuning → Options runs age_mover.\n";
-    echo " • To disable the built-in mover schedule, set it to Disabled\n";
-    echo "   in Mover Settings.\n";
-    echo " • Use the “Mover Tuning Schedule” (Plugin Settings) to\n";
-    echo "   schedule Mover Tuning instead.\n";
-    echo " • The Unraid mover can still be triggered through the\n";
-    echo "   “Force move all files on a schedule” option.\n";
-    echo "=============================================================\n\n";
+  if (version_compare($version['version'], "7.2.1", ">=")) {
+    echo "=============================================================\n" .
+         " IMPORTANT: Starting with Unraid 7.2.1, Mover Tuning behavior has changed:\n" .
+         " ------------------------------------------------------------\n" .
+         " • The plugin is now separated from the built-in Unraid mover.\n" .
+         " • “Move Now” in Mover Settings runs the built-in Unraid mover.\n" .
+         " • “Move” on the Main page also runs the Unraid mover.\n" .
+         " • “Move Now” in Mover Tuning → Options runs age_mover.\n" .
+         " • To disable the built-in mover schedule, set it to Disabled in Mover Settings.\n" .
+         " • Use the “Mover Tuning Schedule” (Plugin Settings) to schedule Mover Tuning instead.\n" .
+         " • The Unraid mover can still be triggered through the “Force move all files on a schedule” option.\n" .
+         "=============================================================\n\n";
   }
  ?>
 ]]>
@@ -552,6 +547,18 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
         # Rename old dynamix cron file
         echo "Renaming old schedule: mover.cron → mover.cron.old"
         mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
+    fi
+
+    # Restore original mover if both current and backup exist
+    if [[ -f /usr/local/sbin/mover &amp;&amp; -f /usr/local/sbin/mover.old ]]; then
+        echo "Restoring original /usr/local/sbin/mover from backup"
+        mv /usr/local/sbin/mover.old /usr/local/sbin/mover
+    fi
+
+    # Same for /usr/local/bin/mover
+    if [[ -f /usr/local/bin/mover &amp;&amp; -f /usr/local/bin/mover.old ]]; then
+        echo "Restoring original /usr/local/bin/mover from backup"
+        mv /usr/local/bin/mover.old /usr/local/bin/mover
     fi
 
 else
