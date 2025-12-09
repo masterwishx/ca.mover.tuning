@@ -452,7 +452,7 @@ echo "Unraid version detected: $UNRAID_VERSION"
 if version_ge "$UNRAID_VERSION" "7.2.1"; then
     echo "Unraid 7.2.1 or newer — skipping mover script backup."
 
-    TUNING_CRON_FILE="/boot/config/plugins/ca.mover.tuning/mover.tuning.cron"
+    TUNING_CRON_FILE="/boot/config/plugins/&name;/mover.tuning.cron"
     DYNAMIX_CRON_FILE="/boot/config/plugins/dynamix/mover.cron"
     DYNAMIX_CRON_OLD="/boot/config/plugins/dynamix/mover.cron.old"
 

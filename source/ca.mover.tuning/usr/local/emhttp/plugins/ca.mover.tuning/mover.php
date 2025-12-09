@@ -50,7 +50,7 @@ function startMover()
             if ($cfg['debuglogging'] == 'yes') {
                 logger("Option 1: $option1\n");
             }
-            // Fix for Unraid v6.x that emhttp run mover without "start" parametr
+            // Fix for Unraid v6.x that emhttp run mover without "start" parameter
         } else if (version_compare($vars['version'], '7.0.0', '<')) {
             $args[0] = 'start';
             $option1 = $args[0];
