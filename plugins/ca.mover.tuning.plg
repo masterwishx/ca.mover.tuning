@@ -438,9 +438,9 @@ echo ""
 # Config file
 config_file=/boot/config/plugins/&name;/&name;.cfg;
 
-# Check if the config file exists and is empty
-if [[ $(cat $config_file | wc -l) -eq 1 ]]; then
-  rm $config_file
+# Remove legacy single-line configs if present
+if [[ -f "$config_file" &amp;&amp; $(wc -l &lt; "$config_file") -eq 1 ]]; then
+  rm "$config_file"
 fi
 
 if [[ ! -f "$config_file" ]]; then
