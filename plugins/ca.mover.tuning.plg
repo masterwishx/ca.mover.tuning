@@ -21,7 +21,7 @@
 - new: “Move now” button to start the tuning mover from the UI and live “Mover is running” indicator.
 - new: Persistent breaking-change notice banner with dismiss functionality and contextual guidance for v7.2.1+.
 - new: Dual cron management — separate schedules for Unraid's native mover and Mover Tuning, with migration of legacy schedules.
-- new: Version detection & conditional logic — core files and UI elements gated based on Unraid version.
+- new: Version detection and conditional logic — core files and UI elements gated based on Unraid version.
 - new: Post-install migration script detects old dynamix mover schedules, creates mover.tuning.cron, and renames old mover.cron.
 - new: UI updates — new cron schedule field, warning if shareMoverSchedule conflicts, version-aware mover execution.
 - fix: Displays current mover running state and updates status/help text dynamically.
