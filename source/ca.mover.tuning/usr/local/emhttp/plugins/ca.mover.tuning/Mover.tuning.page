@@ -8,6 +8,7 @@ if ($var['shareCacheEnabled']!='yes') {
 } elseif ($var['shareUser']=='-') {
   echo "<p class='notice'>User shares not enabled!</p>";
 }
+$vars = @parse_ini_file("/var/local/emhttp/var.ini") ?: [];
 $plugin = 'ca.mover.tuning';
 $config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 $config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
@@ -30,6 +31,8 @@ $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
 $sizefSyncDisabled = ($cfg['sizefSync'] != "yes") ? "disabled" : "";
 $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $version = ($cfg['version']);
+$moverRunning = file_exists('/var/run/mover.pid');
+$showMoverButton = version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=');
 
 ?>
 
@@ -49,13 +52,18 @@ $.fn.toggleAttr = function(attr) {
 
 function updateCron() {
   var cron = $("#cronSchedule").val();
+  var tune_cron = $("#tune_cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
   var ismoverDisabled = $("#moverDisabled").val();
-	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,ismoverDisabled:ismoverDisabled});
+	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled});
 }
 
 function moveNow() {
 	$.post("/plugins/ca.mover.tuning/mover.php crond start");
+}
+
+function startTuneMover() {
+$.post("/plugins/ca.mover.tuning/mover.php", { cmdStartTuneMover: 1 });
 }
 
 function resetDefaults() { 
@@ -126,6 +134,66 @@ $(function() {
 });
 </script>
 
+<!-- Condition A: Unraid native Mover schedule enabled -->
+<span id="mover_schedule_warning" class="orange-text" 
+      style="display:<?= (!empty($vars['shareMoverSchedule']) && version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>; font-style:italic;">
+    <i class="fa fa-warning"></i>
+    <?= _('Unraid Mover schedule is currently') ?> <b>enabled</b>
+    (<?= htmlspecialchars($vars['shareMoverSchedule']) ?>). &nbsp;
+    <?= _('If you want Mover Tuning to fully manage scheduling, disable it in Mover Settings.') ?>
+</span>
+
+<!-- Breaking changes notice for Unraid 7.2.1+ -->
+<div id="mover_tuning_breaking_notice" 
+     style="display:<?= (version_compare($vars['version'], '7.2.1', '>=')) ? 'block' : 'none' ?>;
+            position:relative;
+            background-color: var(--title-header-background-color);
+            border: 1px solid var(--border-color);
+            border-radius:10px;
+            box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);            
+            padding:15px 40px 15px 15px;
+            margin-bottom:10px;
+            color:var(--ui-info);
+            font-size:1.5rem;
+            line-height:1.5em;">
+    <i class="fa fa-info-circle" style="margin-right:5px;"></i>
+    <?= _('**Important: &nbsp;*Starting with Unraid 7.2.1, Mover Tuning plugin behavior has changed:***') ?>
+    <br><br>
+    <?= _('• The plugin is now separated from the built-in Unraid mover.') ?>
+    <br>
+    <?= _('• **“Move Now”** in the main Mover Settings runs the built-in Unraid mover.') ?>
+    <br>
+    <?= _('• **“Move”** on the Main page also runs the built-in Unraid mover.') ?>
+    <br>
+    <?= _('• **“Move Now”** in Mover Tuning → Options runs the plugin age_mover (Mover Tuning).') ?>
+    <br>
+    <?= _('• To disable the built-in Unraid mover schedule, set **“Mover schedule”** in Mover Settings to **Disabled**.') ?>
+    <br>
+    <?= _('• Use the **“Mover Tuning Schedule”** in the plugin settings to schedule **Mover Tuning** instead.') ?>
+    <br>
+    <?= _('• The built-in Unraid mover can still be triggered using **“Force move all files on a schedule”** (Cron schedule) in Plugin Settings if needed.') ?>
+
+    <!-- Close button -->
+    <span id="close_mover_notice"
+      class="fa fa-times"
+      style="position:absolute; top:5px; right:10px; cursor:pointer; font-size:1.3rem;"
+      title="Close"></span>
+</div>
+
+<script>
+document.getElementById('close_mover_notice').addEventListener('click', function() {
+    var notice = document.getElementById('mover_tuning_breaking_notice');
+    notice.style.display = 'none';
+    localStorage.setItem('mover_notice_closed', 'yes');
+});
+
+// Hide automatically if previously closed
+if (localStorage.getItem('mover_notice_closed') === 'yes') {
+    var notice = document.getElementById('mover_tuning_breaking_notice');
+    notice.style.display = 'none';
+}
+</script>
+
 <div class="title">
 <span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
 <span class="right">Version: <?=$version?></span>
@@ -147,6 +215,16 @@ _(Disable Mover running on a schedule)_:
 :end
 
 <div markdown="1" id="moverTuningSettings">
+<?php if (version_compare($vars['version'], '7.2.1', '>=')): ?>
+_(Mover Tuning schedule)_:
+: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'])?>'>
+
+<blockquote class="inline_help">
+<p>Runs the <strong><code>age_mover</code></strong> schedule from the Mover Tuning plugin using your custom cron entry (includes all plugin filters).</p>
+<p> Cron Schedule entry example <strong>0 */4 * * *</strong>.&nbsp; To run at <em>every</em><strong> 4 hours</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> What Is Cron</a></p>
+</blockquote>
+<?php endif; ?>
+
 _(Test Mode (dry run))_:
 : <select name='testmode' size='1' id='testmode' onchange="toggleTestModeWarning(this.value)">
     <?=mk_option($cfg['testmode'],"no",_('No'))?>
@@ -704,6 +782,10 @@ _(Resynchronize all Primary files to Secondary)_:
     <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
     <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
+    <?if ($showMoverButton):?>
+      <input type="button" name="StartTuneMover" value="_(Move now)_" onclick="startTuneMover(); location.reload()" title="Run Mover Tuning ..."<?if ($moverRunning):?> disabled<?endif;?>>
+      <?if ($moverRunning):?><span>_(Mover is running)_</span><?endif;?>
+    <?endif;?>
   </span>
 
 </form>
