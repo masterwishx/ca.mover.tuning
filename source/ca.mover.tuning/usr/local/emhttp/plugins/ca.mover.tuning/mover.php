@@ -22,6 +22,8 @@ function startMover()
 {
     global $vars, $cfg, $cron, $bash, $argv, $args;
 
+    logger("Starting Mover Tuning ...");
+
     if ($argv[2]) {
         $args[] = trim($argv[2]);
     }
@@ -144,8 +146,6 @@ if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
     logger("Parity Check / rebuild in progress.  Not running mover");
     exit();
 }
-
-logger("Starting Mover Tuning ...");
 
 startMover();
 
