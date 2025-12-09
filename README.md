@@ -35,6 +35,19 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.12.09
+    - new: Added support for Unraid 7.2.1+, handling breaking changes so Mover Tuning works alongside the native mover while remaining compatible with older versions. *(masterwishx)*
+    - new: Configurable Mover Tuning schedule input with inline help (v7.2.1+).
+    - new: “Move now” button to start the tuning mover from the UI and live “Mover is running” indicator.
+    - new: Persistent breaking-change notice banner with dismiss functionality and contextual guidance for v7.2.1+.
+    - new: Dual cron management — separate schedules for Unraid's native mover and Mover Tuning, with migration of legacy schedules.
+    - new: Version detection & conditional logic — core files and UI elements gated based on Unraid version.
+    - new: Post-install migration script detects old dynamix mover schedules, creates mover.tuning.cron, and renames old mover.cron.
+    - new: UI updates — new cron schedule field, warning if shareMoverSchedule conflicts, version-aware mover execution.
+    - fix: Displays current mover running state and updates status/help text dynamically.
+    - fix: Version-aware cron handling; tuning cron can be saved and synchronized.
+    - fix: Cleanup of legacy files and configurations to prevent conflicts.
+
 - 2025.11.28
     - new: Added "Move empty folders" option to the WebUI (moveEmptyFolders="yes" by default) to control whether empty directories are moved along with files. *(masterwishx)*
     - new: Automatic empty-folder cleanup for rsync, removing source directories that become empty after file moves (when enabled).
