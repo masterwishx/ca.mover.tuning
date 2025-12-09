@@ -389,7 +389,7 @@
 <?php
   $version = parse_ini_file("/etc/unraid-version");
   $displayversion = $version['version'];
-  echo "$displayversion \n";
+  echo "Unraid v$displayversion \n";
 
   if ( version_compare($version['version'],"6.9.0-rc2", "<") )
   {
@@ -403,9 +403,9 @@
 
   // NEW: Breaking-changes notice for Unraid >= 7.2.1
   if (version_compare($version['version'], "7.2.1", ">=")) {
-    echo "=============================================================\n" .
+    echo "===================================================================================================\n" .
          " IMPORTANT: Starting with Unraid 7.2.1, Mover Tuning behavior has changed:\n" .
-         " ------------------------------------------------------------\n" .
+         " --------------------------------------------------------------------------------------------------\n" .
          " • The plugin is now separated from the built-in Unraid mover.\n" .
          " • “Move Now” in Mover Settings runs the built-in Unraid mover.\n" .
          " • “Move” on the Main page also runs the Unraid mover.\n" .
@@ -413,7 +413,7 @@
          " • To disable the built-in mover schedule, set it to Disabled in Mover Settings.\n" .
          " • Use the “Mover Tuning Schedule” (Plugin Settings) to schedule Mover Tuning instead.\n" .
          " • The Unraid mover can still be triggered through the “Force move all files on a schedule” option.\n" .
-         "=============================================================\n\n";
+         "===================================================================================================\n\n";
   }
  ?>
 ]]>
@@ -625,6 +625,7 @@ The 'remove' script.
 <INLINE>
 if [[ -e /usr/local/sbin/mover.old ]]; then mv -f /usr/local/sbin/mover.old /usr/local/sbin/mover; fi
 if [[ -e /usr/local/bin/mover.old ]]; then mv -f /usr/local/bin/mover.old /usr/local/bin/mover; fi
+if [[ -e /boot/config/plugins/dynamix/mover.cron.old ]]; then mv -f /boot/config/plugins/dynamix/mover.cron.old /boot/config/plugins/dynamix/mover.cron; fi
 removepkg &name;-&version;-x86_64-1
 rm -rf &plugdir;
 rm -rf /boot/config/plugins/&name;
