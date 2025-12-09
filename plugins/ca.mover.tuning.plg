@@ -474,6 +474,14 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
                 echo "Setting moverTuneCron to: $SHARE_MOV_SCHED"
                 echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
             fi
+
+            # Create cron file for Mover Tuning
+            echo "Creating Mover Tuning cron file: $TUNING_CRON_FILE"
+            {
+                echo "# Generated schedule for Mover Tuning move:"
+                echo "$SHARE_MOV_SCHED /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |&amp; logger -t move"
+            } > "$TUNING_CRON_FILE"
+
         else
             echo "shareMoverSchedule is empty — nothing to migrate."
         fi
