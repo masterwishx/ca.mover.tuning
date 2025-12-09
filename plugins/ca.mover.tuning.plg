@@ -438,6 +438,51 @@ echo ""
 # Config file
 config_file=/boot/config/plugins/&name;/&name;.cfg;
 
+# Check if the config file exists and is empty
+if [[ $(cat $config_file | wc -l) -eq 1 ]]; then
+  rm $config_file
+fi
+
+if [[ ! -f "$config_file" ]]; then
+  echo "Creating file $config_file with default configuration."
+  # Create the file with some default values
+  echo 'testmode="no"' > $config_file
+  echo 'logging="yes"' >> $config_file
+  echo 'movenow="yes"' >> $config_file
+  echo 'version="&version;"' >> "$config_file"
+else  
+  echo "Updating config file"
+  if [ &upgrade; = "major" ]; then
+    echo "- Major upgrade, forcing test mode"
+    if grep -q "testmode" "$config_file"; then
+      sed -i "s/testmode=.*$/testmode=\"yes\"/" "$config_file"
+    else
+      echo 'testmode="yes"' >> "$config_file"
+    fi
+  else
+    echo "- Minor upgrade, not forcing test mode"
+  fi
+  echo "- Updating version number"
+  if grep -q "version" "$config_file"; then
+    sed -i "s/version=.*$/version=\"&version;\"/" "$config_file"
+  else
+    echo "version=\"&version;\"" >> "$config_file"
+  fi
+  if grep -q "threshold=" $config_file; then
+    echo "- Updating movingThreshold"
+    sed "s/threshold=/movingThreshold=/" -i "$config_file"
+  fi
+  if grep -q 'freeingThreshold=""' "$config_file"; then
+      echo "- Updating freeingThreshold"
+      thresh=$(grep "movingThreshold=" $config_file | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+      sed "s/freeingThreshold=.*$/freeingThreshold=$thresh/" -i "$config_file"
+  fi
+  if ! grep -q 'freeingThreshold=' $config_file; then
+    echo "- Updating freeingThreshold"
+    grep 'movingThreshold=' "$config_file" | sed 's/movingThreshold/freeingThreshold/' >> "$config_file"
+  fi
+fi
+
 # Read Unraid version
 UNRAID_VERSION=$(grep '^version=' /etc/unraid-version | cut -d'"' -f2)
 
@@ -468,11 +513,16 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
             echo "Found shareMoverSchedule: $SHARE_MOV_SCHED"
 
             # Add moverTuneCron only if missing
-            if grep -q '^moverTuneCron=' "$config_file"; then
+            if [[ -f "$config_file" ]] &amp;&amp; grep -q '^moverTuneCron=' "$config_file"; then
                 echo "moverTuneCron already exists — skipping update."
             else
+                # Only append if file exists
                 echo "Setting moverTuneCron to: $SHARE_MOV_SCHED"
-                echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
+                if [[ -f "$config_file" ]]; then
+                    echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
+                else
+                    echo "Config file not found."
+                fi
             fi
 
             # Create cron file for Mover Tuning
@@ -531,49 +581,6 @@ chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover
 chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover
-
-if [[ $(cat $config_file | wc -l) -eq 1 ]]; then
-  rm $config_file
-fi
-if [[ ! -f "$config_file" ]]; then
-  echo "Creating file $config_file with default configuration."
-  # Create the file with some default values
-  echo 'testmode="no"' > $config_file
-  echo 'logging="yes"' >> $config_file
-  echo 'movenow="yes"' >> $config_file
-  echo 'version="&version;"' >> "$config_file"
-else  
-  echo "Updating config file"
-  if [ &upgrade; = "major" ]; then
-    echo "- Major upgrade, forcing test mode"
-    if grep -q "testmode" "$config_file"; then
-      sed -i "s/testmode=.*$/testmode=\"yes\"/" "$config_file"
-    else
-      echo 'testmode="yes"' >> "$config_file"
-    fi
-  else
-    echo "- Minor upgrade, not forcing test mode"
-  fi
-  echo "- Updating version number"
-  if grep -q "version" "$config_file"; then
-    sed -i "s/version=.*$/version=\"&version;\"/" "$config_file"
-  else
-    echo "version=\"&version;\"" >> "$config_file"
-  fi
-  if grep -q "threshold=" $config_file; then
-    echo "- Updating movingThreshold"
-    sed "s/threshold=/movingThreshold=/" -i "$config_file"
-  fi
-  if grep -q 'freeingThreshold=""' "$config_file"; then
-      echo "- Updating freeingThreshold"
-      thresh=$(grep "movingThreshold=" $config_file | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
-      sed "s/freeingThreshold=.*$/freeingThreshold=$thresh/" -i "$config_file"
-  fi
-  if ! grep -q 'freeingThreshold=' $config_file; then
-    echo "- Updating freeingThreshold"
-    grep 'movingThreshold=' "$config_file" | sed 's/movingThreshold/freeingThreshold/' >> "$config_file"
-  fi
-fi
 
 echo ""
 echo "----------------------------------------------------"
