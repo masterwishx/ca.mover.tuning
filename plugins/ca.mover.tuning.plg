@@ -518,14 +518,14 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
         SHARE_MOV_SCHED=$(grep '^shareMoverSchedule=' /var/local/emhttp/var.ini | cut -d'"' -f2)
 
         if [[ -n "$SHARE_MOV_SCHED" ]]; then
-            echo "Found shareMoverSchedule: $SHARE_MOV_SCHED"
+            echo "Found shareMoverSchedule: [$SHARE_MOV_SCHED]"
 
             # Add moverTuneCron only if missing
             if [[ -f "$config_file" ]] &amp;&amp; grep -q '^moverTuneCron=' "$config_file"; then
                 echo "moverTuneCron already exists — skipping update."
             else
                 # Only append if file exists
-                echo "Setting moverTuneCron to: $SHARE_MOV_SCHED"
+                echo "Setting moverTuneCron to: [$SHARE_MOV_SCHED]"
                 if [[ -f "$config_file" ]]; then
                     echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
                 else
