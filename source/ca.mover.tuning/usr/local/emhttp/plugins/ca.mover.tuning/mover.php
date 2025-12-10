@@ -8,6 +8,16 @@ $cron = $argv[1] == "crond";
 $bash = $argv[1] == "bash";
 $args = [];
 
+// Check if mover is running
+if (!empty($_GET['check'])) {
+    if (file_exists('/var/run/mover.pid')) {
+        echo "1";  // mover running
+    } else {
+        echo "0";  // mover finished
+    }
+    exit;
+}
+
 function logger($string)
 {
     global $cfg;

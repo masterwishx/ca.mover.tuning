@@ -62,9 +62,42 @@ function moveNow() {
 	$.post("/plugins/ca.mover.tuning/mover.php crond start");
 }
 
-function startTuneMover() {
-$.post("/plugins/ca.mover.tuning/mover.php", { cmdStartTuneMover: 1 });
-}
+document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("StartTuneMoverBtn");
+    const status = document.getElementById("MoverStatus");
+    const spinner = document.getElementById("MoverSpinner");
+
+    if (!btn) return;
+
+    btn.addEventListener("click", () => {
+        // Prevent multiple clicks
+        btn.disabled = true;
+        spinner.style.display = "inline-block";
+        status.textContent = "Mover is running...";
+
+        // Start age_mover via AJAX
+        $.post("/plugins/ca.mover.tuning/mover.php", { cmdStartTuneMover: 1 })
+            .done(() => {
+                // Poll every 2 seconds to check if mover finished
+                const interval = setInterval(() => {
+                    $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })
+                        .done((running) => {
+                            if (running !== "1") {  // mover finished
+                                clearInterval(interval);
+                                location.reload();   // reload page when done
+                            }
+                        })
+                        .fail(err => console.error("Failed to check mover status:", err));
+                }, 2000);
+            })
+            .fail(err => {
+                console.error("Failed to start mover:", err);
+                btn.disabled = false;
+                spinner.style.display = "none";
+                status.textContent = "";
+            });
+    });
+});
 
 function resetDefaults() { 
   $.post("/plugins/ca.mover.tuning/reset.php");
@@ -784,11 +817,13 @@ _(Resynchronize all Primary files to Secondary)_:
     <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
     <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
-    <?if ($showMoverButton):?>
-      <input type="button" name="StartTuneMover" value="_(Move now)_" 
-      onclick="startTuneMover(); setTimeout(() => location.reload(), 500);" title="Run Mover Tuning ..."<?if ($moverRunning):?> disabled<?endif;?>>
-      <?if ($moverRunning):?><span>_(Mover is running)_</span><?endif;?>
-    <?endif;?>
+<?if ($showMoverButton):?>
+  <button id="StartTuneMoverBtn" class="button" title="Run Mover Tuning..." <?if($moverRunning) echo 'disabled';?>>
+      <i id="MoverWrench" class="fa fa-wrench" style="color:<?if($moverRunning) echo 'var(--gray-500)'; else echo 'var(--blue-700)';?>; margin-right:2px;"></i> _(Move now)_
+      <i id="MoverSpinner" class="fa fa-spinner fa-spin" style="margin-left:2px; display:<?if($moverRunning) echo 'inline-block'; else echo 'none';?>;"></i>
+  </button>
+  <span id="MoverStatus"><?if($moverRunning) echo "_(Mover is running)_";?></span>
+<?endif;?>
   </span>
 
 </form>
