@@ -171,7 +171,9 @@ $(function() {
     <br>
     <?= _('• Use the **“Mover Tuning Schedule”** in the plugin settings to schedule **Mover Tuning** instead.') ?>
     <br>
-    <?= _('• The built-in Unraid mover can still be triggered using **“Force move all files on a schedule”** (Cron schedule) in Plugin Settings if needed.') ?>
+    <?= _('• The built-in Unraid mover can still be triggered using **“Force move all files on a schedule”** (Cron schedule) in Plugin Settings.') ?>
+    <br>
+    <?= _('• In the CLI, use **“age_mover --help”** for plugin commands. Running **“mover --help”** will call the built-in Unraid mover.') ?>
 
     <!-- Close button -->
     <span id="close_mover_notice"

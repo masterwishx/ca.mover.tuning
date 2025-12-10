@@ -413,6 +413,7 @@
          " • To disable the built-in mover schedule, set it to Disabled in Mover Settings.\n" .
          " • Use the “Mover Tuning Schedule” (Plugin Settings) to schedule Mover Tuning instead.\n" .
          " • The Unraid mover can still be triggered through the “Force move all files on a schedule” option.\n" .
+         " • In the CLI, use “age_mover --help” for plugin commands. Running “mover --help” will call the built-in Unraid mover.\n" .
          "====================================================================================================\n\n";
   }
  ?>
