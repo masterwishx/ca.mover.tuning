@@ -99,6 +99,13 @@ MOVER_LOG="${LOGFOLDER}/ca.mover.tuning/Mover_tuning_$NOW.log"
 MOVER_DEBUG_LOG="${LOGFOLDER}/ca.mover.tuning/Debug_Mover_tuning_$NOW.log"
 GUI_CURRENT_FILE=""
 GUI_ACTION="Calculating"
+# Read Unraid version
+UNRAID_VERSION=$(grep '^version=' /etc/unraid-version | cut -d'"' -f2)
+
+# Safe version compare function
+version_ge() {
+    [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+}
 
 # This function is to send messages to Unraid gui etc.
 function unraid_notify() {
@@ -2289,8 +2296,13 @@ usage() {
     echo "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)"
     echo
     echo "Usage:"
-    echo "  $0 | mover start [-e <disk_name>]"
-    echo "  $0 | mover stop | softstop | status | reset | debug"
+    if version_ge "$UNRAID_VERSION" "7.2.1"; then
+        echo "  $0 | age_mover start [-e <disk_name>]  # Uses age_mover only (Unraid >=7.2.1)"
+        echo "  $0 | age_mover stop | softstop | status | reset | debug"
+    else
+        echo "  $0 | mover start [-e <disk_name>]  # Can use mover or age_mover"
+        echo "  $0 | mover stop | softstop | status | reset | debug"
+    fi
     echo
     echo "Notes:"
     echo "  <disk_name> must match the pattern 'disk[0-9]*' and /mnt/<disk_name> must be a mounted disk."

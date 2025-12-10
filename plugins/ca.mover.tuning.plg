@@ -6,7 +6,7 @@
 <!ENTITY md5       "80c2e3571d6eac142399a828fb231e73">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
-<!ENTITY github    "masterwishx/ca.mover.tuning">
+<!ENTITY github    "masterwishx/&name;">
 <!ENTITY branch    "master">
 <!ENTITY upgrade   "minor">
 <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/master/plugins/&name;.plg">
@@ -413,6 +413,7 @@
          " • To disable the built-in mover schedule, set it to Disabled in Mover Settings.\n" .
          " • Use the “Mover Tuning Schedule” (Plugin Settings) to schedule Mover Tuning instead.\n" .
          " • The Unraid mover can still be triggered through the “Force move all files on a schedule” option.\n" .
+         " • In the CLI, use “age_mover --help” for plugin commands. Running “mover --help” will call the built-in Unraid mover.\n" .
          "====================================================================================================\n\n";
   }
  ?>
@@ -537,7 +538,7 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
             echo "Creating Mover Tuning cron file: $TUNING_CRON_FILE"
             {
                 echo "# Generated schedule for Mover Tuning move:"
-                echo "$SHARE_MOV_SCHED /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |&amp; logger -t move"
+                echo "$SHARE_MOV_SCHED /usr/local/emhttp/plugins/&name;/age_mover start |&amp; logger -t move"
             } > "$TUNING_CRON_FILE"
 
         else
@@ -584,23 +585,37 @@ else
     chmod +x /usr/local/sbin/mover
 fi
 
-# Cleaning eventual leftovers
-if ! pgrep age_mover; then
-  echo "Cleaning lock and stop files"
+# Clean leftover run-state files only if age_mover is NOT running
+if ! pgrep -f "age_mover" >/dev/null 2>&amp;1; then
+  echo "Cleaning leftover lock/stop files..."
   for file in mover.pid moversoft.stop; do
-    if [[ -e "/var/run/$file" ]]; then rm -f "/var/run/$file"; fi
+    if [[ -e "/var/run/$file" ]]; then
+      rm -f "/var/run/$file"
+    fi
   done
+else
+  echo "WARNING: age_mover is still running - aborting plugin removal."
+  exit 1
 fi
 
 # Renaming mover.cron.disabled to mover.cron if exists (from old cron fix)
 if [[ -e /boot/config/plugins/dynamix/mover.cron.disabled ]]; then mv -f /boot/config/plugins/dynamix/mover.cron.disabled /boot/config/plugins/dynamix/mover.cron; fi
 
 echo "Fixing permissions for ca.mover.tuning files"
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/*.php
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/age_mover
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/mover
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/share_mover
-chmod +x /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover
+chmod +x /usr/local/emhttp/plugins/&name;/*.php
+chmod +x /usr/local/emhttp/plugins/&name;/age_mover
+chmod +x /usr/local/emhttp/plugins/&name;/mover
+chmod +x /usr/local/emhttp/plugins/&name;/share_mover
+chmod +x /usr/local/emhttp/plugins/&name;/debug_mover
+
+# Install symlink for age_mover
+if [[ -x /usr/local/emhttp/plugins/&name;/age_mover ]]; then
+  ln -sf /usr/local/emhttp/plugins/&name;/age_mover /usr/local/sbin/age_mover
+  echo "Linked age_mover → /usr/local/sbin/age_mover"
+fi
+
+# Refresh cron
+/usr/local/sbin/update_cron
 
 echo ""
 echo "----------------------------------------------------"
@@ -623,13 +638,75 @@ The 'remove' script.
 -->
 <FILE Run="/bin/bash" Method="remove">
 <INLINE>
-if [[ -e /usr/local/sbin/mover.old ]]; then mv -f /usr/local/sbin/mover.old /usr/local/sbin/mover; fi
-if [[ -e /usr/local/bin/mover.old ]]; then mv -f /usr/local/bin/mover.old /usr/local/bin/mover; fi
-if [[ -e /boot/config/plugins/dynamix/mover.cron.old ]]; then mv -f /boot/config/plugins/dynamix/mover.cron.old /boot/config/plugins/dynamix/mover.cron; fi
+# Clean leftover run-state files only if age_mover is NOT running
+if ! pgrep -f "age_mover" >/dev/null 2>&amp;1; then
+  echo "Cleaning leftover lock/stop files..."
+  for file in mover.pid moversoft.stop; do
+    if [[ -e "/var/run/$file" ]]; then
+      rm -f "/var/run/$file"
+    fi
+  done
+else
+  echo "WARNING: age_mover is still running - aborting plugin removal."
+  exit 1
+fi
+
+# Restore original mover binaries if backups exist
+if [[ -e /usr/local/sbin/mover.old ]]; then
+  mv -f /usr/local/sbin/mover.old /usr/local/sbin/mover
+fi
+
+if [[ -e /usr/local/bin/mover.old ]]; then
+  mv -f /usr/local/bin/mover.old /usr/local/bin/mover
+fi
+
+# Restore original mover cron if backup exists
+if [[ -e /boot/config/plugins/dynamix/mover.cron.old ]]; then
+  mv -f /boot/config/plugins/dynamix/mover.cron.old /boot/config/plugins/dynamix/mover.cron
+fi
+
+# Remove plugin package
 removepkg &name;-&version;-x86_64-1
-rm -rf &plugdir;
-rm -rf /boot/config/plugins/&name;
+
+# Remove age_mover symlink
+if [[ -L /usr/local/sbin/age_mover ]]; then
+  rm -f /usr/local/sbin/age_mover
+fi
+
+# Remove plugin install directory under /usr/local/emhttp/plugins/
+# (this is &plugdir; — safe to delete completely)
+if [[ -d &plugdir; ]]; then
+  rm -rf &plugdir;
+fi
+
+# Remove only plugin cron files stored in config folder
+if [[ -e /boot/config/plugins/&name;/mover.tuning.cron ]]; then
+  rm -f /boot/config/plugins/&name;/mover.tuning.cron
+fi
+
+if [[ -e /boot/config/plugins/&name;/mover.cron ]]; then
+  rm -f /boot/config/plugins/&name;/mover.cron
+fi
+
+# Remove config folder only if empty
+if [[ -d /boot/config/plugins/&name; ]] &amp;&amp; [[ -z $(ls -A /boot/config/plugins/&name;) ]]; then
+  rmdir /boot/config/plugins/&name;
+fi
+
+# Refresh cron
 /usr/local/sbin/update_cron
+
+echo ""
+echo "----------------------------------------------------"
+echo " &name; has been removed."
+echo " Copyright (C)"
+echo "       2018 - Andrew Zawadzki"
+echo "       2023 - hugenbd"
+echo "       2024 - R3yn4ld"
+echo "       2025 - masterwishx"
+echo " Version: &version;"
+echo "----------------------------------------------------"
+echo ""
 </INLINE>
 </FILE> 
 </PLUGIN>
