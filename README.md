@@ -35,6 +35,12 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.12.10
+    - new: Added version-aware help text for CLI commands. *(masterwishx)*
+    - new: Implemented safety checks during installation to prevent conflicts with running processes.
+    - fix: Enhanced installation and removal workflows with comprehensive cleanup and restoration logic.
+    - doc: Clarified CLI usage instructions and mover command guidance for end-users.
+
 - 2025.12.09
     - new: Added support for Unraid 7.2.1+, handling breaking changes so Mover Tuning works alongside the native mover while remaining compatible with older versions. *(masterwishx)*
     - new: Configurable Mover Tuning schedule input with inline help (v7.2.1+).
