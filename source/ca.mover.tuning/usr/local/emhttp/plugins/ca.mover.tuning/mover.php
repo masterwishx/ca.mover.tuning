@@ -8,13 +8,9 @@ $cron = $argv[1] == "crond";
 $bash = $argv[1] == "bash";
 $args = [];
 
-// Check if mover is running
+// Read-only status check (no state change, no CSRF risk)
 if (!empty($_GET['check'])) {
-    if (file_exists('/var/run/mover.pid')) {
-        echo "1";  // mover running
-    } else {
-        echo "0";  // mover finished
-    }
+    echo file_exists('/var/run/mover.pid') ? "1" : "0";
     exit;
 }
 
