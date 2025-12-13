@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     failureCount = 0; // reset on success
                     const isRunning = String(running).trim() === "1";
                     if (!isRunning) { // mover finished
-                        clearInterval(pollingInterval);  
+                        clearInterval(pollingInterval);
                         pollingInterval = null;
                         location.reload();
                     }
@@ -99,7 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 2000); // 2s is fine
     }
     window.addEventListener("beforeunload", () => {  
-        if (pollingInterval) clearInterval(pollingInterval);  
+        if (pollingInterval) clearInterval(pollingInterval);
     });
 
     // 🔹 Mover already running on page load (cron / CLI)
@@ -125,12 +125,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     .done((running) => {  
                         const isRunning = String(running).trim() === "1";
                         if (!isRunning) {
-                            location.reload();  
-                        } else {  
-                            startPolling();  
-                        }  
-                    })  
-                    .fail(() => startPolling()); // start polling on check failure  
+                            location.reload();
+                        } else {
+                            startPolling();
+                        }
+                    })
+                    .fail(() => startPolling()); // start polling on check failure
             })
             .fail(err => {
                 console.error("Failed to start mover:", err);
