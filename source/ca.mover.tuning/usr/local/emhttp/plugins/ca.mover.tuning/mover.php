@@ -8,6 +8,12 @@ $cron = $argv[1] == "crond";
 $bash = $argv[1] == "bash";
 $args = [];
 
+// Read-only status check (no state change, no CSRF risk)
+if (!empty($_GET['check'])) {
+    echo file_exists('/var/run/mover.pid') ? "1" : "0";
+    exit;
+}
+
 function logger($string)
 {
     global $cfg;
