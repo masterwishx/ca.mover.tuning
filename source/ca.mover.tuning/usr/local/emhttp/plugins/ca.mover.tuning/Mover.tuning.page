@@ -79,7 +79,8 @@ document.addEventListener("DOMContentLoaded", () => {
             $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })
                 .done((running) => {
                     failureCount = 0; // reset on success
-                    if (running !== "1") { // mover finished
+                    const isRunning = String(running).trim() === "1";
+                    if (!isRunning) { // mover finished
                         clearInterval(pollingInterval);  
                         pollingInterval = null;
                         location.reload();
@@ -91,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (failureCount >= MAX_FAILURES) {
                         clearInterval(pollingInterval);
                         pollingInterval = null;
-                        status.textContent = "Error checking mover status. Please refresh the page.";
+                        status.textContent = "_(Error checking mover status. Please refresh the page.)_";
                         status.style.color = "var(--warning)";
                     }
                  });
@@ -104,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🔹 Mover already running on page load (cron / CLI)
     if (btn.disabled) {        
         spinner.style.visibility = "visible";
-        status.textContent = "Mover is running...";
+        status.textContent = "_(Mover is running...)_";
         wrench.style.color = "var(--gray-500)";
         startPolling();
     }
@@ -114,7 +115,7 @@ document.addEventListener("DOMContentLoaded", () => {
         btn.disabled = true;
         btn.setAttribute("aria-disabled", "true");
         spinner.style.visibility = "visible";
-        status.textContent = "Mover is running...";
+        status.textContent = "_(Mover is running...)_";
         wrench.style.color = "var(--gray-500)";
 
         $.post("/plugins/ca.mover.tuning/mover.php", { cmdStartTuneMover: 1 })
@@ -137,7 +138,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 spinner.style.visibility = "hidden";
                 status.textContent = "";
                 wrench.style.color = "var(--blue-700)";
-                alert("Failed to start Mover Tuning. Check the logs.");
+                alert("_(Failed to start Mover Tuning. Check the logs.)_");
             });
     });
 });
@@ -867,7 +868,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <!-- Spinner outside button -->
   <span id="MoverInlineStatus" style="display:inline-flex; align-items:center;">
   <span id="MoverSpinner" class="fa fa-spinner fa-spin" style="width:16px; height:16px; line-height:16px; text-align:center; flex:0 0 16px; visibility:<?=$moverRunning ? 'visible' : 'hidden'?>;"></span>
-  <span id="MoverStatus" style="margin-left:6px;"> <?if($moverRunning) echo "_(Mover is running...)_";?></span>
+  <span id="MoverStatus" role="status" aria-live="polite" style="margin-left:6px;"> <?if($moverRunning) echo "_(Mover is running...)_";?></span>
   </span>
 <?endif;?>
   </span>
