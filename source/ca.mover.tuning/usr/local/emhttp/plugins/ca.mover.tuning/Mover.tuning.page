@@ -123,7 +123,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Immediate check to avoid race if mover finishes quickly  
                 $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })  
                     .done((running) => {  
-                        if (running !== "1") {  
+                        const isRunning = String(running).trim() === "1";
+                        if (!isRunning) {
                             location.reload();  
                         } else {  
                             startPolling();  
