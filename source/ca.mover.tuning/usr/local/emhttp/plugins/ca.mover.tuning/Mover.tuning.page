@@ -104,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         pollingInterval = null;
                         updateUIFinished();
                         // Optional: reload after 1s if you want
-                        setTimeout(() => location.reload(), 1000);                        
+                        // setTimeout(() => location.reload(), 1000);                        
                     }
                 })
                 .fail(err => {
@@ -113,6 +113,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (failureCount >= MAX_FAILURES) {
                         clearInterval(pollingInterval);
                         pollingInterval = null;
+                        // Stop "running" UI so the user can retry without a manual refresh
+                        updateUIFinished();
                         status.textContent = "_(Error checking mover status. Please refresh the page.)_";
                         status.style.color = "var(--warning)";
                     }
@@ -143,6 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         const isRunning = String(running).trim() === "1";
                         if (!isRunning) {
                             updateUIFinished();
+                            location.reload();
                         } else {
                             startPolling();
                         }
@@ -881,7 +884,7 @@ _(Resynchronize all Primary files to Secondary)_:
   </button>
     <!-- Spinner outside button -->
   <span id="MoverInlineStatus" style="display:inline-flex; align-items:center;">
-  <span id="MoverSpinner" class="fa fa-spinner fa-spin" style="width:16px; height:16px; line-height:16px; text-align:center; flex:0 0 16px; visibility:<?=$moverRunning ? 'visible' : 'hidden'?>;"></span>
+  <span id="MoverSpinner" aria-hidden="true" class="fa fa-spinner fa-spin" style="width:16px; height:16px; line-height:16px; text-align:center; flex:0 0 16px; visibility:<?=$moverRunning ? 'visible' : 'hidden'?>;"></span>
   <span id="MoverStatus" role="status" aria-live="polite" style="margin-left:6px;"> <?if($moverRunning) echo "_(Mover is running...)_";?></span>
   </span>
 <?endif;?>
