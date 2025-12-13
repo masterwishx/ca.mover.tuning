@@ -71,22 +71,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!btn || !status || !spinner || !wrench) return;
 
+    function updateUIRunning() {
+        btn.disabled = true;
+        btn.setAttribute("aria-disabled", "true");
+        spinner.style.visibility = "visible";
+        status.textContent = "_(Mover is running...)_";
+        wrench.style.color = "var(--gray-500)";
+    }
+
+    function updateUIFinished() {
+        btn.disabled = false;
+        btn.setAttribute("aria-disabled", "false");
+        spinner.style.visibility = "hidden";
+        status.textContent = "";
+        wrench.style.color = "var(--blue-700)";
+    }
+
     function startPolling() {
         let failureCount = 0;
         const MAX_FAILURES = 5;
-        if (pollingInterval) clearInterval(pollingInterval); 
+        if (pollingInterval) clearInterval(pollingInterval);
+
         pollingInterval = setInterval(() => {
             $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                 .done((running) => {
-                    failureCount = 0; // reset on success
+                    failureCount = 0;
                     const isRunning = String(running).trim() === "1";
                     if (!isRunning) { // mover finished
                         clearInterval(pollingInterval);
                         pollingInterval = null;
-                        location.reload();
+                        updateUIFinished();
+                        // Optional: reload after 1s if you want
+                        // setTimeout(() => location.reload(), 1000);
                     }
                 })
-                 .fail(err => {
+                .fail(err => {
                     console.error("Failed to check mover status:", err);
                     failureCount++;
                     if (failureCount >= MAX_FAILURES) {
@@ -95,51 +114,42 @@ document.addEventListener("DOMContentLoaded", () => {
                         status.textContent = "_(Error checking mover status. Please refresh the page.)_";
                         status.style.color = "var(--warning)";
                     }
-                 });
+                });
         }, 2000); // 2s is fine
     }
-    window.addEventListener("beforeunload", () => {  
+
+    window.addEventListener("beforeunload", () => {
         if (pollingInterval) clearInterval(pollingInterval);
         pollingInterval = null;
     });
 
-    // 🔹 Mover already running on page load (cron / CLI)
-    if (btn.disabled) {        
-        spinner.style.visibility = "visible";
-        status.textContent = "_(Mover is running...)_";
-        wrench.style.color = "var(--gray-500)";
+    // If mover already running on page load
+    if (btn.disabled) {
+        updateUIRunning();
         startPolling();
     }
 
-    // 🔹 User clicks button
+    // User clicks button
     btn.addEventListener("click", () => {
-        btn.disabled = true;
-        btn.setAttribute("aria-disabled", "true");
-        spinner.style.visibility = "visible";
-        status.textContent = "_(Mover is running...)_";
-        wrench.style.color = "var(--gray-500)";
+        updateUIRunning();
 
         $.post("/plugins/ca.mover.tuning/mover.php", { cmdStartTuneMover: 1 })
-            .done(() => {  
-                // Immediate check to avoid race if mover finishes quickly  
-                $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })  
-                    .done((running) => {  
+            .done(() => {
+                // Immediate check to avoid race if mover finishes quickly
+                $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })
+                    .done((running) => {
                         const isRunning = String(running).trim() === "1";
                         if (!isRunning) {
-                            location.reload();
+                            updateUIFinished();
                         } else {
                             startPolling();
                         }
                     })
-                    .fail(() => startPolling()); // start polling on check failure
+                    .fail(() => startPolling());
             })
             .fail(err => {
                 console.error("Failed to start mover:", err);
-                btn.disabled = false;
-                btn.setAttribute("aria-disabled", "false");
-                spinner.style.visibility = "hidden";
-                status.textContent = "";
-                wrench.style.color = "var(--blue-700)";
+                updateUIFinished();
                 alert("_(Failed to start Mover Tuning. Check the logs.)_");
             });
     });
