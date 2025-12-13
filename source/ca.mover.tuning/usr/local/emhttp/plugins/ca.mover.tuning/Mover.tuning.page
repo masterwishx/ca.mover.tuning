@@ -67,23 +67,39 @@ document.addEventListener("DOMContentLoaded", () => {
     const status = document.getElementById("MoverStatus");
     const spinner = document.getElementById("MoverSpinner");
     const wrench = document.getElementById("MoverWrench");
+    let pollingInterval = null;
 
     if (!btn) return;
 
     function startPolling() {
-        const interval = setInterval(() => {
+        let failureCount = 0;
+        const MAX_FAILURES = 5;
+        if (pollingInterval) clearInterval(pollingInterval); 
+        pollingInterval = setInterval(() => {
             $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })
                 .done((running) => {
+                    failureCount = 0; // reset on success
                     if (running !== "1") { // mover finished
-                        clearInterval(interval);
+                        clearInterval(pollingInterval);  
+                        pollingInterval = null;
                         location.reload();
                     }
                 })
-                .fail(err =>
-                    console.error("Failed to check mover status:", err)
-                );
+                 .fail(err => {
+                    console.error("Failed to check mover status:", err);
+                    failureCount++;
+                    if (failureCount >= MAX_FAILURES) {
+                        clearInterval(pollingInterval);
+                        pollingInterval = null;
+                        status.textContent = "Error checking mover status. Please refresh the page.";
+                        status.style.color = "var(--warning)";
+                    }
+                 });
         }, 2000); // 2s is fine
     }
+    window.addEventListener("beforeunload", () => {  
+        if (pollingInterval) clearInterval(pollingInterval);  
+    });
 
     // 🔹 Mover already running on page load (cron / CLI)
     if (btn.disabled) {        
@@ -96,15 +112,28 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🔹 User clicks button
     btn.addEventListener("click", () => {
         btn.disabled = true;
+        btn.setAttribute("aria-disabled", "true");
         spinner.style.visibility = "visible";
         status.textContent = "Mover is running...";
         wrench.style.color = "var(--gray-500)";
 
         $.post("/plugins/ca.mover.tuning/mover.php", { cmdStartTuneMover: 1 })
-            .done(() => startPolling())
+            .done(() => {  
+                // Immediate check to avoid race if mover finishes quickly  
+                $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })  
+                    .done((running) => {  
+                        if (running !== "1") {  
+                            location.reload();  
+                        } else {  
+                            startPolling();  
+                        }  
+                    })  
+                    .fail(() => startPolling()); // start polling on check failure  
+            })
             .fail(err => {
                 console.error("Failed to start mover:", err);
                 btn.disabled = false;
+                btn.setAttribute("aria-disabled", "false");
                 spinner.style.visibility = "hidden";
                 status.textContent = "";
                 wrench.style.color = "var(--blue-700)";
@@ -832,12 +861,12 @@ _(Resynchronize all Primary files to Secondary)_:
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
     <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
 <?if ($showMoverButton):?>
-  <button id="StartTuneMoverBtn" class="button" title="Run Mover Tuning..." <?if($moverRunning) echo 'disabled';?>>
+    <button id="StartTuneMoverBtn" class="button" title="Run Mover Tuning..." aria-label="Start Mover Tuning" aria-disabled="<?=$moverRunning ? 'true' : 'false'?>" <?if($moverRunning) echo 'disabled';?>>
     <i id="MoverWrench" class="fa fa-wrench" style="color:<?=$moverRunning ? 'var(--gray-500)' : 'var(--blue-700)'?>;"></i> _(Move now)_
   </button>
     <!-- Spinner outside button -->
   <span id="MoverInlineStatus" style="display:inline-flex; align-items:center;">
-  <span id="MoverSpinner" class="fa fa-spinner fa-spin" style="width:16px; height:16px; line-height:16px; text-align:center; flex:0 0 16px; visibility:<?=$moverRunning ? 'visible' : 'hidden'?>;"></i></span>
+  <span id="MoverSpinner" class="fa fa-spinner fa-spin" style="width:16px; height:16px; line-height:16px; text-align:center; flex:0 0 16px; visibility:<?=$moverRunning ? 'visible' : 'hidden'?>;"></span>
   <span id="MoverStatus" style="margin-left:6px;"> <?if($moverRunning) echo "_(Mover is running...)_";?></span>
   </span>
 <?endif;?>
