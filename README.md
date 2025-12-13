@@ -35,6 +35,12 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.12.13
+    fix: Fixed Firefox button responsiveness issue where clicking did not trigger the mover. *(masterwishx)*
+    new: New mover control UI with Start button, spinner, status text, and wrench indicator that reflects running state; disables while running and re-enables on errors.
+    new: DOMContentLoaded-driven flow with immediate status checks and polling to detect completion and refresh the page.
+    fix: Improved error handling, failure counter, and cleanup on page unload to avoid polling leaks.
+
 - 2025.12.10
     - new: Added version-aware help text for CLI commands. *(masterwishx)*
     - new: Implemented safety checks during installation to prevent conflicts with running processes.
