@@ -69,14 +69,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const wrench = document.getElementById("MoverWrench");
     let pollingInterval = null;
 
-    if (!btn) return;
+    if (!btn || !status || !spinner || !wrench) return;
 
     function startPolling() {
         let failureCount = 0;
         const MAX_FAILURES = 5;
         if (pollingInterval) clearInterval(pollingInterval); 
         pollingInterval = setInterval(() => {
-            $.get("/plugins/ca.mover.tuning/mover.php", { check: 1 })
+            $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                 .done((running) => {
                     failureCount = 0; // reset on success
                     const isRunning = String(running).trim() === "1";
@@ -100,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     window.addEventListener("beforeunload", () => {  
         if (pollingInterval) clearInterval(pollingInterval);
+        pollingInterval = null;
     });
 
     // 🔹 Mover already running on page load (cron / CLI)
