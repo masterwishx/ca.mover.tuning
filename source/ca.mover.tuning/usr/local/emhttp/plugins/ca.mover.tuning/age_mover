@@ -447,6 +447,11 @@ getMoverSettings() {
     else
         if [ $(cfg filelistf) = "yes" ]; then
             SKIPFILESLIST=$(cfg filelistv)
+            if grep -q '^[[:space:]]\|[[:space:]]$' <<< "$SKIPFILESLIST"; then
+                TRIMMED_SKIPFILESLIST=$(sed 's/^[[:space:]]\+\|[[:space:]]\+$//g' <<< "$SKIPFILESLIST")
+                sed -i "s|filelistv=\"$SKIPFILESLIST\"|filelistv=\"$TRIMMED_SKIPFILESLIST\"|g" "$config_file"
+                SKIPFILESLIST=$TRIMMED_SKIPFILESLIST
+            fi
             mvlogger "Skip file list: $SKIPFILESLIST"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SKIPFILESLIST=""
