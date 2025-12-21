@@ -51,7 +51,7 @@ tmp_readme_file="$tmpdir/tmp_readme_file.txt"
 # Modify the config file (*.plg) with changelog
 # Step 1: Cut content after ### from $config_file to $tmp_config_file
 sed -n '/###*/,$p' "$config_file" > "$tmp_config_file"
-# Step 2: Dlete evrything after ### in $config_file
+# Step 2: Delete everything after ### in $config_file
 sed -i '/###*/,$d' "$config_file"
 # Step 3: Add version to $config_file
 sed -i '$a\###'${version}'' "$config_file"
@@ -63,7 +63,7 @@ cat "$tmp_config_file" >> "$config_file"
 # Modify the readme file with changelog
 # Step 1: Cut content after ## Changelog from $readme_file to $tmp_readme_file
 sed -n '/- 20*/,$p' "$readme_file" > "$tmp_readme_file"
-# Step 2: Dlete evrything after ## Changelog in $readme_file
+# Step 2: Delete everything after ## Changelog in $readme_file
 sed -i '/- 20*/,$d' "$readme_file"
 # Step 3: Add version to $readme_file
 sed -i '$a\- '${version}'' "$readme_file"

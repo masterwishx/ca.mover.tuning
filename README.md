@@ -35,6 +35,14 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.12.21
+    - fix: Refactored mover workflow and file list logic for cleaner code. *(masterwishx)*
+    - fix: Fixed variable expansion issue in file list checking to prevent word-splitting/empty-string errors. (Thanks to RyanWarwick)
+    - fix: Enhanced mover scheduling workflow with updated binary path references.
+    - fix: Improved symlink creation logic and plugin messaging for better consistency.
+    - fix: Migration added to update existing scheduled tasks to use the mover start command with migration logging.
+    - new: UI updated with version-aware guidance, duplicated CLI help panels, and responsive styling.
+
 - 2025.12.13
     - fix: Fixed Firefox button responsiveness issue where clicking did not trigger the mover. *(masterwishx)*
     - new: New mover control UI with Start button, spinner, status text, and wrench indicator that reflects running state; disables while running and re-enables on errors.
