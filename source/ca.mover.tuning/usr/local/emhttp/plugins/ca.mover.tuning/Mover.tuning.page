@@ -967,7 +967,7 @@ _(Resynchronize all Primary files to Secondary)_:
 
 /* Help box styling */
 .cli-help-box {
-  flex: 0 0 15%;        /* fixed width 40%, do not grow/shrink */
+  flex: 0 0 15%;        /* fixed width 15%, do not grow/shrink */
   padding: 15px;
   background-color: var(--title-header-background-color);
   border: 1px solid var(--border-color);
