@@ -562,6 +562,12 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
         mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
     fi
 
+    # Fix old cron entries using age_mover -> mover
+    if [[ -f "$TUNING_CRON_FILE" ]] &amp;&amp; grep -q '/age_mover start' "$TUNING_CRON_FILE"; then
+        sed -i 's|/age_mover start|/mover start|' "$TUNING_CRON_FILE"
+        echo "Migrated cron entry: age_mover → mover"
+    fi
+
     # Restore original mover if both current and backup exist
     if [[ -f /usr/local/sbin/mover &amp;&amp; -f /usr/local/sbin/mover.old ]]; then
         echo "Restoring original /usr/local/sbin/mover from backup"
