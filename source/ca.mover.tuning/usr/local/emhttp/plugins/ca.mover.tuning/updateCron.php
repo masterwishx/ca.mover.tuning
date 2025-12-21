@@ -46,7 +46,7 @@ function make_tune_cron()
 		logger("Error: No cron schedule provided for Mover Tuning move.");
 		return; // Nothing to write
 	}
-	$cronTuneFile = "# Generated schedule for Mover Tuning move:\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start |& logger -t move\n\n";
+	$cronTuneFile = "# Generated schedule for Mover Tuning move:\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/mover start |& logger -t move\n\n";
 	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron", $cronTuneFile) === false) {
 		logger("Error: Failed to write mover.tuning.cron file.");
 	}
