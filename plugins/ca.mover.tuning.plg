@@ -626,10 +626,10 @@ chmod +x /usr/local/emhttp/plugins/&name;/mover
 chmod +x /usr/local/emhttp/plugins/&name;/share_mover
 chmod +x /usr/local/emhttp/plugins/&name;/debug_mover
 
-# Install symlink for mover → age_mover
+# Install symlink: /usr/local/sbin/age_mover → plugin mover
 if [[ -x /usr/local/emhttp/plugins/&name;/mover ]]; then
   ln -sf /usr/local/emhttp/plugins/&name;/mover /usr/local/sbin/age_mover
-  echo "Linked mover → /usr/local/sbin/age_mover"
+  echo "Created symlink: /usr/local/sbin/age_mover → plugin mover (for backward compatibility)"
 fi
 
 # Refresh cron
