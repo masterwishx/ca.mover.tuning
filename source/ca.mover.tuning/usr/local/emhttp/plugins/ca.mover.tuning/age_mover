@@ -445,7 +445,7 @@ getMoverSettings() {
             echo 'filelistf="no"' >>$config_file
         fi
     else
-        if [ $(cfg filelistf) = "yes" ]; then
+        if [ "$(cfg filelistf)" = "yes" ]; then
             SKIPFILESLIST=$(cfg filelistv)
             if grep -q '^[[:space:]]\|[[:space:]]$' <<< "$SKIPFILESLIST"; then
                 TRIMMED_SKIPFILESLIST=$(sed 's/^[[:space:]]\+\|[[:space:]]\+$//g' <<< "$SKIPFILESLIST")
