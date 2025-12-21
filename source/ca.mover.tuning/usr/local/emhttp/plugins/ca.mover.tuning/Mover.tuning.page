@@ -244,7 +244,7 @@ $(function() {
             background-color: var(--title-header-background-color);
             border: 1px solid var(--border-color);
             border-radius:10px;
-            box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);            
+            box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);
             padding:15px 40px 15px 15px;
             margin-bottom:10px;
             color:var(--ui-info);
@@ -307,7 +307,24 @@ _(Disable Mover running on a schedule)_:
 <span><i class="fa fa-info i"></i>&nbsp;&nbsp;<strong>Yes</strong> <em>- disables the plugin's schedule</em></span>
 
 :mover_tune_disable_plug:
-> This will <strong>prevent</strong> mover from running at the schedule set in Mover Settings.  You will only be able to run mover by <strong>manually</strong> invoking it.
+<blockquote class="inline_help">
+<?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
+<p>This will <strong>prevent</strong> mover from running at the schedule set in <strong>Mover Tuning Settings</strong>.</p>
+<p>You will only be able to run mover by <strong>manually</strong> invoking it:</p>
+<ul>
+  <li>Press the <strong>“Move now”</strong> button in <strong>Mover Tuning - Options</strong>.</li>
+  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong>.</li>
+</ul>
+<?php else: ?>
+<p>This will <strong>prevent</strong> mover from running at the schedule set in <strong>Mover Settings</strong>.</p>
+<p>You will only be able to run mover by <strong>manually</strong> invoking it:</p>
+<ul>
+  <li>Press the <strong>“Move now”</strong> button in <strong>Mover Settings</strong>.</li>
+  <li>Press <strong>“Move”</strong> on the <strong>Main</strong> page.</li>
+  <li>Run <strong>“mover start”</strong> from the <strong>CLI</strong>.</li>
+</ul>
+<?php endif; ?>
+</blockquote>
 :end
 
 <div markdown="1" id="moverTuningSettings">
@@ -337,7 +354,10 @@ function toggleTestModeWarning(val) {
 </script>
 
 :mover_tune_testmode_plug:
-> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.
+<blockquote class="inline_help">
+<p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>.</p>
+<p> Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.</p>
+</blockquote>
 :end
 
 _(Validate input filenames to prevent attacks)_:
@@ -921,3 +941,54 @@ _(Resynchronize all Primary files to Secondary)_:
     <dt>Used IDE</dt>
     <dd>Visual Studio Code</dd>
 </dl>
+
+<div class="cli-help-wrapper">
+<div class="cli-help-box">
+  <p><strong>CLI help commands:</strong></p>
+  <?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
+    <ul>
+      <li><strong><code>“age_mover --help”</code></strong> — Plugin mover</li>
+      <li><strong><code>“mover --help”</code></strong> — Unraid mover</li>
+    </ul>
+  <?php else: ?>
+    <ul>
+      <li><strong><code>“mover --help”</code></strong> — Plugin mover</li>
+      <li><strong><code>“mover.old --help”</code></strong> — Unraid mover</li>
+    </ul>
+  <?php endif; ?>
+</div>
+</div>
+
+<style>
+/* Flex wrapper: default aligns left */
+.cli-help-wrapper {
+  display: flex;        /* parent is flex */  
+}
+
+/* Help box styling */
+.cli-help-box {
+  flex: 0 0 15%;        /* fixed width 15%, do not grow/shrink */
+  padding: 15px;
+  background-color: var(--title-header-background-color);
+  border: 1px solid var(--border-color);
+  box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);
+  border-radius: 10px;  
+}
+
+/* Center list items inside */
+.cli-help-box ul {
+  list-style-position: inside;
+  padding-left: 0;
+}
+
+/* Responsive: stack on narrow screens */
+@media (max-width: 900px) {
+  .cli-help-wrapper {
+    display: block;       /* stack vertically */
+  }
+  .cli-help-box {
+    flex: none;    
+    margin-left: 0;
+  }
+}
+</style>

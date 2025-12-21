@@ -550,7 +550,7 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
             echo "Creating Mover Tuning cron file: $TUNING_CRON_FILE"
             {
                 echo "# Generated schedule for Mover Tuning move:"
-                echo "$SHARE_MOV_SCHED /usr/local/emhttp/plugins/&name;/age_mover start |&amp; logger -t move"
+                echo "$SHARE_MOV_SCHED /usr/local/emhttp/plugins/&name;/mover start |&amp; logger -t move"
             } > "$TUNING_CRON_FILE"
 
         else
@@ -560,6 +560,12 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
         # Rename old dynamix cron file
         echo "Renaming old schedule: mover.cron → mover.cron.old"
         mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
+    fi
+
+    # Fix old cron entries using age_mover -> mover
+    if [[ -f "$TUNING_CRON_FILE" ]] &amp;&amp; grep -q '/age_mover start' "$TUNING_CRON_FILE"; then
+        sed -i 's|/age_mover start|/mover start|' "$TUNING_CRON_FILE"
+        echo "Migrated cron entry: age_mover → mover"
     fi
 
     # Restore original mover if both current and backup exist
@@ -620,10 +626,10 @@ chmod +x /usr/local/emhttp/plugins/&name;/mover
 chmod +x /usr/local/emhttp/plugins/&name;/share_mover
 chmod +x /usr/local/emhttp/plugins/&name;/debug_mover
 
-# Install symlink for age_mover
-if [[ -x /usr/local/emhttp/plugins/&name;/age_mover ]]; then
-  ln -sf /usr/local/emhttp/plugins/&name;/age_mover /usr/local/sbin/age_mover
-  echo "Linked age_mover → /usr/local/sbin/age_mover"
+# Install symlink: /usr/local/sbin/age_mover → plugin mover
+if [[ -x /usr/local/emhttp/plugins/&name;/mover ]]; then
+  ln -sf /usr/local/emhttp/plugins/&name;/mover /usr/local/sbin/age_mover
+  echo "Created symlink: /usr/local/sbin/age_mover → plugin mover (for backward compatibility)"
 fi
 
 # Refresh cron
