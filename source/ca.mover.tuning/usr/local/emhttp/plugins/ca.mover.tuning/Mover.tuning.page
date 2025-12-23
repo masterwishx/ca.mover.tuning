@@ -969,7 +969,7 @@ _(Resynchronize all Primary files to Secondary)_:
       <li><strong><code>“mover --help”</code></strong> — Plugin mover</li>
       <li><strong><code>“mover.old --help”</code></strong> — Unraid mover</li>
     </ul>
-  <?php endif; ?>  
+  <?php endif; ?>
   </blockquote>
   </div>
 
