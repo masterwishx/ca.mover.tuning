@@ -950,8 +950,10 @@ _(Resynchronize all Primary files to Secondary)_:
 
     <dt>Used IDE</dt>
     <dd>Visual Studio Code</dd>
+</dl>
 
-<span class="left mtp-help-toggle" style="cursor: help;">
+<div class="cli-help-container">
+<span class="mtp-help-toggle" style="cursor: help;">
   <i class="fa fa-info-circle"></i>
   <strong>CLI help commands</strong>
 </span>
@@ -969,10 +971,32 @@ _(Resynchronize all Primary files to Secondary)_:
 </ul>
 <?php endif; ?>  
 </blockquote>
+</div>
 
 <script>
 $('.mtp-help-toggle').on('click', function () {
   $(this).next('.inline_help').slideToggle(150);
 });
 </script>
-</dl>
+
+<style>
+.cli-help-container {  
+  display: inline-flex;           /* override Unraid flex */      
+  gap: 8px;                       /* spacing between help text and label */
+  flex-wrap: wrap;                /* wrap on small screens */
+}
+
+.inline_help {
+   max-width: 80%;
+}
+
+@media (max-width: 600px) {
+  .cli-help-container {
+    flex-direction: column;
+  }
+  .inline_help {
+    max-width: 100%;
+  }
+}
+</style>
+
