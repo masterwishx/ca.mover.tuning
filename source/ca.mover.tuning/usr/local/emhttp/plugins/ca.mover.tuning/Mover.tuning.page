@@ -508,7 +508,8 @@ _(Priority for disk I/O)_:
 </select>
 
 <blockquote class="inline_help">
-<p>The above two options set the priority for the mover process. Setting these options may help with circumstances where when mover runs other applications may pause or buffer.</p>
+<p>The above two options set the priority for the mover process.</p>
+<p>Setting these options may help with circumstances where when mover runs other applications may pause or buffer.</p>
 <p>Note that moving the files may take <strong>longer</strong> when setting these options.</p>
 </blockquote>
 
@@ -834,7 +835,10 @@ _(Clean empty folders)_:
 <?=mk_option($cfg['cleanFolders'],"topFolder","Top Folder")?>
 </select>
 
-> This will remove the parent folder <strong>only of moved</strong> files. <strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.
+<blockquote class="inline_help">
+<p>This will remove the parent folder <strong>only of moved</strong> files.</p>
+<p><strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.</p>
+</blockquote>
 
 _(Clean empty ZFS datasets)_:
 : <select name='cleanDatasets' size='1'>
@@ -946,55 +950,29 @@ _(Resynchronize all Primary files to Secondary)_:
 
     <dt>Used IDE</dt>
     <dd>Visual Studio Code</dd>
+
+<span class="left mtp-help-toggle" style="cursor: help;">
+  <i class="fa fa-info-circle"></i>
+  <strong>CLI help commands</strong>
+</span>
+
+<blockquote class="inline_help" style="display:none;">
+<?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
+<ul>
+  <li><strong><code>“age_mover --help”</code></strong> — Plugin mover</li>
+  <li><strong><code>“mover --help”</code></strong> — Unraid mover</li>
+</ul>
+<?php else: ?>
+<ul>
+  <li><strong><code>“mover --help”</code></strong> — Plugin mover</li>
+  <li><strong><code>“mover.old --help”</code></strong> — Unraid mover</li>
+</ul>
+<?php endif; ?>  
+</blockquote>
+
+<script>
+$('.mtp-help-toggle').on('click', function () {
+  $(this).next('.inline_help').slideToggle(150);
+});
+</script>
 </dl>
-
-<div class="cli-help-wrapper">
-<div class="cli-help-box">
-  <p><strong>CLI help commands:</strong></p>
-  <?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
-    <ul>
-      <li><strong><code>“age_mover --help”</code></strong> — Plugin mover</li>
-      <li><strong><code>“mover --help”</code></strong> — Unraid mover</li>
-    </ul>
-  <?php else: ?>
-    <ul>
-      <li><strong><code>“mover --help”</code></strong> — Plugin mover</li>
-      <li><strong><code>“mover.old --help”</code></strong> — Unraid mover</li>
-    </ul>
-  <?php endif; ?>
-</div>
-</div>
-
-<style>
-/* Flex wrapper: default aligns left */
-.cli-help-wrapper {
-  display: flex;        /* parent is flex */  
-}
-
-/* Help box styling */
-.cli-help-box {
-  flex: 0 0 15%;        /* fixed width 15%, do not grow/shrink */
-  padding: 15px;
-  background-color: var(--title-header-background-color);
-  border: 1px solid var(--border-color);
-  box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);
-  border-radius: 10px;  
-}
-
-/* Center list items inside */
-.cli-help-box ul {
-  list-style-position: inside;
-  padding-left: 0;
-}
-
-/* Responsive: stack on narrow screens */
-@media (max-width: 900px) {
-  .cli-help-wrapper {
-    display: block;       /* stack vertically */
-  }
-  .cli-help-box {
-    flex: none;    
-    margin-left: 0;
-  }
-}
-</style>
