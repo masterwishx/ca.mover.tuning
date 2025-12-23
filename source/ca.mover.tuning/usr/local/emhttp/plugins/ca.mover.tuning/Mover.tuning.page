@@ -952,51 +952,29 @@ _(Resynchronize all Primary files to Secondary)_:
     <dd>Visual Studio Code</dd>
 </dl>
 
-<div class="cli-help-container">
-<span class="mtp-help-toggle" style="cursor: help;">
-  <i class="fa fa-info-circle"></i>
-  <strong>CLI help commands</strong>
-</span>
+<div id="MoverInlineStatus" style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+  <span class="mtp-help-toggle" style="cursor: help;">
+   <i class="fa fa-info-circle" style="margin-right: 2px;"></i>
+   <strong>CLI help commands</strong>
+  </span>
 
-<blockquote class="inline_help" style="display:none;">
-<?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
-<ul>
-  <li><strong><code>“age_mover --help”</code></strong> — Plugin mover</li>
-  <li><strong><code>“mover --help”</code></strong> — Unraid mover</li>
-</ul>
-<?php else: ?>
-<ul>
-  <li><strong><code>“mover --help”</code></strong> — Plugin mover</li>
-  <li><strong><code>“mover.old --help”</code></strong> — Unraid mover</li>
-</ul>
-<?php endif; ?>  
-</blockquote>
-</div>
+  <blockquote class="inline_help" style="max-width: 80%; display: none;">
+  <?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
+    <ul>
+      <li><strong><code>“age_mover --help”</code></strong> — Plugin mover</li>
+      <li><strong><code>“mover --help”</code></strong> — Unraid mover</li>
+    </ul>
+    <?php else: ?>
+    <ul>
+      <li><strong><code>“mover --help”</code></strong> — Plugin mover</li>
+      <li><strong><code>“mover.old --help”</code></strong> — Unraid mover</li>
+    </ul>
+  <?php endif; ?>  
+  </blockquote>
+  </div>
 
 <script>
-$('.mtp-help-toggle').on('click', function () {
+$('#MoverInlineStatus .mtp-help-toggle').on('click', function() {
   $(this).next('.inline_help').slideToggle(150);
 });
 </script>
-
-<style>
-.cli-help-container {  
-  display: inline-flex;           /* override Unraid flex */      
-  gap: 8px;                       /* spacing between help text and label */
-  flex-wrap: wrap;                /* wrap on small screens */
-}
-
-.inline_help {
-   max-width: 80%;
-}
-
-@media (max-width: 600px) {
-  .cli-help-container {
-    flex-direction: column;
-  }
-  .inline_help {
-    max-width: 100%;
-  }
-}
-</style>
-
