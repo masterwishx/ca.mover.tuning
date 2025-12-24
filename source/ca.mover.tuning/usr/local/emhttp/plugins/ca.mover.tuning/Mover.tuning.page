@@ -42,12 +42,50 @@ $(function(){
 		caPluginUpdateCheck("ca.mover.tuning.plg",{name:"Mover Tuning",element:".moverUpdate"});
 	}
 });
-	
+
 $.fn.toggleAttr = function(attr) {
   this.each(function() {
 		var $this = $(this);
 		$this.attr(attr) ? $this.removeAttr(attr) : $this.attr(attr,true);
 	});
+}
+
+function toggleTime(source) {
+  var $src = $('.' + source);
+  var $dst = source === 'ctime' ? $('.atime') : $('.ctime');
+
+  if ($src.val() === 'yes') {
+    // force opposite to no and disable it
+    $dst.val('no');
+    if (!$dst.attr('disabled')) {
+      $dst.toggleAttr('disabled');
+    }
+  } else {
+    // re-enable opposite if needed
+    if ($dst.attr('disabled')) {
+      $dst.toggleAttr('disabled');
+    }
+  }
+}
+
+function toggleAge(val) {
+  var enable = (val === 'yes');
+
+  $('.myage').each(function () {
+    var $el = $(this);
+
+    if (enable) {
+      $el.removeAttr('disabled');
+    } else {
+      $el.attr('disabled', true);
+    }
+  });
+
+  // re-apply CTIME/ATIME exclusivity after enabling
+  if (enable) {
+    toggleTime('ctime');
+    toggleTime('atime');
+  }
 }
 
 function updateCron() {
@@ -225,7 +263,12 @@ $(function() {
   updateScreenMoverAdvancedFilters('<? echo $advancedFilters ?>');
   updateScreenMoverAdvancedOptions('<? echo $advancedOptions ?>');
   updateScreenMoverInvalidCharsToBlock('<? echo $validateFilenames ?>');
+
+  toggleTime('ctime');
+  toggleTime('atime');
+  toggleAge($('select[name="age"]').val());
 });
+
 </script>
 
 <!-- Condition A: Unraid native Mover schedule enabled -->
@@ -600,7 +643,7 @@ _(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
 > Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive after the mover has completed its run. Setting this to (<strong><em>95%</em></strong>) means that the mover will continue until <strong><em>95%</em></strong> of the cache pool is filled.
 
 _(Move files off Primary (<em>cache</em>) based on age)_?
-: <select name="age" size='1' onchange='$(".myage").toggleAttr("disabled")'>
+: <select name="age" size='1' onchange="toggleAge(this.value)">
   <?=mk_option($cfg['age'],'no','No')?>
   <?=mk_option($cfg['age'],'yes','Yes')?>
 </select>
@@ -637,7 +680,7 @@ _(Show advanced filters)_:
 
 <div markdown="1" id="moverAdvancedFilters">
 _(Use CTIME)_:
-: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> <?=$ctimeDisabled?> onchange='$(".atime").toggleAttr("disabled")'>
+: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> <?=$ctimeDisabled?>  onchange="toggleTime('ctime')">
   <?=mk_option($cfg['ctime'],'no','No')?>
   <?=mk_option($cfg['ctime'],'yes','Yes')?>
 </select>
@@ -645,7 +688,7 @@ _(Use CTIME)_:
 > Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Use ATIME)_:
-: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> <?=$atimeDisabled?> onchange='$(".ctime").toggleAttr("disabled")'>
+: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> <?=$atimeDisabled?> onchange="toggleTime('atime')">
   <?=mk_option($cfg['atime'],'no','No')?>
   <?=mk_option($cfg['atime'],'yes','Yes')?>
 </select>
