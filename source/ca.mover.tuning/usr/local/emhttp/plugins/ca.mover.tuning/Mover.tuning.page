@@ -340,8 +340,8 @@ _(Mover Tuning schedule)_:
 
 _(Test Mode (dry run))_:
 : <select name='testmode' size='1' id='testmode' onchange="toggleTestModeWarning(this.value)">
-    <?=mk_option($cfg['testmode'],"no",_('No'))?>
-    <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
+  <?=mk_option($cfg['testmode'],"no",_('No'))?>
+  <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
 </select>
 <span><i class="fa fa-info i"></i>&nbsp;&nbsp;<strong>No</strong> <em>- disables test mode</em></span>
 <span id="testmode_warning" class="orange-text" style="display:<?= ($cfg['testmode'] == 'yes') ? 'block' : 'none' ?>; font-style:italic;">
@@ -488,7 +488,7 @@ _(Show advanced settings)_:
 _(Let scheduled mover run during a parity check / rebuild)_:
 : <select name='parity' size='1'>
   <?=mk_option($cfg['parity'],'yes','Yes')?>
-	<?=mk_option($cfg['parity'],'no','No')?>
+  <?=mk_option($cfg['parity'],'no','No')?>
 </select>
 
 > If a parity check or disk rebuild is in progress, this will prevent mover from running.
@@ -601,8 +601,8 @@ _(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
 
 _(Move files off Primary (<em>cache</em>) based on age)_?
 : <select name="age" size='1' onchange='$(".myage").toggleAttr("disabled")'>
-       <?=mk_option($cfg['age'],'no','No')?>
-       <?=mk_option($cfg['age'],'yes','Yes')?>
+  <?=mk_option($cfg['age'],'no','No')?>
+  <?=mk_option($cfg['age'],'yes','Yes')?>
 </select>
 
 > Select if you want to move files off of the Primary (cache) based on their age - days old.
@@ -638,31 +638,31 @@ _(Show advanced filters)_:
 <div markdown="1" id="moverAdvancedFilters">
 _(Use CTIME)_:
 : <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> <?=$ctimeDisabled?> onchange='$(".atime").toggleAttr("disabled")'>
-       <?=mk_option($cfg['ctime'],'no','No')?>
-       <?=mk_option($cfg['ctime'],'yes','Yes')?>
+  <?=mk_option($cfg['ctime'],'no','No')?>
+  <?=mk_option($cfg['ctime'],'yes','Yes')?>
 </select>
 
 > Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Use ATIME)_:
 : <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> <?=$atimeDisabled?> onchange='$(".ctime").toggleAttr("disabled")'>
-       <?=mk_option($cfg['atime'],'no','No')?>
-       <?=mk_option($cfg['atime'],'yes','Yes')?>
+  <?=mk_option($cfg['atime'],'no','No')?>
+  <?=mk_option($cfg['atime'],'yes','Yes')?>
 </select>
 
 > Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Move files based on minimum size)_?
 : <select name="sizef" size='1' onchange='$(".mysizef").toggleAttr("disabled")'>
-       <?=mk_option($cfg['sizef'],'no','No')?>
-       <?=mk_option($cfg['sizef'],'yes','Yes')?>
+  <?=mk_option($cfg['sizef'],'no','No')?>
+  <?=mk_option($cfg['sizef'],'yes','Yes')?>
 </select>
 
 > Select <strong>yes</strong> if you want to move files based on their size in <strong>MB</strong>.
 
 _(Move files that are larger than this size (In MB))_.
 : <select name="sizeinM" size="1" class='mysizef' <?=$sizefDisabled?>>
-	<?=mk_option($cfg['sizeinM'], 1, "1")?>
+  <?=mk_option($cfg['sizeinM'], 1, "1")?>
 	<?=mk_option($cfg['sizeinM'], 2, "2")?>
 	<?=mk_option($cfg['sizeinM'], 3, "3")?>
 	<?=mk_option($cfg['sizeinM'], 4, "4")?>
@@ -683,8 +683,8 @@ _(Move files that are larger than this size (In MB))_.
 
 _(Sync files based on maximum size)_?
 : <select name="sizefSync" size='1' onchange='$(".mysizefSync").toggleAttr("disabled")'>
-       <?=mk_option($cfg['sizefSync'],'no','No')?>
-       <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
+  <?=mk_option($cfg['sizefSync'],'no','No')?>
+  <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
 </select>
 
 > Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
@@ -712,8 +712,8 @@ _(Sync files that are smaller than this size (In MB))_.
 
 _(Move files off Primary (cache) based on sparseness)_?
 : <select name="sparsnessf" size='1' onchange='$(".mysparsnessf").toggleAttr("disabled")'>
-       <?=mk_option($cfg['sparsnessf'],'no','No')?>
-       <?=mk_option($cfg['sparsnessf'],'yes','Yes')?>
+  <?=mk_option($cfg['sparsnessf'],'no','No')?>
+  <?=mk_option($cfg['sparsnessf'],'yes','Yes')?>
 </select>
 
 > Select the sparseness size. Any file with a sparseness larger will be moved.
@@ -958,7 +958,7 @@ _(Resynchronize all Primary files to Secondary)_:
    <strong>CLI help commands</strong>
   </span>
 
-  <blockquote class="inline_help" style="max-width: 80%; display: none;">
+  <blockquote class="inline_help" style="max-width: 80%; margin-left: 2px; margin-right: 2px; display: none;">
   <?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
     <ul>
       <li><strong><code>“age_mover --help”</code></strong> — Plugin mover</li>
