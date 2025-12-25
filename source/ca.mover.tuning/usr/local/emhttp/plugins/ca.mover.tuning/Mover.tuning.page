@@ -995,7 +995,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <dd>Visual Studio Code</dd>
 </dl>
 
-<div id="MoverInlineStatus" style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+<div id="MoverCliHelp" style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px;">
   <span class="mtp-help-toggle" style="cursor: help;">
    <i class="fa fa-info-circle" style="margin-right: 2px;"></i>
    <strong>CLI help commands</strong>
@@ -1017,7 +1017,7 @@ _(Resynchronize all Primary files to Secondary)_:
   </div>
 
 <script>
-$('#MoverInlineStatus .mtp-help-toggle').on('click', function() {
+$('#MoverCliHelp .mtp-help-toggle').on('click', function() {
   $(this).next('.inline_help').slideToggle(150);
 });
 </script>
