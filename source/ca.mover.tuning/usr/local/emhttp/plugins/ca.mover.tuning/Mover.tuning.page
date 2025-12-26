@@ -19,8 +19,6 @@ $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
 $moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
 $validateFilenames = ($cfg['validateFilenames'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
-$ctimeDisabled = ($cfg['ctime'] != "yes") ? "disabled" : "";
-$atimeDisabled = ($cfg['atime'] != "yes") ? "disabled" : "";
 $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
@@ -42,12 +40,34 @@ $(function(){
 		caPluginUpdateCheck("ca.mover.tuning.plg",{name:"Mover Tuning",element:".moverUpdate"});
 	}
 });
-	
+
 $.fn.toggleAttr = function(attr) {
   this.each(function() {
 		var $this = $(this);
 		$this.attr(attr) ? $this.removeAttr(attr) : $this.attr(attr,true);
 	});
+}
+
+function toggleTime(source) {
+  var $src = $('.' + source);
+  var $dst = source === 'ctime' ? $('.atime') : $('.ctime');
+
+  if ($src.val() === 'yes') {
+    // Set opposite option to 'no'
+    $dst.val('no');
+  }
+}
+
+function toggleAge(val) {
+  var enable = (val === 'yes');
+  // enable or disable both CTIME and ATIME based on AGE
+  $('.myage').prop('disabled', !enable);
+
+  // re-apply mutual exclusivity if AGE is yes
+  if (enable) {
+    toggleTime('ctime');
+    toggleTime('atime');
+  }
 }
 
 function updateCron() {
@@ -225,7 +245,12 @@ $(function() {
   updateScreenMoverAdvancedFilters('<? echo $advancedFilters ?>');
   updateScreenMoverAdvancedOptions('<? echo $advancedOptions ?>');
   updateScreenMoverInvalidCharsToBlock('<? echo $validateFilenames ?>');
+
+  toggleTime('ctime');
+  toggleTime('atime');
+  toggleAge($('select[name="age"]').val());
 });
+
 </script>
 
 <!-- Condition A: Unraid native Mover schedule enabled -->
@@ -290,6 +315,61 @@ if (localStorage.getItem('mover_notice_closed') === 'yes') {
 }
 </script>
 
+<!-- Happy New Year notice -->
+
+<?php
+$month = (int)date('n');
+$day   = (int)date('j');
+// Show New Year notice from Dec 26 to Jan 3 each year
+$showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
+?>
+
+<div id="new_year_notice"
+     style="display:<?= $showNewYearNotice ? 'block' : 'none' ?>;
+            position:relative;
+            background-color: var(--title-header-background-color);
+            border: 1px solid var(--border-color);
+            border-radius:10px;
+            box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);
+            padding:15px 40px 15px 15px;
+            margin-bottom:10px;
+            color:var(--ui-color-info-300);
+            font-size:1.4rem;
+            line-height:1.5em;">
+
+  <i class="fa fa-snowflake-o" style="margin-right:6px; color:#9ddcff;"></i>
+  <strong><?= _('Happy New Year!') ?></strong><i class="fa fa-tree" style="margin-left:6px; color:#4caf50;"></i>
+  
+  <br><br>
+
+  <?= _('Thank you for using this plugin.') ?><br>
+  <?= _('Wishing you a stable array, fast mover runs, and zero parity errors!') ?>
+  <div style="opacity:.7;">
+  <span class="plugin-year" data-start="2025"></span> - by <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer"> masterwishx</a>
+  </div>
+
+  <!-- Close button -->
+  <span id="close_new_year_notice"
+        class="fa fa-times"
+        style="position:absolute; top:6px; right:10px; cursor:pointer;"
+        title="<?= _('Close') ?>"></span>
+</div>
+
+<script>
+document.getElementById('close_new_year_notice')?.addEventListener('click', function() {
+    var notice = document.getElementById('new_year_notice');
+    notice.style.display = 'none';
+    localStorage.setItem('new_year_notice_closed', 'yes');
+});
+
+// Hide automatically if previously closed
+if (localStorage.getItem('new_year_notice_closed') === 'yes') {
+    var notice = document.getElementById('new_year_notice');
+    if (notice) notice.style.display = 'none';
+}
+</script>
+
+
 <div class="title">
 <span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
 <span class="right">Version: <?=$version?></span>
@@ -340,8 +420,8 @@ _(Mover Tuning schedule)_:
 
 _(Test Mode (dry run))_:
 : <select name='testmode' size='1' id='testmode' onchange="toggleTestModeWarning(this.value)">
-    <?=mk_option($cfg['testmode'],"no",_('No'))?>
-    <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
+  <?=mk_option($cfg['testmode'],"no",_('No'))?>
+  <?=mk_option($cfg['testmode'],"yes",_('Yes'))?>
 </select>
 <span><i class="fa fa-info i"></i>&nbsp;&nbsp;<strong>No</strong> <em>- disables test mode</em></span>
 <span id="testmode_warning" class="orange-text" style="display:<?= ($cfg['testmode'] == 'yes') ? 'block' : 'none' ?>; font-style:italic;">
@@ -405,7 +485,10 @@ _(Log Mover Tuning plugin actions)_:
 <?=mk_option($cfg['logging'],"yes","Yes")?>
 </select>
 
-> Enables or disables logging from this plugin. Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> by default.
+<blockquote class="inline_help">
+<p> Enables or disables logging from this plugin.</p>
+<p> Logs are displayed in <strong>SYSLOG</strong> and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> by default.</p>
+</blockquote>
 
 _(Debug Log Mover Tuning plugin actions)_:
 : <select name='debuglogging' size='1'>
@@ -413,7 +496,10 @@ _(Debug Log Mover Tuning plugin actions)_:
 <?=mk_option($cfg['debuglogging'],"yes","Yes")?>
 </select>
 
-> Enables or disables debug logging from this plugin. Debug Logs are displayed in **SYSLOG** and stored at <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong> by default.
+<blockquote class="inline_help">
+<p> Enables or disables debug logging from this plugin.</p>
+<p> Debug Logs are displayed in <strong>SYSLOG</strong> and stored at <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong> by default.</p>
+</blockquote>
 
 _(Notify Mover Tuning plugin actions)_:
 : <select name='notify' size='1'>
@@ -482,7 +568,7 @@ _(Show advanced settings)_:
 _(Let scheduled mover run during a parity check / rebuild)_:
 : <select name='parity' size='1'>
   <?=mk_option($cfg['parity'],'yes','Yes')?>
-	<?=mk_option($cfg['parity'],'no','No')?>
+  <?=mk_option($cfg['parity'],'no','No')?>
 </select>
 
 > If a parity check or disk rebuild is in progress, this will prevent mover from running.
@@ -502,7 +588,8 @@ _(Priority for disk I/O)_:
 </select>
 
 <blockquote class="inline_help">
-<p>The above two options set the priority for the mover process. Setting these options may help with circumstances where when mover runs other applications may pause or buffer.</p>
+<p>The above two options set the priority for the mover process.</p>
+<p>Setting these options may help with circumstances where when mover runs other applications may pause or buffer.</p>
 <p>Note that moving the files may take <strong>longer</strong> when setting these options.</p>
 </blockquote>
 
@@ -593,9 +680,9 @@ _(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
 > Set to the amount of disk space used on the <strong><em>Secondary->Primary</em></strong> (cache:<strong>prefer</strong>) drive after the mover has completed its run. Setting this to (<strong><em>95%</em></strong>) means that the mover will continue until <strong><em>95%</em></strong> of the cache pool is filled.
 
 _(Move files off Primary (<em>cache</em>) based on age)_?
-: <select name="age" size='1' onchange='$(".myage").toggleAttr("disabled")'>
-       <?=mk_option($cfg['age'],'no','No')?>
-       <?=mk_option($cfg['age'],'yes','Yes')?>
+: <select name="age" size='1' onchange="toggleAge(this.value)">
+  <?=mk_option($cfg['age'],'no','No')?>
+  <?=mk_option($cfg['age'],'yes','Yes')?>
 </select>
 
 > Select if you want to move files off of the Primary (cache) based on their age - days old.
@@ -630,32 +717,32 @@ _(Show advanced filters)_:
 
 <div markdown="1" id="moverAdvancedFilters">
 _(Use CTIME)_:
-: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> <?=$ctimeDisabled?> onchange='$(".atime").toggleAttr("disabled")'>
-       <?=mk_option($cfg['ctime'],'no','No')?>
-       <?=mk_option($cfg['ctime'],'yes','Yes')?>
+: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> onchange="toggleTime('ctime')">
+  <?=mk_option($cfg['ctime'],'no','No')?>
+  <?=mk_option($cfg['ctime'],'yes','Yes')?>
 </select>
 
 > Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Use ATIME)_:
-: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> <?=$atimeDisabled?> onchange='$(".ctime").toggleAttr("disabled")'>
-       <?=mk_option($cfg['atime'],'no','No')?>
-       <?=mk_option($cfg['atime'],'yes','Yes')?>
+: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> onchange="toggleTime('atime')">
+  <?=mk_option($cfg['atime'],'no','No')?>
+  <?=mk_option($cfg['atime'],'yes','Yes')?>
 </select>
 
 > Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Move files based on minimum size)_?
 : <select name="sizef" size='1' onchange='$(".mysizef").toggleAttr("disabled")'>
-       <?=mk_option($cfg['sizef'],'no','No')?>
-       <?=mk_option($cfg['sizef'],'yes','Yes')?>
+  <?=mk_option($cfg['sizef'],'no','No')?>
+  <?=mk_option($cfg['sizef'],'yes','Yes')?>
 </select>
 
 > Select <strong>yes</strong> if you want to move files based on their size in <strong>MB</strong>.
 
 _(Move files that are larger than this size (In MB))_.
 : <select name="sizeinM" size="1" class='mysizef' <?=$sizefDisabled?>>
-	<?=mk_option($cfg['sizeinM'], 1, "1")?>
+  <?=mk_option($cfg['sizeinM'], 1, "1")?>
 	<?=mk_option($cfg['sizeinM'], 2, "2")?>
 	<?=mk_option($cfg['sizeinM'], 3, "3")?>
 	<?=mk_option($cfg['sizeinM'], 4, "4")?>
@@ -676,8 +763,8 @@ _(Move files that are larger than this size (In MB))_.
 
 _(Sync files based on maximum size)_?
 : <select name="sizefSync" size='1' onchange='$(".mysizefSync").toggleAttr("disabled")'>
-       <?=mk_option($cfg['sizefSync'],'no','No')?>
-       <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
+  <?=mk_option($cfg['sizefSync'],'no','No')?>
+  <?=mk_option($cfg['sizefSync'],'yes','Yes')?>
 </select>
 
 > Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
@@ -705,8 +792,8 @@ _(Sync files that are smaller than this size (In MB))_.
 
 _(Move files off Primary (cache) based on sparseness)_?
 : <select name="sparsnessf" size='1' onchange='$(".mysparsnessf").toggleAttr("disabled")'>
-       <?=mk_option($cfg['sparsnessf'],'no','No')?>
-       <?=mk_option($cfg['sparsnessf'],'yes','Yes')?>
+  <?=mk_option($cfg['sparsnessf'],'no','No')?>
+  <?=mk_option($cfg['sparsnessf'],'yes','Yes')?>
 </select>
 
 > Select the sparseness size. Any file with a sparseness larger will be moved.
@@ -828,7 +915,10 @@ _(Clean empty folders)_:
 <?=mk_option($cfg['cleanFolders'],"topFolder","Top Folder")?>
 </select>
 
-> This will remove the parent folder <strong>only of moved</strong> files. <strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.
+<blockquote class="inline_help">
+<p>This will remove the parent folder <strong>only of moved</strong> files.</p>
+<p><strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.</p>
+</blockquote>
 
 _(Clean empty ZFS datasets)_:
 : <select name='cleanDatasets' size='1'>
@@ -924,7 +1014,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <dt>Plugin thread @ Unraid community</dt>
     <dd><span><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank" rel="noopener noreferrer">Open</a> - Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.</span></dd>
     <dt>Maintainers</dt>
-    <dd><span>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
+    <dd><span><span class="plugin-year" data-start="2025"></span> - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
         2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank" rel="noopener noreferrer">R3yn4ld</a> | 
         2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank" rel="noopener noreferrer">hugenbd</a> | 
         2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank" rel="noopener noreferrer">Andrew Zawadzki</a></span></dd>
@@ -942,53 +1032,36 @@ _(Resynchronize all Primary files to Secondary)_:
     <dd>Visual Studio Code</dd>
 </dl>
 
-<div class="cli-help-wrapper">
-<div class="cli-help-box">
-  <p><strong>CLI help commands:</strong></p>
+<div id="MoverCliHelp" style="display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px;">
+  <span class="mtp-help-toggle" style="cursor: help;">
+   <i class="fa fa-info-circle" style="margin-right: 2px;"></i>
+   <strong>CLI help commands</strong>
+  </span>
+
+  <blockquote class="inline_help" style="max-width: 80%; margin-left: 2px; margin-right: 2px; display: none;">
   <?php if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=')): ?>
     <ul>
       <li><strong><code>“age_mover --help”</code></strong> — Plugin mover</li>
       <li><strong><code>“mover --help”</code></strong> — Unraid mover</li>
     </ul>
-  <?php else: ?>
+    <?php else: ?>
     <ul>
       <li><strong><code>“mover --help”</code></strong> — Plugin mover</li>
       <li><strong><code>“mover.old --help”</code></strong> — Unraid mover</li>
     </ul>
   <?php endif; ?>
-</div>
-</div>
+  </blockquote>
+  </div>
 
-<style>
-/* Flex wrapper: default aligns left */
-.cli-help-wrapper {
-  display: flex;        /* parent is flex */  
-}
+<script>
+$('#MoverCliHelp .mtp-help-toggle').on('click', function() {
+  $(this).next('.inline_help').slideToggle(150);
+});
 
-/* Help box styling */
-.cli-help-box {
-  flex: 0 0 15%;        /* fixed width 15%, do not grow/shrink */
-  padding: 15px;
-  background-color: var(--title-header-background-color);
-  border: 1px solid var(--border-color);
-  box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);
-  border-radius: 10px;  
-}
+document.querySelectorAll('.plugin-year').forEach(function(el){
+  const start = el.dataset.start;
+  const year  = new Date().getFullYear();
+  el.textContent = start && start != year ? start + '-' + year : year;
+});
 
-/* Center list items inside */
-.cli-help-box ul {
-  list-style-position: inside;
-  padding-left: 0;
-}
-
-/* Responsive: stack on narrow screens */
-@media (max-width: 900px) {
-  .cli-help-wrapper {
-    display: block;       /* stack vertically */
-  }
-  .cli-help-box {
-    flex: none;    
-    margin-left: 0;
-  }
-}
-</style>
+</script>
