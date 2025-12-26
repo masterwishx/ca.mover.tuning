@@ -318,13 +318,10 @@ if (localStorage.getItem('mover_notice_closed') === 'yes') {
 <!-- Happy New Year notice -->
 
 <?php
-$now = time();
-$year = date('Y');
-
-$start = strtotime("$year-12-26");
-$end   = strtotime(($year + 1) . "-01-03 23:59:59");
-
-$showNewYearNotice = ($now >= $start || $now <= $end);
+$month = (int)date('n');
+$day   = (int)date('j');
+// Show New Year notice from Dec 26 to Jan 3 each year
+$showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
 ?>
 
 <div id="new_year_notice"
