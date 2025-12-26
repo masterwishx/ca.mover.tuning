@@ -318,6 +318,50 @@ if (localStorage.getItem('mover_notice_closed') === 'yes') {
 }
 </script>
 
+<!-- Happy New Year notice -->
+
+<?php
+$now = time();
+$year = date('Y');
+
+$start = strtotime("$year-12-26");
+$end   = strtotime(($year + 1) . "-01-03 23:59:59");
+
+$showNewYearNotice = ($now >= $start || $now <= $end);
+?>
+
+<div id="new_year_notice"
+     style="display:<?= $showNewYearNotice ? 'block' : 'none' ?>;
+            position:relative;
+            background-color: var(--title-header-background-color);
+            border: 1px solid var(--border-color);
+            border-radius:10px;
+            box-shadow: 0.05em 0.2em 0.6em var(--dynamix-awesomplete-list-shadow-color);
+            padding:15px 40px 15px 15px;
+            margin-bottom:10px;
+            color:var(--ui-color-info-300);
+            font-size:1.4rem;
+            line-height:1.5em;">
+
+  <i class="fa fa-snowflake-o" style="margin-right:6px; color:#9ddcff;"></i>
+  <strong><?= _('Happy New Year!') ?></strong><i class="fa fa-tree" style="margin-left:6px; color:#4caf50;"></i>
+  
+  <br><br>
+
+  <?= _('Thank you for using this plugin.') ?><br>
+  <?= _('Wishing you a stable array, fast mover runs, and zero parity errors!') ?>
+  <div style="opacity:.7;">
+  <span class="plugin-year" data-start="2025"></span> - by <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer"> masterwishx</a>
+  </div>
+
+  <!-- Close button -->
+  <span id="close_new_year_notice"
+        class="fa fa-times"
+        style="position:absolute; top:6px; right:10px; cursor:pointer;"
+        title="<?= _('Close') ?>"></span>
+</div>
+
+
 <div class="title">
 <span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
 <span class="right">Version: <?=$version?></span>
@@ -962,7 +1006,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <dt>Plugin thread @ Unraid community</dt>
     <dd><span><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank" rel="noopener noreferrer">Open</a> - Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.</span></dd>
     <dt>Maintainers</dt>
-    <dd><span>2025 - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
+    <dd><span><span class="plugin-year" data-start="2025"></span> - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
         2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank" rel="noopener noreferrer">R3yn4ld</a> | 
         2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank" rel="noopener noreferrer">hugenbd</a> | 
         2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank" rel="noopener noreferrer">Andrew Zawadzki</a></span></dd>
@@ -1005,4 +1049,11 @@ _(Resynchronize all Primary files to Secondary)_:
 $('#MoverCliHelp .mtp-help-toggle').on('click', function() {
   $(this).next('.inline_help').slideToggle(150);
 });
+
+document.querySelectorAll('.plugin-year').forEach(function(el){
+  const start = el.dataset.start;
+  const year  = new Date().getFullYear();
+  el.textContent = start && start != year ? start + '-' + year : year;
+});
+
 </script>
