@@ -358,6 +358,20 @@ $showNewYearNotice = ($now >= $start || $now <= $end);
         title="<?= _('Close') ?>"></span>
 </div>
 
+<script>
+document.getElementById('close_new_year_notice')?.addEventListener('click', function() {
+    var notice = document.getElementById('new_year_notice');
+    notice.style.display = 'none';
+    localStorage.setItem('new_year_notice_closed', 'yes');
+});
+
+// Hide automatically if previously closed
+if (localStorage.getItem('new_year_notice_closed') === 'yes') {
+    var notice = document.getElementById('new_year_notice');
+    if (notice) notice.style.display = 'none';
+}
+</script>
+
 
 <div class="title">
 <span class="left"><i class="fa fa-cog title"></i>Mover Tuning - Plugin Settings</span>
