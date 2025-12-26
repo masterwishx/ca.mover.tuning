@@ -53,11 +53,8 @@ function toggleTime(source) {
   var $dst = source === 'ctime' ? $('.atime') : $('.ctime');
 
   if ($src.val() === 'yes') {
-    // Set opposite option to 'no' and mark it as readonly (UI hint)
-    $dst.val('no').prop('readonly', true);
-  } else {
-    // re-enable opposite
-    $dst.prop('readonly', false);
+    // Set opposite option to 'no'
+    $dst.val('no');
   }
 }
 
