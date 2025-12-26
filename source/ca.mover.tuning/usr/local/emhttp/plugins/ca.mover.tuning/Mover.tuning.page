@@ -19,8 +19,6 @@ $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
 $moverDisabled =  ($cfg['moverDisabled'] != "yes") ? "no" : "yes";
 $validateFilenames = ($cfg['validateFilenames'] != "yes") ? "no" : "yes";
 $ageDisabled = ($cfg['age'] != "yes") ? "disabled" : "";
-$ctimeDisabled = ($cfg['ctime'] != "yes") ? "disabled" : "";
-$atimeDisabled = ($cfg['atime'] != "yes") ? "disabled" : "";
 $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
@@ -55,33 +53,20 @@ function toggleTime(source) {
   var $dst = source === 'ctime' ? $('.atime') : $('.ctime');
 
   if ($src.val() === 'yes') {
-    // force opposite to no and disable it
-    $dst.val('no');
-    if (!$dst.attr('disabled')) {
-      $dst.toggleAttr('disabled');
-    }
+    // Set opposite option to 'no' and mark it as readonly (UI hint)
+    $dst.val('no').prop('readonly', true);
   } else {
-    // re-enable opposite if needed
-    if ($dst.attr('disabled')) {
-      $dst.toggleAttr('disabled');
-    }
+    // re-enable opposite
+    $dst.prop('readonly', false);
   }
 }
 
 function toggleAge(val) {
   var enable = (val === 'yes');
+  // enable or disable both CTIME and ATIME based on AGE
+  $('.myage').prop('disabled', !enable);
 
-  $('.myage').each(function () {
-    var $el = $(this);
-
-    if (enable) {
-      $el.removeAttr('disabled');
-    } else {
-      $el.attr('disabled', true);
-    }
-  });
-
-  // re-apply CTIME/ATIME exclusivity after enabling
+  // re-apply mutual exclusivity if AGE is yes
   if (enable) {
     toggleTime('ctime');
     toggleTime('atime');
@@ -680,7 +665,7 @@ _(Show advanced filters)_:
 
 <div markdown="1" id="moverAdvancedFilters">
 _(Use CTIME)_:
-: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> <?=$ctimeDisabled?>  onchange="toggleTime('ctime')">
+: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> onchange="toggleTime('ctime')">
   <?=mk_option($cfg['ctime'],'no','No')?>
   <?=mk_option($cfg['ctime'],'yes','Yes')?>
 </select>
@@ -688,7 +673,7 @@ _(Use CTIME)_:
 > Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Use ATIME)_:
-: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> <?=$atimeDisabled?> onchange="toggleTime('atime')">
+: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> onchange="toggleTime('atime')">
   <?=mk_option($cfg['atime'],'no','No')?>
   <?=mk_option($cfg['atime'],'yes','Yes')?>
 </select>
