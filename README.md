@@ -35,6 +35,13 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2025.12.26
+    - fix: Added mutual-exclusion between CTIME/ATIME and age-based controls with automatic initialization. *(masterwishx)*
+    - new: Collapsible CLI help panel with toggle to reveal/hide command details.
+    - new: Added dismissible New Year notice and dynamic plugin year rendering across the UI.
+    - new: Expanded inline help for logging, debug, top-folder, and related options.
+    - fix: Wording, spacing, and layout refinements for improved clarity.
+
 - 2025.12.21
     - fix: Refactored mover workflow and file list logic for cleaner code. *(masterwishx)*
     - fix: Fixed variable expansion issue in file list checking to prevent word-splitting/empty-string errors. (Thanks to RyanWarwick)
