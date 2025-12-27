@@ -250,7 +250,6 @@ $(function() {
   toggleTime('atime');
   toggleAge($('select[name="age"]').val());
 });
-
 </script>
 
 <!-- Condition A: Unraid native Mover schedule enabled -->
@@ -316,12 +315,13 @@ if (localStorage.getItem('mover_notice_closed') === 'yes') {
 </script>
 
 <!-- Happy New Year notice -->
-
 <?php
 $month = (int)date('n');
 $day   = (int)date('j');
+$year  = (int)date('Y');
 // Show New Year notice from Dec 26 to Jan 3 each year
 $showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
+$newYearSeason = ($month == 12) ? $year + 1 : $year;
 ?>
 
 <div id="new_year_notice"
@@ -337,8 +337,8 @@ $showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
             font-size:1.4rem;
             line-height:1.5em;">
 
-  <i class="fa fa-snowflake-o" style="margin-right:6px; color:#9ddcff;"></i>
-  <strong><?= _('Happy New Year!') ?></strong><i class="fa fa-tree" style="margin-left:6px; color:#4caf50;"></i>
+  <i class="fa fa-snowflake-o" style="margin-right:6px; color: var(--ui-color-info-500)"></i>
+  <strong><?= _('Happy New Year!') ?></strong><i class="fa fa-tree" style="margin-left:8px; color: var(--ui-color-success-700);"></i>
   
   <br><br>
 
@@ -356,16 +356,18 @@ $showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
 </div>
 
 <script>
-document.getElementById('close_new_year_notice')?.addEventListener('click', function() {
-    var notice = document.getElementById('new_year_notice');
-    notice.style.display = 'none';
-    localStorage.setItem('new_year_notice_closed', 'yes');
+const newYearSeasonKey = 'new_year_notice_closed_<?= $newYearSeason ?>';
+
+// Close button
+document.getElementById('close_new_year_notice')?.addEventListener('click', function () {
+  document.getElementById('new_year_notice').style.display = 'none';
+  localStorage.setItem(newYearSeasonKey, 'yes');
 });
 
-// Hide automatically if previously closed
-if (localStorage.getItem('new_year_notice_closed') === 'yes') {
-    var notice = document.getElementById('new_year_notice');
-    if (notice) notice.style.display = 'none';
+// Hide automatically if previously closed for THIS season
+if (localStorage.getItem(newYearSeasonKey) === 'yes') {
+  const notice = document.getElementById('new_year_notice');
+  if (notice) notice.style.display = 'none';
 }
 </script>
 
@@ -1060,7 +1062,7 @@ $('#MoverCliHelp .mtp-help-toggle').on('click', function() {
 
 document.querySelectorAll('.plugin-year').forEach(function(el){
   const start = el.dataset.start;
-  const year  = new Date().getFullYear();
+  const year  = <?= date('Y') ?>; // Server-side year (Unraid system time)
   el.textContent = start && start != year ? start + '-' + year : year;
 });
 
