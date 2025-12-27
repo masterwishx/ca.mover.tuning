@@ -1071,7 +1071,7 @@ $('#MoverCliHelp .mtp-help-toggle').on('click', function() {
 
 document.querySelectorAll('.plugin-year').forEach(function(el){
   const start = el.dataset.start;
-  const year  = new Date().getFullYear();
+  const year  = <?= date('Y') ?>; // Server-side year (Unraid system time)
   el.textContent = start && start != year ? start + '-' + year : year;
 });
 
