@@ -337,8 +337,8 @@ $showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
             font-size:1.4rem;
             line-height:1.5em;">
 
-  <i class="fa fa-snowflake-o" style="margin-right:6px; color:#9ddcff;"></i>
-  <strong><?= _('Happy New Year!') ?></strong><i class="fa fa-tree" style="margin-left:6px; color:#4caf50;"></i>
+  <i class="fa fa-snowflake-o" style="margin-right:6px; color: var(--ui-color-info-500)"></i>
+  <strong><?= _('Happy New Year!') ?></strong><i class="fa fa-tree" style="margin-left:8px; color: var(--ui-color-success-700);"></i>
   
   <br><br>
 
@@ -356,16 +356,27 @@ $showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
 </div>
 
 <script>
-document.getElementById('close_new_year_notice')?.addEventListener('click', function() {
-    var notice = document.getElementById('new_year_notice');
-    notice.style.display = 'none';
-    localStorage.setItem('new_year_notice_closed', 'yes');
+function getNewYearSeason() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth(); // 0 = Jan, 11 = Dec
+
+  // December belongs to next New Year
+  return (month === 11) ? year + 1 : year;
+}
+
+const newYearSeasonKey = 'new_year_notice_closed_' + getNewYearSeason();
+
+// Close button
+document.getElementById('close_new_year_notice')?.addEventListener('click', function () {
+  document.getElementById('new_year_notice').style.display = 'none';
+  localStorage.setItem(newYearSeasonKey, 'yes');
 });
 
-// Hide automatically if previously closed
-if (localStorage.getItem('new_year_notice_closed') === 'yes') {
-    var notice = document.getElementById('new_year_notice');
-    if (notice) notice.style.display = 'none';
+// Hide automatically if previously closed for THIS season
+if (localStorage.getItem(newYearSeasonKey) === 'yes') {
+  const notice = document.getElementById('new_year_notice');
+  if (notice) notice.style.display = 'none';
 }
 </script>
 
