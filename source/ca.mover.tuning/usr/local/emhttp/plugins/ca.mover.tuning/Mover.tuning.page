@@ -250,7 +250,6 @@ $(function() {
   toggleTime('atime');
   toggleAge($('select[name="age"]').val());
 });
-
 </script>
 
 <!-- Condition A: Unraid native Mover schedule enabled -->
@@ -316,12 +315,13 @@ if (localStorage.getItem('mover_notice_closed') === 'yes') {
 </script>
 
 <!-- Happy New Year notice -->
-
 <?php
 $month = (int)date('n');
 $day   = (int)date('j');
+$year  = (int)date('Y');
 // Show New Year notice from Dec 26 to Jan 3 each year
 $showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
+$newYearSeason = ($month == 12) ? $year + 1 : $year;
 ?>
 
 <div id="new_year_notice"
@@ -356,16 +356,7 @@ $showNewYearNotice = ($month == 12 && $day >= 26) || ($month == 1 && $day <= 3);
 </div>
 
 <script>
-function getNewYearSeason() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth(); // 0 = Jan, 11 = Dec
-
-  // December belongs to next New Year
-  return (month === 11) ? year + 1 : year;
-}
-
-const newYearSeasonKey = 'new_year_notice_closed_' + getNewYearSeason();
+const newYearSeasonKey = 'new_year_notice_closed_<?= $newYearSeason ?>';
 
 // Close button
 document.getElementById('close_new_year_notice')?.addEventListener('click', function () {
