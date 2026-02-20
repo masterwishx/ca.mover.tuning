@@ -43,9 +43,9 @@ UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
 MOVERTUNING_OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 MOVERTUNING_DEFAULT_CFGFILE="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
-LOGMODE=$(grep 'logging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+LOGMODE=$(grep '^logging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 LOGLEVEL=$(case "$LOGMODE" in yes) echo 1 ;; fileOnly) echo 2 ;; no) echo 0 ;; *) echo 1 ;; esac)
-DEBUGMODE=$(grep 'debuglogging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+DEBUGMODE=$(grep '^debuglogging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 DEBUGLEVEL=$(case "$DEBUGMODE" in yes) echo 1 ;; fileOnly) echo 2 ;; no) echo 0 ;; *) echo 1 ;; esac)
 TOTALPRIMARYFILES=0
 TOTALPRIMARYFOLDERS=0
@@ -217,7 +217,7 @@ mvlogger() {
         mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
-    if [ $LOGLEVEL = 1 ]; then
+    if [ "$LOGLEVEL" = 1 ]; then
         if [ -t 1 ]; then # running from terminal, echoing date
             echo "$(date +"%T.%3N") $1"
         else # running from cron
@@ -225,7 +225,7 @@ mvlogger() {
         fi
         echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
     # If filesOnly store to log files only
-    elif [ $LOGLEVEL = 2 ]; then
+    elif [ "$LOGLEVEL" = 2 ]; then
         echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
     fi
 
@@ -2058,7 +2058,7 @@ start() {
         exit 2
     fi
     
-    [ $LOGLEVEL = 0 ] && echo "Starting Mover tuning plugin.."
+    [[ $LOGLEVEL != 1 ]] && echo "Starting Mover tuning plugin ..."
 
     #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
@@ -2237,7 +2237,7 @@ start() {
         fi
     fi
 
-    [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
+    [[ $LOGLEVEL != 1 ]] && echo "Mover tuning plugin done!"
 }
 
 reset() {
