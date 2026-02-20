@@ -1866,26 +1866,26 @@ processTheMoves() {
                                 else
                                     mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$top_folder_count" != ".placeholder" ] && echo "s"): ${top_folder}"
                                 fi
-                            fi
-                            
-                            # Clean Unraid share if empty (no files or folders inside share)
-                            share_path="/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}"
 
-                            if [ -d "$share_path" ]; then
-                                if [ -e "${share_path}/.placeholder" ]; then
-                                    share_count=".placeholder"
-                                else
-                                    # Count both files and folders inside the share
-                                    share_count=$(find "$share_path" -mindepth 1 -maxdepth 1 | wc -l)
-                                fi
+                                # Clean Unraid share if empty (no files or folders inside share)
+                                share_path="/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}"
 
-                                mvDebuglogger "Share path: $share_path, Count in share: $share_count" "Clean Share - Start"
+                                if [ -d "$share_path" ]; then
+                                    if [ -e "${share_path}/.placeholder" ]; then
+                                        share_count=".placeholder"
+                                    else
+                                        # Count both files and folders inside the share
+                                        share_count=$(find "$share_path" -mindepth 1 -maxdepth 1 | wc -l)
+                                    fi
 
-                                if [[ "$share_count" != ".placeholder" && "$share_count" -eq 0 ]]; then
-                                    mvlogger "Deleting empty Unraid share: $share_path"
-                                    find "$share_path" -empty -type d -delete
-                                else
-                                    mvlogger "Not deleting Unraid share containing $share_count item(s): $share_path"
+                                    mvDebuglogger "Share path: $share_path, Count in share: $share_count" "Clean Share - Start"
+
+                                    if [[ "$share_count" != ".placeholder" && "$share_count" -eq 0 ]]; then
+                                        mvlogger "Deleting empty Unraid share: $share_path"
+                                        find "$share_path" -empty -type d -delete
+                                    else
+                                        mvlogger "Not deleting Unraid share containing $share_count item(s): $share_path"
+                                    fi
                                 fi
                             fi
                         fi
