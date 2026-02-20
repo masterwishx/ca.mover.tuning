@@ -485,10 +485,13 @@ _(Log Mover Tuning plugin actions)_:
 : <select name='logging' size='1'>
 <?=mk_option($cfg['logging'],"no",'No')?>
 <?=mk_option($cfg['logging'],"yes","Yes")?>
+<?= mk_option($cfg['logging'],"filesOnly","Files Only") ?>
 </select>
 
 <blockquote class="inline_help">
 <p> Enables or disables logging from this plugin.</p>
+<p><strong>Yes</strong> will store to <strong>SYSLOG</strong> and to the log files.</p>
+<p><strong>Files Only</strong> will store <strong>only</strong> to the log files.</p>
 <p> Logs are displayed in <strong>SYSLOG</strong> and stored at <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong> by default.</p>
 </blockquote>
 
@@ -496,10 +499,13 @@ _(Debug Log Mover Tuning plugin actions)_:
 : <select name='debuglogging' size='1'>
 <?=mk_option($cfg['debuglogging'],"no",'No')?>
 <?=mk_option($cfg['debuglogging'],"yes","Yes")?>
+<?= mk_option($cfg['debuglogging'],"filesOnly","Files Only") ?>
 </select>
 
 <blockquote class="inline_help">
 <p> Enables or disables debug logging from this plugin.</p>
+<p><strong>Yes</strong> will store to <strong>SYSLOG</strong> and to the log files.</p>
+<p><strong>Files Only</strong> will store <strong>only</strong> to the log files.</p>
 <p> Debug Logs are displayed in <strong>SYSLOG</strong> and stored at <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong> by default.</p>
 </blockquote>
 

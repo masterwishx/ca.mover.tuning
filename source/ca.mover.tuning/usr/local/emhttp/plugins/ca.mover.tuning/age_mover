@@ -220,6 +220,9 @@ mvlogger() {
             echo "$1"
         fi
         echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
+    # If filesOnly store to log files only
+    elif [ $LOGLEVEL = 2 ]; then
+        echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
     fi
 
     # if $2 exist send notify message
@@ -232,14 +235,15 @@ mvlogger() {
 # $1 is the debug message to log
 # $2 is the name of debug message
 mvDebuglogger() {
+
+    if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
+        echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
+        mkdir -p "${LOGFOLDER}/ca.mover.tuning"
+    fi
+
     if [ "$DEBUGLEVEL" = 1 ]; then
         local msg="$1"
         local tag="$2"
-
-        if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
-            echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
-            mkdir -p "${LOGFOLDER}/ca.mover.tuning"
-        fi
 
         # Terminal output
         if [ -t 1 ]; then # interactive terminal ⇒ show timestamp
@@ -252,6 +256,14 @@ mvDebuglogger() {
             printf '%s\n' "$(titleLine " " ' ')"
         fi
 
+        # Log file output (always with timestamp)
+        {
+            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
+            printf '%s\n' "$(date +"%T.%3N") $msg"
+            printf '%s\n' "$(titleLine " " ' ')"
+        } >>"$MOVER_DEBUG_LOG"
+    # If filesOnly store to log files only
+    elif [ $LOGLEVEL = 2 ]; then
         # Log file output (always with timestamp)
         {
             printf '%s\n' "$(titleLine "Debugging $tag" '-')"
@@ -447,8 +459,8 @@ getMoverSettings() {
     else
         if [ "$(cfg filelistf)" = "yes" ]; then
             SKIPFILESLIST=$(cfg filelistv)
-            if grep -q '^[[:space:]]\|[[:space:]]$' <<< "$SKIPFILESLIST"; then
-                TRIMMED_SKIPFILESLIST=$(sed 's/^[[:space:]]\+\|[[:space:]]\+$//g' <<< "$SKIPFILESLIST")
+            if grep -q '^[[:space:]]\|[[:space:]]$' <<<"$SKIPFILESLIST"; then
+                TRIMMED_SKIPFILESLIST=$(sed 's/^[[:space:]]\+\|[[:space:]]\+$//g' <<<"$SKIPFILESLIST")
                 sed -i "s|filelistv=\"$SKIPFILESLIST\"|filelistv=\"$TRIMMED_SKIPFILESLIST\"|g" "$config_file"
                 SKIPFILESLIST=$TRIMMED_SKIPFILESLIST
             fi
@@ -611,8 +623,10 @@ getMoverSettings() {
     else
         if [ $(cfg logging) = "no" ]; then
             LOGLEVEL=0
-        else
+        elif [ $(cfg logging) = "yes" ]; then
             LOGLEVEL=1
+        else
+            LOGLEVEL=2
         fi
         mvlogger "Logging: $(cfg logging)"
     fi
@@ -626,8 +640,10 @@ getMoverSettings() {
     else
         if [ $(cfg debuglogging) = "no" ]; then
             DEBUGLEVEL=0
-        else
+        elif [ $(cfg debuglogging) = "yes" ]; then
             DEBUGLEVEL=1
+        else
+            DEBUGLEVEL=2
         fi
         mvlogger "Debug Logging: $(cfg debuglogging)"
     fi
