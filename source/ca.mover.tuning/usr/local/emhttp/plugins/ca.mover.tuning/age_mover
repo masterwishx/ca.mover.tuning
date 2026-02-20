@@ -4,7 +4,7 @@
 #      2018 - Andrew Zawadzki (parts of code from mover tuning package)
 #      2023 - hugenbd (parts of code from mover tuning package)
 #      2024 - R3yn4ld (parts of code from mover tuning package)
-#      2025 - masterwishx (as current author and maintainer of this file)
+#      2025-2026 - masterwishx (as current author and maintainer of this file)
 #License: GPLv2 only
 
 # This is the 'mover tuning' script used for moving files between the cache disk and main array.
