@@ -1220,7 +1220,7 @@ createFilteredFilelist() {
 
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
-            FINDSTR="$FINDSTR ' \$7 == \"d\" || \$3 > 0.SPARSENESS ' {"
+            FINDSTR="$FINDSTR ' \$7 == \"d\" || \$3 > (SPARSENESS / 10) {"
         else
             FINDSTR="$FINDSTR ' {"
         fi
@@ -1253,7 +1253,7 @@ createFilteredFilelist() {
         #                \$2 = result;
         #            "
         #        fi
-        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6, \$7}'"
+        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%g|%d|%d|%s|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6, \$7}'"
 
         # Send FINDSTR to debug
         mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
@@ -1317,7 +1317,7 @@ createFilteredFilelist() {
                 # Handle duplicates
                 key = $3 "|" $5 "|" $7 "|" file_path
                 if (! is_duplicate(key)) {
-                    printf "%s|%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+                    printf "%s|%s|%s|%s|%d|%d|%d|%g|%d|%d|%s|%s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
                 }
             }' >"$FILTERED_FILELIST"
         mvlogger "Sorting"
