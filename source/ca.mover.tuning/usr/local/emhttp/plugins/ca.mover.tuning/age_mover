@@ -46,7 +46,7 @@ MOVERTUNING_DEFAULT_CFGFILE="/usr/local/emhttp/plugins/ca.mover.tuning/default.c
 LOGMODE=$(grep '^logging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 LOGLEVEL=$(case "$LOGMODE" in yes) echo 1 ;; fileOnly) echo 2 ;; no) echo 0 ;; *) echo 1 ;; esac)
 DEBUGMODE=$(grep '^debuglogging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
-DEBUGLEVEL=$(case "$DEBUGMODE" in yes) echo 1 ;; fileOnly) echo 2 ;; no) echo 0 ;; *) echo 1 ;; esac)
+DEBUGLEVEL=$(case "$DEBUGMODE" in yes) echo 1 ;; fileOnly) echo 2 ;; no) echo 0 ;; *) echo 0 ;; esac)
 TOTALPRIMARYFILES=0
 TOTALPRIMARYFOLDERS=0
 REMAINING_CACHE_FILES=0
@@ -219,7 +219,7 @@ validate_filename() {
 mvlogger() {
 
     if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
-        echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
+        [ "$LOGLEVEL" = 1 ] && echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
         mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
@@ -1851,8 +1851,11 @@ processTheMoves() {
                             # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
                             if [ -d "${DIR}" ]; then
                                 if ! is_zfs_dataset_mountpoint "${DIR}"; then
-                                    rmdir "${DIR}" 2>/dev/null
-                                    mvlogger "Deleting empty folder: ${DIR}"
+                                    if rmdir "${DIR}" 2>/dev/null; then
+                                        mvlogger "Deleted empty folder: ${DIR}"
+                                    else
+                                        mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Folder"
+                                    fi
                                 else
                                     mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
                                 fi
@@ -1954,8 +1957,11 @@ processTheMoves() {
                             # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
                             if [ -d "${DIR}" ]; then
                                 if ! is_zfs_dataset_mountpoint "${DIR}"; then
-                                    rmdir "${DIR}" 2>/dev/null
-                                    mvlogger "Deleting empty folder: ${DIR}"
+                                    if rmdir "${DIR}" 2>/dev/null; then
+                                        mvlogger "Deleted empty folder: ${DIR}"
+                                    else
+                                        mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Empty Moved Folder"
+                                    fi
                                 else
                                     mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
                                 fi
