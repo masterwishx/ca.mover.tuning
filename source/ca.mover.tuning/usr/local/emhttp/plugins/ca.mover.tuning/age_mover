@@ -4,7 +4,7 @@
 #      2018 - Andrew Zawadzki (parts of code from mover tuning package)
 #      2023 - hugenbd (parts of code from mover tuning package)
 #      2024 - R3yn4ld (parts of code from mover tuning package)
-#      2025 - masterwishx (as current author and maintainer of this file)
+#      2025-2026 - masterwishx (as current author and maintainer of this file)
 #License: GPLv2 only
 
 # This is the 'mover tuning' script used for moving files between the cache disk and main array.
@@ -43,8 +43,10 @@ UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
 MOVERTUNING_OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 MOVERTUNING_DEFAULT_CFGFILE="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
-LOGLEVEL=1
-DEBUGLEVEL=1
+LOGMODE=$(grep '^logging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+LOGLEVEL=$(case "$LOGMODE" in yes) echo 1 ;; fileOnly) echo 2 ;; no) echo 0 ;; *) echo 1 ;; esac)
+DEBUGMODE=$(grep '^debuglogging=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+DEBUGLEVEL=$(case "$DEBUGMODE" in yes) echo 1 ;; fileOnly) echo 2 ;; no) echo 0 ;; *) echo 0 ;; esac)
 TOTALPRIMARYFILES=0
 TOTALPRIMARYFOLDERS=0
 REMAINING_CACHE_FILES=0
@@ -65,6 +67,8 @@ REMAINING_UNATTENDED_FOLDERS=0
 REMAINING_UNATTENDED_SIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
+UNRAID_MOVER_LOGLEVEL=0
+UNRAID_MOVER=0
 # PHP requires escaped quotes (" -> \") for text fields
 DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Variables for counts when delete folders
@@ -108,7 +112,7 @@ version_ge() {
 }
 
 # This function is to send messages to Unraid gui etc.
-function unraid_notify() {
+unraid_notify() {
     local message="$1"
     local flag="$2"
     #
@@ -148,14 +152,20 @@ function unraid_notify() {
     /usr/local/emhttp/webGui/scripts/notify -s "Mover Tuning Notification" -d "$message" -i "$severity" -l "/Settings/Scheduler"
 }
 
-function is_zfs_mountpoint_fstype() {
+is_zfs_mountpoint_fstype() {
     local result
     result=$(findmnt "$1" -o fstype | tail -n 1)
     [ "$result" = "zfs" ]
     return
 }
 
-function titleLine() {
+is_zfs_dataset_mountpoint() {
+    local mp
+    mp=$(findmnt -n -o TARGET "$1")
+    [ "$mp" = "$1" ] && is_zfs_mountpoint_fstype "$1"
+}
+
+titleLine() {
     local title="$1"
     local padding_char="$2"
     local line_length=71
@@ -168,17 +178,17 @@ function titleLine() {
 }
 
 # Function to convert byte size to human-readable format
-function bytes_to_human() {
+bytes_to_human() {
     printf "%sB" "$(numfmt --to=iec-i "$1")"
 }
 
-function human_to_bytes() {
+human_to_bytes() {
     local input="${1:-$(cat)}"
     numfmt --from=iec "$input"
 }
 
 # Sanitize input filename to prevent attacks
-function validate_filename() {
+validate_filename() {
     local filename="$1"
 
     ## Check filename length
@@ -209,16 +219,19 @@ function validate_filename() {
 mvlogger() {
 
     if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
-        echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
+        [ "$LOGLEVEL" = 1 ] && echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
         mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
-    if [ $LOGLEVEL = 1 ]; then
+    if [ "$LOGLEVEL" = 1 ]; then
         if [ -t 1 ]; then # running from terminal, echoing date
             echo "$(date +"%T.%3N") $1"
         else # running from cron
             echo "$1"
         fi
+        echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
+    # If filesOnly store to log files only
+    elif [ "$LOGLEVEL" = 2 ]; then
         echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
     fi
 
@@ -232,15 +245,15 @@ mvlogger() {
 # $1 is the debug message to log
 # $2 is the name of debug message
 mvDebuglogger() {
+    local msg="$1"
+    local tag="$2"
+
+    if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
+        echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
+        mkdir -p "${LOGFOLDER}/ca.mover.tuning"
+    fi
+
     if [ "$DEBUGLEVEL" = 1 ]; then
-        local msg="$1"
-        local tag="$2"
-
-        if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
-            echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
-            mkdir -p "${LOGFOLDER}/ca.mover.tuning"
-        fi
-
         # Terminal output
         if [ -t 1 ]; then # interactive terminal ⇒ show timestamp
             printf '%s\n' "$(titleLine "Debugging $tag" '-')"
@@ -252,6 +265,14 @@ mvDebuglogger() {
             printf '%s\n' "$(titleLine " " ' ')"
         fi
 
+        # Log file output (always with timestamp)
+        {
+            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
+            printf '%s\n' "$(date +"%T.%3N") $msg"
+            printf '%s\n' "$(titleLine " " ' ')"
+        } >>"$MOVER_DEBUG_LOG"
+    # If filesOnly store to log files only
+    elif [ "$DEBUGLEVEL" = 2 ]; then
         # Log file output (always with timestamp)
         {
             printf '%s\n' "$(titleLine "Debugging $tag" '-')"
@@ -447,8 +468,8 @@ getMoverSettings() {
     else
         if [ "$(cfg filelistf)" = "yes" ]; then
             SKIPFILESLIST=$(cfg filelistv)
-            if grep -q '^[[:space:]]\|[[:space:]]$' <<< "$SKIPFILESLIST"; then
-                TRIMMED_SKIPFILESLIST=$(sed 's/^[[:space:]]\+\|[[:space:]]\+$//g' <<< "$SKIPFILESLIST")
+            if grep -q '^[[:space:]]\|[[:space:]]$' <<<"$SKIPFILESLIST"; then
+                TRIMMED_SKIPFILESLIST=$(sed 's/^[[:space:]]\+\|[[:space:]]\+$//g' <<<"$SKIPFILESLIST")
                 sed -i "s|filelistv=\"$SKIPFILESLIST\"|filelistv=\"$TRIMMED_SKIPFILESLIST\"|g" "$config_file"
                 SKIPFILESLIST=$TRIMMED_SKIPFILESLIST
             fi
@@ -611,8 +632,10 @@ getMoverSettings() {
     else
         if [ $(cfg logging) = "no" ]; then
             LOGLEVEL=0
-        else
+        elif [ $(cfg logging) = "yes" ]; then
             LOGLEVEL=1
+        else
+            LOGLEVEL=2
         fi
         mvlogger "Logging: $(cfg logging)"
     fi
@@ -626,8 +649,10 @@ getMoverSettings() {
     else
         if [ $(cfg debuglogging) = "no" ]; then
             DEBUGLEVEL=0
-        else
+        elif [ $(cfg debuglogging) = "yes" ]; then
             DEBUGLEVEL=1
+        else
+            DEBUGLEVEL=2
         fi
         mvlogger "Debug Logging: $(cfg debuglogging)"
     fi
@@ -1823,14 +1848,22 @@ processTheMoves() {
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         if [ "$TESTMODE" = "no" ]; then
-                            # Check if empty folder exist and remove it
-                            [ -d "${DIR}" ] && rmdir "${DIR}"
-                            mvlogger "Deleting empty folder: ${DIR}"
-
+                            # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
+                            if [ -d "${DIR}" ]; then
+                                if ! is_zfs_dataset_mountpoint "${DIR}"; then
+                                    if rmdir "${DIR}" 2>/dev/null; then
+                                        mvlogger "Deleted empty folder: ${DIR}"
+                                    else
+                                        mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Folder"
+                                    fi
+                                else
+                                    mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
+                                fi
+                            fi
                             # Clean top level folder if empty
                             if [ "$CLEANFOLDERS" = "topFolder" ]; then
-                                # Get the Top-Level Folder of $DIR on share
-                                top_folder="$(echo "${DIR}" | cut -d'/' -f1-5)"
+                                # Get the Top-Level (share) Folder of $DIR on the primary storage
+                                top_folder="$(echo "${DIR}" | cut -d'/' -f1-4)"
 
                                 if [ -e "${top_folder}/.placeholder" ]; then
                                     top_folder_count=".placeholder"
@@ -1840,10 +1873,14 @@ processTheMoves() {
                                     mvDebuglogger "Current top folder: $top_folder, Count of files in Top Folder: $top_folder_count" "Clean Top Folder - Start Loop"
                                 fi
 
+                                # Check if empty top-level folder exists and remove it (skip ZFS dataset mountpoints)
                                 if [[ "$top_folder_count" != ".placeholder" && "$top_folder_count" -eq 0 ]]; then
-                                    # Check if empty top-level folder exist and remove it
-                                    [ -d "$top_folder" ] && find "$top_folder" -empty -type d -delete
-                                    mvlogger "Deleting empty top-level folder: $top_folder"
+                                    if ! is_zfs_dataset_mountpoint "$top_folder"; then
+                                        [ -d "$top_folder" ] && find "$top_folder" -empty -type d -delete
+                                        mvlogger "Deleting empty top-level folder: $top_folder"
+                                    else
+                                        mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
+                                    fi
                                 else
                                     mvlogger "Not deleting top-level folder containing $top_folder_count file$([ "$top_folder_count" != ".placeholder" ] && echo "s"): ${top_folder}"
                                 fi
@@ -1917,8 +1954,18 @@ processTheMoves() {
 
                     if [ "$file_count" != ".placeholder" ] && [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ]; then
                         if [ "$TESTMODE" = "no" ]; then
-                            mvlogger "Deleting moved empty folder: ${DIR}"
-                            rmdir "$DIR"
+                            # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
+                            if [ -d "${DIR}" ]; then
+                                if ! is_zfs_dataset_mountpoint "${DIR}"; then
+                                    if rmdir "${DIR}" 2>/dev/null; then
+                                        mvlogger "Deleted empty folder: ${DIR}"
+                                    else
+                                        mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Empty Moved Folder"
+                                    fi
+                                else
+                                    mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
+                                fi
+                            fi
                         else
                             mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
                         fi
@@ -2011,10 +2058,7 @@ processTheMoves() {
 }
 
 start() {
-    [ $LOGLEVEL = 0 ] && echo "Starting Mover tuning plugin.."
 
-    #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
-    mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
     # Do not start if already running
     if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
         mvlogger "mover: already running" "warning"
@@ -2031,16 +2075,35 @@ start() {
     # Only start if config OK
     if [ -f $UNRAIDCFGFILE ]; then
         if grep -qs 'shareMoverLogging="yes"' $UNRAIDCFGFILE; then
-            mvlogger "Log Level: $LOGLEVEL"
+            UNRAID_MOVER_LOGLEVEL=1
+        fi
+        if ! grep -qs 'shareMoverSchedule=""' $UNRAIDCFGFILE; then
+            UNRAID_MOVER=1
         fi
     else
         mvlogger "Fatal error: $UNRAIDCFGFILE does not exist, check this." "failure"
         rm $SOFTSTOPFILE
         exit 2
     fi
+
+    mvlogger "Starting Mover tuning plugin ..."
+
+    #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
+    mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "^version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
+    mvlogger "Log Level: $LOGLEVEL"
+
+    # Convert flags to readable text
+    UNRAID_MOVER_ENABLED=$([ "$UNRAID_MOVER" = 1 ] && echo "yes" || echo "no")
+    UNRAID_MOVER_LOGLEVEL_TEXT=$([ "$UNRAID_MOVER_LOGLEVEL" = 1 ] && echo "yes" || echo "no")
+
+    # Log them
+    mvlogger "Unraid Mover Enabled: $UNRAID_MOVER_ENABLED"
+    mvlogger "Unraid Mover Log Enabled: $UNRAID_MOVER_LOGLEVEL_TEXT"
+
+    mvlogger "$(titleLine "Global settings" '-')"
+
     if [ -f "$MOVERTUNINGCFGFILE" ]; then
         #Get Mover Tuning Settings
-        mvlogger "$(titleLine "Global settings" '-')"
         getMoverSettings "$MOVERTUNINGCFGFILE"
     else
         mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this." "failure"
@@ -2202,7 +2265,7 @@ start() {
         fi
     fi
 
-    [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
+    mvlogger "Mover tuning plugin done!"
 }
 
 reset() {
