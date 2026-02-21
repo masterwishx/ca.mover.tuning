@@ -35,6 +35,15 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.02.21
+    - fix: Resolved syslog spam by refactoring mover logging to honor "LOGMODE" and "DEBUGMODE" settings. *(masterwishx)*
+    - new: Added ZFS mountpoint checks to suppress rmdir errors and safely skip ZFS-backed directories during cleanup.
+    - new: Improved UI with season-aware New Year notice, dynamic year rendering, and updated icon styling.
+    - new: Enhanced logging options in the UI ("File (and Syslog)" vs "File Only") for clearer behavior.
+    - fix: Updated copyright and README year ranges to 2025-2026.
+    - fix: Corrected top-folder cleanup to use the share's actual top-level path.
+    - fix: Improved sparseness filtering and numeric formatting for clearer file listings. *(Ben64)*
+
 - 2025.12.26
     - fix: Added mutual-exclusion between CTIME/ATIME and age-based controls with automatic initialization. *(masterwishx)*
     - new: Collapsible CLI help panel with toggle to reveal/hide command details.

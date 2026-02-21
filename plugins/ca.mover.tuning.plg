@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2025.12.26">
-<!ENTITY md5       "940b9fae3d56694092eae4ce18acdab9">
+<!ENTITY version   "2026.02.21">
+<!ENTITY md5       "e8b725c15c889f2f09f9254fc1918feb">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -15,6 +15,15 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.02.21
+- fix: Resolved syslog spam by refactoring mover logging to honor "LOGMODE" and "DEBUGMODE" settings. *(masterwishx)*
+- new: Added ZFS mountpoint checks to suppress rmdir errors and safely skip ZFS-backed directories during cleanup.
+- new: Improved UI with season-aware New Year notice, dynamic year rendering, and updated icon styling.
+- new: Enhanced logging options in the UI ("File (and Syslog)" vs "File Only") for clearer behavior.
+- fix: Updated copyright and README year ranges to 2025-2026.
+- fix: Corrected top-folder cleanup to use the share's actual top-level path.
+- fix: Improved sparseness filtering and numeric formatting for clearer file listings. *(Ben64)*
+
 ###2025.12.26
 - fix: Added mutual-exclusion between CTIME/ATIME and age-based controls with automatic initialization. *(masterwishx)*
 - new: Collapsible CLI help panel with toggle to reveal/hide command details.
