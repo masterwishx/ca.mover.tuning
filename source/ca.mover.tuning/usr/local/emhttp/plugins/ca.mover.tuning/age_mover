@@ -1117,8 +1117,8 @@ createFilteredFilelist() {
         fi
 
         if [[ "$MOVE_EMPTY_FOLDERS" == "yes" ]]; then
-            # Only search inside the share (skip the share root): files + any folders (nested empty dirs included)
-            FINDSTR+=" -mindepth 1 \( -type f -o -type d \)"
+            # Only search inside the share (skip the share root): files + empty dirs
+            FINDSTR+=" -mindepth 1 \( -type f -o -type d -empty \)"
         else
             FINDSTR+=" -type f"
         fi
