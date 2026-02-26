@@ -90,13 +90,6 @@ if ($cfg_cronEnabled != $_POST['cronEnabled']) {
 if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 	// If mover schedule is disabled
 	if ($_POST['ismoverDisabled'] == "yes") {
-		// Check if the file exists
-		if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
-			@unlink("/boot/config/plugins/dynamix/mover.cron");
-			logger("Mover schedule disabled successfully.");
-		} else {
-			logger("Error: Mover cron file does not exist");
-		}
 		if (version_compare($vars['version'], '7.2.1', '>=')) {
 			// Check if the file exists
 			if (file_exists("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron")) {
@@ -105,15 +98,16 @@ if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 			} else {
 				logger("Error: Mover Tuning cron file does not exist");
 			}
+		} else {
+			// Check if the file exists
+			if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
+				@unlink("/boot/config/plugins/dynamix/mover.cron");
+				logger("Mover schedule disabled successfully.");
+			} else {
+				logger("Error: Mover cron file does not exist");
+			}
 		}
 	} else {
-		// If mover schedule is enabled
-		make_unraid_cron();
-		if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
-			logger("Mover schedule enabled successfully.");
-		} else {
-			logger("Error: Failed to create mover cron file.");
-		}
 		if (version_compare($vars['version'], '7.2.1', '>=')) {
 			// Check if the file exists
 			make_tune_cron();
@@ -121,6 +115,14 @@ if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 				logger("Mover Tuning schedule enabled successfully.");
 			} else {
 				logger("Error: Failed to create Mover Tuning cron file.");
+			}
+		} else {
+			// If mover schedule is enabled
+			make_unraid_cron();
+			if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
+				logger("Mover schedule enabled successfully.");
+			} else {
+				logger("Error: Failed to create mover cron file.");
 			}
 		}
 	}
