@@ -35,6 +35,15 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.02.27
+    - new: Smarter empty‑folder cleanup — now removes only truly empty parent folders after a move, with improved tracking and safety checks. *(masterwishx)*
+    - new: Added protection for ZFS datasets and ".placeholder" files to avoid deleting system‑critical or intentionally preserved folders.
+    - new: Split cleanup logic into per‑folder and top‑level share cleanup for clearer, more predictable behavior.
+    - fix: Improved mover logging with clearer messages for file vs. folder actions and more accurate end‑of‑run summaries.
+    - fix: Updated mover scheduling logic for Unraid 7.2.1+, including better enable/disable handling and compatibility with older "mover.cron" setups.
+    - fix: Strengthened error handling in cron updates with clearer success/failure reporting and safer fallback behavior.
+    - new: Increased reliability of empty‑folder cleanup, especially for deep directory structures, ZFS datasets, and other edge‑case scenarios.
+
 - 2026.02.21
     - fix: Resolved syslog spam by refactoring mover logging to honor "LOGMODE" and "DEBUGMODE" settings. *(masterwishx)*
     - new: Added ZFS mountpoint checks to suppress rmdir errors and safely skip ZFS-backed directories during cleanup.
