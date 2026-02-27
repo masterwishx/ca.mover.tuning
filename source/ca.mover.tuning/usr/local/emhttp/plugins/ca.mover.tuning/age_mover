@@ -1924,7 +1924,7 @@ processTheMoves() {
                 LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
                 EMPTY_DIR_COUNT=-1
 
-                # If Unraid already deleted the folder (move mode), skip cleanup
+                # If Unraid already deleted the folder (move mode) using upper folder, skip cleanup
                 if [ ! -d "$START_DIR" ]; then
                     START_DIR="$(dirname "${START_DIR}")"
                     if [ -d "$START_DIR" ]; then
@@ -1993,8 +1993,6 @@ processTheMoves() {
                 else
                     EMPTY_DIR_COUNT=-1
                 fi
-
-                mvDebuglogger "EMPTY_DIR_COUNT: ${EMPTY_DIR_COUNT} EMPTY_DIR_COUNT Empty Moved Folder"
             fi
 
             # Clean top level folder if empty
