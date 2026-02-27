@@ -924,8 +924,8 @@ _(Clean empty folders)_:
 </select>
 
 <blockquote class="inline_help">
-<p>This will remove the parent folder <strong>only of moved</strong> files.</p>
-<p><strong>Top Folder</strong> will remove the top-level folder <strong>of moved</strong> files on a share, including <strong>all subfolders</strong> if they are empty.</p>
+<p><strong>Yes</strong> - Removes the parent folder <strong>only of moved</strong> files.</p>
+<p><strong>Top Folder</strong> - Removes the top-level <strong>share folder</strong> of the moved content, including <strong>all empty subfolders</strong> on the primary storage.</p>
 </blockquote>
 
 _(Clean empty ZFS datasets)_:
