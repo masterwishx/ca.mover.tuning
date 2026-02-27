@@ -1795,12 +1795,18 @@ processTheMoves() {
 
             moverStatusWrite
 
+            if [[ "$FILETYPE" == "f" ]]; then
+                filetype="file"
+            else
+                filetype="folder"
+            fi
+
             # Check if action and move files tool is unraid move
             if [[ "$ACTION" =~ "move" && "$MOVE_FILES_TOOL" = "move" ]]; then
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
-                    mvDebuglogger "Move cmd: move, Move file: $SOURCE/$FILEPATH, Dest: $DESTINATION/" "Move Action"
+                    mvDebuglogger "Move cmd: move, Move $filetype: $SOURCE/$FILEPATH, Dest: $DESTINATION/" "Move Action"
                     # Perform unraid binary move.
                     find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
                 fi
@@ -1809,7 +1815,7 @@ processTheMoves() {
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would $rsync_action using rsync utility"
                 else
-                    mvDebuglogger "Rsync cmd: $RSYNC_CMD, $rsync_action file: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
+                    mvDebuglogger "Rsync cmd: $RSYNC_CMD, $rsync_action $filetype: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
                     # Perform rsync. relative paths and hardlinks
                     eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
                 fi
@@ -1913,37 +1919,53 @@ processTheMoves() {
 
             # Clean moved empty folders
             if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ]; then
-                DIR="${SOURCE}/${FILEPATH}"
+                START_DIR="${SOURCE}/${FILEPATH}"
+                    mvDebuglogger "Empty folder inside while-do LIST ${DIR_LIST}" "Clean Empty Moved Folder"
+                LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
+                EMPTY_DIR_COUNT=-1
 
-                if [ -d "$DIR" ]; then
-                    LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
-                    mvDebuglogger "Current folder: $DIR, Count of all empty folders: $LAST_FOLDER_COUNT" "Clean Empty Moved Folder - Start Loop"
+                mvDebuglogger "Empty folder before while ${START_DIR}" "Clean Empty Moved Folder"
+
+                # Build list of parent directories
+                DIR_LIST=""
+                DIR="$START_DIR"
+
+                while [[ -d "$DIR" && "$DIR" != "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" ]]; do
+                    DIR_LIST+="${DIR}"$'\n'
+                    DIR="$(dirname "${DIR}")"
+                    mvDebuglogger "Empty folder inside while-do ${DIR}" "Clean Empty Moved Folder"
+                done
+                
+                mvDebuglogger "Empty folder LIST ${DIR_LIST}" "Clean Empty Moved Folder"
+                # Process each directory using while read
+                while IFS= read -r DIR; do
+                    #[ -z "$DIR" ] && continue
+                    mvDebuglogger "Empty folder ${DIR}" "Clean Empty Moved Folder"
+
+                    # Stop at ZFS dataset boundaries
+                    if is_zfs_dataset_mountpoint "${DIR}"; then
+                        mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
+                        break
+                    fi
 
                     # Skip placeholder
                     if [ -e "${DIR}/.placeholder" ]; then
-                        file_count=".placeholder"
-                    else
-                        file_count=$(find "$DIR" -type f | wc -l)
+                        mvlogger "Not deleting folder: contains .placeholder: ${DIR}"
+                        break
                     fi
 
-                    # Count subdirectories
-                    dir_count=$(find "$DIR" -mindepth 1 -type d | wc -l)
+                    # Count files and subdirectories
+                    empty_file_count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
+                    empty_dir_count=$(find "$DIR" -mindepth 1 -type d | wc -l)
 
                     # Folder is truly empty
-                    if [ "$file_count" != ".placeholder" ] && [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ]; then
+                    if [ "$empty_file_count" -eq 0 ] && [ "$empty_dir_count" -eq 0 ]; then
                         if [ "$TESTMODE" = "no" ]; then
-                            EMPTY_DIR_COUNT=$((file_count + dir_count))
-                            # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
-                            if [ -d "${DIR}" ]; then
-                                if ! is_zfs_dataset_mountpoint "${DIR}"; then
-                                    if rmdir "${DIR}" 2>/dev/null; then
-                                        mvlogger "Deleted empty moved folder: ${DIR}"
-                                    else
-                                        mvDebuglogger "Failed to delete moved folder (may not be empty): ${DIR}" "Clean Empty Moved Folder"
-                                    fi
-                                else
-                                    mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
-                                fi
+                            if rmdir "${DIR}" 2>/dev/null; then
+                                mvlogger "Deleted empty moved folder: ${DIR}"
+                            else
+                                mvDebuglogger "Failed to delete moved folder (may not be empty): ${DIR}" "Clean Empty Moved Folder"
+                                break
                             fi
                         else
                             mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
@@ -1951,9 +1973,14 @@ processTheMoves() {
 
                         mvDebuglogger "Cycle of delete empty folder, Previous count: $LAST_FOLDER_COUNT, Count of all empty folders: $((LAST_FOLDER_COUNT - 1))" "Clean Empty Moved Folder - End Loop"
                     else
-                        mvlogger "Not deleting folder: contains $file_count file(s), $dir_count subfolder(s): $DIR"
+                        mvlogger "Not deleting folder: contains $empty_file_count file(s), $empty_dir_count subfolder(s): $DIR"
+                        break
                     fi
-                fi
+
+                done <<<"${DIR_LIST}"
+
+                EMPTY_DIR_COUNT=$((empty_file_count + empty_dir_count))
+                mvDebuglogger "EMPTY_DIR_COUNT: ${EMPTY_DIR_COUNT} EMPTY_DIR_COUNT Empty Moved Folder"
             fi
 
             # Clean top level folder if empty
