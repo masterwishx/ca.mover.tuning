@@ -1920,26 +1920,35 @@ processTheMoves() {
             # Clean moved empty folders
             if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ]; then
                 START_DIR="${SOURCE}/${FILEPATH}"
-                    mvDebuglogger "Empty folder inside while-do LIST ${DIR_LIST}" "Clean Empty Moved Folder"
+
                 LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
                 EMPTY_DIR_COUNT=-1
 
-                mvDebuglogger "Empty folder before while ${START_DIR}" "Clean Empty Moved Folder"
+                # If Unraid already deleted the folder (move mode), skip cleanup
+                if [ ! -d "$START_DIR" ]; then
+                    START_DIR="$(dirname "${START_DIR}")"
+                    if [ -d "$START_DIR" ]; then
+                        mvDebuglogger "Skipping cleanup: $START_DIR no longer exists, using upper folder: $(dirname "${START_DIR}")" "Clean Empty Moved Folder"
+                    else
+                        mvDebuglogger "Skipping cleanup: $START_DIR no longer exists" "Clean Empty Moved Folder"
+                        continue
+                    fi
+                fi
 
                 # Build list of parent directories
                 DIR_LIST=""
                 DIR="$START_DIR"
 
+                mvDebuglogger "Cycle of delete empty folder: ${DIR}" "Clean Empty Moved Folder - Start Loop"
+
                 while [[ -d "$DIR" && "$DIR" != "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" ]]; do
                     DIR_LIST+="${DIR}"$'\n'
                     DIR="$(dirname "${DIR}")"
-                    mvDebuglogger "Empty folder inside while-do ${DIR}" "Clean Empty Moved Folder"
                 done
-                
-                mvDebuglogger "Empty folder LIST ${DIR_LIST}" "Clean Empty Moved Folder"
+
                 # Process each directory using while read
                 while IFS= read -r DIR; do
-                    #[ -z "$DIR" ] && continue
+                    [ -z "$DIR" ] && continue
                     mvDebuglogger "Empty folder ${DIR}" "Clean Empty Moved Folder"
 
                     # Stop at ZFS dataset boundaries
@@ -1979,7 +1988,12 @@ processTheMoves() {
 
                 done <<<"${DIR_LIST}"
 
-                EMPTY_DIR_COUNT=$((empty_file_count + empty_dir_count))
+                if [ -n "${empty_file_count+x}" ] && [ -n "${empty_dir_count+x}" ]; then
+                    EMPTY_DIR_COUNT=$((empty_file_count + empty_dir_count))
+                else
+                    EMPTY_DIR_COUNT=-1
+                fi
+
                 mvDebuglogger "EMPTY_DIR_COUNT: ${EMPTY_DIR_COUNT} EMPTY_DIR_COUNT Empty Moved Folder"
             fi
 
