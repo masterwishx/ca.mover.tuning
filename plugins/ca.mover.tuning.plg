@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.02.27">
-<!ENTITY md5       "5c7f26c98946c97f86fa4abb1d8f35fb">
+<!ENTITY version   "2026.03.21">
+<!ENTITY md5       "8dfa9c2daed3c07a83273d82fa644dee">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -15,6 +15,10 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.03.21
+- fix: Corrects the share-root path check to properly clean top-level folders during array → cache moves. *(masterwishx)*
+- fix: Resolves an infinite loop in the empty-folder cleanup logic by fixing the parent-directory stop condition during array → cache moves. *(atipapp)*
+
 ###2026.02.27
 - new: Smarter empty-folder cleanup — now removes only truly empty parent folders after a move, with improved tracking and safety checks. *(masterwishx)*
 - new: Added protection for ZFS datasets and ".placeholder" files to avoid deleting system-critical or intentionally preserved folders.
