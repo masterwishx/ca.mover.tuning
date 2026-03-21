@@ -2000,7 +2000,7 @@ processTheMoves() {
                 # Check counters if equal to 0 then check top share
                 if [[ "$LAST_COUNT" -eq 0 || "$EMPTY_DIR_COUNT" -eq 0 ]]; then
                     # Determine top-level share folder
-                    top_folder="/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}"
+                    top_folder="${SOURCE}/${SHARENAME}"
                     # Skip if placeholder exists
                     if [ -d "$top_folder" ]; then
                         if [ -e "${top_folder}/.placeholder" ]; then
