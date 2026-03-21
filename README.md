@@ -35,6 +35,10 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.03.21
+    - fix: Corrects the share-root path check to properly clean top-level folders during array → cache moves. *(masterwishx)*
+    - fix: Resolves an infinite loop in the empty-folder cleanup logic by fixing the parent-directory stop condition during array → cache moves. *(atipapp)*
+
 - 2026.02.27
     - new: Smarter empty-folder cleanup — now removes only truly empty parent folders after a move, with improved tracking and safety checks. *(masterwishx)*
     - new: Added protection for ZFS datasets and ".placeholder" files to avoid deleting system-critical or intentionally preserved folders.
