@@ -1941,7 +1941,7 @@ processTheMoves() {
 
                 mvDebuglogger "Cycle of delete empty folder: ${DIR}" "Clean Empty Moved Folder - Start Loop"
 
-                while [[ -d "$DIR" && "$DIR" != "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" ]]; do
+                while [[ -d "$DIR" && "$DIR" != "${SOURCE}/${SHARENAME}" ]]; do
                     DIR_LIST+="${DIR}"$'\n'
                     DIR="$(dirname "${DIR}")"
                 done
