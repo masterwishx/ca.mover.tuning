@@ -1186,6 +1186,17 @@ createFilteredFilelist() {
                 skipped_path="${skipped_path%"${skipped_path##*[!/*]}"}"
                 #skipped_path="${skipped_path%/}" # Remove potential trailing slash
                 mvDebuglogger "skipped_path = $skipped_path" "Skipped Path"
+
+                # Check if the last path component contains a wildcard pattern
+                lastcomponent="${skipped_path##*/}"
+                if [[ "$lastcomponent" == *"*"* ]]; then
+                    mvDebuglogger "${skipped_path} - is a wildcard pattern" "Skipped Path"
+                    mvlogger "Skipping wildcard pattern: ${skipped_path} (size not tracked)"
+                    FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
+                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|0|0|0|0|${skipped_path}|f" >>"$FILTERED_FILELIST"
+                    continue
+                fi
+
                 if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
                     mvDebuglogger "${skipped_path} - exists" "Skipped Path"
                     SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
