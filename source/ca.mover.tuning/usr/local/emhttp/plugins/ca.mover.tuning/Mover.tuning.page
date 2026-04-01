@@ -831,11 +831,16 @@ _(File list path)_:
 : <input type='text' name='filelistv' size='1' class='myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
-<p> Full path to a file that contains a list of files and folder you want ignored from being moved off the Primary (cache) pool.</p>
-<p> File List example: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
-<p> Folder example: <strong><em>/mnt/cache_ssd/Files/MyFiles</em></strong> , Do <strong>NOT</strong> put "<strong><em> * </em></strong>" (except for wildcard file extensions) or "<strong><em> / </em></strong>" at the end of the line.</p>
-<p> File example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
-<p> Wildcard example: <strong><em>/mnt/cache_ssd/Files/MyFolder/*.ext</em></strong> , excludes all files matching the pattern recursively within that folder. Size is not tracked for wildcard entries.</p>
+<p> Full path to a file that contains a list of files and folders you want ignored from being moved off the Primary (cache) pool.</p>
+<p> <strong>File List</strong> example: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
+<p> <strong>Folder</strong> example: <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> , Do <strong>NOT</strong> put (<strong><em> * </em></strong>) or (<strong><em> / </em></strong>) at the end of the line.</p>
+<p> <strong>File</strong> example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
+<p> <strong>Wildcard</strong> example:</p>
+<ul>
+  <li><strong><em>/mnt/cache_ssd/Files/MyFolder/*.ext</em></strong> , Excludes all files matching the pattern recursively within that folder.</li>
+  <li><strong><em>/mnt/cache_ssd/Files/MyFolder/*MyFile*</em></strong> , Excludes all folders and files matching the pattern recursively within that folder.</li>
+</ul>
+<p> Size is not tracked for wildcard entries.</p>
 </blockquote>
 
 _(Ignore file types)_:
