@@ -35,6 +35,11 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.04.01
+    - new: Adjusted wildcard pattern detection logic in file filtering operations. *(masterwishx)*
+    - new: Added handling of wildcard patterns in ignored file entries, wildcards now exclude matching files recursively without size tracking. *(Joly0)*
+    - new: Enhanced help text for the "Ignore file types" feature with clearer wildcard pattern examples and improved formatting.
+
 - 2026.03.21
     - fix: Corrects the share-root path check to properly clean top-level folders during array → cache moves. *(masterwishx)*
     - fix: Resolves an infinite loop in the empty-folder cleanup logic by fixing the parent-directory stop condition during array → cache moves. *(atipapp)*
