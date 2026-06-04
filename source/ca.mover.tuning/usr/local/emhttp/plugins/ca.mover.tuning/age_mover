@@ -876,6 +876,7 @@ createFilteredFilelist() {
         if [ ! -d "/mnt/$PRIMARYSTORAGENAME" ]; then
             # Do not process this pool if path does not exist
             mvlogger "/mnt/$PRIMARYSTORAGENAME does not exist. Is the pool still used? Consider removing $SHARECFG if not."
+            mvlogger "Tip: Safely remove unused shares via the Unraid Shares -> Clean Up button."
             mvlogger "=> Skipping"
             continue # Move to the next iteration of the loop
         fi
@@ -951,10 +952,12 @@ createFilteredFilelist() {
             if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                 # Do not process this pool if path does not exist
                 mvlogger "$SHAREPATH does not exist. Is the ZFS dataset not created yet? Copy files to '/mnt/user/$SHARENAME' first."
+                mvlogger "Tip: Safely remove unused shares via the Unraid Shares -> Clean Up button."
                 mvlogger "=> Skipping"
             else
                 # Do not process this pool if path does not exist
                 mvlogger "$SHAREPATH does not exist. Is the share still used? Consider removing $SHARECFG if not."
+                mvlogger "Tip: Safely remove unused shares via the Unraid Shares -> Clean Up button."
                 mvlogger "=> Skipping"
             fi
             continue # Move to the next iteration of the loop
