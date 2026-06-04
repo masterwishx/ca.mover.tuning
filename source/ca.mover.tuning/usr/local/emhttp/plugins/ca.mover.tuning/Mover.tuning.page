@@ -942,6 +942,17 @@ _(Clean empty ZFS datasets)_:
 
 > This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
 
+_(Share size calculation)_:
+: <select name='shareCalculation' size='1'>
+<?=mk_option($cfg['shareCalculation'],"no",'No')?>
+<?=mk_option($cfg['shareCalculation'],"yes","Yes")?>
+</select>
+
+<blockquote class="inline_help">
+<p>Enable or disable share size calculation on the <strong><em>Primary</em></strong> storage (cache:<strong>only</strong>).</p>
+<p>This runs <strong><code>du</code></strong> on the share, which can be <strong>heavy</strong> on large XFS/Btrfs shares with many files.</p>
+</blockquote>
+
 _(Synchronize Primary files to Secondary)_:
 : <select name='synchronizeCache' size='1'>
 <?=mk_option($cfg['synchronizeCache'],"no",'No')?>
