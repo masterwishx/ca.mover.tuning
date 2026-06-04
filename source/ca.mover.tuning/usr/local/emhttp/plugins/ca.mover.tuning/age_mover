@@ -742,6 +742,19 @@ getMoverSettings() {
         MOVE_EMPTY_FOLDERS=$(cfg moveEmptyFolders)
         mvlogger "Move empty folders: $MOVE_EMPTY_FOLDERS"
     fi
+
+    # Share size calculation
+    if [ -z "$(cfg shareCalculation)" ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Share size calculation argument provided, defaulting to yes"
+            SHARE_CALCULATION="yes"
+            echo 'shareCalculation="yes"' >>"$config_file"
+        fi
+    else
+        SHARE_CALCULATION=$(cfg shareCalculation)
+        mvlogger "Share size calculation: $SHARE_CALCULATION"
+    fi
+
 }
 
 resetRunOnceMoverSettings() {
@@ -1071,18 +1084,26 @@ createFilteredFilelist() {
                 else
                     mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only)."
                     mvlogger "=> Nothing will be moved. Share usage is taken into account in the calculation of the threshold for other shares."
-                    if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-                        mvlogger "Calculating zfs share usage..."
-                        # if error on command then share can be a folder instead dataset
-                        if ! CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME"); then
-                            mvlogger "Warning: Share is currently a folder. Convert it to a dataset for better performance."
+
+					# Share size calculation (only if enabled)
+					if [ "$SHARE_CALCULATION" = "yes" ]; then
+						# Try ZFS dataset first
+						if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                           mvlogger "Calculating zfs share usage..."
+    				       # if error on command then share can be a folder instead dataset
+						    if ! CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME"); then
+                                mvlogger "Warning: Share is currently a folder. Convert it to a dataset for better performance."
+                                mvlogger "Calculating share usage... (can take a moment)"
+                                CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                            fi
+                        else
                             mvlogger "Calculating share usage... (can take a moment)"
                             CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
-                        fi
-                    else
-                        mvlogger "Calculating share usage... (can take a moment)"
-                        CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
-                    fi
+						fi
+					else
+						mvlogger "Share size calculation disabled for this share."
+						CACHESHARERESERVEDSPACE=0
+					fi
                 fi
                 echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}|d" >>"$FILTERED_FILELIST"
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human "$CACHESHARERESERVEDSPACE")"
