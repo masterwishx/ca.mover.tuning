@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.04.01">
-<!ENTITY md5       "4c9abacca29996f40614268d8b722a30">
+<!ENTITY version   "2026.06.05">
+<!ENTITY md5       "25e2a87d5861640ba723fe82c11450fa">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -15,6 +15,11 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.06.05
+- new: Added a new option "Share size calculation" in Mover Tuning, helping avoid slow scans on large or busy shares. *(masterwishx)*
+- new: Cache reserved-space logic now respects the share-size calculation setting.
+- new: Improved log messages for missing shares or pool folders, with a hint to clean unused shares via the *Shares → Clean Up* button.
+
 ###2026.04.01
 - new: Adjusted wildcard pattern detection logic in file filtering operations. *(masterwishx)*
 - new: Added handling of wildcard patterns in ignored file entries, wildcards now exclude matching files recursively without size tracking. *(Joly0)*

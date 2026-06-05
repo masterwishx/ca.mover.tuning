@@ -35,6 +35,11 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.06.05
+    - new: Added a new option "Share size calculation" in Mover Tuning, helping avoid slow scans on large or busy shares. *(masterwishx)*
+    - new: Cache reserved-space logic now respects the share-size calculation setting.
+    - new: Improved log messages for missing shares or pool folders, with a hint to clean unused shares via the *Shares → Clean Up* button.
+
 - 2026.04.01
     - new: Adjusted wildcard pattern detection logic in file filtering operations. *(masterwishx)*
     - new: Added handling of wildcard patterns in ignored file entries, wildcards now exclude matching files recursively without size tracking. *(Joly0)*
