@@ -112,7 +112,8 @@ version_ge() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
-# Detect cron via parent process name
+# Detect execution method by finding the top-level root ancestor process
+# (crond = Cron, ttyd = CLI, php-fpm = Web Button)
 UPPER_PROC=$(ps -eo pid,comm | awk -v pid="$$" '
     function get_parents(p) {
         if (p == 1 || p == "") return;
@@ -127,10 +128,19 @@ UPPER_PROC=$(ps -eo pid,comm | awk -v pid="$$" '
 
 IS_CRON=0
 
-# Check if crond or logger is anywhere in our direct parent tree
+# Check if crond is anywhere in our direct parent tree
 if echo "$UPPER_PROC" | grep -qE 'crond'; then
     IS_CRON=1
 fi
+
+RUN_METHOD=""
+
+case "$UPPER_PROC" in
+    crond) RUN_METHOD="cron" ;;
+    ttyd) RUN_METHOD="cli" ;;
+    php-fpm*) RUN_METHOD="web button" ;;
+    *) RUN_METHOD="unknown" ;;
+esac
 
 # This function is to send messages to Unraid gui etc.
 unraid_notify() {
@@ -262,23 +272,19 @@ mvlogger() {
 
         if [ "$IS_CRON" = 1 ]; then
             # CRON → echo only (goes to syslog automatically)
-            echo "$msg"
-            echo "$IS_CRON = CRON"
-            echo "UPPER_PROC = $UPPER_PROC"
+            echo "$msg"            
         else
             # CLI or BUTTON → echo + logger
             echo "$(date +"%T.%3N") $msg"
-            logger -t move "$msg"
-            echo "$IS_CRON = NOT CRON"
-            echo "UPPER_PROC = $UPPER_PROC"
+            logger -t move "$msg"            
         fi
 
         # Always append to mover log
-        echo "$(date +"%T.%3N") $msg" >> "$MOVER_LOG"
+        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
 
     elif [ "$LOGLEVEL" = 2 ]; then
         # Files-only mode
-        echo "$(date +"%T.%3N") $msg" >> "$MOVER_LOG"
+        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
     fi
 
     # Optional notification
@@ -310,10 +316,11 @@ mvDebuglogger() {
 
     # Build formatted debug block
     local block
-    block="$(printf '%s\n%s\n%s\n' \
-        "$(titleLine "Debugging $tag" '-')" \
-        "$(date +"%T.%3N") $msg" \
-        "$(titleLine " " ' ')"
+    block="$(
+        printf '%s\n%s\n%s\n' \
+            "$(titleLine "Debugging $tag" '-')" \
+            "$(date +"%T.%3N") $msg" \
+            "$(titleLine " " ' ')"
     )"
 
     if [ "$DEBUGLEVEL" = 1 ]; then
@@ -323,16 +330,17 @@ mvDebuglogger() {
             printf '%s\n' "$block"
         else
             # CLI or BUTTON → echo + logger
-            printf '%s\n' "$block"
-            logger -t move "$tag: $msg"
+            printf "%s\n" "$block"
+            printf "%s\n" "$block" | logger --tag move
+
         fi
 
         # Always append to debug log
-        printf '%s\n' "$block" >> "$MOVER_DEBUG_LOG"
+        printf '%s\n' "$block" >>"$MOVER_DEBUG_LOG"
 
     elif [ "$DEBUGLEVEL" = 2 ]; then
         # Files-only mode
-        printf '%s\n' "$block" >> "$MOVER_DEBUG_LOG"
+        printf '%s\n' "$block" >>"$MOVER_DEBUG_LOG"
     fi
 }
 
@@ -2239,8 +2247,9 @@ start() {
 
     #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "^version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
+    mvlogger "Run by: [$RUN_METHOD]"
     mvlogger "Log Level: $LOGLEVEL"
-
+    
     # Convert flags to readable text
     UNRAID_MOVER_ENABLED=$([ "$UNRAID_MOVER" = 1 ] && echo "yes" || echo "no")
     UNRAID_MOVER_LOGLEVEL_TEXT=$([ "$UNRAID_MOVER_LOGLEVEL" = 1 ] && echo "yes" || echo "no")
