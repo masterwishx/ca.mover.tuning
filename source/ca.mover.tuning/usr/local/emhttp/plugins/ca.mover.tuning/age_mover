@@ -112,6 +112,50 @@ version_ge() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
+# Detect execution method by finding the top-level root ancestor process
+# (crond = Cron, ttyd = CLI, php-fpm = Web Button)
+UPPER_PROC=""
+curr_pid=$$
+
+while [[ "$curr_pid" =~ ^[0-9]+$ ]] && [ "$curr_pid" -gt 1 ]; do
+    if [ -r "/proc/$curr_pid/status" ]; then
+        unset comm ppid
+        while IFS=$'\t ' read -r key val; do
+            case "$key" in
+                Name:) comm=$val ;;
+                PPid:) ppid=$val ;;
+            esac
+        done < "/proc/$curr_pid/status"
+        
+        # Save the process name as long as it isn't our own script ($$)
+        if [ "$curr_pid" -ne "$$" ]; then
+            UPPER_PROC="$comm"
+        fi
+        
+        curr_pid=$ppid
+    else
+        break
+    fi
+done
+
+IS_CRON=0
+
+# Check if crond is anywhere in our direct parent tree
+if echo "$UPPER_PROC" | grep -qE 'crond'; then
+    IS_CRON=1
+fi
+
+# Convert the top‑level parent process into a readable run method
+# so logs can show: [cron], [cli], or [web button]
+RUN_METHOD=""
+
+case "$UPPER_PROC" in
+    crond) RUN_METHOD="cron" ;;
+    ttyd) RUN_METHOD="cli" ;;
+    php-fpm*) RUN_METHOD="web button" ;;
+    *) RUN_METHOD="unknown" ;;
+esac
+
 # This function is to send messages to Unraid gui etc.
 unraid_notify() {
     local message="$1"
@@ -217,34 +261,64 @@ validate_filename() {
 }
 
 # Function for verbose output and logging
+# $1 = message text
+# $2 = optional notify level
+#
+# Uses global $IS_CRON (set at script startup):
+#   IS_CRON=1 → script was launched by cron (echo only, no logger)
+#   IS_CRON=0 → CLI or GUI button (echo + logger)
+#
+# LOGLEVEL:
+#   1 → echo + log file
+#   2 → log file only
+#
 mvlogger() {
+    local msg="$1"
+    local notify="$2"
 
+    # Ensure log folder exists
     if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
         [ "$LOGLEVEL" = 1 ] && echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
         mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
     if [ "$LOGLEVEL" = 1 ]; then
-        if [ -t 1 ]; then # running from terminal, echoing date
-            echo "$(date +"%T.%3N") $1"
-        else # running from cron
-            echo "$1"
+
+        if [ "$IS_CRON" = 1 ]; then
+            # CRON → echo only (goes to syslog automatically)
+            echo "$msg"            
+        else
+            # CLI or BUTTON → echo + logger
+            echo "$(date +"%T.%3N") $msg"
+            logger -t move -- "$msg"
         fi
-        echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
-    # If filesOnly store to log files only
+
+        # Always append to mover log
+        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
+
     elif [ "$LOGLEVEL" = 2 ]; then
-        echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
+        # Files-only mode
+        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
     fi
 
-    # if $2 exist send notify message
-    if [ -n "$2" ]; then
-        unraid_notify "$1" "$2"
+    # Optional notification
+    if [ -n "$notify" ]; then
+        unraid_notify "$msg" "$notify"
     fi
 }
 
 # Function for verbose debug output and debug logging
-# $1 is the debug message to log
-# $2 is the name of debug message
+# $1 = debug message
+# $2 = debug tag
+#
+# Uses global $IS_CRON (set at script startup):
+#   IS_CRON=1 → cron run (echo only)
+#   IS_CRON=0 → CLI or GUI button (echo + logger)
+#
+# DEBUGLEVEL:
+#   1 → echo + debug log
+#   2 → debug log only
+#
 mvDebuglogger() {
     local msg="$1"
     local tag="$2"
@@ -254,32 +328,33 @@ mvDebuglogger() {
         mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
+    # Build formatted debug block
+    local block
+    block="$(
+        printf '%s\n%s\n%s\n' \
+            "$(titleLine "Debugging $tag" '-')" \
+            "$(date +"%T.%3N") $msg" \
+            "$(titleLine " " ' ')"
+    )"
+
     if [ "$DEBUGLEVEL" = 1 ]; then
-        # Terminal output
-        if [ -t 1 ]; then # interactive terminal ⇒ show timestamp
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$(date +"%T.%3N") $msg"
-            printf '%s\n' "$(titleLine " " ' ')"
-        else # cron/non-interactive ⇒ plain echo
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$msg"
-            printf '%s\n' "$(titleLine " " ' ')"
+
+        if [ "$IS_CRON" = 1 ]; then
+            # CRON → echo only
+            printf '%s\n' "$block"
+        else
+            # CLI or BUTTON → echo + logger
+            printf "%s\n" "$block"
+            printf "%s\n" "$block" | logger --tag move
+
         fi
 
-        # Log file output (always with timestamp)
-        {
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$(date +"%T.%3N") $msg"
-            printf '%s\n' "$(titleLine " " ' ')"
-        } >>"$MOVER_DEBUG_LOG"
-    # If filesOnly store to log files only
+        # Always append to debug log
+        printf '%s\n' "$block" >>"$MOVER_DEBUG_LOG"
+
     elif [ "$DEBUGLEVEL" = 2 ]; then
-        # Log file output (always with timestamp)
-        {
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$(date +"%T.%3N") $msg"
-            printf '%s\n' "$(titleLine " " ' ')"
-        } >>"$MOVER_DEBUG_LOG"
+        # Files-only mode
+        printf '%s\n' "$block" >>"$MOVER_DEBUG_LOG"
     fi
 }
 
@@ -2186,8 +2261,9 @@ start() {
 
     #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "^version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
+    mvlogger "Run by: $RUN_METHOD"
     mvlogger "Log Level: $LOGLEVEL"
-
+    
     # Convert flags to readable text
     UNRAID_MOVER_ENABLED=$([ "$UNRAID_MOVER" = 1 ] && echo "yes" || echo "no")
     UNRAID_MOVER_LOGLEVEL_TEXT=$([ "$UNRAID_MOVER_LOGLEVEL" = 1 ] && echo "yes" || echo "no")
