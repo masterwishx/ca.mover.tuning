@@ -36,8 +36,8 @@ If an error occurs in copying a file, the partial file, if present, is deleted a
 
 ## Changelog
 - 2026.06.24
-    - new: Improved detection of how mover tuning was started, giving clearer identification of cron, CLI, or web-triggered runs.
-    - new: Added a readable “Run by” entry in startup logs for easier troubleshooting.
+    - new: Improved detection of how mover tuning was started, giving clearer identification of cron, CLI, or web-triggered runs. *(masterwishx)*
+    - new: Added a readable "Run by" entry in startup logs for easier troubleshooting.
     - fix: Unified logging format across CLI, web UI, and scheduled runs for consistent output.
     - fix: Enhanced debug log readability for mover-related operations.
     - fix: Corrected missing syslog output for non-cron mover runs (CLI and Web UI now log properly).
