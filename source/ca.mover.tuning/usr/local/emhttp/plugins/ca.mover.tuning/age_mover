@@ -114,17 +114,29 @@ version_ge() {
 
 # Detect execution method by finding the top-level root ancestor process
 # (crond = Cron, ttyd = CLI, php-fpm = Web Button)
-UPPER_PROC=$(ps -eo pid,comm | awk -v pid="$$" '
-    function get_parents(p) {
-        if (p == 1 || p == "") return;
-        "ps -o ppid= -p " p | getline ppid;
-        sub(/^[ \t]+/, "", ppid);
-        "ps -o comm= -p " p | getline comm;
-        print comm;
-        get_parents(ppid);
-    }
-    BEGIN { get_parents(pid) }
-' | tail -n 1)
+UPPER_PROC=""
+curr_pid=$$
+
+while [[ "$curr_pid" =~ ^[0-9]+$ ]] && [ "$curr_pid" -gt 1 ]; do
+    if [ -r "/proc/$curr_pid/status" ]; then
+        unset comm ppid
+        while IFS=$'\t ' read -r key val; do
+            case "$key" in
+                Name:) comm=$val ;;
+                PPid:) ppid=$val ;;
+            esac
+        done < "/proc/$curr_pid/status"
+        
+        # Save the process name as long as it isn't our own script ($$)
+        if [ "$curr_pid" -ne "$$" ]; then
+            UPPER_PROC="$comm"
+        fi
+        
+        curr_pid=$ppid
+    else
+        break
+    fi
+done
 
 IS_CRON=0
 
