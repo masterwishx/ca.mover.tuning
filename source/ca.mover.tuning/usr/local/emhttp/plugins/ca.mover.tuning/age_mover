@@ -112,6 +112,26 @@ version_ge() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
+# Detect cron via parent process name
+UPPER_PROC=$(ps -eo pid,comm | awk -v pid="$$" '
+    function get_parents(p) {
+        if (p == 1 || p == "") return;
+        "ps -o ppid= -p " p | getline ppid;
+        sub(/^[ \t]+/, "", ppid);
+        "ps -o comm= -p " p | getline comm;
+        print comm;
+        get_parents(ppid);
+    }
+    BEGIN { get_parents(pid) }
+' | tail -n 1)
+
+IS_CRON=0
+
+# Check if crond or logger is anywhere in our direct parent tree
+if echo "$UPPER_PROC" | grep -qE 'crond'; then
+    IS_CRON=1
+fi
+
 # This function is to send messages to Unraid gui etc.
 unraid_notify() {
     local message="$1"
@@ -217,34 +237,68 @@ validate_filename() {
 }
 
 # Function for verbose output and logging
+# $1 = message text
+# $2 = optional notify level
+#
+# Uses global $IS_CRON (set at script startup):
+#   IS_CRON=1 → script was launched by cron (echo only, no logger)
+#   IS_CRON=0 → CLI or GUI button (echo + logger)
+#
+# LOGLEVEL:
+#   1 → echo + log file
+#   2 → log file only
+#
 mvlogger() {
+    local msg="$1"
+    local notify="$2"
 
+    # Ensure log folder exists
     if [ ! -d "${LOGFOLDER}/ca.mover.tuning" ]; then
         [ "$LOGLEVEL" = 1 ] && echo "${LOGFOLDER}/ca.mover.tuning Directory does not exist. Creating it"
         mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
     if [ "$LOGLEVEL" = 1 ]; then
-        if [ -t 1 ]; then # running from terminal, echoing date
-            echo "$(date +"%T.%3N") $1"
-        else # running from cron
-            echo "$1"
+
+        if [ "$IS_CRON" = 1 ]; then
+            # CRON → echo only (goes to syslog automatically)
+            echo "$msg"
+            echo "$IS_CRON = CRON"
+            echo "UPPER_PROC = $UPPER_PROC"
+        else
+            # CLI or BUTTON → echo + logger
+            echo "$(date +"%T.%3N") $msg"
+            logger -t move "$msg"
+            echo "$IS_CRON = NOT CRON"
+            echo "UPPER_PROC = $UPPER_PROC"
         fi
-        echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
-    # If filesOnly store to log files only
+
+        # Always append to mover log
+        echo "$(date +"%T.%3N") $msg" >> "$MOVER_LOG"
+
     elif [ "$LOGLEVEL" = 2 ]; then
-        echo "$(date +"%T.%3N") $1" >>"$MOVER_LOG"
+        # Files-only mode
+        echo "$(date +"%T.%3N") $msg" >> "$MOVER_LOG"
     fi
 
-    # if $2 exist send notify message
-    if [ -n "$2" ]; then
-        unraid_notify "$1" "$2"
+    # Optional notification
+    if [ -n "$notify" ]; then
+        unraid_notify "$msg" "$notify"
     fi
 }
 
 # Function for verbose debug output and debug logging
-# $1 is the debug message to log
-# $2 is the name of debug message
+# $1 = debug message
+# $2 = debug tag
+#
+# Uses global $IS_CRON (set at script startup):
+#   IS_CRON=1 → cron run (echo only)
+#   IS_CRON=0 → CLI or GUI button (echo + logger)
+#
+# DEBUGLEVEL:
+#   1 → echo + debug log
+#   2 → debug log only
+#
 mvDebuglogger() {
     local msg="$1"
     local tag="$2"
@@ -254,32 +308,31 @@ mvDebuglogger() {
         mkdir -p "${LOGFOLDER}/ca.mover.tuning"
     fi
 
+    # Build formatted debug block
+    local block
+    block="$(printf '%s\n%s\n%s\n' \
+        "$(titleLine "Debugging $tag" '-')" \
+        "$(date +"%T.%3N") $msg" \
+        "$(titleLine " " ' ')"
+    )"
+
     if [ "$DEBUGLEVEL" = 1 ]; then
-        # Terminal output
-        if [ -t 1 ]; then # interactive terminal ⇒ show timestamp
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$(date +"%T.%3N") $msg"
-            printf '%s\n' "$(titleLine " " ' ')"
-        else # cron/non-interactive ⇒ plain echo
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$msg"
-            printf '%s\n' "$(titleLine " " ' ')"
+
+        if [ "$IS_CRON" = 1 ]; then
+            # CRON → echo only
+            printf '%s\n' "$block"
+        else
+            # CLI or BUTTON → echo + logger
+            printf '%s\n' "$block"
+            logger -t move "$tag: $msg"
         fi
 
-        # Log file output (always with timestamp)
-        {
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$(date +"%T.%3N") $msg"
-            printf '%s\n' "$(titleLine " " ' ')"
-        } >>"$MOVER_DEBUG_LOG"
-    # If filesOnly store to log files only
+        # Always append to debug log
+        printf '%s\n' "$block" >> "$MOVER_DEBUG_LOG"
+
     elif [ "$DEBUGLEVEL" = 2 ]; then
-        # Log file output (always with timestamp)
-        {
-            printf '%s\n' "$(titleLine "Debugging $tag" '-')"
-            printf '%s\n' "$(date +"%T.%3N") $msg"
-            printf '%s\n' "$(titleLine " " ' ')"
-        } >>"$MOVER_DEBUG_LOG"
+        # Files-only mode
+        printf '%s\n' "$block" >> "$MOVER_DEBUG_LOG"
     fi
 }
 
