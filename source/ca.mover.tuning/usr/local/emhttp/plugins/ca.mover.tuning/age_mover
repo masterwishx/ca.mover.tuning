@@ -278,7 +278,7 @@ mvlogger() {
         else
             # CLI or BUTTON → echo + logger
             echo "$(date +"%T.%3N") $msg"
-            logger -t move "$msg"            
+            logger -t move -- "$msg"
         fi
 
         # Always append to mover log
