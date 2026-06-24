@@ -133,6 +133,8 @@ if echo "$UPPER_PROC" | grep -qE 'crond'; then
     IS_CRON=1
 fi
 
+# Convert the top‑level parent process into a readable run method
+# so logs can show: [cron], [cli], or [web button]
 RUN_METHOD=""
 
 case "$UPPER_PROC" in
@@ -2247,7 +2249,7 @@ start() {
 
     #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "^version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
-    mvlogger "Run by: [$RUN_METHOD]"
+    mvlogger "Run by: $RUN_METHOD"
     mvlogger "Log Level: $LOGLEVEL"
     
     # Convert flags to readable text
