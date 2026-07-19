@@ -1858,11 +1858,11 @@ processTheMoves() {
                 fi
             fi
 
-            #Prepare RSYNC_CMD
-            RSYNC_CMD="rsync --archive --xattrs --relative --hard-links"
+            #Prepare RSYNC_CMD as an array so it is never re-parsed by the shell
+            RSYNC_CMD=(rsync --archive --xattrs --relative --hard-links)
 
             if [ "$TESTMODE" = "yes" ]; then
-                RSYNC_CMD+=" --dry-run"
+                RSYNC_CMD+=(--dry-run)
             fi
 
             # print to debug $SYNCED_FILES $FILEPATH
@@ -1883,6 +1883,12 @@ processTheMoves() {
             SYNCED_FILES=$(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while read line; do echo "\"$SOURCE/./$line\""; done | tr '\n' ' ')
             GUI_CURRENT_FILE=$SYNCED_FILES
 
+            # Same file list as a real array for the rsync call below. SYNCED_FILES
+            # above is kept as a display/count string only; passing the filenames to
+            # rsync via this array (instead of eval) stops the shell from interpreting
+            # spaces, backticks, $(...), redirections, etc. that appear in file names.
+            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+
             # Check if list is complete
             NBFILES=$(($(echo "$SYNCED_FILES" | grep -o '" "' | wc -l) + 1))
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
@@ -1897,7 +1903,7 @@ processTheMoves() {
                 mvlogger "Moving $SYNCED_FILES to  $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
                 rsync_action="Move"
                 # Finalize RSYNC_CMD
-                RSYNC_CMD+=" --remove-source-files"
+                RSYNC_CMD+=(--remove-source-files)
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
                 GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
@@ -1927,9 +1933,9 @@ processTheMoves() {
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would $rsync_action using rsync utility"
                 else
-                    mvDebuglogger "Rsync cmd: $RSYNC_CMD, $rsync_action $filetype: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
+                    mvDebuglogger "Rsync cmd: ${RSYNC_CMD[*]}, $rsync_action $filetype: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
                     # Perform rsync. relative paths and hardlinks
-                    eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
+                    "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/"
                 fi
             fi
 
