@@ -1942,8 +1942,12 @@ processTheMoves() {
 
             # Clean parent folder of files if empty
             if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
-                # Define a function to handle the directory cleanup logic
-                while IFS= read -r FILE; do
+                # Define a function to handle the directory cleanup logic.
+                # Iterate the array directly (was: echo "$SYNCED_FILES" | xargs),
+                # so filenames with quotes/spaces/special chars are handled safely.
+                for FILE in "${SYNCED_FILES_ARR[@]}"; do
+                    # Collapse the rsync --relative marker ("/./" -> "/")
+                    FILE="${FILE//\/.\//\/}"
                     DIR=$(dirname "$FILE")
                     mvDebuglogger "Current file: $FILE, Current folder: $DIR, Previous folder: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
@@ -1988,7 +1992,7 @@ processTheMoves() {
                             fi
                         fi
                     fi
-                done <<<"$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)"
+                done
             fi
 
             # Clean parent ZFS dataset if empty
