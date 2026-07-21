@@ -1936,7 +1936,11 @@ processTheMoves() {
                 else
                     mvDebuglogger "Rsync cmd: ${RSYNC_CMD[*]}, $rsync_action $filetype: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
                     # Perform rsync. relative paths and hardlinks
-                    "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/"
+                    if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
+                        "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/"
+                    else
+                        mvlogger "Error: No files found to move for $FILEPATH" "failure"
+                    fi
                 fi
             fi
 
