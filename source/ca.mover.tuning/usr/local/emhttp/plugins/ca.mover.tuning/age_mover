@@ -1879,18 +1879,19 @@ processTheMoves() {
                 fi
             fi
 
-            # Get files to rsync:
-            SYNCED_FILES=$(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while read line; do echo "\"$SOURCE/./$line\""; done | tr '\n' ' ')
-            GUI_CURRENT_FILE=$SYNCED_FILES
-
-            # Same file list as a real array for the rsync call below. SYNCED_FILES
-            # above is kept as a display/count string only; passing the filenames to
-            # rsync via this array (instead of eval) stops the shell from interpreting
+            # Get files to rsync as a real array. Passing the filenames to rsync
+            # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
             mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
 
-            # Check if list is complete
-            NBFILES=$(($(echo "$SYNCED_FILES" | grep -o '" "' | wc -l) + 1))
+            # SYNCED_FILES is a display/count string only, derived from the array so
+            # the extraction pipeline above runs only once per file.
+            SYNCED_FILES=""
+            [[ ${#SYNCED_FILES_ARR[@]} -gt 0 ]] && printf -v SYNCED_FILES '"%s" ' "${SYNCED_FILES_ARR[@]}"
+            GUI_CURRENT_FILE=$SYNCED_FILES
+
+            # Check if list is complete (array length is exact, unlike parsing the string)
+            NBFILES=${#SYNCED_FILES_ARR[@]}
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 continue
