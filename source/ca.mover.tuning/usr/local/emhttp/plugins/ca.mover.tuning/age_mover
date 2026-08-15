@@ -1858,11 +1858,11 @@ processTheMoves() {
                 fi
             fi
 
-            #Prepare RSYNC_CMD
-            RSYNC_CMD="rsync --archive --xattrs --relative --hard-links"
+            #Prepare RSYNC_CMD as an array so it is never re-parsed by the shell
+            RSYNC_CMD=(rsync --archive --xattrs --relative --hard-links)
 
             if [ "$TESTMODE" = "yes" ]; then
-                RSYNC_CMD+=" --dry-run"
+                RSYNC_CMD+=(--dry-run)
             fi
 
             # print to debug $SYNCED_FILES $FILEPATH
@@ -1879,12 +1879,19 @@ processTheMoves() {
                 fi
             fi
 
-            # Get files to rsync:
-            SYNCED_FILES=$(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while read line; do echo "\"$SOURCE/./$line\""; done | tr '\n' ' ')
+            # Get files to rsync as a real array. Passing the filenames to rsync
+            # via this array (instead of eval) stops the shell from interpreting
+            # spaces, backticks, $(...), redirections, etc. that appear in file names.
+            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+
+            # SYNCED_FILES is a display/count string only, derived from the array so
+            # the extraction pipeline above runs only once per file.
+            SYNCED_FILES=""
+            [[ ${#SYNCED_FILES_ARR[@]} -gt 0 ]] && printf -v SYNCED_FILES '"%s" ' "${SYNCED_FILES_ARR[@]}"
             GUI_CURRENT_FILE=$SYNCED_FILES
 
-            # Check if list is complete
-            NBFILES=$(($(echo "$SYNCED_FILES" | grep -o '" "' | wc -l) + 1))
+            # Check if list is complete (array length is exact, unlike parsing the string)
+            NBFILES=${#SYNCED_FILES_ARR[@]}
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 continue
@@ -1897,7 +1904,7 @@ processTheMoves() {
                 mvlogger "Moving $SYNCED_FILES to  $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
                 rsync_action="Move"
                 # Finalize RSYNC_CMD
-                RSYNC_CMD+=" --remove-source-files"
+                RSYNC_CMD+=(--remove-source-files)
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
                 GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
@@ -1927,16 +1934,24 @@ processTheMoves() {
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would $rsync_action using rsync utility"
                 else
-                    mvDebuglogger "Rsync cmd: $RSYNC_CMD, $rsync_action $filetype: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
+                    mvDebuglogger "Rsync cmd: ${RSYNC_CMD[*]}, $rsync_action $filetype: $SYNCED_FILES, Dest: $DESTINATION/" "$rsync_action Action"
                     # Perform rsync. relative paths and hardlinks
-                    eval "$RSYNC_CMD" "$SYNCED_FILES" "$DESTINATION/"
+                    if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
+                        "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/"
+                    else
+                        mvlogger "Error: No files found to move for $FILEPATH" "failure"
+                    fi
                 fi
             fi
 
             # Clean parent folder of files if empty
             if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
-                # Define a function to handle the directory cleanup logic
-                while IFS= read -r FILE; do
+                # Define a function to handle the directory cleanup logic.
+                # Iterate the array directly (was: echo "$SYNCED_FILES" | xargs),
+                # so filenames with quotes/spaces/special chars are handled safely.
+                for FILE in "${SYNCED_FILES_ARR[@]}"; do
+                    # Collapse the rsync --relative marker ("/./" -> "/")
+                    FILE="${FILE//\/.\//\/}"
                     DIR=$(dirname "$FILE")
                     mvDebuglogger "Current file: $FILE, Current folder: $DIR, Previous folder: $LAST_DIR, Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
@@ -1981,7 +1996,7 @@ processTheMoves() {
                             fi
                         fi
                     fi
-                done <<<"$(echo "$SYNCED_FILES" | sed 's|/./|/|g' | xargs -n1 echo)"
+                done
             fi
 
             # Clean parent ZFS dataset if empty
