@@ -35,6 +35,14 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.08.15
+    fix: Safer handling of filenames with spaces and special characters in processTheMoves(). *(masterwishx - Thanks to Joly0 for this PR fix)*
+    fix: Removed unsafe eval; rsync now runs through a proper Bash array for stable execution.
+    fix: Improved dry-run output to better reflect real rsync behavior.
+    fix: Reworked empty-folder cleanup for more predictable and reliable results.
+    fix: Added clear handling when no source files are available.
+    new: Faster and safer path normalization using Bash substitution.
+
 - 2026.06.24
     - new: Improved detection of how mover tuning was started, giving clearer identification of cron, CLI, or web-triggered runs. *(masterwishx)*
     - new: Added a readable "Run by" entry in startup logs for easier troubleshooting.

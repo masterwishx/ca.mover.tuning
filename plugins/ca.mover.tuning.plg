@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.06.24">
-<!ENTITY md5       "252cd3e7a3e3acf66ce52ed19ff44ce2">
+<!ENTITY version   "2026.08.15">
+<!ENTITY md5       "95614898fe1ff5ddae3ce58706a22421">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -15,6 +15,14 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.08.15
+fix: Safer handling of filenames with spaces and special characters in processTheMoves(). *(masterwishx - Thanks to Joly0 for this PR fix)*
+fix: Removed unsafe eval; rsync now runs through a proper Bash array for stable execution.
+fix: Improved dry-run output to better reflect real rsync behavior.
+fix: Reworked empty-folder cleanup for more predictable and reliable results.
+fix: Added clear handling when no source files are available.
+new: Faster and safer path normalization using Bash substitution.
+
 ###2026.06.24
 - new: Improved detection of how mover tuning was started, giving clearer identification of cron, CLI, or web-triggered runs. *(masterwishx)*
 - new: Added a readable "Run by" entry in startup logs for easier troubleshooting.
