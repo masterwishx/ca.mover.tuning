@@ -2243,19 +2243,14 @@ processTheMoves() {
 start() {
 
     # Do not start if already running
-    if [ -f "$PIDFILE" ]; then
-        pid=$(cat "$PIDFILE")
-
-        if kill -0 "$pid" 2>/dev/null; then
-            mvlogger "mover: already running"
+    if [ -f $PIDFILE ]; then
+        if ps h $(cat $PIDFILE) | grep mover; then
+            echo "mover: already running" >&2
             exit 1
-        else
-            rm -f "$PIDFILE"
-            mvlogger "Stale mover.pid removed"
         fi
     fi
 
-    echo $$ >$PIDFILE
+    echo $$ >"$PIDFILE"
 
     # Remove any old /var/run/moversoft.stop files
     if [ -e $SOFTSTOPFILE ]; then
@@ -2483,43 +2478,6 @@ debug() {
     echo "move: done. ZIP file at /boot/logs/ca.mover.tuning-debug-<date-time>.zip created."
 }
 
-empty() {
-    DISK="$1"
-
-    if [ -f $PIDFILE ]; then
-        if ps h $(cat $PIDFILE) | grep mover; then
-            echo "mover: already running"
-            exit 1
-        fi
-    fi
-
-    echo $$ >/var/run/mover.pid
-    echo "mover: started"
-
-    shopt -s nullglob
-
-    # we can only empty share directories
-    for SHAREPATH in /mnt/$DISK/*; do
-        SHARE=$(basename "$SHAREPATH")
-        if [[ -d "$SHAREPATH" && -f "$CFGPATH/$SHARE.cfg" ]]; then
-            move "$SHAREPATH"
-        fi
-    done
-
-    # output list of files which could not be moved
-    # use 'find' in case huge number of files left in /mnt/$DISK
-    count=$(find /mnt/$DISK -mindepth 1 | wc -l)
-    if [ "$count" -gt 0 ]; then
-        find /mnt/$DISK -mindepth 1 -depth -printf 'move: %p Not moved\n' | head -n 100
-        if [ "$count" -gt 100 ]; then
-            echo "[output truncated to first 100 entries]"
-        fi
-    fi
-
-    rm -f $PIDFILE
-    echo "mover: finished"
-}
-
 killtree() {
     local pid=$1 child
 
@@ -2559,36 +2517,21 @@ usage() {
     echo
     echo "Usage:"
     if version_ge "$UNRAID_VERSION" "7.2.1"; then
-        echo "  $0 | age_mover start [-e <disk_name>]  # Uses age_mover only (Unraid >=7.2.1)"
+        echo "  $0 | age_mover start  # Uses age_mover only (Unraid >=7.2.1)"
         echo "  $0 | age_mover stop | softstop | status | reset | debug"
     else
-        echo "  $0 | mover start [-e <disk_name>]  # Can use mover or age_mover"
+        echo "  $0 | mover start  # Can use mover or age_mover"
         echo "  $0 | mover stop | softstop | status | reset | debug"
     fi
     echo
-    echo "Notes:"
-    echo "  <disk_name> must match the pattern 'disk[0-9]*' and /mnt/<disk_name> must be a mounted disk."
-    echo
     echo "Commands:"
-    echo "  start    - Start mover. Use 'start -e <disk_name>' to empty a disk."
+    echo "  start    - Start mover."
     echo "  stop     - Forced stop mover."
     echo "  softstop - Soft stop mover. (Recommended)"
-    echo "  status    - Check if the mover is running."
+    echo "  status   - Check if the mover is running."
     echo "  reset    - Reset plugin config to default values and delete the override config folder."
     echo "  debug    - Create plugin diagnostics ZIP at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
     exit 1
-}
-
-# validate disk name
-validate_disk() {
-    if [[ ! "$1" =~ ^disk[0-9]+$ ]]; then
-        echo "Error: <disk_name> must match pattern 'disk[0-9]+$'"
-        usage
-    fi
-    if ! mountpoint --nofollow /mnt/$1 >/dev/null 2>&1; then
-        echo "Error: nothing mounted at /mnt/$1"
-        usage
-    fi
 }
 
 status() {
@@ -2602,25 +2545,14 @@ status() {
     exit
 }
 
-if [ "$#" -lt 1 ]; then
+if [ "$#" -ne 1 ]; then
     usage
     exit 1
 fi
 
 case $1 in
 start)
-    if [ -z "$2" ]; then
-        start
-    elif [ "$2" == "-e" ]; then
-        if [ -z "$3" ]; then
-            usage
-        else
-            validate_disk "$3"
-            empty "$3"
-        fi
-    else
-        usage
-    fi
+    start
     ;;
 stop)
     stop
