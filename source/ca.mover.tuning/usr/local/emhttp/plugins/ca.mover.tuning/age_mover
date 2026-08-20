@@ -76,16 +76,6 @@ LAST_DIR=""
 LAST_COUNT=-1
 LAST_FOLDER_COUNT=-1
 EMPTY_DIR_COUNT=-1
-# Variables from unraid mover.old empty() function
-DEBUGGING=""
-CFGPATH="/boot/config/shares"
-move() {
-    find "$1" -depth 2>/dev/null | /usr/libexec/unraid/move $DEBUGGING
-    # second pass to clean up leftover empty directories
-    find "$1" -depth -type d 2>/dev/null | /usr/libexec/unraid/move $DEBUGGING
-}
-###
-
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 
@@ -112,49 +102,57 @@ version_ge() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
+# Variables from unraid mover.old empty() function
+DEBUGGING=""
+CFGPATH="/boot/config/shares"
+move() {
+    find "$1" -depth 2>/dev/null | /usr/libexec/unraid/move $DEBUGGING
+    # second pass to clean up leftover empty directories
+    find "$1" -depth -type d 2>/dev/null | /usr/libexec/unraid/move $DEBUGGING
+}
+
 # Detect execution method by finding the top-level root ancestor process
 # (crond = Cron, ttyd = CLI, php-fpm = Web Button)
 UPPER_PROC=""
 curr_pid=$$
-
-while [[ "$curr_pid" =~ ^[0-9]+$ ]] && [ "$curr_pid" -gt 1 ]; do
-    if [ -r "/proc/$curr_pid/status" ]; then
-        unset comm ppid
-        while IFS=$'\t ' read -r key val; do
-            case "$key" in
-                Name:) comm=$val ;;
-                PPid:) ppid=$val ;;
-            esac
-        done < "/proc/$curr_pid/status"
-        
-        # Save the process name as long as it isn't our own script ($$)
-        if [ "$curr_pid" -ne "$$" ]; then
-            UPPER_PROC="$comm"
-        fi
-        
-        curr_pid=$ppid
-    else
-        break
-    fi
-done
-
 IS_CRON=0
-
-# Check if crond is anywhere in our direct parent tree
-if echo "$UPPER_PROC" | grep -qE 'crond'; then
-    IS_CRON=1
-fi
-
-# Convert the top‑level parent process into a readable run method
-# so logs can show: [cron], [cli], or [web button]
 RUN_METHOD=""
 
-case "$UPPER_PROC" in
-    crond) RUN_METHOD="cron" ;;
+detect_run_method() {
+    while [[ "$curr_pid" =~ ^[0-9]+$ ]] && [ "$curr_pid" -gt 1 ]; do
+        if [ -r "/proc/$curr_pid/status" ]; then
+            unset comm ppid
+            while IFS=$'\t ' read -r key val; do
+                case "$key" in
+                Name:) comm=$val ;;
+                PPid:) ppid=$val ;;
+                esac
+            done <"/proc/$curr_pid/status"
+
+            # Save the process name as long as it isn't our own script ($$)
+            if [ "$curr_pid" -ne "$$" ]; then
+                UPPER_PROC="$comm"
+            fi
+
+            curr_pid=$ppid
+        else
+            break
+        fi
+    done
+
+    # Convert the top‑level parent process into a readable run method
+    # so logs can show: [cron], [cli], or [web button]
+
+    case "$UPPER_PROC" in
+    crond)
+        RUN_METHOD="cron"
+        IS_CRON=1
+        ;;
     ttyd) RUN_METHOD="cli" ;;
     php-fpm*) RUN_METHOD="web button" ;;
     *) RUN_METHOD="unknown" ;;
-esac
+    esac
+}
 
 # This function is to send messages to Unraid gui etc.
 unraid_notify() {
@@ -286,7 +284,7 @@ mvlogger() {
 
         if [ "$IS_CRON" = 1 ]; then
             # CRON → echo only (goes to syslog automatically)
-            echo "$msg"            
+            echo "$msg"
         else
             # CLI or BUTTON → echo + logger
             echo "$(date +"%T.%3N") $msg"
@@ -829,7 +827,6 @@ getMoverSettings() {
         SHARE_CALCULATION=$(cfg shareCalculation)
         mvlogger "Share size calculation: $SHARE_CALCULATION"
     fi
-
 }
 
 resetRunOnceMoverSettings() {
@@ -2246,17 +2243,28 @@ processTheMoves() {
 start() {
 
     # Do not start if already running
-    if [ -f $PIDFILE ] && ps h $(cat $PIDFILE) | grep mover; then
-        mvlogger "mover: already running" "warning"
-        exit 1
+    if [ -f "$PIDFILE" ]; then
+        pid=$(cat "$PIDFILE")
+
+        if kill -0 "$pid" 2>/dev/null; then
+            mvlogger "mover: already running"
+            exit 1
+        else
+            rm -f "$PIDFILE"
+            mvlogger "Stale mover.pid removed"
+        fi
     fi
+
     echo $$ >$PIDFILE
 
-    #Remove any old /var/run/moversoft.stop files
+    # Remove any old /var/run/moversoft.stop files
     if [ -e $SOFTSTOPFILE ]; then
         rm $SOFTSTOPFILE
         mvlogger "Mover soft stop file removed."
     fi
+
+    # Detect execution source (cron/cli/web)
+    detect_run_method
 
     # Only start if config OK
     if [ -f $UNRAIDCFGFILE ]; then
@@ -2277,8 +2285,7 @@ start() {
     #mvlogger "$(titleLine echo "Mover Tuning Plugin version $(grep -oP 'version=\K[^"]+' "$MOVERTUNINGCFGFILE")" '*')"
     mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "^version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
     mvlogger "Run by: $RUN_METHOD"
-    mvlogger "Log Level: $LOGLEVEL"
-    
+
     # Convert flags to readable text
     UNRAID_MOVER_ENABLED=$([ "$UNRAID_MOVER" = 1 ] && echo "yes" || echo "no")
     UNRAID_MOVER_LOGLEVEL_TEXT=$([ "$UNRAID_MOVER_LOGLEVEL" = 1 ] && echo "yes" || echo "no")
