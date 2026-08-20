@@ -2245,7 +2245,7 @@ start() {
     # Do not start if already running
     if [ -f $PIDFILE ]; then
         if ps h $(cat $PIDFILE) | grep mover; then
-            echo "mover: already running" >&2
+            echo "mover: already running"
             exit 1
         fi
     fi
