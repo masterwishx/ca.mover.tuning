@@ -116,6 +116,20 @@ function startMover()
         logger("Cron + options: $options");
     }
 
+    // $options, moverNice and moverIO are the only values interpolated into the
+    // mover command line, and all three come from fixed sets: age_mover's own
+    // command list, and the two priority dropdowns on the settings page.
+    // Anything else is rejected rather than handed to a shell.
+    $allowedCommands = ["start", "stop", "softstop", "status", "reset", "debug"];
+    if (in_array($options, $allowedCommands, true) === false) {
+        logger("Refusing to run mover: unrecognised command '$options'");
+        exit();
+    }
+
+    $allowedIO = ["-c 2 -n 0", "-c 2 -n 7", "-c 3"];
+    $niceLevel = (string) (int) ($cfg['moverNice'] ?: 0);
+    $ioLevel = in_array($cfg['moverIO'] ?? "", $allowedIO, true) ? $cfg['moverIO'] : "-c 2 -n 0";
+
     if ($options != "stop") {
         clearstatcache();
         $pid = @file_get_contents("/var/run/mover.pid");
@@ -145,8 +159,6 @@ function startMover()
     }
 
     if ($options == "stop") {
-        $niceLevel = $cfg['moverNice'] ?: "0";
-        $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
         logger("ionice $ioLevel nice -n $niceLevel $mover_str stop");
         passthru("ionice $ioLevel nice -n $niceLevel $mover_str stop");
         exit();
@@ -154,8 +166,6 @@ function startMover()
 
     if ($cron or $cfg['movenow'] == "yes") {
         //exec("echo 'running from cron or move now question is yes' >> /var/log/syslog");
-        $niceLevel = $cfg['moverNice'] ?: "0";
-        $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
 
         if ($cfg['movingThreshold'] >= 0 or $cfg['fillupThreshold'] >= 0 or $cfg['age'] == "yes" or $cfg['sizef'] == "yes" or $cfg['sparsnessf'] == "yes" or $cfg['filelistf'] == "yes" or $cfg['filetypesf'] == "yes" or $cfg['beforescript'] != '' or $cfg['afterscript'] != '' or $cfg['testmode'] == "yes") {
             $age_mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover";
@@ -166,8 +176,6 @@ function startMover()
     } else {
         //exec("echo 'Running from button' >> /var/log/syslog");
         //Default "move now" button has been hit.
-        $niceLevel = $cfg['moverNice'] ?: "0";
-        $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
         logger("ionice $ioLevel nice -n $niceLevel $mover_str $options");
         runMover("ionice $ioLevel nice -n $niceLevel $mover_str $options");
     }
