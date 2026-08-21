@@ -35,6 +35,20 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.08.21
+    - fix: Improved detection of how scheduled and manual mover runs are initiated. *(masterwishx)*
+    - fix: Added safer checks to prevent multiple mover processes from running simultaneously.
+    - fix: Updated command validation to accept only supported mover commands.
+    - fix: Improved startup behavior and process-tracking reliability.
+    - fix: Removed unsupported empty-directory move handling.
+    - fix: Updated usage information to reflect only supported commands.    
+    - new: Web‑triggered mover operations now run fully in the background to keep the interface responsive. *(masterwishx — Thanks to chodeus for this PR fix)*
+    - new: Command‑line mover operations continue to wait for completion.
+    - fix: Redirected mover output and improved execution-status logging for better reliability.
+    - fix: Added validation for mover commands and priority settings before execution.
+    - fix: Stop operations continue to run synchronously.    
+    - fix: Updated post-install setup to consistently provide the `age_mover` command instead of `mover`. *(Thanks to chodeus for helping to fix)*
+
 - 2026.08.15
     - fix: Safer handling of filenames with spaces and special characters in processTheMoves(). *(masterwishx - Thanks to Joly0 for this PR fix)*
     - fix: Removed unsafe eval; rsync now runs through a proper Bash array for stable execution.
