@@ -133,7 +133,7 @@ function startMover()
     }
 
     $allowedIO = ["-c 2 -n 0", "-c 2 -n 7", "-c 3"];
-    $niceLevel = (string) (int) ($cfg['moverNice'] ?: 0);
+    $niceLevel = (string) (int) ($cfg['moverNice'] ?? 0);
     $ioLevel = in_array($cfg['moverIO'] ?? "", $allowedIO, true) === true ? $cfg['moverIO'] : "-c 2 -n 0";
 
     if ($options != "stop") {
