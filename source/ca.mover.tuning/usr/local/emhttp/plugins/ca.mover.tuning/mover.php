@@ -14,6 +14,12 @@ if (!empty($_GET['check'])) {
     exit;
 }
 
+/**
+ * Write a message to syslog under the "move" tag, when plugin logging is enabled.
+ *
+ * @param string $string Message to log.
+ * @return void
+ */
 function logger($string)
 {
     global $cfg;
@@ -128,7 +134,7 @@ function startMover()
 
     $allowedIO = ["-c 2 -n 0", "-c 2 -n 7", "-c 3"];
     $niceLevel = (string) (int) ($cfg['moverNice'] ?: 0);
-    $ioLevel = in_array($cfg['moverIO'] ?? "", $allowedIO, true) ? $cfg['moverIO'] : "-c 2 -n 0";
+    $ioLevel = in_array($cfg['moverIO'] ?? "", $allowedIO, true) === true ? $cfg['moverIO'] : "-c 2 -n 0";
 
     if ($options != "stop") {
         clearstatcache();
