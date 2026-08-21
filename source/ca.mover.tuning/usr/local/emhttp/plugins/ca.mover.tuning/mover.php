@@ -23,10 +23,17 @@ function logger($string)
     }
 }
 
-// A mover run can last hours. Under the web UI the request stream is the
-// process's stdout, so a disconnect SIGPIPEs the mover and any before/after
-// script. Detach it instead; CLI and cron keep the blocking behaviour
-// because their stdout is already durable.
+/**
+ * Launch a mover command, detaching it when the caller is a web request.
+ *
+ * A mover run can last hours. Under the web UI the request stream is the
+ * process's stdout, so a disconnect SIGPIPEs the mover and any before/after
+ * script. CLI and cron keep the blocking behaviour because their stdout is
+ * already durable.
+ *
+ * @param string $cmd Full shell command line used to launch the mover.
+ * @return void
+ */
 function runMover($cmd)
 {
     if (PHP_SAPI === 'cli') {
