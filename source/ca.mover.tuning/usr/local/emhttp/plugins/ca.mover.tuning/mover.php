@@ -41,7 +41,7 @@ function runMover($cmd)
 
     // Wait for the run to claim the pid file so the page's status poll does
     // not race a mover that has not started yet.
-    for ($i = 0; $i < 50 && !file_exists("/var/run/mover.pid"); $i++) {
+    for ($i = 0; $i < 50 && file_exists("/var/run/mover.pid") === false; $i++) {
         usleep(100000);
     }
 }
