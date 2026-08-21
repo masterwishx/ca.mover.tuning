@@ -23,6 +23,29 @@ function logger($string)
     }
 }
 
+// A mover run can last hours. Under the web UI the request stream is the
+// process's stdout, so a disconnect SIGPIPEs the mover and any before/after
+// script. Detach it instead; CLI and cron keep the blocking behaviour
+// because their stdout is already durable.
+function runMover($cmd)
+{
+    if (PHP_SAPI === 'cli') {
+        passthru($cmd);
+        return;
+    }
+
+    logger("Detached from web request; mover output continues in syslog and the mover log");
+    // stdout is discarded rather than piped to logger: on this path age_mover's
+    // mvlogger already writes each message to syslog, so piping would double it.
+    exec($cmd . " >/dev/null 2>&1 &");
+
+    // Wait for the run to claim the pid file so the page's status poll does
+    // not race a mover that has not started yet.
+    for ($i = 0; $i < 50 && !file_exists("/var/run/mover.pid"); $i++) {
+        usleep(100000);
+    }
+}
+
 //function startMover($options = "start")
 function startMover()
 {
@@ -131,7 +154,7 @@ function startMover()
             $age_mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover";
             //exec("echo 'about to hit mover string here: $age_mover_str' >> /var/log/syslog");
             logger("ionice $ioLevel nice -n $niceLevel $age_mover_str $options");
-            passthru("ionice $ioLevel nice -n $niceLevel $age_mover_str $options");
+            runMover("ionice $ioLevel nice -n $niceLevel $age_mover_str $options");
         }
     } else {
         //exec("echo 'Running from button' >> /var/log/syslog");
@@ -139,7 +162,7 @@ function startMover()
         $niceLevel = $cfg['moverNice'] ?: "0";
         $ioLevel = $cfg['moverIO'] ?: "-c 2 -n 0";
         logger("ionice $ioLevel nice -n $niceLevel $mover_str $options");
-        passthru("ionice $ioLevel nice -n $niceLevel $mover_str $options");
+        runMover("ionice $ioLevel nice -n $niceLevel $mover_str $options");
     }
 }
 
