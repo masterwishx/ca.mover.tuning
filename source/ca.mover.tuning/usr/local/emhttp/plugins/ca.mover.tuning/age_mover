@@ -2379,7 +2379,9 @@ start() {
         if [ -f "$AFTERSCRIPT" ] && [ -x "$AFTERSCRIPT" ]; then
             mvlogger "Launching after script: $AFTERSCRIPT"
             eval "$AFTERSCRIPT"
-            mvlogger "After script finished with result: $([ $? = 0 ] && echo "OK" || echo "$?")"
+            rc=$?
+            # rc is read instead of $?: [ overwrites $? before the || branch runs.
+            mvlogger "After script finished with result: $([ "$rc" = 0 ] && echo "OK" || echo "$rc")"
         else
             mvlogger "After script file $AFTERSCRIPT does not exist or is not executable."
             mvlogger "Skipping"
