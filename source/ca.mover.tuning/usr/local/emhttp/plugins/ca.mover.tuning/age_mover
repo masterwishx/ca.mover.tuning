@@ -913,7 +913,7 @@ createFilteredFilelist() {
     mvlogger "$(titleLine 'FILTERING FILES' '*')"
 
     # create a file containing the list off all shareUseCache yes or prefer whith this format:
-    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH|FILETYPE|POOLUSED" >"$FILTERED_FILELIST"
+    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|POOLUSED|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH|FILETYPE" >"$FILTERED_FILELIST"
 
     for SHARECFG in "$CFGPATH"/*.cfg; do
         if [ -e $SOFTSTOPFILE ]; then
@@ -1506,7 +1506,7 @@ decideMoveActions() {
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
 
             # Print new header
-            printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH|FILETYPE|POOLUSED\n"
+            printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|POOLUSED|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH|FILETYPE\n"
         }
 
         NR > 1 { # Main loop, skip header line
@@ -1540,7 +1540,7 @@ decideMoveActions() {
             pool_sums[$1] += $8
 
             # Initial pool usage (passed once from bash)
-            pool_bytes_used[$1] = $13
+            pool_bytes_used[$1] = $7
 
             # Remaining used bytes after moving files
             remaining_bytes_used[$1] = pool_bytes_used[$1] - pool_sums[$1]
@@ -1598,7 +1598,7 @@ decideMoveActions() {
                     if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC || RESYNCHRONIZECACHE == "yes")) {
                         action = "sync from primary"
                         destination = "/mnt/" $2
-                        if ($12 == "d") {
+                        if ($13 == "d") {
                             pool_stats[$1]["folders_from_primary"] += 1
                         } else {
                             pool_stats[$1]["files_from_primary"] += 1
@@ -1613,7 +1613,7 @@ decideMoveActions() {
                 if (action == "move from primary") {
                     source = storage_path
                     destination = "/mnt/" $2
-                    if ($12 == "d") {
+                    if ($13 == "d") {
                         pool_stats[$1]["folders_from_primary"] += 1
                     } else {
                         pool_stats[$1]["files_from_primary"] += 1
@@ -1637,7 +1637,7 @@ decideMoveActions() {
                         if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped")) {
                             action = "sync from secondary"
                         }
-                        if ($12 == "d") {
+                        if ($13 == "d") {
                             pool_stats[$1]["folders_from_secondary"] += 1
                         } else {
                             pool_stats[$1]["files_from_secondary"] += 1
@@ -1650,14 +1650,14 @@ decideMoveActions() {
                         if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
                             destination = "/mnt/" $1
-                            if ($12 == "d") {
+                            if ($13 == "d") {
                                 pool_stats[$1]["folders_from_unattended"] += 1
                             } else {
                                 pool_stats[$1]["files_from_unattended"] += 1
                             }
                             pool_stats[$1]["total_size_from_unattended"] += $8
                             # Add a line in mover_action as intermediary step
-                            printf "%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $8, pool_sums[$1], $6, pool_bytes_used[$1], $10, $11, action, source, destination, file_path, $12
+                            printf "%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $8, pool_sums[$1], $6, pool_bytes_used[$1], $10, $11, action, source, destination, file_path, $13
                             action="sync unattended to secondary"
                             source = "/mnt/" $1
                             destination = "/mnt/" $2
