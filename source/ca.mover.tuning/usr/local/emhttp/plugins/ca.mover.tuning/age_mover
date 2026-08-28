@@ -1826,7 +1826,7 @@ processTheMoves() {
         [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
     fi
     # MOVER_ACTIONLIST header:
-    # PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH
+    # PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|FILESIZE|POOLSUM|THRESHOLD|POOLUSED|NBLINKS|INODE|ACTION|FROM|TO|FILETYPE|FILEPATH
 
     #Initialise stats:
     REMAINING_ARRAY_SIZE=$TOTALSECONDARYSIZE
@@ -1857,7 +1857,7 @@ processTheMoves() {
     # Ignore "grep '|keep on primary|' '$MOVER_ACTIONLIST'" action because it's not an action
 
     for GREP_CMD in "${GREP_CMDS[@]}"; do
-        while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD NBLINKS INODE ACTION SOURCE DESTINATION FILEPATH FILETYPE POOLUSED; do
+        while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD POOLUSED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH; do
             if [ -e $SOFTSTOPFILE ]; then
                 [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
                 return
@@ -1908,7 +1908,7 @@ processTheMoves() {
             # Get files to rsync as a real array. Passing the filenames to rsync
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
-            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f15 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
