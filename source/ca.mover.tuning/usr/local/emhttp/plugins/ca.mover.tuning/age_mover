@@ -1458,23 +1458,6 @@ createFilteredFilelist() {
         sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
         rm "$tempfile1" "$tempfile2"
     fi
-
-    # Format Filtered Filelist (always)
-    awk -F"|" '
-    BEGIN {
-        FS = OFS = "|"
-        printf "%-20s|%-20s|%-20s|%-13s|%12s|%17s|%15s|%15s|%10s|%7s|%10s|%-8s|%-60s\n",
-            "PRIMARYSTORAGENAME","SECONDARYSTORAGENAME","SHARENAME","SHAREUSECACHE",
-            "MODIFYTIME","PRIMARYSIZETHRESH","POOLUSED","FILESIZE","SPARSENESS",
-            "NBLINKS","INODE","FILETYPE","FILEPATH"
-    }
-    NR > 1 {
-        printf "%-20s|%-20s|%-20s|%-13s|%12d|%17d|%15d|%15d|%10g|%7d|%10d|%-8s|%-60s\n",
-            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13
-    }
-    ' "$FILTERED_FILELIST" > "$FILTERED_FILELIST.tmp"
-
-    mv "$FILTERED_FILELIST.tmp" "$FILTERED_FILELIST"
 }
 
 decideMoveActions() {
@@ -1521,7 +1504,7 @@ decideMoveActions() {
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
 
             # Print new header
-            printf "%-20s|%-20s|%-13s|%12s|%15s|%15s|%15s|%15s|%7s|%10s|%-20s|%-20s|%-20s|%-8s|%-60s\n",
+            printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
             "PRIMARYSTORAGENAME","SHARENAME","SHAREUSECACHE","MODIFYTIME",
             "FILESIZE","POOLSUM","THRESHOLD","POOLUSED","NBLINKS","INODE",
             "ACTION","FROM","TO","FILETYPE","FILEPATH"
@@ -1704,7 +1687,7 @@ decideMoveActions() {
             }
 
             # Create action list
-            printf "%-20s|%-20s|%-13s|%12d|%15d|%15d|%15d|%15d|%7d|%10d|%-20s|%-20s|%-20s|%-8s|%-60s\n", $1, $3, $4, $5, $8, pool_sums[$1], $6, pool_bytes_used[$1], $10, $11, action, source, destination, $12, file_path
+            printf "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $8, pool_sums[$1], $6, pool_bytes_used[$1], $10, $11, action, source, destination, $12, file_path
         }
         END {
             if (system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
