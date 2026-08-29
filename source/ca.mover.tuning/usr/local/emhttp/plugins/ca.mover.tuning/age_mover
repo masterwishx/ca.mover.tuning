@@ -1537,23 +1537,23 @@ decideMoveActions() {
                 }
             }
 
-            # Update cumulative file size for this pool
+            # Cumulative FILESIZE processed for this pool
             pool_sums[$1] += $8
 
-            # Initial pool usage (passed once from POOLUSED)
+            # Actual pool usage before mover starts (from POOLUSED)
             pool_bytes_used[$1] = $7
 
-            # Remaining used bytes after moving files
+            # Projected pool usage after this file is processed
             if ($4 == "yes") {
-                # yes = cache used only when needed → mover empties cache
+                # yes = mover empties cache → subtract cumulative moved size
                 remaining_bytes_used[$1] = pool_bytes_used[$1] - pool_sums[$1]
             }
             else if ($4 == "prefer") {
-                # prefer = cache used whenever possible → mover fills cache
+                # prefer = mover fills cache → add cumulative moved size
                 remaining_bytes_used[$1] = pool_bytes_used[$1] + pool_sums[$1]
             }
             else {
-                # only / skipped → no movement logic needed
+                # others (only/skipped) = no movement → usage unchanged
                 remaining_bytes_used[$1] = pool_bytes_used[$1]
             }
 
