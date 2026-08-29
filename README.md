@@ -35,6 +35,15 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.08.29
+    - fix: Improved mover threshold evaluation by using projected pool usage instead of raw cumulative file size. *(masterwishx)*
+    - fix: Ensured accurate pool-usage tracking across file filtering, move planning, and mover execution.
+    - fix: Corrected threshold evaluation so mover decisions reflect true projected pool usage.
+    - fix: Corrected decision logic for all share modes, including "yes", "prefer", and "only".
+    - fix: Increased consistency in threshold checks and usage calculations during mover operations.
+    - fix: Improved reliability when generating and processing mover file lists and action lists.
+    - fix: Improved after-script result handling so the correct exit status is captured and logged reliably. *(Thanks to chodeus for this PR fix)*
+
 - 2026.08.21
     - fix: Improved detection of how scheduled and manual mover runs are initiated. *(masterwishx)*
     - fix: Added safer checks to prevent multiple mover processes from running simultaneously.

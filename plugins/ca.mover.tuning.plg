@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.08.21">
-<!ENTITY md5       "3ca6f72ef4871adb927531e20a85945e">
+<!ENTITY version   "2026.08.29">
+<!ENTITY md5       "d90f4f70a45ebb576080e5b3a4688aab">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -15,6 +15,15 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.08.29
+- fix: Improved mover threshold evaluation by using projected pool usage instead of raw cumulative file size. *(masterwishx)*
+- fix: Ensured accurate pool-usage tracking across file filtering, move planning, and mover execution.
+- fix: Corrected threshold evaluation so mover decisions reflect true projected pool usage.
+- fix: Corrected decision logic for all share modes, including "yes", "prefer", and "only".
+- fix: Increased consistency in threshold checks and usage calculations during mover operations.
+- fix: Improved reliability when generating and processing mover file lists and action lists.
+- fix: Improved after-script result handling so the correct exit status is captured and logged reliably. *(Thanks to chodeus for this PR fix)*
+
 ###2026.08.21
 - fix: Improved detection of how scheduled and manual mover runs are initiated. *(masterwishx)*
 - fix: Added safer checks to prevent multiple mover processes from running simultaneously.
