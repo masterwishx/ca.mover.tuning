@@ -913,7 +913,7 @@ createFilteredFilelist() {
     mvlogger "$(titleLine 'FILTERING FILES' '*')"
 
     # create a file containing the list off all shareUseCache yes or prefer whith this format:
-    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH|FILETYPE" >"$FILTERED_FILELIST"
+    echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|PRIMARYSIZETHRESH|POOLUSED|FILESIZE|SPARSENESS|NBLINKS|INODE|FILETYPE|FILEPATH" >"$FILTERED_FILELIST"
 
     for SHARECFG in "$CFGPATH"/*.cfg; do
         if [ -e $SOFTSTOPFILE ]; then
@@ -1178,7 +1178,7 @@ createFilteredFilelist() {
                         CACHESHARERESERVEDSPACE=0
                     fi
                 fi
-                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$CACHESHARERESERVEDSPACE|0|0|0|${SHAREPATH}|d" >>"$FILTERED_FILELIST"
+                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|only|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$CACHESHARERESERVEDSPACE|0|0|0|d|${SHAREPATH}" >>"$FILTERED_FILELIST"
                 mvlogger "$PRIMARYSTORAGENAME/$SHARENAME used: $(bytes_to_human "$CACHESHARERESERVEDSPACE")"
                 continue
             fi
@@ -1255,7 +1255,7 @@ createFilteredFilelist() {
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
             HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du -ch --files0-from=- | awk '/total$/ {print $1}' | human_to_bytes)
-            echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$HIDDENFILES_RESERVED_SPACE|0|0|0|${SHAREPATH}/ hidden files|f" >>"$FILTERED_FILELIST"
+            echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$HIDDENFILES_RESERVED_SPACE|0|0|0|f|${SHAREPATH}/ hidden files" >>"$FILTERED_FILELIST"
             mvlogger "    Hidden files are using $(bytes_to_human "$HIDDENFILES_RESERVED_SPACE")"
         fi
 
@@ -1285,7 +1285,7 @@ createFilteredFilelist() {
                     mvDebuglogger "${skipped_path} - is a Wildcard Pattern" "Skipped Path"
                     mvlogger "Skipping wildcard pattern: ${skipped_path} (size not tracked)"
                     FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
-                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|0|0|0|0|${skipped_path}|f" >>"$FILTERED_FILELIST"
+                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|0|0|0|0|f|${skipped_path}" >>"$FILTERED_FILELIST"
                     continue
                 fi
 
@@ -1316,7 +1316,7 @@ createFilteredFilelist() {
                 fi
 
                 if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
-                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|${skipped_path}|$filetype" >>"$FILTERED_FILELIST"
+                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|$filetype|${skipped_path}" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
                 else
                     mvlogger "Error calculating size for $skipped_path"
@@ -1332,7 +1332,7 @@ createFilteredFilelist() {
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name '*.$ext'"
                 if SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"; then
-                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|$SHAREPATH/**/*.$ext|f" >>"$FILTERED_FILELIST"
+                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|f|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
                     mvlogger "Error calculating size for ${globalSkipFileTypes}"
@@ -1342,26 +1342,25 @@ createFilteredFilelist() {
         fi
 
         #Add Size to find string and pass to awk to modify some fields
-        #FINDSTR+=" -printf '%T@|%s|%S|%n|%i|%p|\0' | awk -v RS='\0' -v FS='|' -v SPARSENESS=\$SPARSENESS -v PRIMARYSTORAGENAME=\$PRIMARYSTORAGENAME -v SECONDARYSTORAGENAME=\$SECONDARYSTORAGENAME -v SHARENAME=\$SHARENAME -v SHAREUSECACHE=\$SHAREUSECACHE -v PRIMARYSIZETHRESH=\$PRIMARYSIZETHRESH"
-        # Fix shares space issue but same code as above
-        FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%p|%y|\0'"
+        FINDSTR="$FINDSTR -printf '%T@|%s|%S|%n|%i|%y|%p|\0'"
         FINDSTR="$FINDSTR | awk -v RS='\0' -v FS='|' \
         -v SPARSENESS='$SPARSENESS' \
         -v PRIMARYSTORAGENAME='$PRIMARYSTORAGENAME' \
         -v SECONDARYSTORAGENAME='$SECONDARYSTORAGENAME' \
         -v SHARENAME='$SHARENAME' \
         -v SHAREUSECACHE='$SHAREUSECACHE' \
-        -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH'"
+        -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH' \
+        -v POOLBYTEUSED='$POOLBYTEUSED'"
 
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
-            FINDSTR="$FINDSTR ' \$7 == \"d\" || \$3 > (SPARSENESS / 10) {"
+            FINDSTR="$FINDSTR ' \$6 == \"d\" || \$3 > (SPARSENESS / 10) {"
         else
             FINDSTR="$FINDSTR ' {"
         fi
         # Get Birthtime with stat if CTIME option enabled
         if [ "$CTIME" == "yes" ]; then
-            FINDSTR="$FINDSTR cmd=\"stat -c%W \\\"\"\$6\"\\\"\";
+            FINDSTR="$FINDSTR cmd=\"stat -c%W \\\"\"\$7\"\\\"\";
                 cmd | getline result;
                 close(cmd);
                 sub(/\\n\$/, \"\", result);
@@ -1371,7 +1370,7 @@ createFilteredFilelist() {
 
         # Get Birthtime with stat if ATIME option enabled
         if [ "$ATIME" == "yes" ]; then
-            FINDSTR="$FINDSTR cmd=\"stat -c%X \\\"\"\$6\"\\\"\";
+            FINDSTR="$FINDSTR cmd=\"stat -c%X \\\"\"\$7\"\\\"\";
                 cmd | getline result;
                 close(cmd);
                 sub(/\\n\$/, \"\", result);
@@ -1388,7 +1387,7 @@ createFilteredFilelist() {
         #                \$2 = result;
         #            "
         #        fi
-        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%g|%d|%d|%s|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, \$2, \$3, \$4, \$5, \$6, \$7}'"
+        FINDSTR="$FINDSTR printf \"%s|%s|%s|%s|%d|%d|%d|%d|%g|%d|%d|%s|%s\\n\", PRIMARYSTORAGENAME, SECONDARYSTORAGENAME, SHARENAME, SHAREUSECACHE, \$1, PRIMARYSIZETHRESH, POOLBYTEUSED, \$2, \$3, \$4, \$5, \$6, \$7}'"
 
         # Send FINDSTR to debug
         mvDebuglogger "FINDSTR: $FINDSTR" "[$SHARENAME] share Find Function"
@@ -1406,7 +1405,7 @@ createFilteredFilelist() {
     done
 
     # Sort the file list by PRIMARYSTORAGENAME, shareusecache, creation/modification time, and inode, keeping /mnt/disk at the end
-    sort -t '|' -k1,1 -k4,4 -k5,5nr -k10,10 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
+    sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
     # Need to remove duplicate (cache and array)
     if grep -q "/mnt/disk" "$FILTERED_FILELIST"; then
         mvlogger "$(titleLine 'Optimizing Filtered Filelist' '-')"
@@ -1440,23 +1439,23 @@ createFilteredFilelist() {
                 previous_inode = 0
 
                 # Print new header
-                printf "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|PRIMARYSIZETHRESH|FILESIZE|SPARSENESS|NBLINKS|INODE|FILEPATH|FILETYPE\n"
+                printf "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|PRIMARYSIZETHRESH|POOLUSED|FILESIZE|SPARSENESS|NBLINKS|INODE|FILETYPE|FILEPATH\n"
             }
 
             NR > 1 { # Main loop, skip header line
                 if (system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
                     exit 1
                 }
-                file_path = extract_path($11)
+                file_path = extract_path($13)
 
                 # Handle duplicates
-                key = $3 "|" $5 "|" $7 "|" file_path
+                key = $3 "|" $5 "|" $8 "|" file_path
                 if (! is_duplicate(key)) {
-                    printf "%s|%s|%s|%s|%d|%d|%d|%g|%d|%d|%s|%s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+                    printf "%s|%s|%s|%s|%d|%d|%d|%d|%g|%d|%d|%s|%s\n", $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
                 }
             }' >"$FILTERED_FILELIST"
         mvlogger "Sorting"
-        sort -t '|' -k1,1 -k4,4 -k5,5nr -k10,10 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
+        sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
         rm "$tempfile1" "$tempfile2"
     fi
 }
@@ -1484,8 +1483,8 @@ decideMoveActions() {
     mvlogger "Deciding the action (move/sync/keep) for each file. There are $(grep -c "/mnt" "$FILTERED_FILELIST") files, it can take a while..."
 
     ## Proceed with files
-    # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFICATIONTIME
-    # $6:PRIMARYSIZETHRESH $7:FILESIZE $8:SPARSENESS $9:NBLINKS $10:INODE $11:FILEPATH $12:FILETYPE
+    # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFYTIME
+    # $6:PRIMARYSIZETHRESH $7:POOLUSED $8:FILESIZE $9:SPARSENESS $10:NBLINKS $11:INODE $12:FILETYPE $13:FILEPATH
 
     awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
         BEGIN {
@@ -1505,7 +1504,10 @@ decideMoveActions() {
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
 
             # Print new header
-            printf "PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH|FILETYPE\n"
+            printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
+            "PRIMARYSTORAGENAME","SHARENAME","SHAREUSECACHE","MODIFYTIME",
+            "FILESIZE","POOLSUM","THRESHOLD","POOLUSED","NBLINKS","INODE",
+            "ACTION","FROM","TO","FILETYPE","FILEPATH"
         }
 
         NR > 1 { # Main loop, skip header line
@@ -1514,7 +1516,7 @@ decideMoveActions() {
             }
 
             # Extract the part after the first three slashes (/mnt/pool/) in the eleventh field (filepath)
-            split($11, path_parts, "/")
+            split($13, path_parts, "/")
             storage_path = path_parts[1] "/" path_parts[2] "/" path_parts[3]
             storage_pool = path_parts[3]
             file_path = ""
@@ -1526,17 +1528,34 @@ decideMoveActions() {
             }
 
             # Handle hardlinks
-            if ($9 > 1) {
-                key = $1 "|" $2 "|" $3 "|" $10
+            if ($10 > 1) {
+                key = $1 "|" $2 "|" $3 "|" $11
                 if (prev[key]) {
-                    $7 = 0
+                    $8 = 0
                 } else {
                     prev[key] = 1
                 }
             }
 
-            # Update pool sum (use pool_sums[$1])
-            pool_sums[$1] += $7
+            # Cumulative FILESIZE processed for this pool
+            pool_sums[$1] += $8
+
+            # Actual pool usage before mover starts (from POOLUSED)
+            pool_bytes_used[$1] = $7
+
+            # Projected pool usage after this file is processed
+            if ($4 == "yes") {
+                # yes = mover empties cache → subtract cumulative moved size
+                remaining_bytes_used[$1] = pool_bytes_used[$1] - pool_sums[$1]
+            }
+            else if ($4 == "prefer") {
+                # prefer = mover fills cache → add cumulative moved size
+                remaining_bytes_used[$1] = pool_bytes_used[$1] + pool_sums[$1]
+            }
+            else {
+                # others (only/skipped) = no movement → usage unchanged
+                remaining_bytes_used[$1] = pool_bytes_used[$1]
+            }
 
             ### Check if share has Sync override ###
             # Set current sharename
@@ -1580,7 +1599,7 @@ decideMoveActions() {
             # Take decision
             if (storage_pool == $1) {
                 # Make decision to move or keep:
-                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && (pool_sums[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
+                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
 
                 if (action == "keep on primary") {
                     source = storage_path
@@ -1592,7 +1611,7 @@ decideMoveActions() {
                         } else {
                             pool_stats[$1]["files_from_primary"] += 1
                         }
-                            pool_stats[$1]["total_size_from_primary"] += $7
+                            pool_stats[$1]["total_size_from_primary"] += $8
                     } else {
                         destination = "none"
                     }
@@ -1607,12 +1626,12 @@ decideMoveActions() {
                     } else {
                         pool_stats[$1]["files_from_primary"] += 1
                     }
-                    pool_stats[$1]["total_size_from_primary"] += $7
+                    pool_stats[$1]["total_size_from_primary"] += $8
                 }
             } else {
                 if (storage_pool == "user" || ($2 == "user0" && storage_pool ~ "disk")) {
                     # Make decision to move or keep:
-                    action = (($4 == "only" && REBALANCESHARES == "yes") || ($4 == "prefer" && pool_sums[$1] <= $6 && (AGE == -1 || AGE >= 0))) ? "move from secondary" : "keep on secondary"
+                    action = (($4 == "only" && REBALANCESHARES == "yes") || ($4 == "prefer" && remaining_bytes_used[$1] <= $6 && (AGE == -1 || AGE >= 0))) ? "move from secondary" : "keep on secondary"
 
                     if (action == "keep on secondary") {
                         source = storage_path
@@ -1631,11 +1650,11 @@ decideMoveActions() {
                         } else {
                             pool_stats[$1]["files_from_secondary"] += 1
                         }
-                        pool_stats[$1]["total_size_from_secondary"] += $7
+                        pool_stats[$1]["total_size_from_secondary"] += $8
                     }
                 } else {
                     if (REBALANCESHARES == "yes") {
-                        action = ($4 == "only" || ($4 == "prefer" && pool_sums[$1] <= $6)) ? "move unattended to primary" : "move unattended to secondary"
+                        action = ($4 == "only" || ($4 == "prefer" && remaining_bytes_used[$1] <= $6)) ? "move unattended to primary" : "move unattended to secondary"
                         if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
                             destination = "/mnt/" $1
@@ -1644,9 +1663,9 @@ decideMoveActions() {
                             } else {
                                 pool_stats[$1]["files_from_unattended"] += 1
                             }
-                            pool_stats[$1]["total_size_from_unattended"] += $7
+                            pool_stats[$1]["total_size_from_unattended"] += $8
                             # Add a line in mover_action as intermediary step
-                            printf "%s|%s|%s|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $7, pool_sums[$1], $6, $9, $10, action, source, destination, file_path, $12
+                            printf "%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $8, pool_sums[$1], $6, remaining_bytes_used[$1], $10, $11, action, source, destination, $12, file_path
                             action="sync unattended to secondary"
                             source = "/mnt/" $1
                             destination = "/mnt/" $2
@@ -1665,7 +1684,7 @@ decideMoveActions() {
                         } else {
                             pool_stats[$1]["files_from_unattended"] += 1
                         }    
-                        pool_stats[$1]["total_size_from_unattended"] += $7
+                        pool_stats[$1]["total_size_from_unattended"] += $8
                     } else {
                         action="keep misplaced" #If not on primary nor secondary, file will be tagged misplaced                
                         source = storage_path
@@ -1675,7 +1694,7 @@ decideMoveActions() {
             }
 
             # Create action list
-            printf "%s|%s|%s|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $7, pool_sums[$1], $6, $9, $10, action, source, destination, file_path, $12
+            printf "%s|%s|%s|%d|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $8, pool_sums[$1], $6, remaining_bytes_used[$1], $10, $11, action, source, destination, $12, file_path
         }
         END {
             if (system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
@@ -1797,7 +1816,7 @@ processTheMoves() {
         [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
     fi
     # MOVER_ACTIONLIST header:
-    # PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFICATIONTIME|FILESIZE|POOLSUM|THRESHOLD|NBLINKS|INODE|ACTION|FROM|TO|FILEPATH
+    # PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|FILESIZE|POOLSUM|THRESHOLD|POOLUSED|NBLINKS|INODE|ACTION|FROM|TO|FILETYPE|FILEPATH
 
     #Initialise stats:
     REMAINING_ARRAY_SIZE=$TOTALSECONDARYSIZE
@@ -1828,7 +1847,7 @@ processTheMoves() {
     # Ignore "grep '|keep on primary|' '$MOVER_ACTIONLIST'" action because it's not an action
 
     for GREP_CMD in "${GREP_CMDS[@]}"; do
-        while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFICATIONTIME FILESIZE POOLSUM THRESHOLD NBLINKS INODE ACTION SOURCE DESTINATION FILEPATH FILETYPE; do
+        while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD POOLUSED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH; do
             if [ -e $SOFTSTOPFILE ]; then
                 [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
                 return
@@ -1879,7 +1898,7 @@ processTheMoves() {
             # Get files to rsync as a real array. Passing the filenames to rsync
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
-            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFICATIONTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f13 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f15 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
