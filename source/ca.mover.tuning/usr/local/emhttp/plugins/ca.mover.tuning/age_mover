@@ -1301,6 +1301,8 @@ createFilteredFilelist() {
 
                     if [[ -d "${skipped_path}" ]]; then
                         mvDebuglogger "${skipped_path} - is a Folder" "Skipped Path"
+                        # -path "dir/*" matches the contents only, never the dir node
+                        FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\""
                         # Add /* at the end for better reading in Mover_action file
                         skipped_path="${skipped_path}/*"
                         filetype="d"
