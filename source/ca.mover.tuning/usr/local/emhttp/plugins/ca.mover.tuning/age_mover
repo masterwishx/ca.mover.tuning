@@ -230,11 +230,11 @@ human_to_bytes() {
     numfmt --from=iec "$input"
 }
 
-# Skip-list lines belonging to this share. Matched literally, not as a regex:
-# a share name may contain regex metacharacters, and an unanchored substring
-# also matches sibling shares that merely start with the same text.
+# Skip-list lines for this share. Literal match, not regex: share names may hold
+# regex metacharacters, and an unanchored substring also matches sibling shares.
 skiplist_share_lines() {
     awk -v pfx="/mnt/$1/$2" '
+        { sub(/\r$/, "") }   # the gate calls this before the CRLF fix below
         index($0, pfx) == 1 && (length($0) == length(pfx) || substr($0, length(pfx) + 1, 1) == "/")
     ' "$3"
 }
