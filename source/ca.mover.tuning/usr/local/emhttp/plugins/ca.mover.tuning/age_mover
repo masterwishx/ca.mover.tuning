@@ -1335,8 +1335,10 @@ createFilteredFilelist() {
             done <<<"$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")"
 
             if [ ${#SKIPPED_MEASURE_PATHS[@]} -gt 0 ]; then
-                TOTAL_SKIPPED_PATH_RESERVED_SPACE="$(printf '%s\0' "${SKIPPED_MEASURE_PATHS[@]}" | du -sc --block-size=1 --files0-from=- 2>/dev/null | tail -n1 | cut -f1)"
-                if [ -z "$TOTAL_SKIPPED_PATH_RESERVED_SPACE" ]; then
+                # du exits nonzero on a partial read while still printing a total
+                if SKIPPED_PATHS_DU="$(printf '%s\0' "${SKIPPED_MEASURE_PATHS[@]}" | du -sc --block-size=1 --files0-from=- 2>/dev/null)"; then
+                    TOTAL_SKIPPED_PATH_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_PATHS_DU" | cut -f1)
+                else
                     mvlogger "Error calculating size for ${SKIPFILESLIST}"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
                 fi
@@ -1351,7 +1353,8 @@ createFilteredFilelist() {
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name '*.$ext'"
-                if SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null | tail -n1 | cut -f1)" && [ -n "$SKIPPED_FILETYPES_RESERVED_SPACE" ]; then
+                if SKIPPED_FILETYPES_DU="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null)" &&
+                    SKIPPED_FILETYPES_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_FILETYPES_DU" | cut -f1) && [ -n "$SKIPPED_FILETYPES_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|f|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
@@ -1673,7 +1676,7 @@ decideMoveActions() {
                         pool_stats[$1]["total_size_from_secondary"] += $8
                     }
                 } else {
-                    if (REBALANCESHARES == "yes") {
+                    if (REBALANCESHARES == "yes" && $4 != "skipped") {
                         action = ($4 == "only" || ($4 == "prefer" && remaining_bytes_used[$1] <= $6)) ? "move unattended to primary" : "move unattended to secondary"
                         if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
