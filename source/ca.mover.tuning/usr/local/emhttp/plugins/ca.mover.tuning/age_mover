@@ -233,7 +233,9 @@ human_to_bytes() {
 # Skip-list lines for this share. Literal match, not regex: share names may hold
 # regex metacharacters, and an unanchored substring also matches sibling shares.
 skiplist_share_lines() {
-    awk -v pfx="/mnt/$1/$2" '
+    # prefix via ENVIRON, not -v: awk expands escape sequences in a -v value
+    SKIPLIST_PFX="/mnt/$1/$2" awk '
+        BEGIN { pfx = ENVIRON["SKIPLIST_PFX"] }
         { sub(/\r$/, "") }   # the gate calls this before the CRLF fix below
         index($0, pfx) == 1 && (length($0) == length(pfx) || substr($0, length(pfx) + 1, 1) == "/")
     ' "$3"
