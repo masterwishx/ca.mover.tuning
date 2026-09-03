@@ -258,6 +258,13 @@ validate_filename() {
     return 0
 }
 
+# find's -path glob and the eval each strip one level, so a literal backslash
+# needs four. Order matters: backslash first, then '['.
+escape_find_path() {
+    FIND_PATH_ESC=${1//\\/\\\\\\\\}
+    FIND_PATH_ESC=${FIND_PATH_ESC//[/\\[}
+}
+
 # Function for verbose output and logging
 # $1 = message text
 # $2 = optional notify level
@@ -1284,7 +1291,8 @@ createFilteredFilelist() {
                 if [[ "$lastcomponent" == *"*"* ]]; then
                     mvDebuglogger "${skipped_path} - is a Wildcard Pattern" "Skipped Path"
                     mvlogger "Skipping wildcard pattern: ${skipped_path} (size not tracked)"
-                    FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
+                    escape_find_path "$skipped_path"
+                    FINDSTR="$FINDSTR -not -path \"$FIND_PATH_ESC\""
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|0|0|0|0|f|${skipped_path}" >>"$FILTERED_FILELIST"
                     continue
                 fi
@@ -1302,7 +1310,8 @@ createFilteredFilelist() {
                     if [[ -d "${skipped_path}" ]]; then
                         mvDebuglogger "${skipped_path} - is a Folder" "Skipped Path"
                         # -path "dir/*" matches the contents only, never the dir node
-                        FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\""
+                        escape_find_path "$skipped_path"
+                        FINDSTR="$FINDSTR -not -path \"$FIND_PATH_ESC\""
                         # Add /* at the end for better reading in Mover_action file
                         skipped_path="${skipped_path}/*"
                         filetype="d"
@@ -1311,7 +1320,8 @@ createFilteredFilelist() {
                         filetype="f"
                     fi
 
-                    FINDSTR="$FINDSTR -not -path \"${skipped_path//[/\\[}\"" # fixed when folder contain '['
+                    escape_find_path "$skipped_path"
+                    FINDSTR="$FINDSTR -not -path \"$FIND_PATH_ESC\""
                 else
                     mvDebuglogger "${skipped_path} - does not exist?" "Skipped Path"
                     continue
