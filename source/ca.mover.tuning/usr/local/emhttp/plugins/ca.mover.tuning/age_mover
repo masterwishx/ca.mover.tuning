@@ -2367,9 +2367,15 @@ start() {
         mvlogger "Warning: Moving thresholds are equal. No action will be taken because the thresholds do not provide a gap."
     fi
 
-    # If $MOVINGPCTTHRESHOLD - $FREEINGPCTLIMIT <= 5, log a warning message indicating that the mover will possibly not move due to the thresholds low gap beetween.
+    # If the gap is exactly 5, the smallest the settings page can offer, warn that it may not be enough.
     if [ "$MOVINGPCTTHRESHOLD" -eq "$((FREEINGPCTLIMIT + 5))" ]; then
         mvlogger "Warning: The mover will possibly not proceed due to the low gap between thresholds."
+    fi
+
+    # The settings page cannot offer this combination, so it only arrives by saving a
+    # lower moving threshold while the old freeing value is still selected.
+    if [ "$FREEINGPCTLIMIT" -gt "$MOVINGPCTTHRESHOLD" ]; then
+        mvlogger "Warning: Freeing threshold ($FREEINGPCTLIMIT%) is above the moving threshold ($MOVINGPCTTHRESHOLD%), so no file can be moved. The settings page will show the freeing threshold as $MOVINGPCTTHRESHOLD% until it is saved again."
     fi
 
     # Only start if cache enabled and present
@@ -2384,10 +2390,10 @@ start() {
         exit 5
     fi
 
-    #Delete helper files over 5 days old.
+    #Delete list files over $LISTFILESAGE days old.
     find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +"$LISTFILESAGE" -name '*.list' -delete
 
-    #Delete Mover Log and txt files over 10 days old.
+    #Delete Mover Log and txt files over $LOGFILESAGE days old.
     find "${LOGFOLDER}"/ca.mover.tuning/* -daystart -mtime +"$LOGFILESAGE" \( -name '*.log' -o -name '*.txt' \) -delete
 
     #Delete Mover List files with 0 lines.
