@@ -1013,8 +1013,8 @@ createFilteredFilelist() {
 
         # Calculate primary storage size thresholds in bytes
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            # Calculate the real free space by considering an upper limit of fillup (95%) minus pool used usage for later calculations
-            PRIMARYSIZETHRESH=$(((POOLSIZE - POOLBYTEUSED) * PREFER_FILLUPPCTLIMIT / 100))
+            # absolute pool-usage target to fill up to, not a share of free space
+            PRIMARYSIZETHRESH=$((POOLSIZE * PREFER_FILLUPPCTLIMIT / 100))
             MOVESIZETHRESH=$((POOLSIZE * PREFER_MOVINGPCTTHRESHOLD / 100))
         else
             PRIMARYSIZETHRESH=$((POOLSIZE * FREEINGPCTLIMIT / 100))
@@ -1493,6 +1493,13 @@ createFilteredFilelist() {
         sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
         rm "$tempfile1" "$tempfile2"
     fi
+
+    # cache:yes is walked oldest-first so projected pool usage sheds the oldest files;
+    # every other mode keeps newest-first (cache:prefer primes the newest)
+    reorderfile=$(mktemp)
+    awk -F'|' 'NR==1 || $4!="yes"' "$FILTERED_FILELIST" >"$reorderfile"
+    awk -F'|' 'NR>1 && $4=="yes"' "$FILTERED_FILELIST" | sort -t '|' -k1,1 -k5,5n -k11,11 >>"$reorderfile"
+    mv -f "$reorderfile" "$FILTERED_FILELIST"
 }
 
 decideMoveActions() {
@@ -1578,19 +1585,10 @@ decideMoveActions() {
             # Actual pool usage before mover starts (from POOLUSED)
             pool_bytes_used[$1] = $7
 
-            # Projected pool usage after this file is processed
-            if ($4 == "yes") {
-                # yes = mover empties cache → subtract cumulative moved size
-                remaining_bytes_used[$1] = pool_bytes_used[$1] - pool_sums[$1]
-            }
-            else if ($4 == "prefer") {
-                # prefer = mover fills cache → add cumulative moved size
-                remaining_bytes_used[$1] = pool_bytes_used[$1] + pool_sums[$1]
-            }
-            else {
-                # others (only/skipped) = no movement → usage unchanged
-                remaining_bytes_used[$1] = pool_bytes_used[$1]
-            }
+            # Projected pool usage from the moves planned so far. net_delta is signed -
+            # arrivals on the primary add, departures subtract - so a pool carrying both
+            # cache:yes and cache:prefer shares stays consistent across both.
+            remaining_bytes_used[$1] = pool_bytes_used[$1] + net_delta[$1]
 
             ### Check if share has Sync override ###
             # Set current sharename
@@ -1656,6 +1654,7 @@ decideMoveActions() {
                 if (action == "move from primary") {
                     source = storage_path
                     destination = "/mnt/" $2
+                    net_delta[$1] -= $8
                     if ($12 == "d") {
                         pool_stats[$1]["folders_from_primary"] += 1
                     } else {
@@ -1677,6 +1676,7 @@ decideMoveActions() {
                     if (action == "move from secondary") {
                         source = storage_path
                         destination = "/mnt/" $1
+                        net_delta[$1] += $8
                         if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped")) {
                             action = "sync from secondary"
                         }
@@ -1693,6 +1693,8 @@ decideMoveActions() {
                         if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
                             destination = "/mnt/" $1
+                            # the follow-up is a sync, which keeps the file on the primary
+                            net_delta[$1] += $8
                             if ($12 == "d") {
                                 pool_stats[$1]["folders_from_unattended"] += 1
                             } else {
@@ -1708,6 +1710,7 @@ decideMoveActions() {
                             if (action == "move unattended to primary") {
                                 source = storage_path
                                 destination = "/mnt/" $1
+                                net_delta[$1] += $8
                             } else {
                                 action = "move unattended to secondary"
                                 source = storage_path
