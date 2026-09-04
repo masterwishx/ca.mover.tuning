@@ -150,8 +150,8 @@ if [ -d "$LOGFOLDER" ]; then
         done
 fi
 
-# POOLPCTUSED uses used/(used+avail), the freeing target uses size; they differ
-# on btrfs, so record both denominators.
+# size and used+avail differ on btrfs, and the thresholds are derived from them,
+# so record both rather than a single percentage.
 {
     for pool in $POOLNAMES; do
         [ -d "/mnt/$pool" ] || continue
