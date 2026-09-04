@@ -1,0 +1,88 @@
+name: Build Mover Tuning Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: "Version suffix (optional: a, b, c)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install build tools
+      run: |
+        sudo apt update
+        sudo apt install -y rsync makepkg
+
+    - name: Prepare directories
+      run: |
+        export PLUGIN_NAME="ca.mover.tuning"
+        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
+        mkdir -p "$COMPILE_DIR"
+
+        echo "Syncing plugin source to build directory..."
+        rsync -a --exclude='.git/' --exclude='.vscode/' "$GITHUB_WORKSPACE/$PLUGIN_NAME/" "$COMPILE_DIR/$PLUGIN_NAME/"
+
+    - name: Run pkg_build.sh
+      run: |
+        export PLUGIN_NAME="ca.mover.tuning"
+        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
+        export DATE_VERSION="${{ github.event.inputs.suffix }}"
+
+        cd "$COMPILE_DIR/$PLUGIN_NAME/source/$PLUGIN_NAME"
+        bash pkg_build.sh "$COMPILE_DIR" "$DATE_VERSION"
+
+    - name: Validate build
+      id: validate
+      run: |
+        export PLUGIN_NAME="ca.mover.tuning"
+        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
+
+        built_package=$(ls -t "$COMPILE_DIR/$PLUGIN_NAME/archive" | head -1)
+        echo "package=$built_package" >> $GITHUB_OUTPUT
+
+        if [ -z "$built_package" ]; then
+          echo "No package found"
+          exit 1
+        fi
+
+        FILE_TIMESTAMP=$(date -r "$COMPILE_DIR/$PLUGIN_NAME/archive/$built_package" +%s)
+        CURRENT_TIMESTAMP=$(date +%s)
+        TIME_DIFF=$((CURRENT_TIMESTAMP - FILE_TIMESTAMP))
+
+        if [ $TIME_DIFF -le 300 ]; then
+          echo "Plugin compiled successfully"
+        else
+          echo "Plugin compilation failed: file older than 5 minutes"
+          exit 1
+        fi
+
+    - name: Copy updated files back to repo
+      run: |
+        export PLUGIN_NAME="ca.mover.tuning"
+        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
+
+        cp -a "$COMPILE_DIR/$PLUGIN_NAME/README.md" "$GITHUB_WORKSPACE/$PLUGIN_NAME/"
+        cp -a "$COMPILE_DIR/$PLUGIN_NAME/archive/" "$GITHUB_WORKSPACE/$PLUGIN_NAME/"
+        cp -a "$COMPILE_DIR/$PLUGIN_NAME/plugins/" "$GITHUB_WORKSPACE/$PLUGIN_NAME/"
+        cp -a "$COMPILE_DIR/$PLUGIN_NAME/source/$PLUGIN_NAME/usr/local/emhttp/plugins/$PLUGIN_NAME/default.cfg" \
+              "$GITHUB_WORKSPACE/$PLUGIN_NAME/source/$PLUGIN_NAME/usr/local/emhttp/plugins/$PLUGIN_NAME/default.cfg"
+
+    - name: Commit updated files
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Auto-build: ${{ steps.validate.outputs.package }}"
+        branch: main
+
+    - name: Upload built package artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mover-tuning-package
+        path: build/ca.mover.tuning/archive/*.txz
