@@ -15,8 +15,88 @@ LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)/ca.mover.tuning
 # Get the filelistv from config
 SKIPFILESLIST=$(grep "filelistv=" "$CONFIG" | cut -d '"' -f 2)
 
+# Newest N files to take from the log folder, so a per-minute schedule cannot
+# turn a week of retained logs into a package nobody can attach to a forum post.
+MAXLOGFILES=2000
+
 DEBUGTIME="$(date '+%Y%m%d-%H%M' 2>/dev/null)"
 DEBUGNAME="ca.mover.tuning-debug-${DEBUGTIME}.zip"
+
+# Unraid's own diagnostics mangles share names (DATA -> D--A). The plugin's logs
+# carry the real names and full paths, which undid that in the same zip.
+ANONAWK="$(mktemp)"
+trap 'rm -f "$ANONAWK"' EXIT
+cat >"$ANONAWK" <<'ANONEOF'
+function dashes(k,   i, r) { r = ""; for (i = 0; i < k; i++) r = r "-"; return r }
+
+function mangle(s,   n) {
+    n = length(s)
+    if (n <= 2) return s
+    return substr(s, 1, 1) dashes(n - 2) substr(s, n, 1)
+}
+
+# keeps a trailing extension: the filetype filters are diagnosed from it
+function mangle_leaf(s,   i) {
+    if (s == "." || s == ".." || s == "") return s
+    i = match(s, /\.[A-Za-z0-9]{1,8}$/)
+    if (i > 0) return mangle(substr(s, 1, i - 1)) substr(s, i)
+    return mangle(s)
+}
+
+# /mnt and the pool stay readable, everything below the pool is mangled
+function mangle_path(p,   parts, n, i, out) {
+    n = split(p, parts, "/")
+    out = ""
+    for (i = 1; i <= n; i++) {
+        if (i <= 3 || parts[i] in pool) out = out (i > 1 ? "/" : "") parts[i]
+        else out = out "/" mangle_leaf(parts[i])
+    }
+    return out
+}
+
+BEGIN {
+    split(POOLS, p, " ");  for (i in p) pool[p[i]] = 1
+    split(SHARES, s, " "); for (i in s) if (length(s[i]) > 2) share[s[i]] = mangle(s[i])
+}
+
+{
+    line = $0
+    out = ""
+    # st/len are copied first: mangle_leaf runs its own match() and would
+    # otherwise clobber the RSTART/RLENGTH this loop advances on
+    while (match(line, /\/mnt\/[^ \t"'|,;)>]*/)) {
+        st = RSTART; len = RLENGTH
+        out = out substr(line, 1, st - 1) mangle_path(substr(line, st, len))
+        line = substr(line, st + len)
+    }
+    line = out line
+
+    # Share names also appear bare - "[DATA] share", "Name: DATA - Path:",
+    # "SHARENAME='DATA'", the SHARENAME column. Replacing every occurrence is
+    # blunt and will catch a share name that is also an ordinary word, but a
+    # missed context is a leak and a mangled word is only untidy.
+    for (k in share) gsub("\\<" k "\\>", share[k], line)
+    print line
+}
+ANONEOF
+
+# pools stay readable, shares get mangled
+POOLNAMES="user user0 $(for f in /boot/config/pools/*.cfg; do [ -f "$f" ] && basename "$f" .cfg; done | tr '\n' ' ')"
+SHARENAMES="$(for f in /boot/config/shares/*.cfg; do [ -f "$f" ] && basename "$f" .cfg; done | tr '\n' ' ')"
+
+anonymize_tree() {
+    find "$1" -type f -print0 | while IFS= read -r -d '' f; do
+        gawk -v POOLS="$POOLNAMES" -v SHARES="$SHARENAMES" -f "$ANONAWK" "$f" >"$f.anon" 2>/dev/null &&
+            mv -f "$f.anon" "$f" || rm -f "$f.anon"
+    done
+    # share names appear in the override cfg filenames too
+    for f in "$1"/shareOverrideConfig/*.cfg.txt; do
+        [ -f "$f" ] || continue
+        b="$(basename "$f" .cfg.txt)"
+        m="$(printf '%s' "$b" | gawk -v POOLS="" -v SHARES="$b" -f "$ANONAWK")"
+        [ "$m" != "$b" ] && mv -f "$f" "$(dirname "$f")/$m.cfg.txt"
+    done
+}
 
 # prepare download location
 rm -rf $PKGROOT 2>&1
@@ -66,25 +146,43 @@ for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
     fi
 done
 
-# copy all files with today date from $LOGFOLDER
-[ -d "$LOGFOLDER" ] && for file in "$LOGFOLDER"/*; do
-    if [[ -f "$file" ]]; then
-        # Get the modification time of the file and format it to compare with today's date
-        mod_date=$(date -r "$file" +%Y-%m-%d)
-        today=$(date +%Y-%m-%d)
-
-        if [ "$mod_date" == "$today" ]; then
-            mkdir -p $DEBUGROOT/PLUGIN/Logs 2>&1
+# Copy the newest $MAXLOGFILES files from $LOGFOLDER. This used to take only
+# files modified today, so a report written the morning after an incident
+# arrived with an empty Logs folder even though the plugin still had 5-10 days
+# of them on disk.
+if [ -d "$LOGFOLDER" ]; then
+    mkdir -p $DEBUGROOT/PLUGIN/Logs 2>&1
+    find "$LOGFOLDER" -maxdepth 1 -type f -printf '%T@\t%p\0' 2>/dev/null |
+        sort -zrn | head -z -n "$MAXLOGFILES" | cut -z -f2- |
+        while IFS= read -r -d '' file; do
             cp -f "$file" $DEBUGROOT/PLUGIN/Logs/"$(basename "$file").txt" 2>&1
-        fi
-    fi
-done
+        done
+fi
+
+# Pool sizing as the mover reads it. POOLPCTUSED comes from df's percentage
+# (used/(used+avail)) while the freeing target is bytes off df's size, and the
+# two disagree on btrfs, so capture both denominators.
+{
+    for pool in $POOLNAMES; do
+        [ -d "/mnt/$pool" ] || continue
+        echo "### /mnt/$pool"
+        stat -f -c 'fstype=%T' "/mnt/$pool" 2>&1
+        df --output=size,used,avail,pcent --block-size=1 "/mnt/$pool" 2>&1
+        zfs list -Hpo name,available,used "$pool" 2>/dev/null
+        echo
+    done
+} >$DEBUGROOT/PLUGIN/pools.txt 2>&1
 
 # include unraid version in package
 [ -f /etc/unraid-version ] && cp -f /etc/unraid-version $DEBUGROOT/unraid-version.txt 2>&1
 
 # include plugin definition files in package
 cp -f /boot/config/plugins/ca.mover.tuning.plg $DEBUGROOT/PLUGIN/ca.mover.tuning.plg.txt 2>&1
+
+# anonymize before the diagnostics land: that zip is already anonymized by
+# Unraid and must not be rewritten
+anonymize_tree $DEBUGROOT/PLUGIN
+rm -f "$ANONAWK"
 
 # generate and include diagnostics package
 DIAGFILE="$(/usr/local/sbin/diagnostics 2>/dev/null | grep -o "${BOOT_LOGS}.*\.zip")"
