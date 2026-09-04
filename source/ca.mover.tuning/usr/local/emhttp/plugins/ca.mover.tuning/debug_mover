@@ -21,7 +21,8 @@ MAXLOGBYTES=$((30 * 1024 * 1024))
 DEBUGTIME="$(date '+%Y%m%d-%H%M' 2>/dev/null)"
 DEBUGNAME="ca.mover.tuning-debug-${DEBUGTIME}.zip"
 
-# Matches Unraid's diagnostics mangling (DATA -> D--A) so the two halves line up.
+# Mangles file and folder names below the share. Share and pool names are kept:
+# every mover decision is per-share, and they are Unraid defaults, not user data.
 ANONAWK="$(mktemp)"
 trap 'rm -f "$ANONAWK"' EXIT
 cat >"$ANONAWK" <<'ANONEOF'
@@ -45,7 +46,8 @@ function mangle_path(p,   parts, n, i, out) {
     n = split(p, parts, "/")
     out = ""
     for (i = 1; i <= n; i++) {
-        if (i <= 3 || parts[i] in pool) out = out (i > 1 ? "/" : "") parts[i]
+        if (i <= 3 || parts[i] in pool || parts[i] in share)
+            out = out (i > 1 ? "/" : "") parts[i]
         else out = out "/" mangle_leaf(parts[i])
     }
     return out
@@ -53,7 +55,7 @@ function mangle_path(p,   parts, n, i, out) {
 
 BEGIN {
     split(POOLS, p, " ");  for (i in p) pool[p[i]] = 1
-    split(SHARES, s, " "); for (i in s) if (length(s[i]) > 2) share[s[i]] = mangle(s[i])
+    split(SHARES, s, " "); for (i in s) share[s[i]] = 1
 }
 
 {
@@ -67,8 +69,6 @@ BEGIN {
     }
     line = out line
 
-    # blunt on purpose: a missed context leaks, a mangled ordinary word does not
-    for (k in share) gsub("\\<" k "\\>", share[k], line)
     print line
 }
 ANONEOF
@@ -80,13 +80,6 @@ anonymize_tree() {
     find "$1" -type f -print0 | while IFS= read -r -d '' f; do
         gawk -v POOLS="$POOLNAMES" -v SHARES="$SHARENAMES" -f "$ANONAWK" "$f" >"$f.anon" 2>/dev/null &&
             mv -f "$f.anon" "$f" || rm -f "$f.anon"
-    done
-    # share names are in the override cfg filenames too
-    for f in "$1"/shareOverrideConfig/*.cfg.txt; do
-        [ -f "$f" ] || continue
-        b="$(basename "$f" .cfg.txt)"
-        m="$(printf '%s' "$b" | gawk -v POOLS="" -v SHARES="$b" -f "$ANONAWK")"
-        [ "$m" != "$b" ] && mv -f "$f" "$(dirname "$f")/$m.cfg.txt"
     done
 }
 
