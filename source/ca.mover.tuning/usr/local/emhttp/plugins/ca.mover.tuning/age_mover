@@ -230,6 +230,17 @@ human_to_bytes() {
     numfmt --from=iec "$input"
 }
 
+# Skip-list lines for this share. Literal match, not regex: share names may hold
+# regex metacharacters, and an unanchored substring also matches sibling shares.
+skiplist_share_lines() {
+    # prefix via ENVIRON, not -v: awk expands escape sequences in a -v value
+    SKIPLIST_PFX="/mnt/$1/$2" awk '
+        BEGIN { pfx = ENVIRON["SKIPLIST_PFX"] }
+        { sub(/\r$/, "") }   # the gate calls this before the CRLF fix below
+        index($0, pfx) == 1 && (length($0) == length(pfx) || substr($0, length(pfx) + 1, 1) == "/")
+    ' "$3"
+}
+
 # Sanitize input filename to prevent attacks
 validate_filename() {
     local filename="$1"
@@ -1263,7 +1274,7 @@ createFilteredFilelist() {
         FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
 
         # Add files from ignore list
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && grep -q "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" "$SKIPFILESLIST"; then
+        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")" ]; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
             mvlogger "List Path: ${SKIPFILESLIST}:"
 
@@ -1277,6 +1288,7 @@ createFilteredFilelist() {
             fi
 
             TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
+            SKIPPED_MEASURE_PATHS=()
             while IFS= read -r skipped_path; do
 
                 # Check if the last path component contains a wildcard pattern
@@ -1289,7 +1301,6 @@ createFilteredFilelist() {
                     continue
                 fi
 
-                SKIPPED_PATH_RESERVED_SPACE=""
                 # Remove potential trailing /, *, /* characters from the skipped_path
                 skipped_path="${skipped_path%"${skipped_path##*[!/*]}"}"
                 #skipped_path="${skipped_path%/}" # Remove potential trailing slash
@@ -1297,7 +1308,10 @@ createFilteredFilelist() {
 
                 if [[ -d "${skipped_path}" || -f "${skipped_path}" ]]; then
                     mvDebuglogger "${skipped_path} - exists" "Skipped Path"
-                    SKIPPED_PATH_RESERVED_SPACE="$(du -sh "${skipped_path}" | awk '{print $1}' | human_to_bytes)"
+                    # Measured after the loop in a single du. du de-duplicates inodes
+                    # only within one invocation, so a per-path call counts a hardlinked
+                    # or nested entry once per listed path it is reachable from.
+                    SKIPPED_MEASURE_PATHS+=("${skipped_path}")
 
                     if [[ -d "${skipped_path}" ]]; then
                         mvDebuglogger "${skipped_path} - is a Folder" "Skipped Path"
@@ -1315,14 +1329,22 @@ createFilteredFilelist() {
                     continue
                 fi
 
-                if [ -n "$SKIPPED_PATH_RESERVED_SPACE" ]; then
-                    echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_PATH_RESERVED_SPACE|0|0|0|$filetype|${skipped_path}" >>"$FILTERED_FILELIST"
-                    TOTAL_SKIPPED_PATH_RESERVED_SPACE=$((TOTAL_SKIPPED_PATH_RESERVED_SPACE + SKIPPED_PATH_RESERVED_SPACE))
+                # Exclusion-only row. The size for the whole list is carried by the
+                # aggregate row below, so these rows cannot double-count in pool_sums.
+                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|0|0|0|0|$filetype|${skipped_path}" >>"$FILTERED_FILELIST"
+            done <<<"$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")"
+
+            if [ ${#SKIPPED_MEASURE_PATHS[@]} -gt 0 ]; then
+                # du exits nonzero on a partial read while still printing a total
+                if SKIPPED_PATHS_DU="$(printf '%s\0' "${SKIPPED_MEASURE_PATHS[@]}" | du -sc --block-size=1 --files0-from=- 2>/dev/null)"; then
+                    TOTAL_SKIPPED_PATH_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_PATHS_DU" | cut -f1)
                 else
-                    mvlogger "Error calculating size for $skipped_path"
+                    mvlogger "Error calculating size for ${SKIPFILESLIST}"
+                    TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
                 fi
-            done <<<"$(grep "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" "${SKIPFILESLIST}")"
-            mvlogger "    Ignored files are using $(bytes_to_human $TOTAL_SKIPPED_PATH_RESERVED_SPACE)"
+                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$TOTAL_SKIPPED_PATH_RESERVED_SPACE|0|0|0|f|${SHAREPATH}/ ignored files" >>"$FILTERED_FILELIST"
+            fi
+            mvlogger "    Ignored files are using $(bytes_to_human "$TOTAL_SKIPPED_PATH_RESERVED_SPACE")"
         fi
 
         #Add Skipfilelist to find string
@@ -1331,7 +1353,8 @@ createFilteredFilelist() {
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name '*.$ext'"
-                if SKIPPED_FILETYPES_RESERVED_SPACE="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name '*.$ext' -print0 | xargs -0 du -sh | awk '{print $1}' | human_to_bytes | awk '{ sum += $1 } END { print sum }')"; then
+                if SKIPPED_FILETYPES_DU="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null)" &&
+                    SKIPPED_FILETYPES_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_FILETYPES_DU" | cut -f1) && [ -n "$SKIPPED_FILETYPES_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|f|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
@@ -1653,7 +1676,7 @@ decideMoveActions() {
                         pool_stats[$1]["total_size_from_secondary"] += $8
                     }
                 } else {
-                    if (REBALANCESHARES == "yes") {
+                    if (REBALANCESHARES == "yes" && $4 != "skipped") {
                         action = ($4 == "only" || ($4 == "prefer" && remaining_bytes_used[$1] <= $6)) ? "move unattended to primary" : "move unattended to secondary"
                         if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
