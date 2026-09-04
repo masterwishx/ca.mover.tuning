@@ -66,11 +66,7 @@ jobs:
           RELEASE_BODY: ${{ github.event.release.body || '' }}
           RELEASE_TAG: ${{ github.event.release.tag_name || env.RELEASE_TAG || '' }}
           RELEASE_NAME: ${{ github.event.release.name || env.RELEASE_NAME || '' }}
-
-          # Normalize NEW_RELEASE to "true"/"false"
-          NEW_RELEASE: ${{ github.event_name == 'release'
-            ? 'true'
-            : (env.NEW_RELEASE == 'true' && 'true' || 'false') }}
+          NEW_RELEASE: ${{ github.event_name == 'release' && 'true' || env.NEW_RELEASE || 'false' }}
 
           # PR / Issue info
           PR_TITLE: ${{ github.event.pull_request.title || '' }}
