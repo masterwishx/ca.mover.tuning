@@ -7,9 +7,9 @@ on:
     types: [opened, closed, reopened]
   issues:
     types: [opened, closed, reopened]
-  workflow_run:
-    workflows: [] # No workflows configured yet
-    types: [completed]
+  # workflow_run:
+  #   workflows: ["Auto Build & Release Mover Tuning Package"]
+  #   types: [completed]
   workflow_dispatch:
 
 permissions:
