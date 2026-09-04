@@ -230,6 +230,16 @@ human_to_bytes() {
     numfmt --from=iec "$input"
 }
 
+# Exact byte total from du. Never parse `du -h` here: it carries two significant
+# digits, so a 58.4GiB share reads back as 62277025792 and the reserved space it
+# feeds into the threshold is always over-stated.
+du_total_bytes() {
+    local out
+    # du prints a total even on a partial read, so the status must be du's own
+    out=$(du -c --block-size=1 "$@" 2>/dev/null) || return 1
+    tail -n1 <<<"$out" | cut -f1
+}
+
 # Skip-list lines for this share. Literal match, not regex: share names may hold
 # regex metacharacters, and an unanchored substring also matches sibling shares.
 skiplist_share_lines() {
@@ -1179,17 +1189,22 @@ createFilteredFilelist() {
                     # Share size calculation (only if enabled)
                     if [ "$SHARE_CALCULATION" = "yes" ]; then
                         # Try ZFS dataset first
+                        CACHESHARERESERVEDSPACE=""
                         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                             mvlogger "Calculating zfs share usage..."
                             # if error on command then share can be a folder instead dataset
                             if ! CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME"); then
                                 mvlogger "Warning: Share is currently a folder. Convert it to a dataset for better performance."
-                                mvlogger "Calculating share usage... (can take a moment)"
-                                CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                                CACHESHARERESERVEDSPACE=""
                             fi
-                        else
+                        fi
+                        # single du fallback for both the non-zfs pool and the zfs-folder case
+                        if [ -z "$CACHESHARERESERVEDSPACE" ]; then
                             mvlogger "Calculating share usage... (can take a moment)"
-                            CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                            if ! CACHESHARERESERVEDSPACE=$(du_total_bytes -s "$SHAREPATH"); then
+                                mvlogger "Error calculating size for $SHAREPATH"
+                                CACHESHARERESERVEDSPACE=0
+                            fi
                         fi
                     else
                         mvlogger "Share size calculation disabled for this share."
@@ -1272,7 +1287,10 @@ createFilteredFilelist() {
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
-            HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du -ch --files0-from=- | awk '/total$/ {print $1}' | human_to_bytes)
+            if ! HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du_total_bytes --files0-from=-); then
+                mvlogger "Error calculating size for hidden files in ${SHAREPATH}"
+                HIDDENFILES_RESERVED_SPACE=0
+            fi
             echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$HIDDENFILES_RESERVED_SPACE|0|0|0|f|${SHAREPATH}/ hidden files" >>"$FILTERED_FILELIST"
             mvlogger "    Hidden files are using $(bytes_to_human "$HIDDENFILES_RESERVED_SPACE")"
         fi
