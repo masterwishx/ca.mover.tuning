@@ -1005,10 +1005,12 @@ createFilteredFilelist() {
         fi
 
         # Get the size threshold in bytes
+        # used+avail, not df's size: on btrfs those differ by the unallocated
+        # chunks, and POOLPCTUSED is measured against used+avail.
         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
             POOLSIZE=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print $1 + $2}')
         else
-            POOLSIZE=$(df --output=size --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1)
+            POOLSIZE=$(df --output=used,avail --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | awk '{print $1 + $2}')
         fi
 
         # Calculate primary storage size thresholds in bytes
@@ -1022,7 +1024,8 @@ createFilteredFilelist() {
         fi
 
         # Print pool info:
-        mvlogger "Primary storage: $PRIMARYSTORAGENAME - size: $(bytes_to_human $POOLSIZE) - used: $POOLPCTUSED % ($(bytes_to_human $POOLBYTEUSED))"
+        POOLFSTYPE=$(findmnt -no fstype "/mnt/$PRIMARYSTORAGENAME" | tail -n 1)
+        mvlogger "Primary storage: $PRIMARYSTORAGENAME (${POOLFSTYPE:-unknown}) - size: $(bytes_to_human $POOLSIZE) - used: $POOLPCTUSED % ($(bytes_to_human $POOLBYTEUSED))"
         mvlogger "Secondary storage: $SECONDARYSTORAGENAME"
 
         # Find unattended storage for a share when rebalancing shares
