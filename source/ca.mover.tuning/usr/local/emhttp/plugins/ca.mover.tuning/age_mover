@@ -230,9 +230,7 @@ human_to_bytes() {
     numfmt --from=iec "$input"
 }
 
-# Exact byte total from du. Never parse `du -h` here: it carries two significant
-# digits, so a 58.4GiB share reads back as 62277025792 and the reserved space it
-# feeds into the threshold is always over-stated.
+# Exact bytes. `du -h` carries two significant digits and rounds up.
 du_total_bytes() {
     local out
     # du prints a total even on a partial read, so the status must be du's own
@@ -1198,7 +1196,6 @@ createFilteredFilelist() {
                                 CACHESHARERESERVEDSPACE=""
                             fi
                         fi
-                        # single du fallback for both the non-zfs pool and the zfs-folder case
                         if [ -z "$CACHESHARERESERVEDSPACE" ]; then
                             mvlogger "Calculating share usage... (can take a moment)"
                             if ! CACHESHARERESERVEDSPACE=$(du_total_bytes -s "$SHAREPATH"); then
@@ -1287,8 +1284,7 @@ createFilteredFilelist() {
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
-            # pipefail scoped to the subshell: a find that dies part-way still hands du
-            # a valid partial list, and the pipeline would otherwise report du's status
+            # pipefail: a part-way find still hands du a valid list
             if ! HIDDENFILES_RESERVED_SPACE=$(set -o pipefail; find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du_total_bytes --files0-from=-); then
                 mvlogger "Error calculating size for hidden files in ${SHAREPATH}"
                 HIDDENFILES_RESERVED_SPACE=0
