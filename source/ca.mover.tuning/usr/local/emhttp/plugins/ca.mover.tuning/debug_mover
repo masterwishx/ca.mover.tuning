@@ -28,11 +28,7 @@ trap 'rm -f "$ANONAWK"' EXIT
 cat >"$ANONAWK" <<'ANONEOF'
 function dashes(k,   i, r) { r = ""; for (i = 0; i < k; i++) r = r "-"; return r }
 
-function mangle(s,   n) {
-    n = length(s)
-    if (n <= 2) return s
-    return substr(s, 1, 1) dashes(n - 2) substr(s, n, 1)
-}
+function mangle(s) { return dashes(length(s)) }
 
 # extension kept - the filetype filters are diagnosed from it
 function mangle_leaf(s,   i) {
@@ -54,33 +50,48 @@ function mangle_path(p,   parts, n, i, out) {
 }
 
 BEGIN {
+    FS = OFS = "|"
     split(POOLS, p, " ");  for (i in p) pool[p[i]] = 1
     split(SHARES, s, " "); for (i in s) share[s[i]] = 1
 }
 
+# A list row carries the path as its last field, so take it whole - a name with
+# spaces in it has no delimiter the free-text branch below could rely on.
+LIST && NF > 1 { $NF = mangle_path($NF); print; next }
+
 {
     line = $0
     out = ""
-    # copy st/len first: mangle_leaf's own match() clobbers RSTART/RLENGTH
-    while (match(line, /\/mnt\/[^ \t"'|,;)>]*/)) {
+    # spaces are not a terminator: file names contain them. copy st/len first,
+    # mangle_leaf runs its own match() and would clobber RSTART/RLENGTH.
+    while (match(line, /\/mnt\/[^"',;|]*/)) {
         st = RSTART; len = RLENGTH
-        out = out substr(line, 1, st - 1) mangle_path(substr(line, st, len))
+        tok = substr(line, st, len); tail = ""
+        # trailing blanks belong to the line, not the path
+        if (match(tok, /[ \t]+$/)) { tail = substr(tok, RSTART); tok = substr(tok, 1, RSTART - 1) }
+        out = out substr(line, 1, st - 1) mangle_path(tok) tail
         line = substr(line, st + len)
     }
-    line = out line
-
-    print line
+    print out line
 }
 ANONEOF
 
 POOLNAMES="user user0 $(for f in /boot/config/pools/*.cfg; do [ -f "$f" ] && basename "$f" .cfg; done | tr '\n' ' ')"
 SHARENAMES="$(for f in /boot/config/shares/*.cfg; do [ -f "$f" ] && basename "$f" .cfg; done | tr '\n' ' ')"
 
+# Fails closed: the caller must not package a file this could not rewrite.
 anonymize_tree() {
-    find "$1" -type f -print0 | while IFS= read -r -d '' f; do
-        gawk -v POOLS="$POOLNAMES" -v SHARES="$SHARENAMES" -f "$ANONAWK" "$f" >"$f.anon" 2>/dev/null &&
-            mv -f "$f.anon" "$f" || rm -f "$f.anon"
-    done
+    local rc=0 f list
+    while IFS= read -r -d '' f; do
+        list=0; [ "${f%.list.txt}" != "$f" ] && list=1
+        if gawk -v POOLS="$POOLNAMES" -v SHARES="$SHARENAMES" -v LIST="$list" \
+            -f "$ANONAWK" "$f" >"$f.anon" 2>/dev/null && mv -f "$f.anon" "$f"; then
+            continue
+        fi
+        rm -f "$f.anon"
+        rc=1
+    done < <(find "$1" -type f -print0)
+    return $rc
 }
 
 # prepare download location
@@ -170,7 +181,11 @@ fi
 cp -f /boot/config/plugins/ca.mover.tuning.plg $DEBUGROOT/PLUGIN/ca.mover.tuning.plg.txt 2>&1
 
 # before the diagnostics land - that zip is already anonymized by Unraid
-anonymize_tree $DEBUGROOT/PLUGIN
+if ! anonymize_tree $DEBUGROOT/PLUGIN; then
+    rm -rf $DEBUGROOT $PKGROOT 2>&1
+    echo "ERROR: could not anonymize the plugin logs, no debug package was written."
+    exit 1
+fi
 rm -f "$ANONAWK"
 
 # generate and include diagnostics package
