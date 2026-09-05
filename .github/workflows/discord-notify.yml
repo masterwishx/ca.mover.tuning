@@ -130,6 +130,10 @@ jobs:
                 ICON="🎉"
                 CONTENT="Pull Request Merged"
                 COLOR=8311585
+              elif [ "${ACTION}" = "reopened" ]; then
+                ICON="🔁"
+                CONTENT="Pull Request Reopened"
+                COLOR=9807270
               else
                 ICON="❌"
                 CONTENT="Pull Request Closed"
