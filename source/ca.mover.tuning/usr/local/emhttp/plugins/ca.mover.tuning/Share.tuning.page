@@ -21,15 +21,16 @@ ob_end_clean();
 
 $plugin='ca.mover.tuning';
 $shareName = $_GET['name'];
+$shareCfgText = is_file("/boot/config/shares/$shareName.cfg") ? (string)file_get_contents("/boot/config/shares/$shareName.cfg") : '';
 $shareCFG = "/boot/config/plugins/$plugin/shareOverrideConfig/$shareName.cfg";
 $cfg = parse_share_cfg($plugin, $shareName);
 $overrideEnabled = ($cfg['moverOverride'] != "yes") ? "no" : "yes";
 $ageDisabled  = ($cfg['age']  != "yes") ? "disabled" : "";
-$ctimeDisabled = ($cfg['ctime'] != "yes") ? "disabled" : "";
-$atimeDisabled = ($cfg['atime'] != "yes") ? "disabled" : "";
+$lockAtime = ($cfg['ctime'] == "yes") ? "disabled" : "";
+$lockCtime = ($cfg['atime'] == "yes") ? "disabled" : "";
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
 $sizefSyncDisabled = ($cfg['sizefSync'] != "yes") ? "disabled" : "";
-$sparsenessfDisabled = ($cfg['sparsenessf'] != "yes") ? "disabled" : "";
+$sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
@@ -40,7 +41,7 @@ $f = $cfg['movingThreshold'];
 
 <script>
 function moveShareNow() {
-        $.post("/plugins/ca.mover.tuning/moveShareNow.php?Share='<?echo $shareName?>'");
+        $.post("/plugins/ca.mover.tuning/moveShareNow.php", {Share: <?= json_encode($shareName, JSON_HEX_TAG) ?>});
 	MoveShare.disabled = true;
 }
 
@@ -70,11 +71,11 @@ $(function() {
 <input type="hidden" name="#file" value="<?=$shareCFG?>">
 
 <? if ($shareName != ""): ?>
-<? if (strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="no"') !== false || strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="only"') !== false): ?>
+<? if (strpos($shareCfgText, 'shareUseCache="no"') !== false || strpos($shareCfgText, 'shareUseCache="only"') !== false): ?>
 <div markdown="1" class="shade-<?=$display['theme']?>">
 _(Mover Tuning settings not available for this share.)_
 </div>
-<? elseif (strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="prefer"') !== false): ?>
+<? elseif (strpos($shareCfgText, 'shareUseCache="prefer"') !== false): ?>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
 _(Override Mover Tuning settings for this share)_:
@@ -126,7 +127,7 @@ _(Only move files that are older than this (in days))_:
 > Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
 _(Use CTIME)_:
-: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $ctimeDisabled ?> onchange='$(".atime").toggleAttr("disabled")'>
+: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $lockCtime ?> onchange='$(".atime").toggleAttr("disabled")'>
   <?=mk_option($cfg['ctime'],'no','No')?>
   <?=mk_option($cfg['ctime'],'yes','Yes')?>
   </select>
@@ -135,7 +136,7 @@ _(Use CTIME)_:
 > Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Use ATIME)_:
-: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $atimeDisabled ?> onchange='$(".ctime").toggleAttr("disabled")'>
+: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $lockAtime ?> onchange='$(".ctime").toggleAttr("disabled")'>
   <?=mk_option($cfg['atime'],'no','No')?>
   <?=mk_option($cfg['atime'],'yes','Yes')?>
   </select>
@@ -175,25 +176,25 @@ _(Only move files larger than this (in MB))_:
 > Select the minimum size a file has to be to get moved (in **Megabytes**).
 
 _(Move files based on sparseness)_:
-: <select name="sparsenessf" onchange='$(".mysparsenessf").toggleAttr("disabled")'>
-  <?= mk_option($cfg['sparsenessf'], 'no', 'No') ?>
-  <?= mk_option($cfg['sparsenessf'], 'yes', 'Yes') ?>
+: <select name="sparsnessf" onchange='$(".mysparsnessf").toggleAttr("disabled")'>
+  <?= mk_option($cfg['sparsnessf'], 'no', 'No') ?>
+  <?= mk_option($cfg['sparsnessf'], 'yes', 'Yes') ?>
   </select>
 
 <!--:mover_tuning_sparseness_help:-->
 > Select **Yes** to move files based on their sparseness.
 
 _(Move files that are greater than this sparseness)_:
-: <select name='sparsenessv' class='mysparsenessf' <?= $sparsenessfDisabled ?>>
-  <?= mk_option($cfg['sparsenessv'], 1, "0.1") ?>
-	<?= mk_option($cfg['sparsenessv'], 2, "0.2") ?>
-	<?= mk_option($cfg['sparsenessv'], 3, "0.3") ?>
-	<?= mk_option($cfg['sparsenessv'], 4, "0.4") ?>
-	<?= mk_option($cfg['sparsenessv'], 5, "0.5") ?>
-	<?= mk_option($cfg['sparsenessv'], 6, "0.6") ?>
-	<?= mk_option($cfg['sparsenessv'], 7, "0.7") ?>
-	<?= mk_option($cfg['sparsenessv'], 8, "0.8") ?>
-	<?= mk_option($cfg['sparsenessv'], 9, "0.9") ?>
+: <select name='sparsnessv' class='mysparsnessf' <?= $sparsnessfDisabled ?>>
+  <?= mk_option($cfg['sparsnessv'], 1, "0.1") ?>
+	<?= mk_option($cfg['sparsnessv'], 2, "0.2") ?>
+	<?= mk_option($cfg['sparsnessv'], 3, "0.3") ?>
+	<?= mk_option($cfg['sparsnessv'], 4, "0.4") ?>
+	<?= mk_option($cfg['sparsnessv'], 5, "0.5") ?>
+	<?= mk_option($cfg['sparsnessv'], 6, "0.6") ?>
+	<?= mk_option($cfg['sparsnessv'], 7, "0.7") ?>
+	<?= mk_option($cfg['sparsnessv'], 8, "0.8") ?>
+	<?= mk_option($cfg['sparsnessv'], 9, "0.9") ?>
   </select>
 
 <!--:mover_tuning_min_sparseness_help:-->
@@ -209,7 +210,7 @@ _(Skip files listed in text file)_:
 > Select **Yes** to skip files which have been listed in a specified text file.
 
 _(File list path)_:
-: <input type='text' name='filelistv' class='myfilelistf' value='<?= $cfg['filelistv'] ?>' <?= $filelistfDisabled ?>>
+: <input type='text' name='filelistv' class='myfilelistf' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?= $filelistfDisabled ?>>
 
 <!--:mover_tuning_file_list_path_help:-->
 > Specify the full path to a text file that contains the list of files the mover should skip.
@@ -224,7 +225,7 @@ _(Skip file types)_:
 > Select **Yes** to skip specific file types in addition to those selected globally.
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' class='myfiletypesf' value='<?= $cfg['filetypesv'] ?>' <?= $filetypesfDisabled ?>>
+: <input type='text' name='filetypesv' class='myfiletypesf' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?= $filetypesfDisabled ?>>
 
 <!--:mover_tuning_file_type_delimited_help:-->
 > Specify the file types to be skipped, separated by a comma (e.g. **".txt,.mp3,.pdf"**).
@@ -254,7 +255,7 @@ _(Move **ALL** files to current pool (won't use mover settings))_:
 > Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Secondary->Primary_** storage space, disregarding any existing mover settings.
 </div>
 
-<? elseif (strpos(file_get_contents("/boot/config/shares/$shareName.cfg"), 'shareUseCache="yes"') !== false): ?>
+<? elseif (strpos($shareCfgText, 'shareUseCache="yes"') !== false): ?>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
 _(Override Mover Tuning settings for this share)_:
@@ -315,7 +316,7 @@ _(Only move files that are older than this (in days))_:
 > Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
 
 _(Use CTIME)_:
-: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $ctimeDisabled ?> onchange='$(".atime").toggleAttr("disabled")'>
+: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $lockCtime ?> onchange='$(".atime").toggleAttr("disabled")'>
   <?=mk_option($cfg['ctime'],'no','No')?>
   <?=mk_option($cfg['ctime'],'yes','Yes')?>
   </select>
@@ -324,7 +325,7 @@ _(Use CTIME)_:
 > Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
 
 _(Use ATIME)_:
-: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $atimeDisabled ?> onchange='$(".ctime").toggleAttr("disabled")'>
+: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $lockAtime ?> onchange='$(".ctime").toggleAttr("disabled")'>
   <?=mk_option($cfg['atime'],'no','No')?>
   <?=mk_option($cfg['atime'],'yes','Yes')?>
   </select>
@@ -393,25 +394,25 @@ _(Sync files that are smaller than this size (In MB))_.
 > Select the maximum size a file has to be to get synched (in **Megabytes**).
 
 _(Move files based on sparseness)_:
-: <select name="sparsenessf" onchange='$(".mysparsenessf").toggleAttr("disabled")'>
-  <?= mk_option($cfg['sparsenessf'], 'no', 'No') ?>
-  <?= mk_option($cfg['sparsenessf'], 'yes', 'Yes') ?>
+: <select name="sparsnessf" onchange='$(".mysparsnessf").toggleAttr("disabled")'>
+  <?= mk_option($cfg['sparsnessf'], 'no', 'No') ?>
+  <?= mk_option($cfg['sparsnessf'], 'yes', 'Yes') ?>
   </select>
 
 <!--:mover_tuning_sparseness_help:-->
 > Select **Yes** to move files based on their sparseness.
 
 _(Move files that are greater than this sparseness)_:
-: <select name='sparsenessv' class='mysparsenessf' <?= $sparsenessfDisabled ?>>
-  <?= mk_option($cfg['sparsenessv'], 1, "0.1") ?>
-	<?= mk_option($cfg['sparsenessv'], 2, "0.2") ?>
-	<?= mk_option($cfg['sparsenessv'], 3, "0.3") ?>
-	<?= mk_option($cfg['sparsenessv'], 4, "0.4") ?>
-	<?= mk_option($cfg['sparsenessv'], 5, "0.5") ?>
-	<?= mk_option($cfg['sparsenessv'], 6, "0.6") ?>
-	<?= mk_option($cfg['sparsenessv'], 7, "0.7") ?>
-	<?= mk_option($cfg['sparsenessv'], 8, "0.8") ?>
-	<?= mk_option($cfg['sparsenessv'], 9, "0.9") ?>
+: <select name='sparsnessv' class='mysparsnessf' <?= $sparsnessfDisabled ?>>
+  <?= mk_option($cfg['sparsnessv'], 1, "0.1") ?>
+	<?= mk_option($cfg['sparsnessv'], 2, "0.2") ?>
+	<?= mk_option($cfg['sparsnessv'], 3, "0.3") ?>
+	<?= mk_option($cfg['sparsnessv'], 4, "0.4") ?>
+	<?= mk_option($cfg['sparsnessv'], 5, "0.5") ?>
+	<?= mk_option($cfg['sparsnessv'], 6, "0.6") ?>
+	<?= mk_option($cfg['sparsnessv'], 7, "0.7") ?>
+	<?= mk_option($cfg['sparsnessv'], 8, "0.8") ?>
+	<?= mk_option($cfg['sparsnessv'], 9, "0.9") ?>
   </select>
 
 <!--:mover_tuning_min_sparseness_help:-->
