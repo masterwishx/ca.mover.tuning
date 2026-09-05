@@ -23,6 +23,12 @@ function logger($string)
 	}
 }
 
+// Five fields only; a newline or stray token here would land in root's crontab
+function valid_cron($cron)
+{
+	return preg_match('/^[A-Za-z0-9*,\/-]+(?:[ \t]+[A-Za-z0-9*,\/-]+){4}\z/', $cron) === 1;
+}
+
 // Unraid Mover cron for unraid v7.2.1+
 function make_unraid_cron()
 {
@@ -46,6 +52,10 @@ function make_tune_cron()
 		logger("Error: No cron schedule provided for Mover Tuning move.");
 		return; // Nothing to write
 	}
+	if (valid_cron($tuneCron) === false) {
+		logger("Error: Invalid cron schedule for Mover Tuning move: $tuneCron");
+		return;
+	}
 	$cronTuneFile = "# Generated schedule for Mover Tuning move:\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/mover start |& logger -t move\n\n";
 	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron", $cronTuneFile) === false) {
 		logger("Error: Failed to write mover.tuning.cron file.");
@@ -61,6 +71,10 @@ function make_cron()
 	$cron = isset($_POST['cron']) ? trim($_POST['cron']) : '';
 	if (empty($cron)) {
 		logger("Error: No cron schedule provided for forced move.");
+		return;
+	}
+	if (valid_cron($cron) === false) {
+		logger("Error: Invalid cron schedule for forced move: $cron");
 		return;
 	}
 	$cronFile = "# Generated schedule for forced move:\n{$cron} {$mover} start |& logger -t move\n\n";
@@ -128,8 +142,8 @@ if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 	}
 }
 
-// Handle Mover Tuning custom cron schedule
-if (version_compare($vars['version'], '7.2.1', '>=')) {
+// Handle Mover Tuning custom cron schedule, unless this request disables Mover Tuning
+if (version_compare($vars['version'], '7.2.1', '>=') === true && ($_POST['ismoverDisabled'] ?? '') !== 'yes') {
 	$postTuneCron = isset($_POST['tune_cron']) ? $_POST['tune_cron'] : '';
 	if ($cfg_moverTuneCron !== $postTuneCron) {
 		if (trim($postTuneCron) !== "") {

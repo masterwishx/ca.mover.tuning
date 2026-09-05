@@ -132,7 +132,9 @@ if ! mountpoint -q /mnt/user0 && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 
     exit 5
 fi
 
-echo $$ >/var/run/mover.pid
+echo $$ >"$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
+trap 'exit 143' HUP INT TERM
 
 shopt -s nullglob
 
@@ -153,7 +155,7 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
         # Do not process this pool if path does not exist
         mvlogger "/mnt/$PRIMARYSTORAGENAME does not exist. Is the pool still used? Consider removing $SHARECFG if not."
         mvlogger "=> Skipping"
-        exit # Move to the next iteration of the loop
+        exit
     fi
 
     # Determine secondary storage
@@ -230,11 +232,6 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
 
     fi
 fi
-
-mvlogger "Cleaning lock file"
-for file in $PIDFILE; do
-    [[ -e "$file" ]] && rm -f "$file"
-done
 
 mvlogger "$(titleLine 'WE ARE DONE !' '*')"
 [ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
