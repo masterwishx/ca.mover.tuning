@@ -230,6 +230,14 @@ human_to_bytes() {
     numfmt --from=iec "$input"
 }
 
+# Exact bytes. `du -h` carries two significant digits and rounds up.
+du_total_bytes() {
+    local out
+    # du prints a total even on a partial read, so the status must be du's own
+    out=$(du -c --block-size=1 "$@" 2>/dev/null) || return 1
+    tail -n1 <<<"$out" | cut -f1
+}
+
 # Skip-list lines for this share. Literal match, not regex: share names may hold
 # regex metacharacters, and an unanchored substring also matches sibling shares.
 skiplist_share_lines() {
@@ -1179,17 +1187,21 @@ createFilteredFilelist() {
                     # Share size calculation (only if enabled)
                     if [ "$SHARE_CALCULATION" = "yes" ]; then
                         # Try ZFS dataset first
+                        CACHESHARERESERVEDSPACE=""
                         if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
                             mvlogger "Calculating zfs share usage..."
                             # if error on command then share can be a folder instead dataset
                             if ! CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME"); then
                                 mvlogger "Warning: Share is currently a folder. Convert it to a dataset for better performance."
-                                mvlogger "Calculating share usage... (can take a moment)"
-                                CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                                CACHESHARERESERVEDSPACE=""
                             fi
-                        else
+                        fi
+                        if [ -z "$CACHESHARERESERVEDSPACE" ]; then
                             mvlogger "Calculating share usage... (can take a moment)"
-                            CACHESHARERESERVEDSPACE=$(du -sh "$SHAREPATH" | awk '{print $1}' | human_to_bytes)
+                            if ! CACHESHARERESERVEDSPACE=$(du_total_bytes -s "$SHAREPATH"); then
+                                mvlogger "Error calculating size for $SHAREPATH"
+                                CACHESHARERESERVEDSPACE=0
+                            fi
                         fi
                     else
                         mvlogger "Share size calculation disabled for this share."
@@ -1272,7 +1284,11 @@ createFilteredFilelist() {
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
-            HIDDENFILES_RESERVED_SPACE=$(find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du -ch --files0-from=- | awk '/total$/ {print $1}' | human_to_bytes)
+            # pipefail: a part-way find still hands du a valid list
+            if ! HIDDENFILES_RESERVED_SPACE=$(set -o pipefail; find "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" -type f -name '.*' -print0 | du_total_bytes --files0-from=-); then
+                mvlogger "Error calculating size for hidden files in ${SHAREPATH}"
+                HIDDENFILES_RESERVED_SPACE=0
+            fi
             echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$HIDDENFILES_RESERVED_SPACE|0|0|0|f|${SHAREPATH}/ hidden files" >>"$FILTERED_FILELIST"
             mvlogger "    Hidden files are using $(bytes_to_human "$HIDDENFILES_RESERVED_SPACE")"
         fi
@@ -1365,7 +1381,7 @@ createFilteredFilelist() {
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name '*.$ext'"
-                if SKIPPED_FILETYPES_DU="$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null)" &&
+                if SKIPPED_FILETYPES_DU="$(set -o pipefail; find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null)" &&
                     SKIPPED_FILETYPES_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_FILETYPES_DU" | cut -f1) && [ -n "$SKIPPED_FILETYPES_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|f|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
