@@ -76,6 +76,7 @@ LAST_DIR=""
 LAST_COUNT=-1
 LAST_FOLDER_COUNT=-1
 EMPTY_DIR_COUNT=-1
+declare -A POOL_FSTYPE_CACHE=()
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 
@@ -195,17 +196,20 @@ unraid_notify() {
     /usr/local/emhttp/webGui/scripts/notify -s "Mover Tuning Notification" -d "$message" -i "$severity" -l "/Settings/Scheduler"
 }
 
-is_zfs_mountpoint_fstype() {
-    local result
-    result=$(findmnt "$1" -o fstype | tail -n 1)
-    [ "$result" = "zfs" ]
-    return
+pool_fstype() {
+    # sets POOLFSTYPE, one findmnt per pool per run. Never call it inside $(...): the subshell drops the cache
+    [ -n "$1" ] || return 1
+    [ -n "${POOL_FSTYPE_CACHE[$1]+x}" ] || POOL_FSTYPE_CACHE[$1]=$(findmnt -no fstype "/mnt/$1" | tail -n 1)
+    POOLFSTYPE=${POOL_FSTYPE_CACHE[$1]}
+}
+
+is_zfs_pool() {
+    pool_fstype "$1" && [ "$POOLFSTYPE" = "zfs" ]
 }
 
 is_zfs_dataset_mountpoint() {
-    local mp
-    mp=$(findmnt -n -o TARGET "$1")
-    [ "$mp" = "$1" ] && is_zfs_mountpoint_fstype "$1"
+    # --mountpoint matches the exact path only, so a folder inside a dataset returns nothing
+    [ "$(findmnt -no fstype --mountpoint "$1" | tail -n 1)" = "zfs" ]
 }
 
 titleLine() {
@@ -1002,22 +1006,16 @@ createFilteredFilelist() {
             fi
         fi
 
-        # Find the current percent of used size of pool.
-        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-            #mvlogger "$PRIMARYSTORAGENAME is zfs."
+        # Pool usage and size in bytes. POOLSIZE is used+avail, not df's size: on
+        # btrfs those differ by the unallocated chunks, and POOLPCTUSED is measured against used+avail.
+        pool_fstype "$PRIMARYSTORAGENAME"
+        if is_zfs_pool "$PRIMARYSTORAGENAME"; then
             POOLPCTUSED=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print int(($2 / ($1 + $2)) * 100)}')
             POOLBYTEUSED=$(zfs list -Hpo used "$PRIMARYSTORAGENAME")
+            POOLSIZE=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print $1 + $2}')
         else
             POOLPCTUSED=$(df --output=pcent "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | tr -d '%')
             POOLBYTEUSED=$(df --output=used --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1)
-        fi
-
-        # Get the size threshold in bytes
-        # used+avail, not df's size: on btrfs those differ by the unallocated
-        # chunks, and POOLPCTUSED is measured against used+avail.
-        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
-            POOLSIZE=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print $1 + $2}')
-        else
             POOLSIZE=$(df --output=used,avail --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | awk '{print $1 + $2}')
         fi
 
@@ -1032,7 +1030,6 @@ createFilteredFilelist() {
         fi
 
         # Print pool info:
-        POOLFSTYPE=$(findmnt -no fstype "/mnt/$PRIMARYSTORAGENAME" | tail -n 1)
         mvlogger "Primary storage: $PRIMARYSTORAGENAME (${POOLFSTYPE:-unknown}) - size: $(bytes_to_human $POOLSIZE) - used: $POOLPCTUSED % ($(bytes_to_human $POOLBYTEUSED))"
         mvlogger "Secondary storage: $SECONDARYSTORAGENAME"
 
@@ -1063,7 +1060,7 @@ createFilteredFilelist() {
 
         if [ ! -d "$SHAREPATH" ]; then # && [ $SHAREUSECACHE != "no" ]
             # Check if share mount point is ZFS
-            if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+            if is_zfs_pool "$PRIMARYSTORAGENAME"; then
                 # Do not process this pool if path does not exist
                 mvlogger "$SHAREPATH does not exist. Is the ZFS dataset not created yet? Copy files to '/mnt/user/$SHARENAME' first."
                 mvlogger "Tip: Safely remove unused shares via the Unraid Shares -> Clean Up button."
@@ -1192,7 +1189,7 @@ createFilteredFilelist() {
                     if [ "$SHARE_CALCULATION" = "yes" ]; then
                         # Try ZFS dataset first
                         CACHESHARERESERVEDSPACE=""
-                        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                        if is_zfs_pool "$PRIMARYSTORAGENAME"; then
                             mvlogger "Calculating zfs share usage..."
                             # if error on command then share can be a folder instead dataset
                             if ! CACHESHARERESERVEDSPACE=$(zfs list -Hpo used "$PRIMARYSTORAGENAME/$SHARENAME"); then
@@ -1434,7 +1431,7 @@ createFilteredFilelist() {
         fi
 
         # Get size with du if on zfs mountpoint with compression enabled
-        #        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME" && [ "$(zfs get compression -Hpo value "$PRIMARYSTORAGENAME/$SHARENAME")" == "on" ]; then
+        #        if is_zfs_pool "$PRIMARYSTORAGENAME" && [ "$(zfs get compression -Hpo value "$PRIMARYSTORAGENAME/$SHARENAME")" == "on" ]; then
         #            FINDSTR="$FINDSTR cmd = \"du -sh \\\"\"\$6\"\\\" | numfmt --from=iec\";
         #                cmd | getline result;
         #                close(cmd);
@@ -2083,7 +2080,7 @@ processTheMoves() {
                     # If no files in share
                     if [ "${share_file_count}" -eq 0 ]; then
                         # Check if mount point is ZFS
-                        if is_zfs_mountpoint_fstype "/mnt/$PRIMARYSTORAGENAME"; then
+                        if is_zfs_pool "$PRIMARYSTORAGENAME"; then
                             DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
                             #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
                             # If ZFS dataset children size is zero and No ZFS dataset children exist
