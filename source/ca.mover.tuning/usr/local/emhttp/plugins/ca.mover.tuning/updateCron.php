@@ -23,12 +23,10 @@ function logger($string)
 	}
 }
 
-// One @keyword, or five fields of * / n / n-m lists with an optional /step, each within its range; anything else would land in root's crontab
+// Five fields of * / n / n-m lists with an optional /step, each within its range; anything else would land in root's crontab.
+// dcron's @hourly..@yearly forms need an ID= job name the writers below do not add, so they are not accepted.
 function valid_cron($cron)
 {
-	if (preg_match('/^@(reboot|hourly|daily|weekly|monthly|yearly)\z/', $cron) === 1) {
-		return true;
-	}
 	$fields = preg_split('/[ \t]+/', $cron);
 	if (count($fields) !== 5) {
 		return false;
