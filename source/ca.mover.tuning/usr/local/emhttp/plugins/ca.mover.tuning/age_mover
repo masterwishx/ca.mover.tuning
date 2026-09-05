@@ -111,14 +111,21 @@ move() {
     find "$1" -depth -type d 2>/dev/null | /usr/libexec/unraid/move $DEBUGGING
 }
 
-# Detect execution method by finding the top-level root ancestor process
-# (crond = Cron, ttyd = CLI, php-fpm = Web Button)
+# Detect execution method: MOVER_RUN_METHOD when the launcher names it, else the
+# top-level ancestor process (crond = Cron, ttyd/sshd = CLI, php-fpm = Web Button)
 UPPER_PROC=""
 curr_pid=$$
 IS_CRON=0
 RUN_METHOD=""
 
 detect_run_method() {
+    # A detached web launch reparents to PID 1, so the walk below never sees php-fpm.
+    if [ -n "${MOVER_RUN_METHOD:-}" ]; then
+        RUN_METHOD="$MOVER_RUN_METHOD"
+        [ "$RUN_METHOD" = "cron" ] && IS_CRON=1
+        return
+    fi
+
     while [[ "$curr_pid" =~ ^[0-9]+$ ]] && [ "$curr_pid" -gt 1 ]; do
         if [ -r "/proc/$curr_pid/status" ]; then
             unset comm ppid
@@ -148,7 +155,7 @@ detect_run_method() {
         RUN_METHOD="cron"
         IS_CRON=1
         ;;
-    ttyd) RUN_METHOD="cli" ;;
+    ttyd | sshd*) RUN_METHOD="cli" ;;
     php-fpm*) RUN_METHOD="web button" ;;
     *) RUN_METHOD="unknown" ;;
     esac
