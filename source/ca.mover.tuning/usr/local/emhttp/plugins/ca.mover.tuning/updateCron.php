@@ -14,6 +14,7 @@ $cfg_moverDisabled = $cfg['moverDisabled'];
 // Get Mover Tuning cron time (normalized)
 $cfg_moverTuneCron = trim($cfg['moverTuneCron'] ?? $vars['shareMoverSchedule'] ?? '');
 
+// Write a message to syslog under the "move" tag when plugin logging is enabled
 function logger($string)
 {
 	global $cfg;
@@ -46,6 +47,7 @@ function valid_cron($cron)
 	return true;
 }
 
+// One cron field: a comma list of * / n / n-m, each with an optional /step; numbers within min..max, names looked up in $names
 function cron_field_ok($field, $min, $max, $names)
 {
 	foreach (explode(',', $field) as $item) {
