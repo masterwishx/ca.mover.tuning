@@ -948,15 +948,15 @@ createFilteredFilelist() {
         mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
 
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
-        if [ -f "${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg" ]; then
-            SHARETUNINGFILE="${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg"
-            if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
-                overrideFlag=1
-                mvlogger "Settings override:"
-                mvlogger "------------------"
-                getMoverSettings "$SHARETUNINGFILE"
-                mvlogger "------------------------------------------------------------------------"
-            fi
+        SHARETUNINGFILE="${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg"
+        if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
+            # Start from the global settings so the previous share's override cannot carry over
+            [ $overrideFlag = 1 ] && getMoverSettings "$MOVERTUNINGCFGFILE"
+            overrideFlag=1
+            mvlogger "Settings override:"
+            mvlogger "------------------"
+            getMoverSettings "$SHARETUNINGFILE"
+            mvlogger "------------------------------------------------------------------------"
         elif [ $overrideFlag = 1 ]; then
             #else if overrideFLag set from previous loop then restore global settings
             overrideFlag=0
