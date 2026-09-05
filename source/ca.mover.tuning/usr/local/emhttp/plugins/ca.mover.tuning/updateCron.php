@@ -23,10 +23,56 @@ function logger($string)
 	}
 }
 
-// Five fields only; a newline or stray token here would land in root's crontab
+// One @keyword, or five fields of * / n / n-m lists with an optional /step, each within its range; anything else would land in root's crontab
 function valid_cron($cron)
 {
-	return preg_match('/^[A-Za-z0-9*,\/-]+(?:[ \t]+[A-Za-z0-9*,\/-]+){4}\z/', $cron) === 1;
+	if (preg_match('/^@(reboot|hourly|daily|weekly|monthly|yearly)\z/', $cron) === 1) {
+		return true;
+	}
+	$fields = preg_split('/[ \t]+/', $cron);
+	if (count($fields) !== 5) {
+		return false;
+	}
+	$limits = [
+		[0, 59, []],
+		[0, 23, []],
+		[1, 31, []],
+		[1, 12, ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']],
+		[0, 7, ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']],
+	];
+	foreach ($fields as $i => $field) {
+		if (cron_field_ok($field, $limits[$i][0], $limits[$i][1], $limits[$i][2]) === false) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function cron_field_ok($field, $min, $max, $names)
+{
+	foreach (explode(',', $field) as $item) {
+		if (preg_match('/^(\*|([a-z0-9]+)(?:-([a-z0-9]+))?)(?:\/([0-9]+))?\z/i', $item, $m) !== 1) {
+			return false;
+		}
+		if (isset($m[4]) && (int)$m[4] < 1) {
+			return false;
+		}
+		if ($m[1] === '*') {
+			continue;
+		}
+		foreach ([$m[2], $m[3] ?? ''] as $value) {
+			if ($value === '') {
+				continue;
+			}
+			// names count from $min, so jan is 1 and sun is 0
+			$index = array_search(strtolower($value), $names, true);
+			$n = is_numeric($value) ? (int)$value : ($index === false ? -1 : $index + $min);
+			if ($n < $min || $n > $max) {
+				return false;
+			}
+		}
+	}
+	return true;
 }
 
 // Unraid Mover cron for unraid v7.2.1+
@@ -53,7 +99,7 @@ function make_tune_cron()
 		return; // Nothing to write
 	}
 	if (valid_cron($tuneCron) === false) {
-		logger("Error: Invalid cron schedule for Mover Tuning move: $tuneCron");
+		logger("Error: Invalid cron schedule for Mover Tuning move: " . preg_replace('/[^[:print:]]/', '?', $tuneCron));
 		return;
 	}
 	$cronTuneFile = "# Generated schedule for Mover Tuning move:\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/mover start |& logger -t move\n\n";
@@ -74,7 +120,7 @@ function make_cron()
 		return;
 	}
 	if (valid_cron($cron) === false) {
-		logger("Error: Invalid cron schedule for forced move: $cron");
+		logger("Error: Invalid cron schedule for forced move: " . preg_replace('/[^[:print:]]/', '?', $cron));
 		return;
 	}
 	$cronFile = "# Generated schedule for forced move:\n{$cron} {$mover} start |& logger -t move\n\n";

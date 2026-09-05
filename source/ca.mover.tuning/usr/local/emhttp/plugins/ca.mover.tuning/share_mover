@@ -132,9 +132,13 @@ if ! mountpoint -q /mnt/user0 && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 
     exit 5
 fi
 
-echo $$ >"$PIDFILE"
-trap 'rm -f "$PIDFILE"' EXIT
+# Remove the pid file only while it still names this run, so overlapping runs cannot delete each other's
+pid_cleanup() {
+    [ "$(cat "$PIDFILE" 2>/dev/null)" = "$$" ] && rm -f "$PIDFILE"
+}
+trap pid_cleanup EXIT
 trap 'exit 143' HUP INT TERM
+echo $$ >"$PIDFILE"
 
 shopt -s nullglob
 
