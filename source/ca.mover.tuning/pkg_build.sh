@@ -1,14 +1,15 @@
 #!/bin/bash
+set -euo pipefail
 
 # Get the directory of the script
-DIR="$(dirname "$(readlink -f ${BASH_SOURCE[0]})")"
+DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
 
 # Set the temporary directory and plugin name
 tmpdir=/tmp/tmp.$(( RANDOM * 19318203981230 + 40 ))
 plugin=$(basename "${DIR}")
 archive="$(dirname "$(dirname "${DIR}")")/archive"
 # $2 is argument addition to date (a,b,c)
-version=$(date +"%Y.%m.%d")$2
+version=$(date +"%Y.%m.%d")${2:-}
 # $1 Path to the plugin directory
 config_file="$1/$plugin/plugins/$plugin.plg"
 readme_file="$1/$plugin/README.md"
@@ -17,20 +18,22 @@ default_config_file="$1/$plugin/source/$plugin/usr/local/emhttp/plugins/$plugin/
 mkdir -p $tmpdir
 
 # Get the content from .update file
-update_content="$(dirname $(dirname "$DIR"))/.updates.txt"
+update_content="$(dirname "$(dirname "$DIR")")/.updates.txt"
+[ -s "$update_content" ] || { echo "Missing release notes: $update_content" >&2; exit 1; }
 
 # Step 0: Change to current version in $default_config_file
 sed -i "s/version=.*/version=\"$version\"/" "$default_config_file"
 
-cp --parents -f $(find . -type f ! \( -iname "pkg_build.sh" -o -iname "sftp-config.json"  \) ) $tmpdir/
+find . -type f ! \( -iname "pkg_build.sh" -o -iname "sftp-config.json" \) -exec cp --parents -f -t "$tmpdir/" {} +
 
 cd $tmpdir
 
-# Build the package using makepkg
-makepkg -l y -c y ${archive}/${plugin}-${version}-x86_64-1.txz
+# Same layout as `makepkg -l y -c y` (root-owned, 755 dirs), without needing Slackware
+find . -type d -exec chmod 755 {} +
+find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion --owner=0 --group=0 -T - -cJf "${archive}/${plugin}-${version}-x86_64-1.txz"
 
 # Calculate the MD5 hash of the package
-package_md5=$(md5sum ${archive}/${plugin}-${version}-x86_64-1.txz | awk '{print $1}')
+package_md5=$(md5sum "${archive}/${plugin}-${version}-x86_64-1.txz" | awk '{print $1}')
 
 echo "Version: $version"
 echo "MD5: $package_md5"

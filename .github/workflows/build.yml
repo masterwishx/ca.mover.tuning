@@ -7,6 +7,17 @@ on:
         description: "Version suffix (optional: a, b, c)"
         required: false
         default: ""
+      publish:
+        description: "Commit the package, manifest and changelog to this branch"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  PLUGIN_NAME: ca.mover.tuning
 
 jobs:
   build:
@@ -14,75 +25,59 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        path: ca.mover.tuning
 
-    - name: Install build tools
+    - name: Check version suffix
+      env:
+        SUFFIX: ${{ inputs.suffix }}
       run: |
-        sudo apt update
-        sudo apt install -y rsync makepkg
-
-    - name: Prepare directories
-      run: |
-        export PLUGIN_NAME="ca.mover.tuning"
-        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
-        mkdir -p "$COMPILE_DIR"
-
-        echo "Syncing plugin source to build directory..."
-        rsync -a --exclude='.git/' --exclude='.vscode/' "$GITHUB_WORKSPACE/$PLUGIN_NAME/" "$COMPILE_DIR/$PLUGIN_NAME/"
+        [[ "$SUFFIX" =~ ^[abc]?$ ]] || { echo "suffix must be empty, a, b or c"; exit 1; }
 
     - name: Run pkg_build.sh
+      env:
+        SUFFIX: ${{ inputs.suffix }}
       run: |
-        export PLUGIN_NAME="ca.mover.tuning"
-        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
-        export DATE_VERSION="${{ github.event.inputs.suffix }}"
-
-        cd "$COMPILE_DIR/$PLUGIN_NAME/source/$PLUGIN_NAME"
-        bash pkg_build.sh "$COMPILE_DIR" "$DATE_VERSION"
+        cd "$PLUGIN_NAME/source/$PLUGIN_NAME"
+        bash pkg_build.sh "$GITHUB_WORKSPACE" "$SUFFIX"
 
     - name: Validate build
       id: validate
       run: |
-        export PLUGIN_NAME="ca.mover.tuning"
-        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
+        cfg="$PLUGIN_NAME/source/$PLUGIN_NAME/usr/local/emhttp/plugins/$PLUGIN_NAME/default.cfg"
+        version=$(sed -n 's/^version="\([^"]*\)"/\1/p' "$cfg")
+        package="$PLUGIN_NAME-$version-x86_64-1.txz"
+        test -s "$PLUGIN_NAME/archive/$package"
+        md5=$(md5sum "$PLUGIN_NAME/archive/$package" | cut -d' ' -f1)
+        grep -Fq "\"$md5\"" "$PLUGIN_NAME/plugins/$PLUGIN_NAME.plg"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "package=$package" >> "$GITHUB_OUTPUT"
 
-        built_package=$(ls -t "$COMPILE_DIR/$PLUGIN_NAME/archive" | head -1)
-        echo "package=$built_package" >> $GITHUB_OUTPUT
-
-        if [ -z "$built_package" ]; then
-          echo "No package found"
-          exit 1
-        fi
-
-        FILE_TIMESTAMP=$(date -r "$COMPILE_DIR/$PLUGIN_NAME/archive/$built_package" +%s)
-        CURRENT_TIMESTAMP=$(date +%s)
-        TIME_DIFF=$((CURRENT_TIMESTAMP - FILE_TIMESTAMP))
-
-        if [ $TIME_DIFF -le 300 ]; then
-          echo "Plugin compiled successfully"
-        else
-          echo "Plugin compilation failed: file older than 5 minutes"
-          exit 1
-        fi
-
-    - name: Copy updated files back to repo
+    - name: Write release info
+      env:
+        VERSION: ${{ steps.validate.outputs.version }}
+        PUBLISH: ${{ inputs.publish }}
       run: |
-        export PLUGIN_NAME="ca.mover.tuning"
-        export COMPILE_DIR="$GITHUB_WORKSPACE/build"
-
-        cp -a "$COMPILE_DIR/$PLUGIN_NAME/README.md" "$GITHUB_WORKSPACE/$PLUGIN_NAME/"
-        cp -a "$COMPILE_DIR/$PLUGIN_NAME/archive/" "$GITHUB_WORKSPACE/$PLUGIN_NAME/"
-        cp -a "$COMPILE_DIR/$PLUGIN_NAME/plugins/" "$GITHUB_WORKSPACE/$PLUGIN_NAME/"
-        cp -a "$COMPILE_DIR/$PLUGIN_NAME/source/$PLUGIN_NAME/usr/local/emhttp/plugins/$PLUGIN_NAME/default.cfg" \
-              "$GITHUB_WORKSPACE/$PLUGIN_NAME/source/$PLUGIN_NAME/usr/local/emhttp/plugins/$PLUGIN_NAME/default.cfg"
-
-    - name: Commit updated files
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: "Auto-build: ${{ steps.validate.outputs.package }}"
-        branch: main
+        jq -n --arg tag "$VERSION" --arg name "Mover Tuning $VERSION" --arg new "$PUBLISH" \
+          '{release_tag: $tag, release_name: $name, new_release: $new}' > release_info.json
 
     - name: Upload built package artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: mover-tuning-package
-        path: build/ca.mover.tuning/archive/*.txz
+        path: ca.mover.tuning/archive/${{ steps.validate.outputs.package }}
+
+    - name: Upload release info
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: release_info
+        path: release_info.json
+
+    - name: Commit updated files
+      if: ${{ inputs.publish }}
+      uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
+      with:
+        repository: ca.mover.tuning
+        commit_message: "Auto-build: ${{ steps.validate.outputs.package }}"
+        file_pattern: README.md archive/ plugins/ source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg

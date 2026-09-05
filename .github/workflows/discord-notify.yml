@@ -8,7 +8,7 @@ on:
   issues:
     types: [opened, closed, reopened]
   workflow_run:
-    workflows: ["Auto Build & Release Mover Tuning Package"]
+    workflows: ["Build Mover Tuning Plugin"]
     types: [completed]
   workflow_dispatch:
 
@@ -24,8 +24,10 @@ jobs:
       # 1. Download release info artifact (workflow_run only)
       # ---------------------------------------------------------
       - name: Download release info artifact
+        id: release_artifact
         if: ${{ github.event_name == 'workflow_run' }}
-        uses: actions/download-artifact@v8
+        continue-on-error: true
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: release_info
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -35,16 +37,18 @@ jobs:
       # 2. Parse release info JSON
       # ---------------------------------------------------------
       - name: Read release info
-        if: ${{ github.event_name == 'workflow_run' }}
+        if: ${{ github.event_name == 'workflow_run' && steps.release_artifact.outcome == 'success' }}
         id: release_info
         run: |
           RELEASE_TAG=$(jq -r '.release_tag' release_info.json)
           RELEASE_NAME=$(jq -r '.release_name' release_info.json)
           NEW_RELEASE=$(jq -r '.new_release' release_info.json)
 
-          echo "RELEASE_TAG=${RELEASE_TAG}" >> ${GITHUB_ENV}
-          echo "RELEASE_NAME=${RELEASE_NAME}" >> ${GITHUB_ENV}
-          echo "NEW_RELEASE=${NEW_RELEASE}" >> ${GITHUB_ENV}
+          {
+            echo "RELEASE_TAG=${RELEASE_TAG}"
+            echo "RELEASE_NAME=${RELEASE_NAME}"
+            echo "NEW_RELEASE=${NEW_RELEASE}"
+          } >> "${GITHUB_ENV}"
 
       # ---------------------------------------------------------
       # 3. Build & send Discord embed
@@ -90,15 +94,15 @@ jobs:
           # Guard: Webhook must exist
           # -----------------------------------------------------
           if [ -z "${WEBHOOK}" ]; then
-            echo "ERROR: Discord webhook is empty"
-            exit 1
+            echo "::warning::DISCORD_WEBHOOK is not set, skipping notification"
+            exit 0
           fi
 
           # -----------------------------------------------------
-          # Truncate bodies to avoid Discord 4096 limit
+          # Truncate bodies to 300 characters (not bytes)
           # -----------------------------------------------------
           truncate() {
-            echo "$1" | head -c 300
+            printf '%s' "$1" | python3 -c 'import sys; sys.stdout.write(sys.stdin.read()[:300])'
           }
 
           # -----------------------------------------------------
@@ -194,11 +198,11 @@ jobs:
 
             START=$(date -d "${WORKFLOW_STARTED}" +%s)
             END=$(date -d "${WORKFLOW_FINISHED}" +%s)
-            SECONDS=$((END - START))
+            ELAPSED=$((END - START))
 
-            H=$((SECONDS / 3600))
-            M=$(((SECONDS % 3600) / 60))
-            S=$((SECONDS % 60))
+            H=$((ELAPSED / 3600))
+            M=$(((ELAPSED % 3600) / 60))
+            S=$((ELAPSED % 60))
 
             if [ ${H} -gt 0 ]; then
               DURATION="${H}h ${M}m ${S}s"
@@ -272,6 +276,8 @@ jobs:
           # -----------------------------------------------------
           # Send to Discord
           # -----------------------------------------------------
-          curl -H "Content-Type: application/json" \
+          curl --fail-with-body --silent --show-error \
+               --connect-timeout 10 --max-time 30 \
+               -H "Content-Type: application/json" \
                -d "${JSON}" \
                "${WEBHOOK}"
