@@ -24,6 +24,12 @@ function logger($string)
 	}
 }
 
+// A form field as a string; anything else, such as an array, counts as empty
+function post_string($key)
+{
+	return isset($_POST[$key]) === true && is_string($_POST[$key]) === true ? $_POST[$key] : '';
+}
+
 // Five fields of * / n / n-m lists with an optional /step, each within its range; anything else would land in root's crontab.
 // dcron's @hourly..@yearly forms need an ID= job name the writers below do not add, so they are not accepted.
 function valid_cron($cron)
@@ -82,6 +88,10 @@ function make_unraid_cron()
 
 	if (!empty($vars['shareMoverSchedule'])) {
 		$moverCron = trim($vars['shareMoverSchedule']);
+		if (valid_cron($moverCron) === false) {
+			logger("Error: Invalid Unraid mover schedule: " . preg_replace('/[^[:print:]]/', '?', $moverCron));
+			return;
+		}
 		$cronMoverFile = "# Generated mover schedule:\n" . $moverCron . " /usr/local/sbin/mover start |& logger -t move\n\n";
 		if (file_put_contents("/boot/config/plugins/dynamix/mover.cron", $cronMoverFile) === false) {
 			logger("Error: Failed to write mover.cron file.");
@@ -93,7 +103,7 @@ function make_unraid_cron()
 function make_tune_cron()
 {
 	global $cfg_moverTuneCron;
-	$tuneCron = isset($_POST['tune_cron']) ? trim($_POST['tune_cron']) : $cfg_moverTuneCron;
+	$tuneCron = isset($_POST['tune_cron']) === true ? trim(post_string('tune_cron')) : $cfg_moverTuneCron;
 	if (empty($tuneCron)) {
 		logger("Error: No cron schedule provided for Mover Tuning move.");
 		return; // Nothing to write
@@ -114,7 +124,7 @@ function make_cron()
 	global $vars;
 	$version = $vars['version'] ?? '0.0.0';
 	$mover = version_compare($version, '7.2.1', '<') ? '/usr/local/sbin/mover.old' : '/usr/local/sbin/mover';
-	$cron = isset($_POST['cron']) ? trim($_POST['cron']) : '';
+	$cron = trim(post_string('cron'));
 	if (empty($cron)) {
 		logger("Error: No cron schedule provided for forced move.");
 		return;
@@ -190,7 +200,7 @@ if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 
 // Handle Mover Tuning custom cron schedule, unless this request disables Mover Tuning
 if (version_compare($vars['version'], '7.2.1', '>=') === true && ($_POST['ismoverDisabled'] ?? '') !== 'yes') {
-	$postTuneCron = isset($_POST['tune_cron']) ? $_POST['tune_cron'] : '';
+	$postTuneCron = post_string('tune_cron');
 	if ($cfg_moverTuneCron !== $postTuneCron) {
 		if (trim($postTuneCron) !== "") {
 			make_tune_cron();
