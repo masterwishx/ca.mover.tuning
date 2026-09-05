@@ -8,9 +8,6 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
-# Updates by pr in new version
-.updates.txt
-
 # VS Code Settings
 .vscode
 

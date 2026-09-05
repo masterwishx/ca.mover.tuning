@@ -1,0 +1,83 @@
+name: Build Mover Tuning Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      suffix:
+        description: "Version suffix for another build on the same day (optional): a letter such as a, or a dot-number such as .1 or .2004"
+        required: false
+        default: ""
+      publish:
+        description: "Commit the package, manifest and changelog to this branch"
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: write
+
+env:
+  PLUGIN_NAME: ca.mover.tuning
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      with:
+        path: ca.mover.tuning
+
+    - name: Check version suffix
+      env:
+        SUFFIX: ${{ inputs.suffix }}
+      run: |
+        [[ "$SUFFIX" =~ ^([a-z]|\.[a-z0-9]+)?$ ]] || { echo "suffix must be empty, a letter (a), or a dot-number (.1)"; exit 1; }
+
+    - name: Run pkg_build.sh
+      env:
+        SUFFIX: ${{ inputs.suffix }}
+      run: |
+        cd "$PLUGIN_NAME/source/$PLUGIN_NAME"
+        bash pkg_build.sh "$GITHUB_WORKSPACE" "$SUFFIX"
+
+    - name: Validate build
+      id: validate
+      run: |
+        cfg="$PLUGIN_NAME/source/$PLUGIN_NAME/usr/local/emhttp/plugins/$PLUGIN_NAME/default.cfg"
+        version=$(sed -n 's/^version="\([^"]*\)"/\1/p' "$cfg")
+        package="$PLUGIN_NAME-$version-x86_64-1.txz"
+        test -s "$PLUGIN_NAME/archive/$package"
+        md5=$(md5sum "$PLUGIN_NAME/archive/$package" | cut -d' ' -f1)
+        grep -Fq "\"$md5\"" "$PLUGIN_NAME/plugins/$PLUGIN_NAME.plg"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "package=$package" >> "$GITHUB_OUTPUT"
+
+    - name: Write release info
+      env:
+        VERSION: ${{ steps.validate.outputs.version }}
+        PUBLISH: ${{ inputs.publish }}
+      run: |
+        jq -n --arg tag "$VERSION" --arg name "Mover Tuning $VERSION" --arg new "$PUBLISH" \
+          '{release_tag: $tag, release_name: $name, new_release: $new}' > release_info.json
+
+    - name: Upload built package artifact
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: mover-tuning-package
+        path: ca.mover.tuning/archive/${{ steps.validate.outputs.package }}
+
+    - name: Upload release info
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      with:
+        name: release_info
+        path: release_info.json
+
+    - name: Commit updated files
+      if: ${{ inputs.publish }}
+      uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
+      with:
+        repository: ca.mover.tuning
+        commit_message: "Auto-build: ${{ steps.validate.outputs.package }}"
+        file_pattern: README.md archive/ plugins/ source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg
