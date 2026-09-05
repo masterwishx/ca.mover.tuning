@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.08.29">
-<!ENTITY md5       "d90f4f70a45ebb576080e5b3a4688aab">
+<!ENTITY version   "2026.09.05">
+<!ENTITY md5       "2b9a9ac3f541fee947c0fcb5f41eeca1">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -15,6 +15,22 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.09.05
+- fix: Improved skip‑list matching to prevent similarly named shares or unrelated paths from being incorrectly included. *(masterwishx - Thanks to chodeus for the PRs fix)*
+- fix: Added support for skip lists that use Windows‑style line endings.
+- fix: Improved reporting of skipped paths and file types, including clearer per‑path exclusions and more accurate total size calculations.
+- fix: Reduced inconsistencies in how skipped‑content sizes are calculated.
+- fix: Prevented unattended storage balancing from moving items that are marked as skipped.
+- fix: Improved cache fill‑up threshold calculations for more accurate mover decisions.
+- fix: Corrected projected pool‑usage calculations when evaluating files marked for cache retention or preference.
+- fix: Ensured planned moves consistently account for their net impact on pool usage.
+- fix: Adjusted file‑processing order so cache‑retained files are handled oldest first, while other modes keep their existing order.
+- fix: Improved consistency when determining which files should be moved as pool usage changes.
+- fix: Added escape_find_path() to correctly escape backslashes and left‑bracket characters before paths are added to find‑path filters.
+- fix: Accounted for both shell evaluation and GNU find path‑glob matching when processing skip‑list paths.
+- fix: Added a filter for ignored directories before appending the star‑slash suffix.
+- fix: Retained content‑filter behavior after appending the star‑slash suffix to ensure directory nodes and their contents are handled correctly.
+
 ###2026.08.29
 - fix: Improved mover threshold evaluation by using projected pool usage instead of raw cumulative file size. *(masterwishx)*
 - fix: Ensured accurate pool-usage tracking across file filtering, move planning, and mover execution.

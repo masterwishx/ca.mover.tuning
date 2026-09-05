@@ -35,6 +35,22 @@ For each file, if the file is not "in use" by any process (as detected by 'fuser
 If an error occurs in copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
+- 2026.09.05
+    - fix: Improved skip‑list matching to prevent similarly named shares or unrelated paths from being incorrectly included. *(masterwishx - Thanks to chodeus for the PRs fix)*
+    - fix: Added support for skip lists that use Windows‑style line endings.
+    - fix: Improved reporting of skipped paths and file types, including clearer per‑path exclusions and more accurate total size calculations.
+    - fix: Reduced inconsistencies in how skipped‑content sizes are calculated.
+    - fix: Prevented unattended storage balancing from moving items that are marked as skipped.
+    - fix: Improved cache fill‑up threshold calculations for more accurate mover decisions.
+    - fix: Corrected projected pool‑usage calculations when evaluating files marked for cache retention or preference.
+    - fix: Ensured planned moves consistently account for their net impact on pool usage.
+    - fix: Adjusted file‑processing order so cache‑retained files are handled oldest first, while other modes keep their existing order.
+    - fix: Improved consistency when determining which files should be moved as pool usage changes.
+    - fix: Added escape_find_path() to correctly escape backslashes and left‑bracket characters before paths are added to find‑path filters.
+    - fix: Accounted for both shell evaluation and GNU find path‑glob matching when processing skip‑list paths.
+    - fix: Added a filter for ignored directories before appending the star‑slash suffix.
+    - fix: Retained content‑filter behavior after appending the star‑slash suffix to ensure directory nodes and their contents are handled correctly.
+
 - 2026.08.29
     - fix: Improved mover threshold evaluation by using projected pool usage instead of raw cumulative file size. *(masterwishx)*
     - fix: Ensured accurate pool-usage tracking across file filtering, move planning, and mover execution.
