@@ -653,18 +653,6 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
         echo "Migrated cron entry: age_mover → mover"
     fi
 
-    # Restore original mover if both current and backup exist
-    if [[ -f /usr/local/sbin/mover &amp;&amp; -f /usr/local/sbin/mover.old ]]; then
-        echo "Restoring original /usr/local/sbin/mover from backup"
-        mv /usr/local/sbin/mover.old /usr/local/sbin/mover
-    fi
-
-    # Same for /usr/local/bin/mover
-    if [[ -f /usr/local/bin/mover &amp;&amp; -f /usr/local/bin/mover.old ]]; then
-        echo "Restoring original /usr/local/bin/mover from backup"
-        mv /usr/local/bin/mover.old /usr/local/bin/mover
-    fi
-
 else
     echo "Unraid version below 7.2.1 — performing mover script backup."
 
@@ -754,13 +742,18 @@ else
   exit 1
 fi
 
-# Restore original mover binaries if backups exist
-if [[ -e /usr/local/sbin/mover.old ]]; then
-  mv -f /usr/local/sbin/mover.old /usr/local/sbin/mover
-fi
-
-if [[ -e /usr/local/bin/mover.old ]]; then
-  mv -f /usr/local/bin/mover.old /usr/local/bin/mover
+# Restore the mover this plugin backed up below Unraid 7.2.1 only; 7.4 ships its own mover.old
+UNRAID_VERSION=$(grep '^version=' /etc/unraid-version | cut -d'"' -f2)
+version_ge() {
+  [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
+}
+if ! version_ge "$UNRAID_VERSION" "7.2.1"; then
+  if [[ -e /usr/local/sbin/mover.old ]]; then
+    mv -f /usr/local/sbin/mover.old /usr/local/sbin/mover
+  fi
+  if [[ -e /usr/local/bin/mover.old ]]; then
+    mv -f /usr/local/bin/mover.old /usr/local/bin/mover
+  fi
 fi
 
 # Restore original mover cron if backup exists
