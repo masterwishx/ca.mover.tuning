@@ -8,6 +8,8 @@ DEFAULT_CONFIG="/usr/local/emhttp/plugins/ca.mover.tuning/default.cfg"
 CRON="/boot/config/plugins/ca.mover.tuning/mover.cron"
 UNRAID_CRON="/boot/config/plugins/dynamix/mover.cron*"
 OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
+PIDFILE="/var/run/mover.pid"
+SOFTSTOPFILE="/var/run/moversoft.stop"
 
 # Get parent Logs Folder from config, if blank set to default /tmp
 LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)
@@ -174,6 +176,31 @@ fi
         echo
     done
 } >$DEBUGROOT/PLUGIN/pools.txt 2>&1
+
+# Who holds the mover now. A pid file left by the stock mover, or one whose pid is
+# dead, explains both "already running" and a run that overlapped the stock mover.
+mover_state() {
+    echo "### $PIDFILE"
+    if [ -f "$PIDFILE" ]; then
+        local pid
+        pid=$(tr -cd '0-9' <"$PIDFILE")
+        if [ -n "$pid" ] && [ -r "/proc/$pid/cmdline" ]; then
+            printf 'pid=%s etime=%s cmdline=' "$pid" "$(ps -o etime= -p "$pid" | tr -d ' ')"
+            tr '\0' ' ' <"/proc/$pid/cmdline"
+            echo
+        else
+            echo "pid=${pid:-?} not running (stale pid file)"
+        fi
+    else
+        echo "absent"
+    fi
+    [ -e "$SOFTSTOPFILE" ] && echo "### $SOFTSTOPFILE present"
+    echo "### mover processes"
+    pgrep -af 'age_mover|share_mover|sbin/mover|unraid/move' || echo "none"
+    echo "### emhttpd"
+    grep -E '^shareMover(Active|Schedule)=' /var/local/emhttp/var.ini
+}
+mover_state >$DEBUGROOT/PLUGIN/mover_state.txt 2>&1
 
 # include unraid version in package
 [ -f /etc/unraid-version ] && cp -f /etc/unraid-version $DEBUGROOT/unraid-version.txt 2>&1

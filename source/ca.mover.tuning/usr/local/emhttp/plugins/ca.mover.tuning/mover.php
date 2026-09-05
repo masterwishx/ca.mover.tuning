@@ -50,6 +50,8 @@ function runMover($cmd)
     logger("Detached from web request; mover output continues in syslog and the mover log");
     // stdout is discarded rather than piped to logger: on this path age_mover's
     // mvlogger already writes each message to syslog, so piping would double it.
+    // The run outlives the request and reparents to PID 1, so name the launcher.
+    putenv("MOVER_RUN_METHOD=web button");
     exec($cmd . " >/dev/null 2>&1 &");
 
     // Wait for the run to claim the pid file so the page's status poll does
