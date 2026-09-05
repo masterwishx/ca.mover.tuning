@@ -1143,6 +1143,7 @@ createFilteredFilelist() {
             fi
         elif [ "$SHAREUSECACHE" = "yes" ]; then
             mvlogger "Moving threshold: $MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Freeing threshold: $FREEINGPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
+            [ $overrideFlag = 1 ] && warn_freeing_above_moving
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
@@ -2297,6 +2298,14 @@ processTheMoves() {
     fi
 }
 
+# The settings pages cannot offer this combination, so it only arrives by saving a
+# lower moving threshold while the old freeing value is still selected.
+warn_freeing_above_moving() {
+    if [ "$FREEINGPCTLIMIT" -gt "$MOVINGPCTTHRESHOLD" ]; then
+        mvlogger "Warning: Freeing threshold ($FREEINGPCTLIMIT%) is above the moving threshold ($MOVINGPCTTHRESHOLD%), so no file can be moved. The settings page will show the freeing threshold as $MOVINGPCTTHRESHOLD% until it is saved again."
+    fi
+}
+
 start() {
 
     # Do not start if already running
@@ -2372,11 +2381,7 @@ start() {
         mvlogger "Warning: The mover will possibly not proceed due to the low gap between thresholds."
     fi
 
-    # The settings page cannot offer this combination, so it only arrives by saving a
-    # lower moving threshold while the old freeing value is still selected.
-    if [ "$FREEINGPCTLIMIT" -gt "$MOVINGPCTTHRESHOLD" ]; then
-        mvlogger "Warning: Freeing threshold ($FREEINGPCTLIMIT%) is above the moving threshold ($MOVINGPCTTHRESHOLD%), so no file can be moved. The settings page will show the freeing threshold as $MOVINGPCTTHRESHOLD% until it is saved again."
-    fi
+    warn_freeing_above_moving
 
     # Only start if cache enabled and present
     if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
