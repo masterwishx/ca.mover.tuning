@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       suffix:
-        description: "Version suffix (optional: a, b, c)"
+        description: "Version suffix for another build on the same day (optional): a letter such as a, or a dot-number such as .1 or .2004"
         required: false
         default: ""
       publish:
@@ -33,7 +33,7 @@ jobs:
       env:
         SUFFIX: ${{ inputs.suffix }}
       run: |
-        [[ "$SUFFIX" =~ ^[abc]?$ ]] || { echo "suffix must be empty, a, b or c"; exit 1; }
+        [[ "$SUFFIX" =~ ^([a-z]|\.[a-z0-9]+)?$ ]] || { echo "suffix must be empty, a letter (a), or a dot-number (.1)"; exit 1; }
 
     - name: Run pkg_build.sh
       env:
