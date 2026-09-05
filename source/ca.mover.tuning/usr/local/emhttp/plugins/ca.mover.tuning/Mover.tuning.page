@@ -78,10 +78,6 @@ function updateCron() {
 	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled});
 }
 
-function moveNow() {
-	$.post("/plugins/ca.mover.tuning/mover.php crond start");
-}
-
 document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById("StartTuneMoverBtn");
     const status = document.getElementById("MoverStatus");

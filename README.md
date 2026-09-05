@@ -459,7 +459,7 @@ You'll find its settings within Settings - [Scheduler](https://docs.unraid.net/u
 
 ## Usage
 
-After installation, the default settings are set so that the plugin will be in test mode. You may check /tmp/ca.mover.tuning/Mover_actions_date.list to see if your settings are correct and if the mover will move/keep/sync the files as expected.
+After installation, Test Mode is disabled by default. Enable Test Mode before reviewing /tmp/ca.mover.tuning/Mover_actions_date.list to confirm that the mover will move/keep/sync files as expected.
 
 There are several commands that can be launched from terminal or a script:
 /usr/local/emhttp/plugins/ca.mover.tuning/age_mover start
