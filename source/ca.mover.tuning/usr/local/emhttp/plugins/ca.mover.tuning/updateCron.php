@@ -54,7 +54,7 @@ function cron_field_ok($field, $min, $max, $names)
 		if (preg_match('/^(\*|([a-z0-9]+)(?:-([a-z0-9]+))?)(?:\/([0-9]+))?\z/i', $item, $m) !== 1) {
 			return false;
 		}
-		if (isset($m[4]) && (int)$m[4] < 1) {
+		if (isset($m[4]) === true && (int)$m[4] < 1) {
 			return false;
 		}
 		if ($m[1] === '*') {
@@ -66,7 +66,7 @@ function cron_field_ok($field, $min, $max, $names)
 			}
 			// names count from $min, so jan is 1 and sun is 0
 			$index = array_search(strtolower($value), $names, true);
-			$n = is_numeric($value) ? (int)$value : ($index === false ? -1 : $index + $min);
+			$n = ctype_digit($value) === true ? (int)$value : ($index === false ? -1 : $index + $min);
 			if ($n < $min || $n > $max) {
 				return false;
 			}
