@@ -10,7 +10,8 @@ UNRAID_CRON="/boot/config/plugins/dynamix/mover.cron*"
 OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 
 # Get parent Logs Folder from config, if blank set to default /tmp
-LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)/ca.mover.tuning
+LOGFOLDER=$(grep "loggingFolder=" "$CONFIG" | cut -d '"' -f 2)
+LOGFOLDER="${LOGFOLDER:-/tmp}/ca.mover.tuning"
 
 # Get the filelistv from config
 SKIPFILESLIST=$(grep "filelistv=" "$CONFIG" | cut -d '"' -f 2)
