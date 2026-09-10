@@ -66,6 +66,10 @@ TOTALUNATTENDEDSIZE=0
 REMAINING_UNATTENDED_FILES=0
 REMAINING_UNATTENDED_FOLDERS=0
 REMAINING_UNATTENDED_SIZE=0
+MOVEDFILES=0
+MOVEDSIZE=0
+NOTMOVEDFILES=0
+NOTMOVEDSIZE=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
 UNRAID_MOVER_LOGLEVEL=0
@@ -1566,6 +1570,32 @@ createFilteredFilelist() {
     mv -f "$reorderfile" "$FILTERED_FILELIST"
 }
 
+# processTheMoves refuses a file whose hardlinks are not all listed, so hold it at planning
+# like an ignored file - otherwise it is counted as moved and as freed space.
+holdPartialHardlinks() {
+    local held files bytes tmp
+    [ -s "$FILTERED_FILELIST" ] || return
+    tmp=$(mktemp)
+    # key mirrors the SYNCED_FILES_ARR lookup in processTheMoves: storage, links, inode, mtime
+    if ! held=$(awk -F'|' -v OFS='|' -v out="$tmp" '
+        function key(   parts) { split($13, parts, "/"); return parts[3] "|" $10 "|" $11 "|" $5 }
+        NR == FNR { if (FNR > 1 && $12 == "f" && $10 > 1) names[key()]++; next }
+        FNR > 1 && $12 == "f" && $10 > 1 && $4 != "skipped" && names[k = key()] < $10 {
+            $4 = "skipped"; files++
+            if (!(k in seen)) { seen[k] = 1; bytes += $8 }
+        }
+        { print > out }
+        END { printf "%d %d\n", files, bytes }' "$FILTERED_FILELIST" "$FILTERED_FILELIST"); then
+        rm -f "$tmp"
+        return
+    fi
+    mv -f "$tmp" "$FILTERED_FILELIST"
+    read -r files bytes <<<"$held"
+    if [ "$files" -gt 0 ]; then
+        mvlogger "$files files representing $(bytes_to_human "$bytes") stay where they are: some of their hardlinks are not in the list of files to move (ignore list or another filter)"
+    fi
+}
+
 decideMoveActions() {
     if [ -e $SOFTSTOPFILE ]; then
         [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
@@ -1930,6 +1960,7 @@ processTheMoves() {
     REMAINING_UNATTENDED_SIZE=$TOTALUNATTENDEDSIZE
     REMAINING_UNATTENDED_FILES=$TOTALUNATTENDEDFILES
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
+    local -A HANDLED_LINKS=()
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -1960,10 +1991,13 @@ processTheMoves() {
                 continue
             fi
 
-            # Skip filesize = 0 (hardlinks already handled in a previous loop)
+            # The first row of a hardlinked file transfers all its names; the source is gone after
+            # a move, so later rows are matched on the SYNCED_FILES_ARR key below, not the file.
             NBLINKS="${NBLINKS:-0}"
-            if [ -f "${SOURCE}/${FILEPATH}" ] && [ "$NBLINKS" -gt 1 ] && [ "$FILESIZE" = 0 ]; then
-                continue
+            if [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -gt 1 ]; then
+                link_key="$SOURCE|$NBLINKS|$INODE|$MODIFYTIME"
+                [ -n "${HANDLED_LINKS[$link_key]}" ] && continue
+                HANDLED_LINKS[$link_key]=1
             fi
 
             # Temporary fix: prevent moving empty directories that are in the skip list (better to remove duplicate empty folders from the lists instead?)
@@ -2013,21 +2047,23 @@ processTheMoves() {
             NBFILES=${#SYNCED_FILES_ARR[@]}
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
+                NOTMOVEDFILES=$((NOTMOVEDFILES + NBFILES))
+                NOTMOVEDSIZE=$((NOTMOVEDSIZE + FILESIZE))
                 continue
             fi
 
             # Proceed with rsync
             if [[ "$ACTION" =~ "move" ]]; then
                 # Some verbosity
-                GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
-                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
                 rsync_action="Move"
                 # Finalize RSYNC_CMD
                 RSYNC_CMD+=(--remove-source-files)
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
-                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
-                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
                 rsync_action="Sync"
             fi
 
@@ -2039,6 +2075,7 @@ processTheMoves() {
                 filetype="folder"
             fi
 
+            rc=0
             # Check if action and move files tool is unraid move
             if [[ "$ACTION" =~ "move" && "$MOVE_FILES_TOOL" = "move" ]]; then
                 if [ "$TESTMODE" = "yes" ]; then
@@ -2060,10 +2097,23 @@ processTheMoves() {
                     mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
                     # Perform rsync. relative paths and hardlinks
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
-                        "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/"
+                        "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/" || rc=$?
                     else
                         mvlogger_t "Error: No files found to move for %s" "failure" "$(qp "$SOURCE/$FILEPATH")"
+                        rc=1
                     fi
+                fi
+            fi
+
+            # Unraid move exits 0 even when it fails, so the destination must hold the file too
+            if [ "$TESTMODE" != "yes" ]; then
+                names=${#SYNCED_FILES_ARR[@]}
+                if [ "$rc" = 0 ] && [ -e "$DESTINATION/$FILEPATH" ]; then
+                    MOVEDFILES=$((MOVEDFILES + names))
+                    MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
+                else
+                    NOTMOVEDFILES=$((NOTMOVEDFILES + (names > 0 ? names : 1)))
+                    NOTMOVEDSIZE=$((NOTMOVEDSIZE + FILESIZE))
                 fi
             fi
 
@@ -2489,6 +2539,7 @@ start() {
 
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
+    [ ! -e $SOFTSTOPFILE ] && holdPartialHardlinks
     [ ! -e $SOFTSTOPFILE ] && decideMoveActions
 
     # Get current time to start time counter
@@ -2585,10 +2636,13 @@ start() {
             unraid_notify "$(translate_text "TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "warning"
         fi
     else
-        if [ "$TOTALFILES" -gt 0 ]; then
-            unraid_notify "$(translate_text "A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$TOTALFILES" "$(bytes_to_human "$TOTALSIZE")" "$ELAPSED_TIME")" "success"
+        if [ "$MOVEDFILES" -gt 0 ]; then
+            unraid_notify "$(translate_text "A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$MOVEDFILES" "$(bytes_to_human "$MOVEDSIZE")" "$ELAPSED_TIME")" "success"
         else
             unraid_notify "$(translate_text "No files were moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "success"
+        fi
+        if [ "$NOTMOVEDFILES" -gt 0 ]; then
+            mvlogger "$NOTMOVEDFILES files representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced, see the mover log for the errors." "failure"
         fi
     fi
 
