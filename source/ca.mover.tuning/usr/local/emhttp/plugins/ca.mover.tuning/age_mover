@@ -2642,7 +2642,7 @@ start() {
             unraid_notify "$(translate_text "No files were moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "success"
         fi
         if [ "$NOTMOVEDFILES" -gt 0 ]; then
-            mvlogger "$NOTMOVEDFILES files representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced, see the mover log for the errors." "failure"
+            mvlogger "$NOTMOVEDFILES files representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced."
         fi
     fi
 
