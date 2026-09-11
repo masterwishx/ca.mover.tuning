@@ -2094,9 +2094,13 @@ processTheMoves() {
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
-                    mvDebuglogger "Move cmd: move, Move $filetype: $(qp "$SOURCE/$FILEPATH"), Dest: $(qp "$DESTINATION/")" "Move Action"
-                    # Perform unraid binary move.
-                    find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                    mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
+                    # Unraid move keeps hardlinks only among names given in one run and skips the file otherwise
+                    if [ "$FILETYPE" = "f" ]; then
+                        printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                    else
+                        find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                    fi
                 fi
             else
                 # If action is sync/move and move files tool is rsync
