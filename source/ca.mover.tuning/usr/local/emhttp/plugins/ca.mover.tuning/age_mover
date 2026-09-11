@@ -70,6 +70,7 @@ MOVEDFILES=0
 MOVEDSIZE=0
 NOTMOVEDFILES=0
 NOTMOVEDSIZE=0
+SYNCFAILED=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
 UNRAID_MOVER_LOGLEVEL=0
@@ -1938,6 +1939,16 @@ decideMoveActions() {
     fi
 }
 
+# Counts the current row as not transferred ($1 = its names, 1 if unknown); a sync row also
+# holds lastCacheSync, since a later run only syncs files newer than the mark.
+not_moved() {
+    NOTMOVEDFILES=$((NOTMOVEDFILES + (${1:-0} > 0 ? ${1:-0} : 1)))
+    NOTMOVEDSIZE=$((NOTMOVEDSIZE + FILESIZE))
+    if [[ "$ACTION" =~ "sync" ]]; then
+        SYNCFAILED=1
+    fi
+}
+
 # Internal move engine
 processTheMoves() {
     if [ -e $SOFTSTOPFILE ]; then
@@ -2028,6 +2039,7 @@ processTheMoves() {
             if [ "$VALIDATE_FILENAMES" = "yes" ]; then
                 if ! validate_filename "$(basename "$FILEPATH")"; then
                     mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "$SOURCE/$FILEPATH")"
+                    not_moved "$([ "$FILETYPE" = "f" ] && echo "$NBLINKS")"
                     continue
                 #else
                 #    mvlogger "Valid filename"
@@ -2050,8 +2062,7 @@ processTheMoves() {
             NBFILES=${#SYNCED_FILES_ARR[@]}
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
-                NOTMOVEDFILES=$((NOTMOVEDFILES + NBFILES))
-                NOTMOVEDSIZE=$((NOTMOVEDSIZE + FILESIZE))
+                not_moved "$NBFILES"
                 continue
             fi
 
@@ -2123,8 +2134,7 @@ processTheMoves() {
                     MOVEDFILES=$((MOVEDFILES + names))
                     MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
                 else
-                    NOTMOVEDFILES=$((NOTMOVEDFILES + (names > 0 ? names : 1)))
-                    NOTMOVEDSIZE=$((NOTMOVEDSIZE + FILESIZE))
+                    not_moved "$names"
                 fi
             fi
 
@@ -2400,8 +2410,7 @@ processTheMoves() {
 
     mvlogger "$(titleLine "Cleaning up" '-')"
 
-    # keep the old mark after a failure, or later runs skip the files that failed to sync
-    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$NOTMOVEDFILES" -eq 0 ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
+    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
 
         mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
