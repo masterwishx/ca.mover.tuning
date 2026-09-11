@@ -186,7 +186,10 @@ unraid_notify() {
     #
     # In Moved Only mode, suppress success/warning when nothing moved, exit the function
     if [[ "$NOTIFY" == "movedOnly" ]] && [[ "$flag" == "success" || "$flag" == "warning" ]]; then
-        if [[ "$TOTALFILES" -eq 0 ]]; then
+        # a real run counts what was moved; test mode has only the plan
+        local moved=$MOVEDFILES
+        [ "$TESTMODE" = "yes" ] && moved=$TOTALFILES
+        if [[ "$moved" -eq 0 ]]; then
             mvDebuglogger "Moved Only notify mode activated. No files were moved, and notifications are disabled." "Notify Mode"
             return 0 # Do not process success messages
         else
@@ -2105,10 +2108,18 @@ processTheMoves() {
                 fi
             fi
 
-            # Unraid move exits 0 even when it fails, so the destination must hold the file too
+            # Unraid move exits 0 even when it fails or skips an existing target, so check every name
             if [ "$TESTMODE" != "yes" ]; then
                 names=${#SYNCED_FILES_ARR[@]}
-                if [ "$rc" = 0 ] && [ -e "$DESTINATION/$FILEPATH" ]; then
+                arrived=0
+                for f in "${SYNCED_FILES_ARR[@]}"; do
+                    rel=${f#"$SOURCE/./"}
+                    [ -e "$DESTINATION/$rel" ] || continue
+                    # rsync leaves a moved folder's source behind, so only a file must be gone
+                    [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" && -e "$SOURCE/$rel" ]] && continue
+                    arrived=$((arrived + 1))
+                done
+                if [ "$rc" = 0 ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ]; then
                     MOVEDFILES=$((MOVEDFILES + names))
                     MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
                 else
@@ -2389,7 +2400,8 @@ processTheMoves() {
 
     mvlogger "$(titleLine "Cleaning up" '-')"
 
-    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
+    # keep the old mark after a failure, or later runs skip the files that failed to sync
+    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$NOTMOVEDFILES" -eq 0 ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
 
         mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
