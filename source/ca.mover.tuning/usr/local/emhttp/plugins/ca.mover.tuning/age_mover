@@ -1574,8 +1574,8 @@ createFilteredFilelist() {
     mv -f "$reorderfile" "$FILTERED_FILELIST"
 }
 
-# processTheMoves refuses a file whose hardlinks are not all listed, so hold it at planning
-# like an ignored file - otherwise it is counted as moved and as freed space.
+# processTheMoves refuses a file whose hardlinks are not all listed: hold it at planning like an
+# ignored file. The hold lasts as long as the exclusion, so it deliberately leaves lastCacheSync alone.
 holdPartialHardlinks() {
     local held files bytes tmp
     [ -s "$FILTERED_FILELIST" ] || return
@@ -2035,17 +2035,6 @@ processTheMoves() {
             #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
-            # Check File by validate function and skip if error
-            if [ "$VALIDATE_FILENAMES" = "yes" ]; then
-                if ! validate_filename "$(basename "$FILEPATH")"; then
-                    mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "$SOURCE/$FILEPATH")"
-                    not_moved "$([ "$FILETYPE" = "f" ] && echo "$NBLINKS")"
-                    continue
-                #else
-                #    mvlogger "Valid filename"
-                fi
-            fi
-
             # Get files to rsync as a real array. Passing the filenames to rsync
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
@@ -2057,6 +2046,16 @@ processTheMoves() {
             SYNCED_FILES=""
             for f in "${SYNCED_FILES_ARR[@]}"; do SYNCED_FILES+="$(qp "$f") "; done
             GUI_CURRENT_FILE=$SYNCED_FILES
+
+            # Check File by validate function and skip if error; rsync gets every hardlink name, so check them all
+            if [ "$VALIDATE_FILENAMES" = "yes" ]; then
+                for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
+                    validate_filename "$(basename "$f")" && continue
+                    mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
+                    not_moved "${#SYNCED_FILES_ARR[@]}"
+                    continue 2
+                done
+            fi
 
             # Check if list is complete (array length is exact, unlike parsing the string)
             NBFILES=${#SYNCED_FILES_ARR[@]}
