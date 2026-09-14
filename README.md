@@ -506,15 +506,16 @@ To cleanly exit loops (Filtering, Deciding, Moving) and age_mover. While moving/
 /usr/local/emhttp/plugins/ca.mover.tuning/age_mover stop
 To kill all the process (can lead to unfinished or corrupted file transferts while moving).
 
-
 See the [Mover Tuning_ thread on the Unraid support forum](https://forums.unraid.net/topic/70783-plugin-mover-tuning/) for more details and discussions.
 
 ## Thanks
 
-This was originally created by [Squid](https://github.com/Squidly271).<br>
+This was originally created by [Squid](https://github.com/Squidly271).
 
-@2023 - Updated by [hugenbd](https://github.com/hugenbd/ca.mover.tuning), with contributions by [Castcore](https://github.com/Castcore), [Swarles](https://github.com/hugenbd/ca.mover.tuning/commit/64e06e91bd83431d768346e4d8158f7be039564e), [Dphelan](https://github.com/dphelan) and [Davendsai](https://github.com/davendesai).
+@2023 – Updated by [hugenbd](https://github.com/hugenbd/ca.mover.tuning), with contributions by [Castcore](https://github.com/Castcore), [Swarles](https://github.com/hugenbd/ca.mover.tuning/commit/64e06e91bd83431d768346e4d8158f7be039564e), [Dphelan](https://github.com/dphelan) and [Davendsai](https://github.com/davendesai).
 
-@2024 - Updated by [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning).
+@2024 – Updated by [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning).
 
-@2025-2026 - Updated by [masterwishx](https://github.com/masterwishx/ca.mover.tuning).
+@2025 – Updated by [masterwishx](https://github.com/masterwishx/ca.mover.tuning).
+
+@2026 – Updated by [masterwishx](https://github.com/masterwishx/ca.mover.tuning), with contributions by [chodeus](https://github.com/chodeus), [Joly0](https://github.com/Joly0).
