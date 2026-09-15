@@ -333,9 +333,9 @@ fill_template() {
 # Notification text in the GUI language; the English template is the fallback when the helper fails.
 translate_text() {
     local text
-    text=$(/usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/translate.php "$@" 2>/dev/null)
-    [ -n "$text" ] || text=$(fill_template "$@")
-    printf '%s' "$text"
+    text=$(/usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/translate.php "$1" 2>/dev/null)
+    [ -n "$text" ] || text="$1"
+    fill_template "$text" "${@:2}"
 }
 
 # Logs the English message and sends its translation as a notification: mvlogger_t TEMPLATE FLAG [ARG ...]

@@ -1,24 +1,9 @@
 #!/usr/bin/php -q
 <?php
-// CLI helper: translate.php TEMPLATE [ARG ...]
-// Prints TEMPLATE in the GUI language, read from languages/<locale>.txt of this plugin, with each %s
-// filled from the arguments; English when no language applies.
+// CLI helper for translate_text in age_mover: prints TEMPLATE in the GUI language from languages/<locale>.txt,
+// or unchanged when no language applies. age_mover fills the %s placeholders.
 $docroot = '/usr/local/emhttp';
 $template = $argv[1] ?? '';
-$args = array_slice($argv, 2);
-
-function fill_template($text, $args) {
-    $from = 0;
-    foreach ($args as $arg) {
-        $pos = strpos($text, '%s', $from);
-        if ($pos === false) {
-            break;
-        }
-        $text = substr_replace($text, $arg, $pos, 2);
-        $from = $pos + strlen($arg);
-    }
-    return $text;
-}
 
 $text = $template;
 if (file_exists("$docroot/webGui/include/Translations.php") === true) {
@@ -37,4 +22,4 @@ if (file_exists("$docroot/webGui/include/Translations.php") === true) {
         $text = $translated;
     }
 }
-echo fill_template($text, $args);
+echo $text;
