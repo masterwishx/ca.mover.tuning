@@ -2006,10 +2006,11 @@ processTheMoves() {
             fi
 
             # The first row of a hardlinked file transfers all its names; the source is gone after
-            # a move, so later rows are matched on the SYNCED_FILES_ARR key below, not the file.
+            # a move, so later rows are matched on the SYNCED_FILES_ARR key below, not the file. The key
+            # carries the plan, so a group split across plans keeps every partition instead of dropping one.
             NBLINKS="${NBLINKS:-0}"
             if [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -gt 1 ]; then
-                link_key="$SOURCE|$NBLINKS|$INODE|$MODIFYTIME"
+                link_key="$ACTION|$SOURCE|$DESTINATION|$NBLINKS|$INODE|$MODIFYTIME"
                 [ -n "${HANDLED_LINKS[$link_key]}" ] && continue
                 HANDLED_LINKS[$link_key]=1
             fi
