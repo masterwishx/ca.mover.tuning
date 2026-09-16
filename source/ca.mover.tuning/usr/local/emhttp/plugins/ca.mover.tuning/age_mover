@@ -307,10 +307,14 @@ validate_filename() {
 }
 
 # find's -path glob and the eval each strip one level, so a literal backslash
-# needs four. Order matters: backslash first, then '['.
+# needs four. Order matters: backslash first, then '[', then the shell's own three,
+# whose escapes the eval consumes before find ever sees the name.
 escape_find_path() {
     FIND_PATH_ESC=${1//\\/\\\\\\\\}
     FIND_PATH_ESC=${FIND_PATH_ESC//[/\\[}
+    FIND_PATH_ESC=${FIND_PATH_ESC//\"/\\\"}
+    FIND_PATH_ESC=${FIND_PATH_ESC//\$/\\\$}
+    FIND_PATH_ESC=${FIND_PATH_ESC//\`/\\\`}
 }
 
 # Function for verbose output and logging
@@ -1438,7 +1442,7 @@ createFilteredFilelist() {
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
-                FINDSTR="$FINDSTR -not -name '*.$ext'"
+                FINDSTR="$FINDSTR -not -name '*.${ext//\'/\'\\\'\'}'"
                 if SKIPPED_FILETYPES_DU="$(set -o pipefail; find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null)" &&
                     SKIPPED_FILETYPES_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_FILETYPES_DU" | cut -f1) && [ -n "$SKIPPED_FILETYPES_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|f|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
@@ -1486,7 +1490,8 @@ createFilteredFilelist() {
 
         # Get size with du if on zfs mountpoint with compression enabled
         #        if is_zfs_pool "$PRIMARYSTORAGENAME" && [ "$(zfs get compression -Hpo value "$PRIMARYSTORAGENAME/$SHARENAME")" == "on" ]; then
-        #            FINDSTR="$FINDSTR cmd = \"du -sh \\\"\"\$6\"\\\" | numfmt --from=iec\";
+        #            FINDSTR="$FINDSTR q = path; gsub(/\\047/, \"\\047\\\"\\047\\\"\\047\", q);
+        #                cmd = \"du -sh \\047\" q \"\\047 | numfmt --from=iec\";
         #                cmd | getline result;
         #                close(cmd);
         #                sub(/\\n\$/, \"\", result);
@@ -1513,14 +1518,15 @@ createFilteredFilelist() {
     # Sort the file list by PRIMARYSTORAGENAME, shareusecache, creation/modification time, and inode, keeping /mnt/disk at the end
     sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
     # Need to remove duplicate (cache and array)
-    if grep -q "/mnt/disk" "$FILTERED_FILELIST"; then
+    if awk -F'|' 'substr($13, 1, 9) == "/mnt/disk" { found = 1; exit } END { exit !found }' "$FILTERED_FILELIST"; then
         mvlogger "$(titleLine 'Optimizing Filtered Filelist' '-')"
         tempfile1=$(mktemp)
         tempfile2=$(mktemp)
 
         mvlogger "Removing duplicate giving priority to cache"
-        grep -v "/mnt/disk" "$FILTERED_FILELIST" >"$tempfile1"
-        grep "/mnt/disk" "$FILTERED_FILELIST" >"$tempfile2"
+        # the path is field 13; a name holding this text elsewhere must not change its side
+        awk -F'|' 'substr($13, 1, 9) != "/mnt/disk"' "$FILTERED_FILELIST" >"$tempfile1"
+        awk -F'|' 'substr($13, 1, 9) == "/mnt/disk"' "$FILTERED_FILELIST" >"$tempfile2"
         cat "$tempfile1" "$tempfile2" | awk -F"|" '
             function is_duplicate(key) {
                 if (prev[key]) {
@@ -1890,21 +1896,17 @@ decideMoveActions() {
     fi
 
     ## Printing some stats
-    TOTALPRIMARYFILES=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 2)
-    TOTALPRIMARYSIZE=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 3)
-    TOTALPRIMARYFOLDERS=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 4)
-    TOTALSECONDARYFILES=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 5)
-    TOTALSECONDARYSIZE=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 6)
-    TOTALSECONDARYFOLDERS=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 7)
-    TOTALUNATTENDEDFILES=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 8)
-    TOTALUNATTENDEDSIZE=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 9)
-    TOTALUNATTENDEDFOLDERS=$(grep "TOTAL" "$STATS_FILE" | cut -d "|" -f 10)
+    # one exact read of the totals row: a pool whose name holds this text is not it
+    IFS='|' read -r _ TOTALPRIMARYFILES TOTALPRIMARYSIZE TOTALPRIMARYFOLDERS \
+        TOTALSECONDARYFILES TOTALSECONDARYSIZE TOTALSECONDARYFOLDERS \
+        TOTALUNATTENDEDFILES TOTALUNATTENDEDSIZE TOTALUNATTENDEDFOLDERS \
+        <<<"$(awk -F'|' '$1 == "TOTAL"' "$STATS_FILE")"
 
     # Add total files and size
     TOTALFILES=$((TOTALPRIMARYFILES + TOTALSECONDARYFILES + TOTALUNATTENDEDFILES))
     TOTALFOLDERS=$((TOTALPRIMARYFOLDERS + TOTALSECONDARYFOLDERS + TOTALUNATTENDEDFOLDERS))
     TOTALSIZE=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
-    UNATTENDEDFILES=$(grep -c "keep misplaced" "$MOVER_ACTIONLIST")
+    UNATTENDEDFILES=$(awk -F'|' '$11 == "keep misplaced" { n++ } END { print n + 0 }' "$MOVER_ACTIONLIST")
 
     # Print stats
     if [ "$UNATTENDEDFILES" -gt 0 ]; then
@@ -1999,18 +2001,19 @@ processTheMoves() {
     fi
 
     # Loop through each line in the action list (except those where action is keep), starting by cache and then array
-    GREP_CMDS=(
-        "grep '|move from primary|' '$MOVER_ACTIONLIST'"
-        "grep '|move unattended to secondary|' '$MOVER_ACTIONLIST'"
-        "grep '|sync from primary|' '$MOVER_ACTIONLIST'"
-        "grep '|move from secondary|' '$MOVER_ACTIONLIST'"
-        "grep '|sync from secondary|' '$MOVER_ACTIONLIST'"
-        "grep '|move unattended to primary|' '$MOVER_ACTIONLIST'"
-        "grep '|sync unattended to secondary|' '$MOVER_ACTIONLIST'"
+    # the action is field 11: matching the whole row would let a filename holding this text join the pass
+    MOVE_ACTIONS=(
+        "move from primary"
+        "move unattended to secondary"
+        "sync from primary"
+        "move from secondary"
+        "sync from secondary"
+        "move unattended to primary"
+        "sync unattended to secondary"
     )
-    # Ignore "grep '|keep on primary|' '$MOVER_ACTIONLIST'" action because it's not an action
+    # "keep on primary", "keep on secondary" and "keep misplaced" are not actions, so they are absent
 
-    for GREP_CMD in "${GREP_CMDS[@]}"; do
+    for ACTION_PASS in "${MOVE_ACTIONS[@]}"; do
         while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH; do
             if [ -e $SOFTSTOPFILE ]; then
                 [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
@@ -2036,7 +2039,12 @@ processTheMoves() {
             # Applies only to empty directories scheduled to be moved
             if [[ "$FILETYPE" == "d" && "$ACTION" =~ "move" ]]; then
                 # If the directory is listed in the skiplist, skip it
-                if [[ -n "$SKIPFILESLIST" && -f "$SKIPFILESLIST" ]] && grep -q "${SOURCE}/${FILEPATH}" "$SKIPFILESLIST"; then
+                # a whole-line compare: as a grep pattern the path is a regex, and "a" matched "abc"
+                if [[ -n "$SKIPFILESLIST" && -f "$SKIPFILESLIST" ]] && SKIP_DIR="${SOURCE}/${FILEPATH}" awk '
+                    BEGIN { d = ENVIRON["SKIP_DIR"]; sub(/\/$/, "", d) }
+                    { sub(/\r$/, ""); sub(/\/$/, "") }
+                    $0 == d { found = 1; exit }
+                    END { exit !found }' "$SKIPFILESLIST"; then
                     mvlogger "Skipping empty folder $(qp "${SOURCE}/${FILEPATH}") as it is listed in the skip list."
                     continue # do not move this folder
                 fi
@@ -2446,12 +2454,13 @@ processTheMoves() {
                 fi
             fi
             moverStatusWrite
-        done <<<"$(eval "$GREP_CMD")"
+        done <<<"$(awk -F'|' -v a="$ACTION_PASS" '$11 == a' "$MOVER_ACTIONLIST")"
     done
 
     mvlogger "$(titleLine "Cleaning up" '-')"
 
-    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
+    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
+        awk -F'|' '$11 == "sync from primary" || $11 == "sync from secondary" { found = 1; exit } END { exit !found }' "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
 
         mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
