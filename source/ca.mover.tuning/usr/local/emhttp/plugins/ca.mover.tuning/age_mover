@@ -2460,7 +2460,7 @@ processTheMoves() {
     mvlogger "$(titleLine "Cleaning up" '-')"
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
-        awk -F'|' '$11 == "sync from primary" || $11 == "sync from secondary" { found = 1; exit } END { exit !found }' "$MOVER_ACTIONLIST"; then
+        awk -F'|' '$11 ~ /^sync / { found = 1; exit } END { exit !found }' "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
 
         mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
