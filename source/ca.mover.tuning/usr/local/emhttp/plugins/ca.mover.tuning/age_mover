@@ -1576,7 +1576,8 @@ createFilteredFilelist() {
 }
 
 # processTheMoves refuses a file whose hardlinks are not all listed: hold it at planning like an
-# ignored file. The hold lasts as long as the exclusion, so it deliberately leaves lastCacheSync alone.
+# ignored file. That refusal marks the sync incomplete through not_moved, so holding early must do
+# the same, or lastCacheSync moves past a held file and later runs no longer consider it.
 holdPartialHardlinks() {
     local held files bytes tmp
     [ -s "$FILTERED_FILELIST" ] || return
@@ -1598,6 +1599,7 @@ holdPartialHardlinks() {
     mv -f "$tmp" "$FILTERED_FILELIST"
     read -r files bytes <<<"$held"
     if [ "$files" -gt 0 ]; then
+        SYNCFAILED=1
         mvlogger "$files files representing $(bytes_to_human "$bytes") stay where they are: some of their hardlinks are not in the list of files to move (ignore list or another filter)"
     fi
 }
