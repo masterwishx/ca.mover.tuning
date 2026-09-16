@@ -1101,7 +1101,7 @@ createFilteredFilelist() {
                     -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
                     -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
                     -not -path "/mnt/user*" \
-                    -not -path "/mnt/disk*" \
+                    -not -path "/mnt/disk[0-9]*" \
                     -maxdepth 2 | cut -d'/' -f3 | tr '\n' ' ')
             else
                 UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
@@ -1518,15 +1518,15 @@ createFilteredFilelist() {
     # Sort the file list by PRIMARYSTORAGENAME, shareusecache, creation/modification time, and inode, keeping /mnt/disk at the end
     sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
     # Need to remove duplicate (cache and array)
-    if awk -F'|' 'substr($13, 1, 9) == "/mnt/disk" { found = 1; exit } END { exit !found }' "$FILTERED_FILELIST"; then
+    if awk -F'|' '$13 ~ /^\/mnt\/disk[0-9]+\// { found = 1; exit } END { exit !found }' "$FILTERED_FILELIST"; then
         mvlogger "$(titleLine 'Optimizing Filtered Filelist' '-')"
         tempfile1=$(mktemp)
         tempfile2=$(mktemp)
 
         mvlogger "Removing duplicate giving priority to cache"
-        # the path is field 13; a name holding this text elsewhere must not change its side
-        awk -F'|' 'substr($13, 1, 9) != "/mnt/disk"' "$FILTERED_FILELIST" >"$tempfile1"
-        awk -F'|' 'substr($13, 1, 9) == "/mnt/disk"' "$FILTERED_FILELIST" >"$tempfile2"
+        # the path is field 13, and only a numbered disk is the array: a pool may be named diskpool
+        awk -F'|' '$13 !~ /^\/mnt\/disk[0-9]+\//' "$FILTERED_FILELIST" >"$tempfile1"
+        awk -F'|' '$13 ~ /^\/mnt\/disk[0-9]+\//' "$FILTERED_FILELIST" >"$tempfile2"
         cat "$tempfile1" "$tempfile2" | awk -F"|" '
             function is_duplicate(key) {
                 if (prev[key]) {
