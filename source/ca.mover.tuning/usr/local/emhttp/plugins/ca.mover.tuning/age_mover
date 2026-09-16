@@ -201,7 +201,7 @@ unraid_notify() {
     fi
     #
     # Call the Unraid notification script
-    /usr/local/emhttp/webGui/scripts/notify -s "Mover Tuning Notification" -d "$message" -i "$severity" -l "/Settings/Scheduler"
+    /usr/local/emhttp/webGui/scripts/notify -s "$(translate_text "Mover Tuning Notification")" -d "$message" -i "$severity" -l "/Settings/Scheduler"
 }
 
 pool_fstype() {
@@ -319,6 +319,34 @@ escape_find_path() {
 # embedded quote - an edge case, but the last redaction hole - would expose the rest.
 qp() { local p=${1//\\/\\\\}; printf '"%s"' "${p//\"/\\\"}"; }
 
+# Fills each %s in TEXT from the remaining arguments; an inserted argument is never rescanned.
+fill_template() {
+    local text="$1" out="" arg
+    shift
+    for arg in "$@"; do
+        [[ "$text" == *%s* ]] || break
+        out+="${text%%"%s"*}$arg"
+        text="${text#*"%s"}"
+    done
+    printf '%s' "$out$text"
+}
+
+# Notification text in the GUI language; the English template is the fallback when the helper fails.
+translate_text() {
+    local text
+    text=$(/usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/translate.php "$1" 2>/dev/null)
+    [ -n "$text" ] || text="$1"
+    fill_template "$text" "${@:2}"
+}
+
+# Logs the English message and sends its translation as a notification: mvlogger_t TEMPLATE FLAG [ARG ...]
+mvlogger_t() {
+    local template="$1" flag="$2"
+    shift 2
+    mvlogger "$(fill_template "$template" "$@")"
+    unraid_notify "$(translate_text "$template" "$@")" "$flag"
+}
+
 mvlogger() {
     local msg="$1"
     local notify="$2"
@@ -429,7 +457,7 @@ getMoverSettings() {
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
 
     if [[ ! -f "$config_file" ]]; then
-        mvlogger "Error: Config file '$config_file' not found." "failure"
+        mvlogger_t "Error: Config file '%s' not found." "failure" "$config_file"
         return 1
     fi
 
@@ -1326,7 +1354,7 @@ createFilteredFilelist() {
                 mvlogger "Warning: Windows-style CRLF line endings detected in ${SKIPFILESLIST}. Converting to LF..."
                 mvDebuglogger "Detected Windows CRLF endings in skip file ${SKIPFILESLIST}. Converting to LF..." "Prepare Skipped Path"
                 if ! sed -i 's/\r$//' "${SKIPFILESLIST}"; then
-                    mvlogger "Error: Failed to convert CRLF line endings in ${SKIPFILESLIST}. Check file permissions." "failure"
+                    mvlogger_t "Error: Failed to convert CRLF line endings in %s. Check file permissions." "failure" "${SKIPFILESLIST}"
                 fi
             fi
 
@@ -1962,7 +1990,7 @@ processTheMoves() {
             # Check File by validate function and skip if error
             if [ "$VALIDATE_FILENAMES" = "yes" ]; then
                 if ! validate_filename "$(basename "$FILEPATH")"; then
-                    mvlogger "Error: Invalid filename path: $(qp "$SOURCE/$FILEPATH"). Please either change the filename to valid or disable the 'Validate input filenames' option." "failure"
+                    mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "$SOURCE/$FILEPATH")"
                     continue
                 #else
                 #    mvlogger "Valid filename"
@@ -2034,7 +2062,7 @@ processTheMoves() {
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
                         "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/"
                     else
-                        mvlogger "Error: No files found to move for $(qp "$SOURCE/$FILEPATH")" "failure"
+                        mvlogger_t "Error: No files found to move for %s" "failure" "$(qp "$SOURCE/$FILEPATH")"
                     fi
                 fi
             fi
@@ -2115,15 +2143,15 @@ processTheMoves() {
                                     mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
                                     # Unmount the ZFS dataset
                                     if ! zfs unmount "${DATASET}"; then
-                                        mvlogger "Failed to unmount ZFS dataset [${DATASET}]" "failure"
+                                        mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "${DATASET}"
                                         continue
                                     else
                                         mvlogger "ZFS dataset [${DATASET}] successfully unmounted."
                                     fi
                                     # Destroy the ZFS dataset
                                     if ! zfs destroy "${DATASET}"; then
-                                        mvlogger "Failed to destroy ZFS dataset [${DATASET}] — attempting to remount." "failure"
-                                        zfs mount "${DATASET}" 2>/dev/null || mvlogger "Failed to remount dataset [${DATASET}]" "warning"
+                                        mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "${DATASET}"
+                                        zfs mount "${DATASET}" 2>/dev/null || mvlogger_t "Failed to remount dataset [%s]" "warning" "${DATASET}"
                                         continue
                                     else
                                         mvlogger "ZFS dataset [${DATASET}] successfully destroyed."
@@ -2376,7 +2404,7 @@ start() {
             UNRAID_MOVER=1
         fi
     else
-        mvlogger "Fatal error: $UNRAIDCFGFILE does not exist, check this." "failure"
+        mvlogger_t "Fatal error: %s does not exist, check this." "failure" "$UNRAIDCFGFILE"
         rm $SOFTSTOPFILE
         exit 2
     fi
@@ -2401,7 +2429,7 @@ start() {
         #Get Mover Tuning Settings
         getMoverSettings "$MOVERTUNINGCFGFILE"
     else
-        mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this." "failure"
+        mvlogger_t "Fatal error: %s does not exist, check this." "failure" "$MOVERTUNINGCFGFILE"
         rm $SOFTSTOPFILE
         exit 3
     fi
@@ -2425,12 +2453,12 @@ start() {
 
     # Only start if cache enabled and present
     if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
-        mvlogger "Fatal error: cache not enabled and less than 2 pools set up." "failure"
+        mvlogger_t "Fatal error: cache not enabled and less than 2 pools set up." "failure"
         rm $SOFTSTOPFILE
         exit 4
     fi
     if ! mountpoint -q /mnt/user0 && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
-        mvlogger "Fatal error: cache not present, or only cache present, and less than 2 pools set up." "failure"
+        mvlogger_t "Fatal error: cache not present, or only cache present, and less than 2 pools set up." "failure"
         rm $SOFTSTOPFILE
         exit 5
     fi
@@ -2552,15 +2580,15 @@ start() {
 
     if [ "$TESTMODE" = "yes" ]; then
         if [ "$TOTALFILES" -gt 0 ]; then
-            unraid_notify "TEST MODE: A total of $TOTALFILES files representing $(bytes_to_human "$TOTALSIZE") would be moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "warning"
+            unraid_notify "$(translate_text "TEST MODE: A total of %s files representing %s would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$TOTALFILES" "$(bytes_to_human "$TOTALSIZE")" "$ELAPSED_TIME")" "warning"
         else
-            unraid_notify "TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "warning"
+            unraid_notify "$(translate_text "TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "warning"
         fi
     else
         if [ "$TOTALFILES" -gt 0 ]; then
-            unraid_notify "A total of $TOTALFILES files representing $(bytes_to_human "$TOTALSIZE") were successfully moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
+            unraid_notify "$(translate_text "A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$TOTALFILES" "$(bytes_to_human "$TOTALSIZE")" "$ELAPSED_TIME")" "success"
         else
-            unraid_notify "No files were moved/synced by Mover Tuning plugin. Elapsed time: $ELAPSED_TIME" "success"
+            unraid_notify "$(translate_text "No files were moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "success"
         fi
     fi
 
