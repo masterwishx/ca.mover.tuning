@@ -1943,7 +1943,14 @@ decideMoveActions() {
 # a sync row also holds lastCacheSync, since a later run only syncs files newer than the mark.
 not_moved() {
     NOTMOVEDFILES=$((NOTMOVEDFILES + ${1:-1}))
-    NOTMOVEDSIZE=$((NOTMOVEDSIZE + ${2:-$FILESIZE}))
+    # a hardlink group's bytes belong to its first failed partition; later partitions are the same file
+    local bytes=${2:-$FILESIZE} phys="$SOURCE|$NBLINKS|$INODE|$MODIFYTIME"
+    if [ -n "${CHARGED_BYTES[$phys]}" ]; then
+        bytes=0
+    elif [ "$bytes" -gt 0 ]; then
+        CHARGED_BYTES[$phys]=1
+    fi
+    NOTMOVEDSIZE=$((NOTMOVEDSIZE + bytes))
     if [[ "$ACTION" =~ "sync" ]]; then
         SYNCFAILED=1
     fi
@@ -1975,6 +1982,7 @@ processTheMoves() {
     REMAINING_UNATTENDED_FILES=$TOTALUNATTENDEDFILES
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
     local -A HANDLED_LINKS=()
+    local -A CHARGED_BYTES=()
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
