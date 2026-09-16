@@ -1939,11 +1939,11 @@ decideMoveActions() {
     fi
 }
 
-# Counts the current row as not transferred ($1 = its names, 1 if unknown); a sync row also
-# holds lastCacheSync, since a later run only syncs files newer than the mark.
+# Counts names that did not transfer ($1, 1 when unknown; $2 = their bytes, the row's size by default);
+# a sync row also holds lastCacheSync, since a later run only syncs files newer than the mark.
 not_moved() {
-    NOTMOVEDFILES=$((NOTMOVEDFILES + (${1:-0} > 0 ? ${1:-0} : 1)))
-    NOTMOVEDSIZE=$((NOTMOVEDSIZE + FILESIZE))
+    NOTMOVEDFILES=$((NOTMOVEDFILES + ${1:-1}))
+    NOTMOVEDSIZE=$((NOTMOVEDSIZE + ${2:-$FILESIZE}))
     if [[ "$ACTION" =~ "sync" ]]; then
         SYNCFAILED=1
     fi
@@ -2035,10 +2035,12 @@ processTheMoves() {
             #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
+            # Only rows planned the same way join the group: hardlinks in two shares can differ, and
+            # transferring them on one share's plan would apply it to the other. A short group is held below.
             # Get files to rsync as a real array. Passing the filenames to rsync
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
-            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f15 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "|$ACTION|$SOURCE|$DESTINATION|" | cut -d'|' -f15 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
@@ -2052,7 +2054,7 @@ processTheMoves() {
                 for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
                     validate_filename "$(basename "$f")" && continue
                     mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
-                    not_moved "${#SYNCED_FILES_ARR[@]}"
+                    not_moved "$(( ${#SYNCED_FILES_ARR[@]} > 0 ? ${#SYNCED_FILES_ARR[@]} : 1 ))"
                     continue 2
                 done
             fi
@@ -2061,7 +2063,7 @@ processTheMoves() {
             NBFILES=${#SYNCED_FILES_ARR[@]}
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
-                not_moved "$NBFILES"
+                not_moved "$(( NBFILES > 0 ? NBFILES : 1 ))"
                 continue
             fi
 
@@ -2133,11 +2135,18 @@ processTheMoves() {
                     [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" && -e "$SOURCE/$rel" ]] && continue
                     arrived=$((arrived + 1))
                 done
-                if [ "$rc" = 0 ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ]; then
-                    MOVEDFILES=$((MOVEDFILES + names))
+                # the group's bytes belong to whichever side received the content, never to both
+                if [ "$arrived" -gt 0 ]; then
+                    MOVEDFILES=$((MOVEDFILES + arrived))
                     MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
-                else
-                    not_moved "$names"
+                fi
+                if [ "$names" -eq 0 ]; then
+                    not_moved
+                elif [ "$arrived" != "$names" ]; then
+                    not_moved "$((names - arrived))" "$([ "$arrived" -gt 0 ] && echo 0)"
+                elif [ "$rc" != 0 ]; then
+                    # every name arrived yet the tool reported an error: hold the sync mark, count nothing
+                    not_moved 0 0
                 fi
             fi
 
