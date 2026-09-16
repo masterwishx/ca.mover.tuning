@@ -69,6 +69,7 @@ REMAINING_UNATTENDED_FILES=0
 REMAINING_UNATTENDED_FOLDERS=0
 REMAINING_UNATTENDED_SIZE=0
 MOVEDFILES=0
+MOVEDFOLDERS=0
 MOVEDSIZE=0
 NOTMOVEDFILES=0
 NOTMOVEDSIZE=0
@@ -2199,6 +2200,7 @@ processTheMoves() {
                 # still on the source and its space was not freed, so they belong to the not-moved side
                 if [ "$STAGE_ROW" = 0 ]; then
                     [ "$FILETYPE" = "f" ] && [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
+                    [ "$FILETYPE" = "d" ] && [ "$arrived" -gt 0 ] && MOVEDFOLDERS=$((MOVEDFOLDERS + 1))
                     [ "$FILETYPE" = "f" ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
                     [ "$FILETYPE" = "f" ] && VANISHEDFILES=$((VANISHEDFILES + vanished))
                     if [ "$names" -eq 0 ]; then
@@ -2735,14 +2737,14 @@ start() {
     mvlogger "$(titleLine 'WE ARE DONE !' '*')"
 
     if [ "$TESTMODE" = "yes" ]; then
-        if [ "$TOTALFILES" -gt 0 ]; then
-            unraid_notify "$(translate_text "TEST MODE: A total of %s files representing %s would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$TOTALFILES" "$(bytes_to_human "$TOTALSIZE")" "$ELAPSED_TIME")" "warning"
+        if [ $((TOTALFILES + TOTALFOLDERS)) -gt 0 ]; then
+            unraid_notify "$(translate_text "TEST MODE: A total of %s files and %s folders representing %s would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$TOTALFILES" "$TOTALFOLDERS" "$(bytes_to_human "$TOTALSIZE")" "$ELAPSED_TIME")" "warning"
         else
             unraid_notify "$(translate_text "TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "warning"
         fi
     else
-        if [ "$MOVEDFILES" -gt 0 ]; then
-            unraid_notify "$(translate_text "A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$MOVEDFILES" "$(bytes_to_human "$MOVEDSIZE")" "$ELAPSED_TIME")" "success"
+        if [ $((MOVEDFILES + MOVEDFOLDERS)) -gt 0 ]; then
+            unraid_notify "$(translate_text "A total of %s files and %s folders representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$MOVEDFILES" "$MOVEDFOLDERS" "$(bytes_to_human "$MOVEDSIZE")" "$ELAPSED_TIME")" "success"
         elif [ "$NOTMOVEDFILES" -eq "$VANISHEDFILES" ]; then
             unraid_notify "$(translate_text "No files were moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "success"
         fi
