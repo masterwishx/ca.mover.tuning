@@ -1807,12 +1807,7 @@ decideMoveActions() {
                             destination = "/mnt/" $1
                             # the follow-up is a sync, which keeps the file on the primary
                             net_delta[$1] += $8
-                            if ($12 == "d") {
-                                pool_stats[$1]["folders_from_unattended"] += 1
-                            } else {
-                                pool_stats[$1]["files_from_unattended"] += 1
-                            }
-                            pool_stats[$1]["total_size_from_unattended"] += $8
+                            # two rows, one file: the shared block below counts it once
                             # Add a line in mover_action as intermediary step
                             printf "%s|%s|%s|%d|%d|%d|%d|%d|%d|%s|%s|%s|%s|%s|%s\n", $1, $3, $4, $5, $8, pool_sums[$1], $6, remaining_bytes_used[$1], $10, $11, action, source, destination, $12, file_path
                             action="sync unattended to secondary"
@@ -2037,6 +2032,17 @@ processTheMoves() {
                 HANDLED_LINKS[$link_key]=1
             fi
 
+            # A chained rebalance moves the file to the pool and a second row syncs it on. That sync row
+            # owns the file's count, so its move row transfers without counting; a lone move still counts.
+            STAGE_ROW=0
+            if [ "$ACTION" = "move unattended to primary" ] && STAGE_PATH="$FILEPATH" awk -F'|' -v inode="$INODE" -v mtime="$MODIFYTIME" -v pool="$DESTINATION" '
+                function full_path(   p, i) { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; return p }
+                BEGIN { inode = inode ""; mtime = mtime "" }
+                $11 == "sync unattended to secondary" && $10 == inode && $4 == mtime && $12 == pool && full_path() == ENVIRON["STAGE_PATH"] { found = 1; exit }
+                END { exit !found }' "$MOVER_ACTIONLIST"; then
+                STAGE_ROW=1
+            fi
+
             # Temporary fix: prevent moving empty directories that are in the skip list (better to remove duplicate empty folders from the lists instead?)
             # Applies only to empty directories scheduled to be moved
             if [[ "$FILETYPE" == "d" && "$ACTION" =~ "move" ]]; then
@@ -2174,15 +2180,17 @@ processTheMoves() {
                 done
                 # the group's bytes count as moved only once every name arrived: until then the file is
                 # still on the source and its space was not freed, so they belong to the not-moved side
-                [ "$FILETYPE" = "f" ] && [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
-                [ "$FILETYPE" = "f" ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
-                if [ "$names" -eq 0 ]; then
-                    not_moved
-                elif [ "$arrived" != "$names" ]; then
-                    not_moved "$((names - arrived))"
-                elif [ "$rc" != 0 ]; then
-                    # every name arrived yet the tool reported an error: hold the sync mark, count nothing
-                    not_moved 0 0
+                if [ "$STAGE_ROW" = 0 ]; then
+                    [ "$FILETYPE" = "f" ] && [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
+                    [ "$FILETYPE" = "f" ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
+                    if [ "$names" -eq 0 ]; then
+                        not_moved
+                    elif [ "$arrived" != "$names" ]; then
+                        not_moved "$((names - arrived))"
+                    elif [ "$rc" != 0 ]; then
+                        # every name arrived yet the tool reported an error: hold the sync mark, count nothing
+                        not_moved 0 0
+                    fi
                 fi
             fi
 
@@ -2408,6 +2416,8 @@ processTheMoves() {
             # group's bytes leave once every name arrived, the same rule as MOVEDSIZE above
             done_bytes=0
             [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && done_bytes=$FILESIZE
+            # a staged move leaves the remaining counters to its sync row as well
+            [ "$STAGE_ROW" = 1 ] && { arrived=0; done_bytes=0; }
             if [[ "$ACTION" =~ "unattended" ]]; then
                 REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - done_bytes))
                 # Check if there are any files or folders left
