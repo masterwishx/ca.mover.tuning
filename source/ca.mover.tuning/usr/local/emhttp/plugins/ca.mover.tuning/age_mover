@@ -1942,14 +1942,16 @@ decideMoveActions() {
 # Counts names that did not transfer ($1, 1 when unknown; $2 = their bytes, the row's size by default);
 # a sync row also holds lastCacheSync, since a later run only syncs files newer than the mark.
 not_moved() {
-    NOTMOVEDFILES=$((NOTMOVEDFILES + ${1:-1}))
+    local failed=${1:-1} bytes=${2:-$FILESIZE} phys="$SOURCE|$NBLINKS|$INODE|$MODIFYTIME"
+    # only files carry file counts and bytes; a failed folder sync still holds lastCacheSync below
+    [ "$FILETYPE" = "f" ] || { failed=0; bytes=0; }
     # a hardlink group's bytes belong to its first failed partition; later partitions are the same file
-    local bytes=${2:-$FILESIZE} phys="$SOURCE|$NBLINKS|$INODE|$MODIFYTIME"
     if [ -n "${CHARGED_BYTES[$phys]}" ]; then
         bytes=0
     elif [ "$bytes" -gt 0 ]; then
         CHARGED_BYTES[$phys]=1
     fi
+    NOTMOVEDFILES=$((NOTMOVEDFILES + failed))
     NOTMOVEDSIZE=$((NOTMOVEDSIZE + bytes))
     if [[ "$ACTION" =~ "sync" ]]; then
         SYNCFAILED=1
@@ -2049,7 +2051,7 @@ processTheMoves() {
             # Get files to rsync as a real array. Passing the filenames to rsync
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
-            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "|$ACTION|$SOURCE|$DESTINATION|" | cut -d'|' -f15 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "|$ACTION|$SOURCE|$DESTINATION|" | cut -d'|' -f15- | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
@@ -2146,8 +2148,8 @@ processTheMoves() {
                 done
                 # the group's bytes count as moved only once every name arrived: until then the file is
                 # still on the source and its space was not freed, so they belong to the not-moved side
-                [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
-                [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
+                [ "$FILETYPE" = "f" ] && [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
+                [ "$FILETYPE" = "f" ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
                 if [ "$names" -eq 0 ]; then
                     not_moved
                 elif [ "$arrived" != "$names" ]; then
