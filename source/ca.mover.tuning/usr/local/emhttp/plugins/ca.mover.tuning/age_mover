@@ -2136,15 +2136,14 @@ processTheMoves() {
                     [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" && -e "$SOURCE/$rel" ]] && continue
                     arrived=$((arrived + 1))
                 done
-                # the group's bytes belong to whichever side received the content, never to both
-                if [ "$arrived" -gt 0 ]; then
-                    MOVEDFILES=$((MOVEDFILES + arrived))
-                    MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
-                fi
+                # the group's bytes count as moved only once every name arrived: until then the file is
+                # still on the source and its space was not freed, so they belong to the not-moved side
+                [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
+                [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
                 if [ "$names" -eq 0 ]; then
                     not_moved
                 elif [ "$arrived" != "$names" ]; then
-                    not_moved "$((names - arrived))" "$([ "$arrived" -gt 0 ] && echo 0)"
+                    not_moved "$((names - arrived))"
                 elif [ "$rc" != 0 ]; then
                     # every name arrived yet the tool reported an error: hold the sync mark, count nothing
                     not_moved 0 0
