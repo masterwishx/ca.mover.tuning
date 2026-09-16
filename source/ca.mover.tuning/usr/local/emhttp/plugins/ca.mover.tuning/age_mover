@@ -1469,19 +1469,14 @@ createFilteredFilelist() {
         fi
         # the path is field 7 up to the trailing separator; a name containing a pipe must stay whole
         FINDSTR="$FINDSTR path = \$7; for (i = 8; i < NF; i++) path = path \"|\" \$i;"
-        # Get Birthtime with stat if CTIME option enabled
-        if [ "$CTIME" == "yes" ]; then
-            FINDSTR="$FINDSTR cmd=\"stat -c%W \\\"\"path\"\\\"\";
-                cmd | getline result;
-                close(cmd);
-                sub(/\\n\$/, \"\", result);
-                \$1 = result;
-            "
-        fi
-
-        # Get Birthtime with stat if ATIME option enabled
-        if [ "$ATIME" == "yes" ]; then
-            FINDSTR="$FINDSTR cmd=\"stat -c%X \\\"\"path\"\\\"\";
+        # Birth time (CTIME option) or access time (ATIME) comes from stat, which awk runs through
+        # sh: the path goes in single quotes with each embedded quote escaped, never bare
+        STATFMT=""
+        [ "$CTIME" == "yes" ] && STATFMT="%W"
+        [ "$ATIME" == "yes" ] && STATFMT="%X"
+        if [ -n "$STATFMT" ]; then
+            FINDSTR="$FINDSTR q = path; gsub(/\\047/, \"\\047\\\"\\047\\\"\\047\", q);
+                cmd = \"stat -c$STATFMT \\047\" q \"\\047\";
                 cmd | getline result;
                 close(cmd);
                 sub(/\\n\$/, \"\", result);
@@ -2061,7 +2056,10 @@ processTheMoves() {
             # Get files to rsync as a real array. Passing the filenames to rsync
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
-            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "|$ACTION|$SOURCE|$DESTINATION|" | cut -d'|' -f15- | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+            # every field is compared whole, so a name containing | cannot impersonate another row
+            mapfile -t SYNCED_FILES_ARR < <(awk -F'|' -v links="$NBLINKS" -v inode="$INODE" -v mtime="$MODIFYTIME" -v action="$ACTION" -v src="$SOURCE" -v dst="$DESTINATION" '
+                BEGIN { links = links ""; inode = inode ""; mtime = mtime "" }
+                $4 == mtime && $9 == links && $10 == inode && $11 == action && $12 == src && $13 == dst { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; print src "/./" p }' "$MOVER_ACTIONLIST")
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
