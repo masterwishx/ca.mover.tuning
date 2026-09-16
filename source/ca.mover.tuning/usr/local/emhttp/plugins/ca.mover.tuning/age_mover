@@ -2145,9 +2145,11 @@ processTheMoves() {
                 fi
             fi
 
+            # a dry run counts every name as done; a real run counts only verified arrivals below
+            names=${#SYNCED_FILES_ARR[@]}
+            arrived=$names
             # Unraid move exits 0 even when it fails or skips an existing target, so check every name
             if [ "$TESTMODE" != "yes" ]; then
-                names=${#SYNCED_FILES_ARR[@]}
                 arrived=0
                 for f in "${SYNCED_FILES_ARR[@]}"; do
                     rel=${f#"$SOURCE/./"}
@@ -2392,14 +2394,17 @@ processTheMoves() {
                 fi
             fi
 
-            # Setting mover status
+            # Setting mover status: only verified arrivals leave the remaining-work counters, and a
+            # group's bytes leave once every name arrived, the same rule as MOVEDSIZE above
+            done_bytes=0
+            [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && done_bytes=$FILESIZE
             if [[ "$ACTION" =~ "unattended" ]]; then
-                REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - FILESIZE))
+                REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - done_bytes))
                 # Check if there are any files or folders left
                 if [[ "$FILETYPE" = "f" ]]; then
-                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - NBLINKS))
+                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - arrived))
                 else
-                    REMAINING_UNATTENDED_FOLDERS=$((REMAINING_UNATTENDED_FOLDERS - 1))
+                    REMAINING_UNATTENDED_FOLDERS=$((REMAINING_UNATTENDED_FOLDERS - arrived))
                 fi
 
                 if [[ "$ACTION" =~ "unattended to secondary" ]]; then
@@ -2419,23 +2424,23 @@ processTheMoves() {
                 fi
             else
                 if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
-                    REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - FILESIZE))
+                    REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - done_bytes))
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
-                        REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - NBLINKS))
+                        REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - arrived))
                         mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                     else
-                        REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - 1))
+                        REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - arrived))
                         mvlogger "$REMAINING_CACHE_FOLDERS folders remaining from caches to array"
                     fi
                 else
-                    REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - FILESIZE))
+                    REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - done_bytes))
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
-                        REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - NBLINKS))
+                        REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - arrived))
                         mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                     else
-                        REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - 1))
+                        REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - arrived))
                         mvlogger "$REMAINING_ARRAY_FOLDERS folders remaining from array to caches"
                     fi
                 fi
