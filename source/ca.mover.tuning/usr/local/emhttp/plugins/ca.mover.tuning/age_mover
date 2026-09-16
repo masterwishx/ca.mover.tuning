@@ -1991,6 +1991,7 @@ processTheMoves() {
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
     local -A HANDLED_LINKS=()
     local -A CHARGED_BYTES=()
+    local -A STAGED_OK=()
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -2034,6 +2035,7 @@ processTheMoves() {
 
             # A chained rebalance moves the file to the pool and a second row syncs it on. That sync row
             # owns the file's count, so its move row transfers without counting; a lone move still counts.
+            chain_key="$PRIMARYSTORAGENAME|$SHARENAME|$MODIFYTIME|$NBLINKS|$INODE|$FILEPATH"
             STAGE_ROW=0
             if [ "$ACTION" = "move unattended to primary" ] && STAGE_PATH="$FILEPATH" awk -F'|' -v inode="$INODE" -v mtime="$MODIFYTIME" -v pool="$DESTINATION" '
                 function full_path(   p, i) { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; return p }
@@ -2091,7 +2093,8 @@ processTheMoves() {
                 for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
                     validate_filename "$(basename "$f")" && continue
                     mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
-                    not_moved "$(( ${#SYNCED_FILES_ARR[@]} > 0 ? ${#SYNCED_FILES_ARR[@]} : 1 ))"
+                    # a staged row's failure is counted once, by its sync row, which fails the same check
+                    [ "$STAGE_ROW" = 0 ] && not_moved "$(( ${#SYNCED_FILES_ARR[@]} > 0 ? ${#SYNCED_FILES_ARR[@]} : 1 ))"
                     continue 2
                 done
             fi
@@ -2100,6 +2103,13 @@ processTheMoves() {
             NBFILES=${#SYNCED_FILES_ARR[@]}
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
+                [ "$STAGE_ROW" = 0 ] && not_moved "$(( NBFILES > 0 ? NBFILES : 1 ))"
+                continue
+            fi
+
+            # the sync row of a chain has nothing to sync unless its staged move delivered every name
+            if [ "$ACTION" = "sync unattended to secondary" ] && [ -z "${STAGED_OK[$chain_key]}" ]; then
+                mvlogger "Not syncing $SYNCED_FILES: its move to the primary did not complete"
                 not_moved "$(( NBFILES > 0 ? NBFILES : 1 ))"
                 continue
             fi
@@ -2193,6 +2203,9 @@ processTheMoves() {
                     fi
                 fi
             fi
+
+            # a staged move that delivered every name lets its sync row proceed
+            [ "$STAGE_ROW" = 1 ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && STAGED_OK[$chain_key]=1
 
             # Clean parent folder of files if empty
             if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
@@ -2722,11 +2735,12 @@ start() {
     else
         if [ "$MOVEDFILES" -gt 0 ]; then
             unraid_notify "$(translate_text "A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$MOVEDFILES" "$(bytes_to_human "$MOVEDSIZE")" "$ELAPSED_TIME")" "success"
-        else
+        elif [ "$NOTMOVEDFILES" -eq 0 ]; then
             unraid_notify "$(translate_text "No files were moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "success"
         fi
         if [ "$NOTMOVEDFILES" -gt 0 ]; then
             mvlogger "$NOTMOVEDFILES files representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced."
+            unraid_notify "$(translate_text "%s files representing %s could not be moved/synced by Mover Tuning plugin." "$NOTMOVEDFILES" "$(bytes_to_human "$NOTMOVEDSIZE")")" "failure"
         fi
     fi
 
