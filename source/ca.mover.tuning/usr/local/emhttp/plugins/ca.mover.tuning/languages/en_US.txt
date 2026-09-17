@@ -8,7 +8,7 @@
 ; translation keeps the English text. Words every Unraid language pack already translates
 ; (Yes, No, Apply, Done, ...) are not repeated here.
 
-%s files representing %s could not be movedsynced by Mover Tuning plugin=%s files representing %s could not be moved/synced by Mover Tuning plugin.
+%s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s files and %s folders representing %s could not be moved/synced by Mover Tuning plugin.
 All community developers=
 Allow force mover schedule to run during a parity checkrebuild=Allow force mover schedule to run during a parity check/rebuild
 Array → Cache=
