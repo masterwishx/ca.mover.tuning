@@ -1101,7 +1101,7 @@ createFilteredFilelist() {
                     -not -path "/mnt/$PRIMARYSTORAGENAME/*" \
                     -not -path "/mnt/$SECONDARYSTORAGENAME/*" \
                     -not -path "/mnt/user*" \
-                    -not -path "/mnt/disk[0-9]*" \
+                    -not -path "/mnt/disk[0-9]/*" -not -path "/mnt/disk[0-9][0-9]/*" \
                     -maxdepth 2 | cut -d'/' -f3 | tr '\n' ' ')
             else
                 UNATTENDEDSTORAGE=$(find /mnt -type d -name "$SHARENAME" \
@@ -1473,6 +1473,8 @@ createFilteredFilelist() {
         fi
         # the path is field 7 up to the trailing separator; a name containing a pipe must stay whole
         FINDSTR="$FINDSTR path = \$7; for (i = 8; i < NF; i++) path = path \"|\" \$i;"
+        # a line break in a name would split this newline-delimited row into a forged one: the name is skipped
+        FINDSTR="$FINDSTR if (path ~ /[\\n\\r]/) { gsub(/[\\n\\r]/, \"?\", path); print \"Skipping a name holding a line break: \" path > \"/dev/stderr\"; next }"
         # Birth time (CTIME option) or access time (ATIME) comes from stat, which awk runs through
         # sh: the path goes in single quotes with each embedded quote escaped, never bare
         STATFMT=""
