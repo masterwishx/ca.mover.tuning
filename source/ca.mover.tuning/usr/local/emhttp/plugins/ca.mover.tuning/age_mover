@@ -1775,7 +1775,7 @@ decideMoveActions() {
                     pool_stats[$1]["total_size_from_primary"] += $8
                 }
             } else {
-                if (storage_pool == "user" || ($2 == "user0" && storage_pool ~ "disk")) {
+                if (storage_pool == "user" || ($2 == "user0" && storage_pool ~ /^disk[0-9]+$/)) {
                     # Make decision to move or keep:
                     action = (($4 == "only" && REBALANCESHARES == "yes") || ($4 == "prefer" && remaining_bytes_used[$1] <= $6 && (AGE == -1 || AGE >= 0))) ? "move from secondary" : "keep on secondary"
 
