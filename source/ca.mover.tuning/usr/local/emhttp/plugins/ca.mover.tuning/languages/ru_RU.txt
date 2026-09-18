@@ -39,17 +39,17 @@ Failed to remount dataset %s=Не удалось перемонтировать 
 Failed to start Mover Tuning Check the logs=Не удалось запустить Mover Tuning. Проверьте журналы.
 Failed to unmount ZFS dataset %s=Не удалось размонтировать ZFS‑датасет [%s]
 Fatal error %s does not exist, check this=Критическая ошибка: %s не существует, проверьте это.
-Fatal error cache not enabled and less than 2 pools set up=Критическая ошибка: кэш не включён и настроено менее двух пулов.
-Fatal error cache not present, or only cache present, and less than 2 pools set up=Критическая ошибка: кэш отсутствует или присутствует только кэш, и настроено менее двух пулов.
+Fatal error cache not enabled and less than 2 pools set up=Критическая ошибка: кэш-пул не включён и настроено менее двух пулов.
+Fatal error cache not present, or only cache present, and less than 2 pools set up=Критическая ошибка: кэш-пул отсутствует или присутствует только кэш-пул, и настроено менее двух пулов.
 File and Syslog=Файл (и Системный журнал)
 File list path=Путь к списку файлов
 File Only=Только файл
-Fill upprime up to this level of used Primary cache space=Заполнить/подготовить до этого уровня использования основного (<em>кэша</em>)
-Fill up to this level of used Primary cache space=Заполнить до этого уровня использования основного (<em>кэша</em>)
+Fill upprime up to this level of used Primary cache space=Заполнить/подготовить до этого уровня использования основного (<em>кэш-пула</em>)
+Fill up to this level of used Primary cache space=Заполнить до этого уровня использования основного (<em>кэш-пула</em>)
 Force move of all files on a schedule=Принудительно перемещать все файлы по расписанию
 Force turbo write during mover=Включать турбо‑запись во время работы Mover
-Free downprime up to this level of used Primary cache space=Освободить/подготовить до этого уровня использования основного (<em>кэша</em>)
-Free down to this level of used Primary cache space=Освободить до этого уровня использования основного (<em>кэша</em>)
+Free downprime up to this level of used Primary cache space=Освободить/подготовить до этого уровня использования основного (<em>кэш-пула</em>)
+Free down to this level of used Primary cache space=Освободить до этого уровня использования основного (<em>кэш-пула</em>)
 Freeing threshold lowered to %1 to stay at or below the moving threshold=Порог освобождения снижен до %1, чтобы оставаться на уровне или ниже порога перемещения.
 GitHub repository=Репозиторий GitHub
 Happy New Year=С Новым годом!
@@ -66,7 +66,7 @@ Log Mover Tuning plugin actions=Журналировать действия пл
 Logs parent folder for Mover Tuning plugin=Родительская папка журналов для плагина Mover Tuning
 Low=Низкий
 Maintainers=Сопровождающие
-make those plugins with ❤️ and a lot of ☕=создают эти плагины с ❤️ (и большим количеством ☕).
+make those plugins with ❤️ and a lot of ☕=создаём эти плагины с ❤️ (и большим количеством ☕).
 Move ALL files from current pool wont use mover settings=Переместить **ВСЕ** файлы из текущего пула (настройки mover не используются)
 Move ALL files to current pool wont use mover settings=Переместить **ВСЕ** файлы в текущий пул (настройки mover не используются)
 Move All from Primary->Secondary cacheyes shares pool percentage=Переместить всё из Основного->Вторичного (cache:yes) — процент заполнения пула шар
@@ -78,13 +78,13 @@ Move empty folders=Перемещать пустые папки
 Move files based on minimum size=Перемещать файлы на основе минимального размера
 Move files based on size=Перемещать файлы на основе размера
 Move files based on sparseness=Перемещать файлы на основе разреженности
-Move files off Primary cache based on age=Перемещать файлы с основного (<em>кэша</em>) на основе возраста
-Move files off Primary cache based on sparseness=Перемещать файлы с основного (кэша) на основе разреженности
+Move files off Primary cache based on age=Перемещать файлы с основного (<em>кэш-пула</em>) на основе возраста
+Move files off Primary cache based on sparseness=Перемещать файлы с основного (кэш-пула) на основе разреженности
 Move files that are greater than this many days old=Перемещать файлы старше указанного количества дней
 Move files that are greater than this sparseness=Перемещать файлы, разреженность которых превышает указанное значение
 Move files that are larger than this size In MB=Перемещать файлы, размер которых превышает указанный (в МБ)
 Move files tool=Инструмент перемещения файлов
-Move files to Primary cache based on age=Перемещать файлы на основной (<em>кэш</em>) на основе возраста
+Move files to Primary cache based on age=Перемещать файлы на основной (<em>кэш-пул</em>) на основе возраста
 Move now=Переместить сейчас
 Move Now=Переместить сейчас
 Move Now button follows plug-in filters=Кнопка «Переместить сейчас» учитывает фильтры плагина
@@ -105,7 +105,7 @@ Not Applicable Share Does Not Exist Yet=Не применимо (шара ещё
 Notify Mover Tuning plugin actions=Уведомлять о действиях плагина Mover Tuning
 Only move files larger than this in MB=Перемещать только файлы больше указанного размера (в МБ)
 Only move files that are older than this in days=Перемещать только файлы старше указанного количества дней
-Only move if above this threshold of used Primary cache space=Перемещать только если превышен этот порог используемого пространства основного (<em>кэш</em>)
+Only move if above this threshold of used Primary cache space=Перемещать только если превышен этот порог используемого пространства основного (<em>кэш-пула</em>)
 Open=Открыть
 Override Mover Tuning settings for this share=Переопределить настройки Mover Tuning для этой шары
 Plugin mover=Плагин Mover
@@ -192,7 +192,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_validate_plug:
-<p> <strong><em>В сфере кибербезопасности имена файлов могут являться критическим вектором для потенциальных атак и уязвимостей системы. Несанированные имена файлов создают значительные риски, способные нарушить целостность и безопасность системы.</em></strong></p>
+<p> <strong><em>В сфере кибербезопасности имена файлов могут являться критическим вектором для потенциальных атак и уязвимостей системы. Несанитизированные имена файлов создают значительные риски, способные нарушить целостность и безопасность системы.</em></strong></p>
 <p> Проверка имён входных файлов проверяет каждое имя файла перед его обработкой Mover'ом. Это гарантирует, что принимаются <strong>только допустимые</strong> имена файлов, <strong>снижая риск</strong> атак и уязвимостей.</p>
 <p> Отключайте <strong>только</strong> если у вас много файлов для перемещения и вы <strong>уверены</strong>, что все имена файлов <strong>допустимы</strong> и не содержат потенциальных угроз безопасности.</p>
 <p> 1. <strong>Проверка длины имени файла</strong> — если имя файла превышает 255 символов, оно будет отклонено.</p>
@@ -218,15 +218,15 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 
 :mover_tune_logging_plug:
 <p> Включает или отключает журналирование этого плагина.</p>
-<p><strong>Файл (и Syslog)</strong> будет сохранять в <strong>SYSLOG</strong> и в файл журнала.</p>
-<p><strong>Только файл</strong> будет сохранять <strong>только</strong> в файл журнала.</p>
+<p><strong>Файл (и Syslog)</strong> сохраняет записи в <strong>SYSLOG</strong> и в файл журнала.</p>
+<p><strong>Только файл</strong> сохраняет записи <strong>только</strong> в файл журнала.</p>
 <p> Журналы отображаются в <strong>SYSLOG</strong> и по умолчанию сохраняются в <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong>.</p>
 :end
 
 :mover_tune_debuglogging_plug:
 <p> Включает или отключает отладочное журналирование этого плагина.</p>
-<p><strong>Файл (и Syslog)</strong> будет сохранять в <strong>SYSLOG</strong> и в файл журнала.</p>
-<p><strong>Только файл</strong> будет сохранять <strong>только</strong> в файл журнала.</p>
+<p><strong>Файл (и Syslog)</strong> сохраняет записи в <strong>SYSLOG</strong> и в файл журнала.</p>
+<p><strong>Только файл</strong> сохраняет записи <strong>только</strong> в файл журнала.</p>
 <p> Отладочные журналы отображаются в <strong>SYSLOG</strong> и по умолчанию сохраняются в <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong>.</p>
 :end
 
@@ -307,7 +307,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_age_plug:
-> Выберите, если хотите перемещать файлы с основного (кэш) на основе их возраста — количества дней.
+> Выберите, если хотите перемещать файлы с основного (кэш-пула) на основе их возраста — количества дней.
 :end
 
 :mover_tune_daysold_plug:
@@ -381,7 +381,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :mover_tune_omoverthresh_plug:
 <p>Установите количество используемого дискового пространства на основном пуле для запуска перемещения всех файлов в шаре <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>).</p>
 <p>После этого фильтры всё равно будут применяться для оставшихся пулов, не достигших этого порога.</p>
-<p>Этот порог должен быть как минимум на <strong>5%</strong> больше, чем указанный выше параметр <strong><em>«Перемещать только при достижении этого порога используемого пространства основного (кэш)»</em></strong>.</p>
+<p>Этот порог должен быть как минимум на <strong>5%</strong> больше, чем указанный выше параметр <strong><em>«Перемещать только при достижении этого порога используемого пространства основного (кэш-пула)»</em></strong>.</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -433,7 +433,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_resynchronizecache_plug:
-<p>Это повторно синхронизирует файлы основного (кэшированного) хранилища как на основном, так и на вторичном (массив), чтобы они были защищены резервным копированием и четностью.</p>
+<p>Это повторно синхронизирует файлы основного (кэш-пул) хранилища как на основном, так и на вторичном (массив), чтобы они были защищены резервным копированием и четностью.</p>
 <p>Все файлы будут синхронизированы заново, независимо от времени изменения.</p>
 <p>Это может занять длительное время. Настройка «Запустить один раз» вернётся к значению <strong>Нет</strong> после следующего запуска.</p>
 :end
@@ -443,7 +443,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_share_age_prefer_plug:
-> Выберите **Да**, чтобы перемещать файлы на основной (кэш) на основе их возраста (в **днях**).
+> Выберите **Да**, чтобы перемещать файлы на основной (кэш-пул) на основе их возраста (в **днях**).
 :end
 
 :mover_tune_share_daysold_plug:
