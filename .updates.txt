@@ -1,26 +1,36 @@
-- new: Added full localization across the plugin, including mover-tuning settings, scheduling, share options, notifications, accessibility text, and command-line guidance. (masterwishx - Thanks to chodeus for the PRs fix)
-- new: Added Full Russian language support for the plugin interface.
+- new: Added full localization across mover‑tuning settings, scheduling, share options, notifications, accessibility text, and command‑line guidance. (masterwishx - Thanks to chodeus for the PRs fix)
 - new: Added English translations for all labels, descriptions, inline help, and troubleshooting messages.
-- new: Added localized threshold warnings and range-adjustment messages while preserving existing behavior.
-- new: Added version-specific guidance for Unraid 7.2.1, including updated scheduler details and mover command usage.
-- new: Notifications now follow the configured GUI language for configuration, validation, sync, cleanup, startup, and completion events.
-- new: Dynamic notification details (filenames, options, elapsed time) are preserved, with English fallback when translations are missing.
-- new: Added a localized "Mover Tuning Notification" label.
-- fix: Transfer completion is now verified more reliably before reporting success.
-- fix: Sync timestamps no longer update when transfers fail.
-- fix: Hardlink groups are handled safely, preventing partial moves and validating all linked filenames.
-- fix: Filenames with special characters, separators, quotes, or path-like text are now validated correctly.
-- fix: Successful and failed transfers are tracked separately, with accurate counts and clear failure details.
-- fix: Mover reporting now distinguishes successful, skipped, incomplete, vanished, and failed items.
-- fix: Post-operation verification ensures moves and syncs are only reported as successful after destination arrival and source removal.
-- fix: Remaining-work tracking is now based on verified results.
-- fix: Folder-only move and sync plans are processed correctly.
-- fix: Non-numbered, disk-prefixed storage paths remain eligible for processing.
-- fix: Improved skip-list handling, file-type filtering, and numbered array-disk detection.
+- new: Added localized threshold warnings and range‑adjustment messages while preserving existing behavior.
+- new: Added version‑specific guidance for Unraid 7.2.1, including updated scheduler details and mover command usage.
+- new: Notifications now appear in the configured GUI language, including configuration, validation, synchronization, cleanup, startup, and completion messages.
+- new: Dynamic notification details—such as filenames, options, and elapsed time—are preserved, with English fallback when translations are unavailable.
+- new: Added a localized “Mover Tuning Notification” label.
+- new: Added Full Russian language support for the plugin interface.
+- fix: Transfer completion is now verified more reliably.
+- fix: Last-sync timestamps no longer update when synchronization transfers fail.
+- fix: Incomplete hardlink groups are handled more safely during transfers.
+- fix: Filename validation now covers all files in a hardlink group.
+- fix: Transfers are counted as successful only after destination arrival and source removal are confirmed.
+- fix: Successful and failed transfers are now tracked separately.
+- fix: Notifications now display accurate success counts and provide failure details.
+- fix: Improved mover reporting to distinguish successfully moved files from skipped or failed files.
+- fix: Fixed handling of paths containing separators, line breaks, quotes, and shell-special characters.
+- fix: Improved hardlink processing by preventing partial moves and validating all linked names.
+- fix: Added post-operation verification before reporting successful moves or synchronizations.
+- fix: Prevented sync timestamps from updating when synchronization failures occur.
+- fix: Improved remaining-work tracking based on verified results.
+- fix: Ensured folder-only plans are processed.
+- fix: Kept non-numbered, disk-prefixed storage paths eligible for processing.
+- fix: Improved notifications and logs with separate successful and unsuccessful file totals.
+- fix: Move and sync reporting now reflects items verified at their destinations, including folders and transferred size.
+- fix: Notifications more accurately distinguish successful, incomplete, vanished, and failed moves.
+- fix: Improved handling of hardlinked files, including incomplete groups.
+- fix: Fixed issues with filenames containing special characters, path-like text, or action-like text.
+- fix: Improved skip-list, file-type filtering, and numbered array-disk detection.
 - fix: Sync status no longer advances after unsuccessful transfers.
-- fix: Notifications and logs now show separate totals for successful and unsuccessful items.
-- fix: Move and sync reporting now includes verified folders and transferred size.
-- doc: Reorganized inline help for test mode, validation, filtering, options, logging, and support links.
-- doc: Improved wording, punctuation, terminology, and formatting throughout the plugin's help content.
-- doc: Updated notification wording for clarity and standardized test-mode vs normal completion messages.
+- fix: Folder-only move operations are now processed correctly.
+- doc: Reorganized inline help for test mode, validation, filtering, options, logging, and support links for clearer navigation.
+- doc: Improved wording, punctuation, terminology, and formatting throughout the plugin’s help content for a more user-friendly experience.
+- doc: Updated notification wording and punctuation for improved clarity.
+- doc: Standardized test-mode and normal completion messages.
 - doc: Corrected English text for mover failure and success notifications.
