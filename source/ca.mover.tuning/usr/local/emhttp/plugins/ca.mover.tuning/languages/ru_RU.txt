@@ -1,0 +1,503 @@
+; Mover Tuning plugin (ca.mover.tuning) - Russian translation file
+;
+; Translated from the en_US.txt master file. Keys on the left of the equal sign
+; are left unchanged (they are lookup identifiers used by the plugin code);
+; only the text to the right of the equal sign has been translated to Russian.
+
+; PART 1: single line entries.
+
+All community developers=Все разработчики сообщества
+Allow force mover schedule to run during a parity checkrebuild=Разрешить запуск расписания принудительного перемещения во время проверки/восстановления четности
+Array → Cache=Массив → Кэш
+A total of %s files representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Всего %s файлов общим объемом %s были успешно перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Перед продолжением нажмите на параметр или F1, чтобы прочитать подробные описания всех настроек.
+by=от
+Cache disk not enabled=Кэш-диск не включён!
+Cache → Array=Кэш → Массив
+Clean empty folders=Очистить пустые папки
+Clean empty ZFS datasets=Очистить пустые ZFS‑датасеты
+CLI help commands=Команды помощи CLI
+Comma separated list of file types=Список типов файлов через запятую
+Cron Schedule to force move all of files=Расписание Cron для принудительного перемещения всех файлов
+Debug Log Mover Tuning plugin actions=Отладочный журнал действий плагина Mover Tuning
+Defaults=По умолчанию
+Delete Mover helper files over than this days old=Удалять вспомогательные файлы Mover старше указанного количества дней
+Delete Mover Log files over than this days old=Удалять лог‑файлы Mover старше указанного количества дней
+Disable Mover running on a schedule=Отключить запуск Mover по расписанию
+disables test mode=отключает тестовый режим
+disables the plugins schedule=отключает расписание плагина
+disables validation of input filenames=отключает проверку имён входных файлов
+enable smart caching=включить умное кэширование
+Error checking mover status Please refresh the page=Ошибка проверки статуса mover. Обновите страницу.
+Error Config file %s not found=Ошибка: файл конфигурации '%s' не найден.
+Error Failed to convert CRLF line endings in %s Check file permissions=Ошибка: не удалось преобразовать окончания строк CRLF в %s. Проверьте права доступа к файлу.
+Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Ошибка: недопустимый путь имени файла: %s. Измените имя файла или отключите параметр «Проверять имена входных файлов».
+Error No files found to move for %s=Ошибка: не найдено файлов для перемещения для %s
+Errors Only=Только ошибки
+Failed to destroy ZFS dataset %s — attempting to remount=Не удалось уничтожить ZFS‑датасет [%s] — выполняется попытка перемонтирования.
+Failed to remount dataset %s=Не удалось перемонтировать датасет [%s]
+Failed to start Mover Tuning Check the logs=Не удалось запустить Mover Tuning. Проверьте журналы.
+Failed to unmount ZFS dataset %s=Не удалось размонтировать ZFS‑датасет [%s]
+Fatal error %s does not exist, check this=Критическая ошибка: %s не существует, проверьте это.
+Fatal error cache not enabled and less than 2 pools set up=Критическая ошибка: кэш-пул не включён и настроено менее двух пулов.
+Fatal error cache not present, or only cache present, and less than 2 pools set up=Критическая ошибка: кэш-пул отсутствует или присутствует только кэш-пул, и настроено менее двух пулов.
+File and Syslog=Файл (и Системный журнал)
+File list path=Путь к списку файлов
+File Only=Только файл
+Fill upprime up to this level of used Primary cache space=Заполнить/подготовить до этого уровня использования основного (<em>кэш-пула</em>)
+Fill up to this level of used Primary cache space=Заполнить до этого уровня использования основного (<em>кэш-пула</em>)
+Force move of all files on a schedule=Принудительно перемещать все файлы по расписанию
+Force turbo write during mover=Включать турбо‑запись во время работы Mover
+Free downprime up to this level of used Primary cache space=Освободить/подготовить до этого уровня использования основного (<em>кэш-пула</em>)
+Free down to this level of used Primary cache space=Освободить до этого уровня использования основного (<em>кэш-пула</em>)
+Freeing threshold lowered to %1 to stay at or below the moving threshold=Порог освобождения снижен до %1, чтобы оставаться на уровне или ниже порога перемещения.
+GitHub repository=Репозиторий GitHub
+Happy New Year=С Новым годом!
+Idle=Ожидание
+If you like the work, you can donate via=Если вам нравится эта работа, вы можете поддержать через
+If you need assistance, you can ask in the Unraid community for help=Если вам нужна помощь, вы можете обратиться в сообщество Unraid.
+If you want Mover Tuning to fully manage scheduling, disable it in Mover Settings=Если вы хотите, чтобы Mover Tuning полностью управлял расписанием, отключите его в настройках Mover.
+Ignore All hidden files and directories=Игнорировать все скрытые файлы и каталоги
+Ignore files and folders listed inside of a text file=Игнорировать файлы и каталоги, перечисленные в текстовом файле
+Ignore file types=Игнорировать типы файлов
+Invalid characters to block=Недопустимые символы для блокировки
+Let scheduled mover run during a parity check rebuild=Разрешить запуск Mover по расписанию во время проверки/восстановления паритета
+Log Mover Tuning plugin actions=Журналировать действия плагина Mover Tuning
+Logs parent folder for Mover Tuning plugin=Родительская папка журналов для плагина Mover Tuning
+Low=Низкий
+Maintainers=Сопровождающие
+make those plugins with ❤️ and a lot of ☕=создаём эти плагины с ❤️ (и большим количеством ☕).
+Move ALL files from current pool wont use mover settings=Переместить **ВСЕ** файлы из текущего пула (настройки mover не используются)
+Move ALL files to current pool wont use mover settings=Переместить **ВСЕ** файлы в текущий пул (настройки mover не используются)
+Move All from Primary->Secondary cacheyes shares pool percentage=Переместить всё из Основного->Вторичного (cache:yes) — процент заполнения пула шар
+Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Переместить всё из Основного->Вторичного (cache:yes) шар, когда диск заполнен выше определённого процента
+Move All from Primary->Secondary shares pool percentage=Переместить всё из Основного->Вторичного — процент заполнения пула шар
+Move All threshold raised to %1 to stay above the moving threshold=Порог «Переместить всё» повышен до %1, чтобы оставаться выше порога перемещения.
+Moved Only=Только перемещённые
+Move empty folders=Перемещать пустые папки
+Move files based on minimum size=Перемещать файлы на основе минимального размера
+Move files based on size=Перемещать файлы на основе размера
+Move files based on sparseness=Перемещать файлы на основе разреженности
+Move files off Primary cache based on age=Перемещать файлы с основного (<em>кэш-пула</em>) на основе возраста
+Move files off Primary cache based on sparseness=Перемещать файлы с основного (кэш-пула) на основе разреженности
+Move files that are greater than this many days old=Перемещать файлы старше указанного количества дней
+Move files that are greater than this sparseness=Перемещать файлы, разреженность которых превышает указанное значение
+Move files that are larger than this size In MB=Перемещать файлы, размер которых превышает указанный (в МБ)
+Move files tool=Инструмент перемещения файлов
+Move files to Primary cache based on age=Перемещать файлы на основной (<em>кэш-пул</em>) на основе возраста
+Move now=Переместить сейчас
+Move Now=Переместить сейчас
+Move Now button follows plug-in filters=Кнопка «Переместить сейчас» учитывает фильтры плагина
+Mover is running=Mover выполняется...
+Mover Tuning=Mover Tuning
+Mover Tuning - Filters=Mover Tuning — Фильтры
+Mover Tuning - Help=Mover Tuning — Справка
+Mover Tuning - Options=Mover Tuning — Параметры
+Mover Tuning - Plugin Settings=Mover Tuning — Настройки плагина
+Mover Tuning - Share Settings=Mover Tuning — Настройки шары
+Mover Tuning Debug Package zip=Отладочный пакет Mover Tuning (.zip)
+Mover Tuning Notification=Уведомление Mover Tuning
+Mover Tuning schedule=Расписание Mover Tuning
+Mover Tuning settings not available for this share=Настройки Mover Tuning недоступны для этой шары
+Mover Tuning thresholds=Пороги Mover Tuning
+No files were movedsynced by Mover Tuning plugin Elapsed time %s=Файлы не были перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+Not Applicable Share Does Not Exist Yet=Не применимо (шара ещё не существует)
+Notify Mover Tuning plugin actions=Уведомлять о действиях плагина Mover Tuning
+Only move files larger than this in MB=Перемещать только файлы больше указанного размера (в МБ)
+Only move files that are older than this in days=Перемещать только файлы старше указанного количества дней
+Only move if above this threshold of used Primary cache space=Перемещать только если превышен этот порог используемого пространства основного (<em>кэш-пула</em>)
+Open=Открыть
+Override Mover Tuning settings for this share=Переопределить настройки Mover Tuning для этой шары
+Plugin mover=Плагин Mover
+Plugin thread @ Unraid community=Тема плагина в сообществе Unraid
+Priority for disk IO=Приоритет дискового I/O
+Priority for mover process=Приоритет процесса Mover
+Rebalance shares=Перебалансировать шары
+Resynchronize all Primary files to Secondary=Повторно синхронизировать все файлы из основного хранилища во вторичное
+Rsync=Rsync
+Run Mover Tuning=Запустить Mover Tuning...
+Run once=Запустить один раз
+Script to run after mover No checks, always runs=Скрипт для запуска после mover (без проверок, выполняется всегда)
+Script to run before mover No checks, always runs=Скрипт для запуска перед mover (без проверок, выполняется всегда)
+Share size calculation=Расчёт размера шары
+Show advanced filters=Показать расширенные фильтры
+Show advanced options=Показать расширенные опции
+Show advanced settings=Показать расширенные настройки
+Skip files listed in text file=Пропускать файлы из текстового списка
+Skip file types=Пропускать типы файлов
+Starting with Unraid 721, Mover Tuning plugin behavior has changed=Начиная с Unraid 7.2.1 поведение плагина Mover Tuning изменилось
+Start Mover Tuning=Запустить Mover Tuning
+Sync files based on maximum size=Синхронизировать файлы на основе максимального размера
+Sync files that are smaller than this size In MB=Синхронизировать файлы меньше указанного размера (в МБ)
+Synchronize Primary files to Secondary=Синхронизировать файлы основного с вторичным
+Test Mode - no files will be movedsynced=Тестовый режим — файлы не будут перемещены/синхронизированы.
+TEST MODE A total of %s files representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: всего %s файлов общим объёмом %s были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+Test Mode dry run=Тестовый режим (пробный запуск)
+TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: файлы не были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+Thank you for using this plugin=Спасибо за использование этого плагина.
+The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Сохранённый порог освобождения — %1, выше порога перемещения %2. Mover запускается при %2 и останавливается при %1, поэтому ничего не перемещается, пока пул находится между ними. Эта страница показывает %3, и сохранение установит это значение.
+The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Сохранённый порог перемещения всех — %1, на уровне или ниже порога перемещения %2. Всё на cache:yes перемещается, список пропусков и фильтры игнорируются до достижения порога. Эта страница показывает %3, и сохранение установит это значение.
+Top Folder=Верхняя папка
+Unraid mover=Unraid Mover
+Unraid Mover schedule is currently enabled=Расписание Unraid Mover сейчас **включено**
+Use ATIME=Использовать ATIME
+Use CTIME=Использовать CTIME
+Used IDE=Используемый IDE
+User shares not enabled=Пользовательские шары не включены!
+Validate input filenames to prevent attacks=Проверять имена файлов для предотвращения атак
+Very Low=Очень низкий
+Want to support the developer and say Thank You=Хотите поддержать разработчика и сказать **Спасибо**?
+We=Мы
+Wishing you a stable array, fast mover runs, and zero parity errors=Желаем вам стабильного массива, быстрой работы mover и отсутствия ошибок четности!
+Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, что пользуетесь!
+• In the CLI, use “age_mover --help” for plugin commands Running “mover --help” will call the built-in Unraid mover=• В CLI используйте **«age_mover --help»** для команд плагина. Выполнение **«mover --help»** вызовет встроенный mover Unraid.
+• The built-in Unraid mover can still be triggered using “Force move all files on a schedule” Cron schedule in Plugin Settings=• Встроенный mover Unraid всё ещё можно запустить с помощью **«Принудительно перемещать все файлы по расписанию»** (расписание Cron) в настройках плагина.
+• The plugin is now separated from the built-in Unraid mover=• Теперь плагин отделён от встроенного mover Unraid.
+• To disable the built-in Unraid mover schedule, set “Mover schedule” in Mover Settings to Disabled=• Чтобы отключить расписание встроенного mover Unraid, установите **«Расписание Mover»** в настройках Mover в значение **«Отключено»**.
+• Use the “Mover Tuning Schedule” in the plugin settings to schedule Mover Tuning instead=• Вместо этого используйте **«Расписание Mover Tuning»** в настройках плагина для планирования **Mover Tuning**.
+• “Move Now” in Mover Tuning → Options runs the plugin age_mover Mover Tuning=• **«Переместить сейчас»** в Mover Tuning → Параметры запускает age_mover плагина (Mover Tuning).
+• “Move Now” in the main Mover Settings runs the built-in Unraid mover=• **«Переместить сейчас»** в основных настройках Mover запускает встроенный mover Unraid.
+• “Move” on the Main page also runs the built-in Unraid mover=• **«Переместить»** на главной странице также запускает встроенный mover Unraid.
+
+; PART 2: multi line sections.
+
+:mover_tune_disable_plug:
+<p>Это <strong>предотвратит</strong> запуск mover по расписанию, установленному в <strong>настройках Mover Tuning</strong>.</p>
+<p>Вы сможете запустить mover только <strong>вручную</strong>:</p>
+<ul>
+  <li>Нажмите кнопку <strong>«Переместить сейчас»</strong> в разделе <strong>Mover Tuning - Параметры</strong>.</li>
+  <li>Выполните <strong>«age_mover start»</strong> из <strong>CLI</strong>.</li>
+</ul>
+:end
+
+:mover_tune_disable_legacy_plug:
+<p>Это <strong>предотвратит</strong> запуск mover по расписанию, установленному в <strong>настройках Mover</strong>.</p>
+<p>Вы сможете запустить mover только <strong>вручную</strong>:</p>
+<ul>
+  <li>Нажмите кнопку <strong>«Переместить сейчас»</strong> в <strong>настройках Mover</strong>.</li>
+  <li>Нажмите <strong>«Переместить»</strong> на странице <strong>Главная</strong>.</li>
+  <li>Выполните <strong>«mover start»</strong> из <strong>CLI</strong>.</li>
+</ul>
+:end
+
+:mover_tune_movertunecron_plug:
+> Запускает расписание <strong><code>age_mover</code></strong> плагина Mover Tuning с использованием вашей пользовательской записи cron (включает все фильтры плагина).
+>
+> Пример записи расписания Cron: <strong>0 */4 * * *</strong>.&nbsp; Для запуска <em>каждые</em><strong> 4 часа</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Что такое Cron</a>
+:end
+
+:mover_tune_testmode_plug:
+<p> Тестовый режим <strong>не</strong> запустит mover, но выведет результаты пользовательской команды find в <em>/tmp/ca.mover.tuning/</em>.</p>
+<p> Внимание — если параметр «Кнопка "Переместить сейчас" учитывает фильтры плагина» установлен в <strong>Нет</strong>, будет запущен оригинальный Mover.</p>
+:end
+
+:mover_tune_validate_plug:
+<p> <strong><em>В сфере кибербезопасности имена файлов могут являться критическим вектором для потенциальных атак и уязвимостей системы. Несанитизированные имена файлов создают значительные риски, способные нарушить целостность и безопасность системы.</em></strong></p>
+<p> Проверка имён входных файлов проверяет каждое имя файла перед его обработкой Mover'ом. Это гарантирует, что принимаются <strong>только допустимые</strong> имена файлов, <strong>снижая риск</strong> атак и уязвимостей.</p>
+<p> Отключайте <strong>только</strong> если у вас много файлов для перемещения и вы <strong>уверены</strong>, что все имена файлов <strong>допустимы</strong> и не содержат потенциальных угроз безопасности.</p>
+<p> 1. <strong>Проверка длины имени файла</strong> — если имя файла превышает 255 символов, оно будет отклонено.</p>
+<p> 2. <strong>Проверка недопустимых символов</strong> — имя файла не должно содержать символы, считающиеся недопустимыми для имён файлов, такие как 
+(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> | </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>).</p>
+<p> 3. <strong>Предотвращение обхода пути</strong> — имя файла не должно содержать символы, которые могут использоваться для обхода каталогов, такие как (<strong><em> ../ </em></strong>).</p>
+<p> Если одна из этих проверок не пройдена, имя файла будет отклонено.</p>
+:end
+
+:mover_tune_invalidfilechars_plug:
+<p> Символы имени файла, такие как:
+  <strong><em>$</em></strong>
+  <strong><em>/</em></strong>
+  <strong><em><</em></strong>
+  <strong><em>></em></strong>
+  <strong><em>:</em></strong>
+  <strong><em>"</em></strong>
+  <strong><em>|</em></strong>
+  <strong><em>?</em></strong>
+  <strong><em>*</em></strong>.
+</p>
+:end
+
+:mover_tune_logging_plug:
+<p> Включает или отключает журналирование этого плагина.</p>
+<p><strong>Файл (и Syslog)</strong> сохраняет записи в <strong>SYSLOG</strong> и в файл журнала.</p>
+<p><strong>Только файл</strong> сохраняет записи <strong>только</strong> в файл журнала.</p>
+<p> Журналы отображаются в <strong>SYSLOG</strong> и по умолчанию сохраняются в <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong>.</p>
+:end
+
+:mover_tune_debuglogging_plug:
+<p> Включает или отключает отладочное журналирование этого плагина.</p>
+<p><strong>Файл (и Syslog)</strong> сохраняет записи в <strong>SYSLOG</strong> и в файл журнала.</p>
+<p><strong>Только файл</strong> сохраняет записи <strong>только</strong> в файл журнала.</p>
+<p> Отладочные журналы отображаются в <strong>SYSLOG</strong> и по умолчанию сохраняются в <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong>.</p>
+:end
+
+:mover_tune_notify_plug:
+<p>Включает или отключает уведомления этого плагина. Уведомления отображаются в графическом интерфейсе Unraid.</p>
+<p><strong>Только ошибки</strong> — уведомление будет отправлено <strong>только</strong> при возникновении ошибки.</p>
+<p><strong>Только перемещённые</strong> — уведомление будет отправлено <strong>только</strong> при перемещении файлов или возникновении ошибки, а не при каждом запуске mover.</p>
+:end
+
+:mover_tune_loggingfolder_plug:
+> Путь к родительской папке журналов <strong><em>/tmp</em></strong>. Журналы сохраняются по этому родительскому пути, по умолчанию в <strong><em>/tmp/ca.mover.tuning</em></strong>.
+:end
+
+:mover_tune_logfilesdaysold_plug:
+> Укажите **количество дней**, по истечении которых плагин Mover Tuning будет удалять файлы журналов **_*.log_** и текстовые файлы **_*.txt_**.
+:end
+
+:mover_tune_listfilesdaysold_plug:
+> Укажите **количество дней**, по истечении которых плагин Mover Tuning будет удалять файлы списков **<em>*.list</em>**.
+:end
+
+:mover_tune_advancedsettings_plug:
+> Показать расширенные настройки. Обратите внимание, что эти настройки активны, если заданы, даже если не отображаются.
+:end
+
+:mover_tune_parity_plug:
+> Если выполняется проверка четности или восстановление диска, это предотвратит запуск mover.
+:end
+
+:mover_tune_moverio_plug:
+<p>Два указанных выше параметра задают приоритет процесса mover.</p>
+<p>Настройка этих параметров может помочь в случаях, когда при работе mover другие приложения могут приостанавливаться или буферизоваться.</p>
+<p>Обратите внимание, что перемещение файлов может занять <strong>больше времени</strong> при использовании этих параметров.</p>
+:end
+
+:mover_tune_force_plug:
+> Выберите <strong>Да</strong>, чтобы запускать <strong>оригинальный mover</strong> по пользовательскому расписанию cron (фильтры плагина игнорируются).
+:end
+
+:mover_tune_cron_plug:
+> Пример записи расписания Cron: <strong>20 4 1 * *</strong>.&nbsp; Для запуска <em>в первый день месяца в </em><strong>4:20 утра</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Что такое Cron</a> 
+:end
+
+:mover_tune_forceparity_plug:
+<p>Установка расписания cron для принудительного перемещения запустит mover по этому расписанию.</p>
+<p>Пример: в настройках Mover установлено расписание «Ежечасно». В течение этого расписания соблюдаются указанные выше правила.</p>
+<p>Расписание cron для принудительного перемещения может быть установлено как <strong>30 03 * * *</strong>, что заставит перемещать все файлы каждый день в <strong>3:30 утра</strong>, независимо от правил.</p>
+<p>Параметр forceParity позволяет переопределить это поведение и принудительно перемещать все файлы независимо от правил.</p>
+<p>Обратите внимание, что проверка ошибок расписания cron не выполняется. Оно должно быть корректной записью.</p>
+:end
+
+:mover_tune_beforescript_plug:
+> Путь к скрипту, который будет выполнен перед запуском mover. Этот скрипт выполняется всегда, даже если фильтры не находят ничего для перемещения.
+:end
+
+:mover_tune_afterscript_plug:
+> Путь к скрипту, который будет выполнен после завершения работы mover. Этот скрипт выполняется всегда.
+:end
+
+:mover_tune_movenow_plug:
+> Выберите <strong>Да</strong>, чтобы учитывать фильтры плагина, <strong>Нет</strong> — чтобы кнопка запускала оригинальный mover (фильтры плагина игнорируются).
+:end
+
+:mover_tune_movingthreshold_plug:
+<p> Установите количество используемого дискового пространства на диске <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>) для запуска mover. При достижении этого порога mover начнёт перемещать данные с кэш-пула.</p>
+<p> <u>Примечание:</u> если вы замечаете, что <strong>mover НЕ перемещает данные, когда должен</strong>, попробуйте установить <strong>более высокий порог перемещения</strong>, чтобы увеличить разрыв между порогами перемещения и освобождения.</p>
+<p> Mover вычисляет сумму используемого размера кэш-пула и размера файла до превышения порога освобождения. Если у вас большие файлы, это может привести к несоответствию выделенному пространству для порогов освобождения.</p>
+:end
+
+:mover_tune_freeingthreshold_plug:
+<p> Установите количество используемого дискового пространства на диске <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>) после завершения работы mover. Установка значения (<strong><em> 0% </em></strong>) означает, что mover будет продолжать работу, пока все данные не будут перемещены с кэш-пула.</p>
+<p> <u>Примечание:</u> если вы замечаете, что <strong>mover НЕ перемещает данные, когда должен</strong>, попробуйте установить <strong>более низкий порог освобождения</strong>, чтобы увеличить разрыв между порогами перемещения и освобождения.</p>
+<p> Mover вычисляет сумму используемого размера кэш-пула и размера файла до превышения порога освобождения. Если у вас большие файлы, это может привести к несоответствию выделенному пространству для порогов освобождения.</p>
+:end
+
+:mover_tune_fillupthreshold_plug:
+> Установите количество используемого дискового пространства на диске <strong><em>Вторичный->Основной</em></strong> (cache:<strong>prefer</strong>) после завершения работы mover. Установка значения (<strong><em>95%</em></strong>) означает, что mover будет продолжать работу, пока кэш-пул не заполнится на <strong><em>95%</em></strong>.
+:end
+
+:mover_tune_age_plug:
+> Выберите, если хотите перемещать файлы с основного (кэш-пула) на основе их возраста — количества дней.
+:end
+
+:mover_tune_daysold_plug:
+> Укажите **количество дней**, которое должно пройти для перемещения файла (до 1 года). Режим «Авто» будет перемещать от самых старых к самым новым, пока не будет достигнут порог.
+:end
+
+:mover_tune_advancedfilters_plug:
+> Показать расширенные параметры фильтров. Обратите внимание, что эти фильтры активны, если заданы, даже если не отображаются.
+:end
+
+:mover_tune_ctime_plug:
+> Используйте <strong>CTIME</strong> <em>(время создания)</em> вместо <strong>MTIME</strong> <em>(время изменения)</em> в команде find.
+:end
+
+:mover_tune_atime_plug:
+> Используйте <strong>ATIME</strong> <em>(время доступа)</em> вместо <strong>MTIME</strong> <em>(время изменения)</em> в команде find.
+:end
+
+:mover_tune_sizef_plug:
+> Выберите <strong>да</strong>, если хотите перемещать файлы на основе их размера в <strong>МБ</strong>.
+:end
+
+:mover_tune_sizeinm_plug:
+> Укажите минимальный размер файла для перемещения (в **мегабайтах**).
+:end
+
+:mover_tune_sizefsync_plug:
+> Выберите <strong>да</strong>, если хотите синхронизировать файлы на основе их размера в <strong>МБ</strong>. Этот параметр применим только при включённой функции синхронизации или повторной синхронизации.
+:end
+
+:mover_tune_sizeinmsync_plug:
+> Укажите максимальный размер файла для синхронизации (в **мегабайтах**).
+:end
+
+:mover_tune_sparsnessf_plug:
+> Укажите размер разреженности. Любой файл с большей разреженностью будет перемещён.
+:end
+
+:mover_tune_sparsnessv_plug:
+> Укажите значение разреженности, при превышении которого файл будет перемещён.
+:end
+
+:mover_tune_filelistv_plug:
+<p> Полный путь к файлу, содержащему список файлов и папок, которые вы хотите исключить из перемещения с основного (кэш) пула.</p>
+<p> Пример <strong>списка файлов</strong>: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , содержимое этого файла должно быть по одной записи на строку.</p>
+<p> Пример <strong>папки</strong>: <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> , <strong>НЕ</strong> ставьте (<strong><em> * </em></strong>) или (<strong><em> / </em></strong>) в конце строки.</p>
+<p> Пример <strong>файла</strong>: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
+<p> Пример <strong>маски</strong>:</p>
+<ul>
+  <li><strong><em>/mnt/cache_ssd/Files/MyFolder/*.ext</em></strong> , исключает все файлы, соответствующие шаблону, рекурсивно внутри этой папки.</li>
+  <li><strong><em>/mnt/cache_ssd/Files/MyFolder/*MyFile*</em></strong> , исключает все папки и файлы, соответствующие шаблону, рекурсивно внутри этой папки.</li>
+</ul>
+<p> Размер не отслеживается для записей с маской.</p>
+:end
+
+:mover_tune_filetypesv_plug:
+> Список типов файлов, разделённых <strong>запятой</strong>.
+:end
+
+:mover_tune_ignorehidden_plug:
+<p>Это используют очень немногие, оставьте значение «Нет».</p>
+<p>Исключает любые файлы или папки, начинающиеся с (<strong><em> . </em></strong>).</p>
+<p>Добавляет (<strong><em> -not -path '*/\.*' </em></strong>) в конец команды find.</p>
+:end
+
+:mover_tune_omovercfg_plug:
+<p>Установите <strong>Да</strong>, если хотите перемещать все файлы из шары <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>) в массив при превышении указанного ниже процента.</p>
+<p>Это аналогично оригинальному mover'у и не применяет фильтры этого плагина к команде find, отправляемой в исполняемый файл mover.</p>
+:end
+
+:mover_tune_omoverthresh_plug:
+<p>Установите количество используемого дискового пространства на основном пуле для запуска перемещения всех файлов в шаре <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>).</p>
+<p>После этого фильтры всё равно будут применяться для оставшихся пулов, не достигших этого порога.</p>
+<p>Этот порог должен быть как минимум на <strong>5%</strong> больше, чем указанный выше параметр <strong><em>«Перемещать только при достижении этого порога используемого пространства основного (кэш-пула)»</em></strong>.</p>
+:end
+
+:mover_tune_enableturbo_plug:
+> Принудительно переключает unRaid в режим турбо-записи (реконструктивная запись) во время работы mover.
+:end
+
+:mover_tune_movefilestool_plug:
+<p>Это изменит инструмент, используемый для перемещения файлов с <strong>фильтрами плагина</strong>, позволяя выбирать между <strong>Rsync</strong> и <strong>Move</strong> — встроенной утилитой Unraid для перемещения файлов.</p>
+<p><strong>Move</strong> — использовать встроенный инструмент Unraid для перемещения файлов, но продолжать использовать <strong>Rsync</strong> для синхронизации файлов.</p>
+<p><strong>Rsync</strong> — использовать Rsync как для перемещения, так и для синхронизации файлов.</p>
+:end
+
+:mover_tune_moveemptyfolders_plug:
+> Это также переместит <strong>пустые папки</strong> на шаре, включая те, которые не связаны с перемещёнными файлами.
+:end
+
+:mover_tune_cleanfolders_plug:
+<p><strong>Да</strong> — удаляет родительскую папку <strong>только для перемещённых</strong> файлов.</p>
+<p><strong>Верхняя папка</strong> — удаляет папку <strong>верхнего уровня шары</strong> перемещённого содержимого, включая <strong>все пустые вложенные папки</strong> на основном хранилище.</p>
+:end
+
+:mover_tune_cleandatasets_plug:
+> Это <strong>размонтирует</strong> и <strong>уничтожит</strong> родительский ZFS-датасет на шаре перемещённых файлов, <strong>только если он не содержит</strong> дочерних датасетов.
+:end
+
+:mover_tune_sharecalculation_plug:
+<p>Включает или отключает расчёт размера шары на хранилище <strong><em>Основной</em></strong> (cache:<strong>only</strong>).</p>
+<p>Это выполняет <strong><code>du</code></strong> на шаре, что может быть <strong>ресурсоёмко</strong> для больших XFS/Btrfs шар с большим количеством файлов.</p>
+:end
+
+:mover_tune_synchronizecache_plug:
+<p>Это синхронизирует файлы основного (кэшированного) хранилища как на основном, так и на вторичном (массив), чтобы они были защищены резервным копированием и четностью.</p>
+<p>Чтение и изменение по-прежнему будут происходить на основном хранилище. При желании можно использовать синхронизацию файлов на основе максимального размера.</p>
+<p><u>Примечание:</u></p>
+<ul>
+  <li><strong>Синхронизируются ТОЛЬКО изменённые файлы</strong> с момента последней синхронизации.</li>
+  <li><strong>Синхронизироваться могут ТОЛЬКО файлы</strong> на кэш-пуле <strong>ниже</strong> порогов перемещения и освобождения.</li>
+</ul>
+:end
+
+:mover_tune_advancedoptions_plug:
+> Показать расширенные параметры. Обратите внимание, что эти параметры активны, если заданы, даже если не отображаются.
+:end
+
+:mover_tune_rebalanceshares_plug:
+<p>Перемещает файлы шар на их основное и/или вторичное хранилище, если они распределены по <strong><em>неучтённому хранилищу</em></strong> (диски/пулы, не назначенные как основное или вторичное хранилище шары).</p>
+<p>Может перемещать более старые файлы из <strong><em>Основного->Вторичное</em></strong> или <strong><em>Вторичного->Основное</em></strong>, если разрешено (cache:prefer, cache:yes, cache:only), для освобождения места.</p>
+<p>Настройка «Запустить один раз» вернётся к значению <strong>Нет</strong> после следующего запуска.</p>
+:end
+
+:mover_tune_resynchronizecache_plug:
+<p>Это повторно синхронизирует файлы основного (кэш-пул) хранилища как на основном, так и на вторичном (массив), чтобы они были защищены резервным копированием и четностью.</p>
+<p>Все файлы будут синхронизированы заново, независимо от времени изменения.</p>
+<p>Это может занять длительное время. Настройка «Запустить один раз» вернётся к значению <strong>Нет</strong> после следующего запуска.</p>
+:end
+
+:mover_tune_moveroverride_plug:
+> Выберите **Да**, чтобы переопределить основные настройки Mover Tuning для этой шары.
+:end
+
+:mover_tune_share_age_prefer_plug:
+> Выберите **Да**, чтобы перемещать файлы на основной (кэш-пул) на основе их возраста (в **днях**).
+:end
+
+:mover_tune_share_daysold_plug:
+> Укажите количество дней, которое должно пройти для перемещения файла (до 1 года). Режим «Авто» будет перемещать от самых старых к самым новым, пока не будет достигнут порог.
+:end
+
+:mover_tune_share_sizef_plug:
+> Выберите **Да**, чтобы перемещать файлы на основе их размера.
+:end
+
+:mover_tune_share_sparsnessf_plug:
+> Выберите **Да**, чтобы перемещать файлы на основе их разреженности.
+:end
+
+:mover_tune_share_sparsnessv_plug:
+> Укажите минимальную разреженность файла для перемещения.
+:end
+
+:mover_tune_filelistf_plug:
+> Выберите **Да**, чтобы пропускать файлы, перечисленные в указанном текстовом файле.
+:end
+
+:mover_tune_share_filelistv_plug:
+> Укажите полный путь к текстовому файлу, содержащему список файлов, которые mover должен пропускать.
+:end
+
+:mover_tune_filetypesf_plug:
+> Выберите **Да**, чтобы пропускать определённые типы файлов в дополнение к выбранным глобально.
+:end
+
+:mover_tune_share_filetypesv_plug:
+> Укажите типы файлов для пропуска, разделённые запятой (например, **".txt,.mp3,.pdf"**).
+:end
+
+:mover_tune_share_ignorehidden_plug:
+> Выберите **Да**, чтобы пропускать все скрытые файлы и папки (начинающиеся с **"."**).
+:end
+
+:mover_tune_share_moveshare_prefer_plug:
+> Нажатие кнопки **Переместить сейчас** вызовет **unraid mover** специально для этой шары. Будет перемещено всё содержимое шары **_Вторичный->Основной_**, независимо от существующих настроек mover.
+:end
+
+:mover_tune_share_movingthreshold_plug:
+> Установите количество используемого дискового пространства на диске <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>) для запуска mover. При достижении этого порога mover начнёт перемещать данные с кэш-пула.
+:end
+
+:mover_tune_share_freeingthreshold_plug:
+> Установите количество используемого дискового пространства на диске <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>) после завершения работы mover. Установка значения (<strong><em> 0% </em></strong>) означает, что mover будет продолжать работу, пока все данные не будут перемещены с кэш-пула.
+:end
+
+:mover_tune_share_age_yes_plug:
+> Выберите **Да**, чтобы перемещать файлы с основного (кэш) на основе их возраста (в **днях**).
+:end
+
+:mover_tune_share_moveshare_yes_plug:
+> Нажатие кнопки **Переместить сейчас** вызовет **unraid mover** специально для этой шары. Будет перемещено всё содержимое шары **_Основной->Вторичный_**, независимо от существующих настроек mover.
+:end
