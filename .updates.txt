@@ -1,32 +1,26 @@
-- fix: Improved skip-list matching to prevent similarly named shares or unrelated paths from being incorrectly included. (masterwishx - Thanks to chodeus for the PRs fix)
-- fix: Added support for skip lists that use Windows-style line endings.
-- fix: Improved reporting of skipped paths and file types, including clearer per-path exclusions and more accurate total size calculations.
-- fix: Reduced inconsistencies in how skipped-content sizes are calculated.
-- fix: Prevented unattended storage balancing from moving items that are marked as skipped.
-- fix: Improved cache fill-up threshold calculations for more accurate mover decisions.
-- fix: Corrected projected pool-usage calculations when evaluating files marked for cache retention or preference.
-- fix: Ensured planned moves consistently account for their net impact on pool usage.
-- fix: Adjusted file-processing order so cache-retained files are handled oldest first, while other modes keep their existing order.
-- fix: Improved consistency when determining which files should be moved as pool usage changes.
-- fix: Added escape_find_path() to correctly escape backslashes and left-bracket characters before paths are added to find-path filters.
-- fix: Accounted for both shell evaluation and GNU find path-glob matching when processing skip-list paths.
-- fix: Added a filter for ignored directories before appending the star-slash suffix.
-- fix: Retained content-filter behavior after appending the star-slash suffix to ensure directory nodes and their contents are handled correctly.
-- fix: Cache-retained and hidden file sizes are now measured in exact bytes instead of rounded values, so the mover no longer over-estimates the space they use.
-- fix: Pool size on non-ZFS pools is now calculated the same way the usage percentage is measured, so thresholds trip where the settings page says they will.
-- fix: The pool filesystem type is now detected once per pool per run instead of repeatedly for every share and folder.
-- fix: Per-share overrides now start from the global settings, so a share that does not override a setting is no longer affected by the previous share's override.
-- fix: A warning is now shown when the freeing threshold is set above the moving threshold, and the wording explains what that combination actually does.
-- fix: The per-share settings page now saves and reads the same setting names the mover uses.
-- fix: On the per-share page, the last-access and last-change time options no longer lock each other out.
-- fix: Share names are now validated and escaped when moving a single share from the share page.
-- fix: The mover's run-state file is now always cleaned up when a run is skipped or stopped, so a later run is not blocked.
-- fix: Schedule entries are validated before being written, so an invalid entry can no longer break the root crontab.
-- fix: The debug package now collects all retained mover logs instead of only today's, and adds pool sizing details.
-- fix: The debug package now hides file names in the mover action lists and in the plugin's own logs.
-- fix: The debug package now records whether the mover was really running, and runs started from the web button are reported as "web button" instead of "unknown".
-- fix: Removed unused code, corrected internal config key names, and fixed the README note that said the threshold warnings only appear in test mode.
-- fix: Threshold dropdowns on the mover and share settings pages now update dynamically when the moving threshold changes.
-- fix: Available options are constrained so freeing thresholds stay at or below the moving threshold, while Move All thresholds stay above it.
-- fix: Previously saved values outside the valid ranges are adjusted and clearly flagged with warnings.
-- fix: Threshold controls refresh immediately when related settings change.
+- new: Added full localization across the plugin, including mover-tuning settings, scheduling, share options, notifications, accessibility text, and command-line guidance. (masterwishx - Thanks to chodeus for the PRs fix)
+- new: Added Full Russian language support for the plugin interface.
+- new: Added English translations for all labels, descriptions, inline help, and troubleshooting messages.
+- new: Added localized threshold warnings and range-adjustment messages while preserving existing behavior.
+- new: Added version-specific guidance for Unraid 7.2.1, including updated scheduler details and mover command usage.
+- new: Notifications now follow the configured GUI language for configuration, validation, sync, cleanup, startup, and completion events.
+- new: Dynamic notification details (filenames, options, elapsed time) are preserved, with English fallback when translations are missing.
+- new: Added a localized "Mover Tuning Notification" label.
+- fix: Transfer completion is now verified more reliably before reporting success.
+- fix: Sync timestamps no longer update when transfers fail.
+- fix: Hardlink groups are handled safely, preventing partial moves and validating all linked filenames.
+- fix: Filenames with special characters, separators, quotes, or path-like text are now validated correctly.
+- fix: Successful and failed transfers are tracked separately, with accurate counts and clear failure details.
+- fix: Mover reporting now distinguishes successful, skipped, incomplete, vanished, and failed items.
+- fix: Post-operation verification ensures moves and syncs are only reported as successful after destination arrival and source removal.
+- fix: Remaining-work tracking is now based on verified results.
+- fix: Folder-only move and sync plans are processed correctly.
+- fix: Non-numbered, disk-prefixed storage paths remain eligible for processing.
+- fix: Improved skip-list handling, file-type filtering, and numbered array-disk detection.
+- fix: Sync status no longer advances after unsuccessful transfers.
+- fix: Notifications and logs now show separate totals for successful and unsuccessful items.
+- fix: Move and sync reporting now includes verified folders and transferred size.
+- doc: Reorganized inline help for test mode, validation, filtering, options, logging, and support links.
+- doc: Improved wording, punctuation, terminology, and formatting throughout the plugin's help content.
+- doc: Updated notification wording for clarity and standardized test-mode vs normal completion messages.
+- doc: Corrected English text for mover failure and success notifications.
