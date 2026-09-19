@@ -2155,10 +2155,12 @@ processTheMoves() {
                 else
                     mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
                     # Unraid move keeps hardlinks only among names given in one run and skips the file otherwise
+                    MOVE_DEBUG_ARGS=()
+                    read -r -a MOVE_DEBUG_ARGS <<<"$DEBUGGING"
                     if [ "$FILETYPE" = "f" ]; then
-                        printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                        printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" >>"$MOVER_DEBUG_LOG" 2>&1
                     else
-                        find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                        find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" >>"$MOVER_DEBUG_LOG" 2>&1
                     fi
                 fi
             else
