@@ -184,7 +184,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :mover_tune_movertunecron_plug:
 > Führt den <strong><code>age_mover</code></strong>‑Zeitplan des Mover‑Tuning‑Plugins anhand deines eigenen Cron‑Eintrags aus (inklusive aller Plugin‑Filter).
 >
-> Beispiel Cron‑Eintrag: <strong>0 */4 * * *</strong>.&nbsp; führt den Vorgang <em>alle</em> <strong>4 Stunden</strong> aus. <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Was ist Cron?</a>
+> Beispiel Cron‑Eintrag: <strong>0 */4 * * *</strong>.&nbsp; Führt den Vorgang <em>alle</em> <strong>4 Stunden</strong> aus. <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Was ist Cron?</a>
 :end
 
 :mover_tune_testmode_plug:
@@ -410,4 +410,96 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_sharecalculation_plug:
-<p>Aktiviert oder deaktiviert die Größenberechnung der Freigabe im <strong>Primärspeicher</strong
+<p>Aktiviere oder deaktiviere die Berechnung der Freigabegröße auf dem <strong><em>Primärspeicher</em></strong> (cache:<strong>only</strong>).</p>
+<p>Dies führt <strong><code>du</code></strong> auf der Freigabe aus, was bei großen XFS/Btrfs‑Freigaben mit vielen Dateien <strong>sehr belastend</strong> sein kann.</p>
+:end
+
+:mover_tune_synchronizecache_plug:
+<p>Dies synchronisiert die Dateien im Primärspeicher (Cache) sowohl auf dem Primär‑ als auch auf dem Sekundärspeicher (Array), sodass sie gesichert und durch Parität geschützt sind.</p>
+<p>Lesen und Schreiben erfolgt weiterhin auf dem Primärspeicher. Optional kann die Synchronisation basierend auf einer maximalen Dateigröße verwendet werden.</p>
+<p><u>Hinweis:</u></p>
+<ul>
+  <li><strong>NUR geänderte Dateien</strong> seit der letzten Synchronisation werden <strong>synchronisiert</strong>.</li>
+  <li><strong>NUR Dateien</strong> im Cache‑Pool <strong>unterhalb</strong> der Verschiebe‑ und Freigabeschwellen können <strong>synchronisiert</strong> werden.</li>
+</ul>
+:end
+
+:mover_tune_advancedoptions_plug:
+> Erweiterte Optionen anzeigen. Bitte beachten: Diese Optionen sind aktiv, auch wenn sie nicht angezeigt werden.
+:end
+
+:mover_tune_rebalanceshares_plug:
+<p>Verschiebt Dateien von Freigaben zu deren Primär‑ und/oder Sekundärspeicher, wenn sie sich auf <strong><em>Unattended Storage</em></strong> befinden (Datenträger/Pools, die nicht als Primär oder Sekundär der Freigabe zugewiesen sind).</p>
+<p>Kann ältere Dateien von <strong><em>Primär→Sekundär</em></strong> oder <strong><em>Sekundär→Primär</em></strong> verschieben, wenn dies erlaubt ist (cache:prefer, cache:yes, cache:only), um Speicherplatz freizugeben.</p>
+<p>Die Einstellung „Einmal ausführen“ wird nach dem nächsten Durchlauf automatisch wieder auf <strong>Nein</strong> gesetzt.</p>
+:end
+
+:mover_tune_resynchronizecache_plug:
+<p>Dies wird alle Dateien im Primärspeicher (Cache) sowohl auf dem Primär‑ als auch auf dem Sekundärspeicher (Array) erneut synchronisieren, sodass sie gesichert und durch Parität geschützt sind.</p>
+<p>Alle Dateien werden unabhängig von ihrer Änderungszeit erneut synchronisiert.</p>
+<p>Dies kann ein sehr langer Vorgang sein. Die Einstellung „Einmal ausführen“ wird nach dem nächsten Durchlauf automatisch wieder auf <strong>Nein</strong> gesetzt.</p>
+:end
+
+:mover_tune_moveroverride_plug:
+> Wähle **Ja**, um die primären Mover‑Tuning‑Einstellungen für diese Freigabe zu überschreiben.
+:end
+
+:mover_tune_share_age_prefer_plug:
+> Wähle **Ja**, um Dateien basierend auf ihrem Alter (in **Tagen**) in den Primärspeicher (Cache) zu verschieben.
+:end
+
+:mover_tune_share_daysold_plug:
+> Wähle die Anzahl der Tage, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt von den ältesten zu den neuesten Dateien, bis der Schwellenwert erreicht ist.
+:end
+
+:mover_tune_share_sizef_plug:
+> Wähle **Ja**, um Dateien basierend auf ihrer Dateigröße zu verschieben.
+:end
+
+:mover_tune_share_sparsnessf_plug:
+> Wähle **Ja**, um Dateien basierend auf ihrer Ausdünnung zu verschieben.
+:end
+
+:mover_tune_share_sparsnessv_plug:
+> Wähle die minimale Ausdünnung, die eine Datei haben muss, um verschoben zu werden.
+:end
+
+:mover_tune_filelistf_plug:
+> Wähle **Ja**, um Dateien zu überspringen, die in einer angegebenen Textdatei gelistet sind.
+:end
+
+:mover_tune_share_filelistv_plug:
+> Gib den vollständigen Pfad zu einer Textdatei an, die die Liste der Dateien enthält, die der Mover überspringen soll.
+:end
+
+:mover_tune_filetypesf_plug:
+> Wähle **Ja**, um bestimmte Dateitypen zusätzlich zu den globalen auszuschließen.
+:end
+
+:mover_tune_share_filetypesv_plug:
+> Gib die auszuschließenden Dateitypen an, getrennt durch Kommas (z. B. **".txt,.mp3,.pdf"**).
+:end
+
+:mover_tune_share_ignorehidden_plug:
+> Wähle **Ja**, um alle versteckten Dateien und Ordner (beginnend mit **"."**) zu überspringen.
+:end
+
+:mover_tune_share_moveshare_prefer_plug:
+> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Secondary→Primary_**, unabhängig von bestehenden Mover‑Einstellungen.
+:end
+
+:mover_tune_share_movingthreshold_plug:
+> Legt den Füllstand des <strong><em>Primär→Sekundär</em></strong> (cache:<strong>yes</strong>)‑Speichers fest, ab dem der Mover ausgeführt wird. Sobald dieser Schwellenwert erreicht ist, beginnt der Mover, Daten vom Cache‑Pool zu verschieben.
+:end
+
+:mover_tune_share_freeingthreshold_plug:
+> Legt den Füllstand des <strong><em>Primär→Sekundär</em></strong> (cache:<strong>yes</strong>)‑Speichers fest, bis zu dem der Mover nach Abschluss weiterläuft. Ein Wert von (<strong><em>0 %</em></strong>) bedeutet, dass alle Daten vom Cache‑Pool verschoben werden.
+:end
+
+:mover_tune_share_age_yes_plug:
+> Wähle **Ja**, um Dateien basierend auf ihrem Alter (in **Tagen**) aus dem Primärspeicher (Cache) zu verschieben.
+:end
+
+:mover_tune_share_moveshare_yes_plug:
+> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Primary→Secondary_**, unabhängig von bestehenden Mover‑Einstellungen.
+:end
