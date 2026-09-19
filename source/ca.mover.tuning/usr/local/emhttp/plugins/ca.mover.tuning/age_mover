@@ -66,6 +66,11 @@ TOTALUNATTENDEDSIZE=0
 REMAINING_UNATTENDED_FILES=0
 REMAINING_UNATTENDED_FOLDERS=0
 REMAINING_UNATTENDED_SIZE=0
+MOVEDFILES=0
+MOVEDSIZE=0
+NOTMOVEDFILES=0
+NOTMOVEDSIZE=0
+SYNCFAILED=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
 UNRAID_MOVER_LOGLEVEL=0
@@ -182,7 +187,10 @@ unraid_notify() {
     #
     # In Moved Only mode, suppress success/warning when nothing moved, exit the function
     if [[ "$NOTIFY" == "movedOnly" ]] && [[ "$flag" == "success" || "$flag" == "warning" ]]; then
-        if [[ "$TOTALFILES" -eq 0 ]]; then
+        # a real run counts what was moved; test mode has only the plan
+        local moved=$MOVEDFILES
+        [ "$TESTMODE" = "yes" ] && moved=$TOTALFILES
+        if [[ "$moved" -eq 0 ]]; then
             mvDebuglogger "Moved Only notify mode activated. No files were moved, and notifications are disabled." "Notify Mode"
             return 0 # Do not process success messages
         else
@@ -1566,6 +1574,32 @@ createFilteredFilelist() {
     mv -f "$reorderfile" "$FILTERED_FILELIST"
 }
 
+# processTheMoves refuses a file whose hardlinks are not all listed: hold it at planning like an
+# ignored file. The hold lasts as long as the exclusion, so it deliberately leaves lastCacheSync alone.
+holdPartialHardlinks() {
+    local held files bytes tmp
+    [ -s "$FILTERED_FILELIST" ] || return
+    tmp=$(mktemp)
+    # key mirrors the SYNCED_FILES_ARR lookup in processTheMoves: storage, links, inode, mtime
+    if ! held=$(awk -F'|' -v OFS='|' -v out="$tmp" '
+        function key(   parts) { split($13, parts, "/"); return parts[3] "|" $10 "|" $11 "|" $5 }
+        NR == FNR { if (FNR > 1 && $12 == "f" && $10 > 1) names[key()]++; next }
+        FNR > 1 && $12 == "f" && $10 > 1 && $4 != "skipped" && names[k = key()] < $10 {
+            $4 = "skipped"; files++
+            if (!(k in seen)) { seen[k] = 1; bytes += $8 }
+        }
+        { print > out }
+        END { printf "%d %d\n", files, bytes }' "$FILTERED_FILELIST" "$FILTERED_FILELIST"); then
+        rm -f "$tmp"
+        return
+    fi
+    mv -f "$tmp" "$FILTERED_FILELIST"
+    read -r files bytes <<<"$held"
+    if [ "$files" -gt 0 ]; then
+        mvlogger "$files files representing $(bytes_to_human "$bytes") stay where they are: some of their hardlinks are not in the list of files to move (ignore list or another filter)"
+    fi
+}
+
 decideMoveActions() {
     if [ -e $SOFTSTOPFILE ]; then
         [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
@@ -1905,6 +1939,25 @@ decideMoveActions() {
     fi
 }
 
+# Counts names that did not transfer ($1, 1 when unknown; $2 = their bytes, the row's size by default);
+# a sync row also holds lastCacheSync, since a later run only syncs files newer than the mark.
+not_moved() {
+    local failed=${1:-1} bytes=${2:-$FILESIZE} phys="$SOURCE|$NBLINKS|$INODE|$MODIFYTIME"
+    # only files carry file counts and bytes; a failed folder sync still holds lastCacheSync below
+    [ "$FILETYPE" = "f" ] || { failed=0; bytes=0; }
+    # a hardlink group's bytes belong to its first failed partition; later partitions are the same file
+    if [ -n "${CHARGED_BYTES[$phys]}" ]; then
+        bytes=0
+    elif [ "$bytes" -gt 0 ]; then
+        CHARGED_BYTES[$phys]=1
+    fi
+    NOTMOVEDFILES=$((NOTMOVEDFILES + failed))
+    NOTMOVEDSIZE=$((NOTMOVEDSIZE + bytes))
+    if [[ "$ACTION" =~ "sync" ]]; then
+        SYNCFAILED=1
+    fi
+}
+
 # Internal move engine
 processTheMoves() {
     if [ -e $SOFTSTOPFILE ]; then
@@ -1930,6 +1983,8 @@ processTheMoves() {
     REMAINING_UNATTENDED_SIZE=$TOTALUNATTENDEDSIZE
     REMAINING_UNATTENDED_FILES=$TOTALUNATTENDEDFILES
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
+    local -A HANDLED_LINKS=()
+    local -A CHARGED_BYTES=()
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -1960,10 +2015,14 @@ processTheMoves() {
                 continue
             fi
 
-            # Skip filesize = 0 (hardlinks already handled in a previous loop)
+            # The first row of a hardlinked file transfers all its names; the source is gone after
+            # a move, so later rows are matched on the SYNCED_FILES_ARR key below, not the file. The key
+            # carries the plan, so a group split across plans keeps every partition instead of dropping one.
             NBLINKS="${NBLINKS:-0}"
-            if [ -f "${SOURCE}/${FILEPATH}" ] && [ "$NBLINKS" -gt 1 ] && [ "$FILESIZE" = 0 ]; then
-                continue
+            if [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -gt 1 ]; then
+                link_key="$ACTION|$SOURCE|$DESTINATION|$NBLINKS|$INODE|$MODIFYTIME"
+                [ -n "${HANDLED_LINKS[$link_key]}" ] && continue
+                HANDLED_LINKS[$link_key]=1
             fi
 
             # Temporary fix: prevent moving empty directories that are in the skip list (better to remove duplicate empty folders from the lists instead?)
@@ -1987,20 +2046,12 @@ processTheMoves() {
             #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
-            # Check File by validate function and skip if error
-            if [ "$VALIDATE_FILENAMES" = "yes" ]; then
-                if ! validate_filename "$(basename "$FILEPATH")"; then
-                    mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "$SOURCE/$FILEPATH")"
-                    continue
-                #else
-                #    mvlogger "Valid filename"
-                fi
-            fi
-
+            # Only rows planned the same way join the group: hardlinks in two shares can differ, and
+            # transferring them on one share's plan would apply it to the other. A short group is held below.
             # Get files to rsync as a real array. Passing the filenames to rsync
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
-            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "ary|$SOURCE|" | cut -d'|' -f15 | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
+            mapfile -t SYNCED_FILES_ARR < <(grep "|$NBLINKS|$INODE|" "$MOVER_ACTIONLIST" | grep "|$MODIFYTIME|" | grep "|$ACTION|$SOURCE|$DESTINATION|" | cut -d'|' -f15- | while IFS= read -r line; do printf '%s\n' "$SOURCE/./$line"; done)
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
@@ -2009,25 +2060,36 @@ processTheMoves() {
             for f in "${SYNCED_FILES_ARR[@]}"; do SYNCED_FILES+="$(qp "$f") "; done
             GUI_CURRENT_FILE=$SYNCED_FILES
 
+            # Check File by validate function and skip if error; rsync gets every hardlink name, so check them all
+            if [ "$VALIDATE_FILENAMES" = "yes" ]; then
+                for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
+                    validate_filename "$(basename "$f")" && continue
+                    mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
+                    not_moved "$(( ${#SYNCED_FILES_ARR[@]} > 0 ? ${#SYNCED_FILES_ARR[@]} : 1 ))"
+                    continue 2
+                done
+            fi
+
             # Check if list is complete (array length is exact, unlike parsing the string)
             NBFILES=${#SYNCED_FILES_ARR[@]}
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
+                not_moved "$(( NBFILES > 0 ? NBFILES : 1 ))"
                 continue
             fi
 
             # Proceed with rsync
             if [[ "$ACTION" =~ "move" ]]; then
                 # Some verbosity
-                GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
-                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
                 rsync_action="Move"
                 # Finalize RSYNC_CMD
                 RSYNC_CMD+=(--remove-source-files)
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
-                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
-                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ -f "$FILEPATH" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
                 rsync_action="Sync"
             fi
 
@@ -2039,14 +2101,19 @@ processTheMoves() {
                 filetype="folder"
             fi
 
+            rc=0
             # Check if action and move files tool is unraid move
             if [[ "$ACTION" =~ "move" && "$MOVE_FILES_TOOL" = "move" ]]; then
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
-                    mvDebuglogger "Move cmd: move, Move $filetype: $(qp "$SOURCE/$FILEPATH"), Dest: $(qp "$DESTINATION/")" "Move Action"
-                    # Perform unraid binary move.
-                    find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                    mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
+                    # Unraid move keeps hardlinks only among names given in one run and skips the file otherwise
+                    if [ "$FILETYPE" = "f" ]; then
+                        printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                    else
+                        find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "$DEBUGGING" >>"$MOVER_DEBUG_LOG" 2>&1
+                    fi
                 fi
             else
                 # If action is sync/move and move files tool is rsync
@@ -2060,10 +2127,36 @@ processTheMoves() {
                     mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
                     # Perform rsync. relative paths and hardlinks
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
-                        "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/"
+                        "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/" || rc=$?
                     else
                         mvlogger_t "Error: No files found to move for %s" "failure" "$(qp "$SOURCE/$FILEPATH")"
+                        rc=1
                     fi
+                fi
+            fi
+
+            # Unraid move exits 0 even when it fails or skips an existing target, so check every name
+            if [ "$TESTMODE" != "yes" ]; then
+                names=${#SYNCED_FILES_ARR[@]}
+                arrived=0
+                for f in "${SYNCED_FILES_ARR[@]}"; do
+                    rel=${f#"$SOURCE/./"}
+                    [ -e "$DESTINATION/$rel" ] || continue
+                    # rsync leaves a moved folder's source behind, so only a file must be gone
+                    [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" && -e "$SOURCE/$rel" ]] && continue
+                    arrived=$((arrived + 1))
+                done
+                # the group's bytes count as moved only once every name arrived: until then the file is
+                # still on the source and its space was not freed, so they belong to the not-moved side
+                [ "$FILETYPE" = "f" ] && [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
+                [ "$FILETYPE" = "f" ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
+                if [ "$names" -eq 0 ]; then
+                    not_moved
+                elif [ "$arrived" != "$names" ]; then
+                    not_moved "$((names - arrived))"
+                elif [ "$rc" != 0 ]; then
+                    # every name arrived yet the tool reported an error: hold the sync mark, count nothing
+                    not_moved 0 0
                 fi
             fi
 
@@ -2339,7 +2432,7 @@ processTheMoves() {
 
     mvlogger "$(titleLine "Cleaning up" '-')"
 
-    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
+    if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] && grep -q "|sync from" "$MOVER_ACTIONLIST"; then
         EPOCH=$(date --date="${NOW:0:4}-${NOW:5:2}-${NOW:8:2} ${NOW:11:2}:${NOW:13:2}:${NOW:15:2}" +%s)
 
         mvlogger "Set last sync date in config file/s: $EPOCH = $NOW"
@@ -2489,6 +2582,7 @@ start() {
 
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
+    [ ! -e $SOFTSTOPFILE ] && holdPartialHardlinks
     [ ! -e $SOFTSTOPFILE ] && decideMoveActions
 
     # Get current time to start time counter
@@ -2585,10 +2679,13 @@ start() {
             unraid_notify "$(translate_text "TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "warning"
         fi
     else
-        if [ "$TOTALFILES" -gt 0 ]; then
-            unraid_notify "$(translate_text "A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$TOTALFILES" "$(bytes_to_human "$TOTALSIZE")" "$ELAPSED_TIME")" "success"
+        if [ "$MOVEDFILES" -gt 0 ]; then
+            unraid_notify "$(translate_text "A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$MOVEDFILES" "$(bytes_to_human "$MOVEDSIZE")" "$ELAPSED_TIME")" "success"
         else
             unraid_notify "$(translate_text "No files were moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "success"
+        fi
+        if [ "$NOTMOVEDFILES" -gt 0 ]; then
+            mvlogger "$NOTMOVEDFILES files representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced."
         fi
     fi
 
