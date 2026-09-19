@@ -8,10 +8,11 @@
 ; translation keeps the English text. Words every Unraid language pack already translates
 ; (Yes, No, Apply, Done, ...) are not repeated here.
 
+%s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s files and %s folders representing %s could not be moved/synced by Mover Tuning plugin.
 All community developers=
 Allow force mover schedule to run during a parity checkrebuild=Allow force mover schedule to run during a parity check/rebuild
 Array → Cache=
-A total of %s files representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=A total of %s files representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s
+A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=A total of %s files and %s folders representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.
 by=
 Cache disk not enabled=Cache disk not enabled!
@@ -133,7 +134,7 @@ Sync files based on maximum size=
 Sync files that are smaller than this size In MB=Sync files that are smaller than this size (In MB)
 Synchronize Primary files to Secondary=
 Test Mode - no files will be movedsynced=Test Mode - no files will be moved/synced.
-TEST MODE A total of %s files representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=TEST MODE: A total of %s files representing %s would be moved/synced by Mover Tuning plugin. Elapsed time: %s
+TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=TEST MODE: A total of %s files and %s folders representing %s would be moved/synced by Mover Tuning plugin. Elapsed time: %s
 Test Mode dry run=Test Mode (dry run)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s
 Thank you for using this plugin=Thank you for using this plugin.
