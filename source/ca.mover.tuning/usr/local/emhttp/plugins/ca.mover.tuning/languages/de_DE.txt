@@ -8,12 +8,12 @@
 
 All community developers=Alle Entwickler der Community
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
-Array → Cache=Speicherverbund → Cache‑Pool
+Array → Cache=Speicherverbund → Cache
 A total of %s files representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Bevor du fortfährst, klicke auf eine Option oder drücke F1, um detaillierte Beschreibungen aller Einstellungen zu lesen.
 by=von
 Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
-Cache → Array=Cache‑Pool → Speicherverbund
+Cache → Array=Cache → Speicherverbund
 Clean empty folders=Leere Ordner bereinigen
 Clean empty ZFS datasets=Leere ZFS‑Datasets bereinigen
 CLI help commands=CLI‑Hilfebefehle
