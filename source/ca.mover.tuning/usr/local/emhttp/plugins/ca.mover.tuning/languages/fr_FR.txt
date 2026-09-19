@@ -233,8 +233,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_notify_plug:
 <p>Active ou désactive les notifications de ce plugin. Les notifications sont affichées dans l’interface graphique d’Unraid.</p>
-<p><strong>Errors Only</strong> enverra une notification <strong>uniquement</strong> lorsqu’une erreur survient.</p>
-<p><strong>Moved Only</strong> enverra une notification <strong>uniquement</strong> lorsque des fichiers sont déplacés ou lorsqu’une erreur survient, et non à chaque exécution du mover.</p>
+<p><strong>Erreurs Uniquement</strong> enverra une notification <strong>uniquement</strong> lorsqu’une erreur survient.</p>
+<p><strong>Déplacés Uniquement</strong> enverra une notification <strong>uniquement</strong> lorsque des fichiers sont déplacés ou lorsqu’une erreur survient, et non à chaque exécution du mover.</p>
 :end
 
 :mover_tune_loggingfolder_plug:
@@ -493,7 +493,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> En cliquant sur **Move Now**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant tous les paramètres existants du mover.
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -509,5 +509,5 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> En cliquant sur **Move Now**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant tous les paramètres existants du mover.
 :end
