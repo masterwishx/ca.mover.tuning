@@ -1,5 +1,5 @@
-- new: Added full localization across the plugin, including mover-tuning settings, scheduling, share options, notifications, accessibility text, and command-line guidance. (masterwishx - Thanks to chodeus for the PRs fix)
-- new: Added Full Russian language support for the plugin interface.
+- new: Added full localization across the plugin, including mover-tuning settings, scheduling, share options, notifications, accessibility text, and command-line guidance. (masterwishx - Thanks to chodeus for the PRs)
+- new: Added Full Russian, German, and French language support for the plugin interface.
 - new: Added English translations for all labels, descriptions, inline help, and troubleshooting messages.
 - new: Added localized threshold warnings and range-adjustment messages while preserving existing behavior.
 - new: Added version-specific guidance for Unraid 7.2.1, including updated scheduler details and mover command usage.
