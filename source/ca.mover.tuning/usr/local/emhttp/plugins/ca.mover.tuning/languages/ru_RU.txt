@@ -7,7 +7,7 @@
 ; PART 1: single line entries.
 
 All community developers=Все разработчики сообщества
-Allow force mover schedule to run during a parity checkrebuild=Разрешить принудительному расписанию перемещения выполняться во время проверки/восстановления четности
+Allow force mover schedule to run during a parity checkrebuild=Разрешить запуск расписания принудительного перемещения во время проверки/восстановления четности
 Array → Cache=Массив → Кэш
 A total of %s files representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Всего %s файлов общим объемом %s были успешно перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Перед продолжением нажмите на параметр или F1, чтобы прочитать подробные описания всех настроек.
@@ -113,7 +113,7 @@ Plugin thread @ Unraid community=Тема плагина в сообществе
 Priority for disk IO=Приоритет дискового I/O
 Priority for mover process=Приоритет процесса Mover
 Rebalance shares=Перебалансировать шары
-Resynchronize all Primary files to Secondary=Повторно синхронизировать все файлы основного с вторичным
+Resynchronize all Primary files to Secondary=Повторно синхронизировать все файлы из основного хранилища во вторичное
 Rsync=Rsync
 Run Mover Tuning=Запустить Mover Tuning...
 Run once=Запустить один раз
