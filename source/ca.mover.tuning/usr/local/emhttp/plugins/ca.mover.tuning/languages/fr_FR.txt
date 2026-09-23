@@ -7,6 +7,7 @@
 ; PART 1: single line entries.
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s fichiers et %s dossiers représentant %s n’ont pas pu être déplacés/synchronisés par le plugin Mover Tuning.
+%s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s fichiers et %s dossiers ont été déplacés/synchronisés, mais rsync a signalé des erreurs les concernant. Consultez le journal de Mover Tuning.
 All community developers=Tous les développeurs de la communauté
 Allow force mover schedule to run during a parity checkrebuild=Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité
 Array → Cache=Array → Cache
