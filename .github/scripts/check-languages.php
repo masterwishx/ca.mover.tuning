@@ -2,15 +2,8 @@
 // Checks languages/*.txt the way Unraid reads them: format errors fail the run, drift is reported as warnings.
 // Usage: php check-languages.php <plugin directory>
 
-$pluginDir = rtrim($argv[1] ?? '', '/');
-$langDir = "$pluginDir/languages";
-if ($pluginDir === '' || is_dir($langDir) === false) {
-    fwrite(STDERR, "usage: php check-languages.php <plugin directory holding languages/>\n");
-    exit(2);
-}
-
 // Words every Unraid language pack translates already; en_US.txt leaves them out on purpose.
-$coreWords = ['Yes', 'No', 'Apply', 'Done', 'OK', 'Close', 'Version', 'Auto', 'Important', 'Normal', 'Move'];
+const CORE_WORDS = ['Yes', 'No', 'Apply', 'Done', 'OK', 'Close', 'Version', 'Auto', 'Important', 'Normal', 'Move'];
 
 $errors = 0;
 $warnings = 0;
@@ -56,115 +49,141 @@ function placeholders(string $text): array
     return $counts;
 }
 
-// Reads one language file: entries and help sections with their line numbers; format errors are reported here.
-function read_language_file(string $path): array
+function check_bytes(string $path, string $raw): void
 {
-    $raw = file_get_contents($path);
-    $entries = [];
-    $sections = [];
     if (strncmp($raw, "\xEF\xBB\xBF", 3) === 0) {
         report('error', $path, 1, 'The file starts with a byte order mark; save it as UTF-8 without BOM.');
     }
     if (mb_check_encoding($raw, 'UTF-8') === false) {
         report('error', $path, 0, 'The file is not valid UTF-8.');
     }
+    if (unraid_parse($raw) === false) {
+        report('error', $path, 0, "Unraid's parser rejects this file, so none of its translations would load.");
+    }
+}
+
+// Opens or closes a :tag_plug: section; returns false for a line that is neither.
+function section_line(string $path, string $line, int $n, ?array &$open, array &$sections): bool
+{
+    if (preg_match('/^:(.+_(?:help|plug)):$/', $line, $m) === 1) {
+        if ($open !== null) {
+            report('error', $path, $n, "Section :{$m[1]}: starts before :{$open[0]}: (line {$open[1]}) has its :end.");
+        }
+        if (isset($sections[$m[1]]) === true) {
+            report('error', $path, $n, "Section :{$m[1]}: appears twice.");
+        }
+        $open = [$m[1], $n];
+        $sections[$m[1]] = $n;
+        return true;
+    }
+    if ($line !== ':end') {
+        return false;
+    }
+    if ($open === null) {
+        report('error', $path, $n, ':end without an open section.');
+    }
+    $open = null;
+    return true;
+}
+
+// A line inside a section: parse_ini_string() fails on an equal sign there, and Unraid then drops the whole file.
+function section_text(string $path, string $line, int $n, string $tag): void
+{
+    if (strpos($line, '=') !== false && ($line === '' || $line[0] !== '>')) {
+        report('error', $path, $n, "A line inside :$tag: holds an equal sign but does not start with >. Unraid would drop the whole file.");
+    }
+}
+
+// A key=text line outside the sections.
+function entry_line(string $path, string $line, int $n, array &$entries): void
+{
+    if (trim($line) === '' || $line[0] === ';') {
+        return;
+    }
+    if (strpos($line, '=') === false) {
+        report('error', $path, $n, 'Not a key=text line, a comment or part of a section.');
+        return;
+    }
+    [$key, $text] = explode('=', $line, 2);
+    $key = trim($key);
+    if (isset($entries[$key]) === true) {
+        report('error', $path, $n, "Key \"$key\" appears twice (first on line {$entries[$key][1]}).");
+        return;
+    }
+    $expected = lookup_key($key);
+    if ($expected !== $key) {
+        report('error', $path, $n, "Key \"$key\" can never be looked up: Unraid turns the text into \"$expected\" first (it drops & ? { } | ~ ! [ ] ( ) / \\ : * ^ . \" ' and HTML tags, and adds . to a bare yes/no).");
+    }
+    $entries[$key] = [$text, $n];
+}
+
+// Reads one language file into entries and sections, each with its line number; format errors are reported here.
+function read_language_file(string $path): array
+{
+    $raw = file_get_contents($path);
+    check_bytes($path, $raw);
+    $entries = [];
+    $sections = [];
     $open = null;
     foreach (preg_split('/\r?\n/', $raw) as $i => $line) {
-        $n = $i + 1;
-        if (preg_match('/^:(.+_(?:help|plug)):$/', $line, $m) === 1) {
-            if ($open !== null) {
-                report('error', $path, $n, "Section :{$m[1]}: starts before :{$open[0]}: (line {$open[1]}) has its :end.");
-            }
-            if (isset($sections[$m[1]]) === true) {
-                report('error', $path, $n, "Section :{$m[1]}: appears twice.");
-            }
-            $open = [$m[1], $n];
-            $sections[$m[1]] = $n;
-            continue;
-        }
-        if ($line === ':end') {
-            if ($open === null) {
-                report('error', $path, $n, ':end without an open section.');
-            }
-            $open = null;
+        if (section_line($path, $line, $i + 1, $open, $sections) === true) {
             continue;
         }
         if ($open !== null) {
-            // parse_ini_string() fails on such a line, and Unraid then drops every translation in the file
-            if (strpos($line, '=') !== false && ($line === '' || $line[0] !== '>')) {
-                report('error', $path, $n, "A line inside :{$open[0]}: holds an equal sign but does not start with >. Unraid would drop the whole file.");
-            }
+            section_text($path, $line, $i + 1, $open[0]);
             continue;
         }
-        if (trim($line) === '' || $line[0] === ';') {
-            continue;
-        }
-        if (strpos($line, '=') === false) {
-            report('error', $path, $n, 'Not a key=text line, a comment or part of a section.');
-            continue;
-        }
-        [$key, $text] = explode('=', $line, 2);
-        $key = trim($key);
-        if (isset($entries[$key]) === true) {
-            report('error', $path, $n, "Key \"$key\" appears twice (first on line {$entries[$key][1]}).");
-            continue;
-        }
-        $expected = lookup_key($key);
-        if ($expected !== $key) {
-            report('error', $path, $n, "Key \"$key\" can never be looked up: Unraid turns the text into \"$expected\" first (it drops & ? { } | ~ ! [ ] ( ) / \\ : * ^ . \" ' and HTML tags, and adds . to a bare yes/no).");
-        }
-        $entries[$key] = [$text, $n];
+        entry_line($path, $line, $i + 1, $entries);
     }
     if ($open !== null) {
         report('error', $path, $open[1], "Section :{$open[0]}: has no :end.");
     }
-    if (unraid_parse($raw) === false) {
-        report('error', $path, 0, "Unraid's parser rejects this file, so none of its translations would load.");
-    }
     return [$entries, $sections];
 }
 
-$masterPath = "$langDir/en_US.txt";
-if (is_file($masterPath) === false) {
-    report('error', $masterPath, 0, 'en_US.txt, the master file, is missing.');
-    exit(1);
-}
-[$master, $masterSections] = read_language_file($masterPath);
-
-// Every text the pages and the notifications look up should have an en_US entry for translators to see.
-$used = [];
-foreach (glob("$pluginDir/*.page") as $page) {
-    $code = file_get_contents($page);
-    preg_match_all('/_\((.+?)\)_/', $code, $m, PREG_OFFSET_CAPTURE);
-    foreach ($m[1] as [$text, $offset]) {
-        $used[$text] ??= [$page, substr_count($code, "\n", 0, $offset) + 1];
+// Texts the pages and the notifications look up, each with where it first appears.
+function used_texts(string $pluginDir): array
+{
+    $used = [];
+    // _(text)_ markers are taken as written; _('text') calls are PHP strings, so their escapes are undone
+    $patterns = ['/_\((.+?)\)_/' => false, "/_\\('((?:[^'\\\\]|\\\\.)*)'\\)/" => true];
+    foreach (glob("$pluginDir/*.page") as $page) {
+        $code = file_get_contents($page);
+        foreach ($patterns as $pattern => $unescape) {
+            preg_match_all($pattern, $code, $m, PREG_OFFSET_CAPTURE);
+            foreach ($m[1] as [$text, $offset]) {
+                $used[$unescape === true ? stripslashes($text) : $text] ??= [$page, substr_count($code, "\n", 0, $offset) + 1];
+            }
+        }
     }
-    preg_match_all("/_\\('((?:[^'\\\\]|\\\\.)*)'\\)/", $code, $m, PREG_OFFSET_CAPTURE);
-    foreach ($m[1] as [$text, $offset]) {
-        $used[stripslashes($text)] ??= [$page, substr_count($code, "\n", 0, $offset) + 1];
+    $mover = "$pluginDir/age_mover";
+    if (is_file($mover) === true) {
+        $code = file_get_contents($mover);
+        preg_match_all('/(?:translate_text|mvlogger_t) "((?:[^"\\\\]|\\\\.)*)"/', $code, $m, PREG_OFFSET_CAPTURE);
+        foreach ($m[1] as [$text, $offset]) {
+            $used[stripcslashes($text)] ??= [$mover, substr_count($code, "\n", 0, $offset) + 1];
+        }
     }
-}
-if (is_file("$pluginDir/age_mover") === true) {
-    $code = file_get_contents("$pluginDir/age_mover");
-    preg_match_all('/(?:translate_text|mvlogger_t) "((?:[^"\\\\]|\\\\.)*)"/', $code, $m, PREG_OFFSET_CAPTURE);
-    foreach ($m[1] as [$text, $offset]) {
-        $used[stripcslashes($text)] ??= ["$pluginDir/age_mover", substr_count($code, "\n", 0, $offset) + 1];
-    }
-}
-foreach ($used as $text => [$file, $line]) {
-    // _() returns '' for blank text; shell variables are not templates
-    if (trim($text) === '' || strpos($text, '$') !== false || in_array($text, $coreWords, true) === true) {
-        continue;
-    }
-    if (isset($master[lookup_key($text)]) === false) {
-        report('warning', $file, $line, "\"$text\" has no entry in en_US.txt, so it cannot be translated.");
-    }
+    return $used;
 }
 
-foreach (glob("$langDir/*.txt") as $path) {
-    if ($path === $masterPath) {
-        continue;
+// Every looked-up text should have an en_US entry, or translators never see it.
+function check_used_texts(array $used, array $master): void
+{
+    foreach ($used as $text => [$file, $line]) {
+        // _() returns '' for blank text; shell variables are not templates
+        if (trim($text) === '' || strpos($text, '$') !== false || in_array($text, CORE_WORDS, true) === true) {
+            continue;
+        }
+        if (isset($master[lookup_key($text)]) === false) {
+            report('warning', $file, $line, "\"$text\" has no entry in en_US.txt, so it cannot be translated.");
+        }
     }
+}
+
+// One translation against en_US.txt: placeholders are an error, drift is a warning.
+function check_translation(string $path, array $master, array $masterSections): void
+{
     [$entries, $sections] = read_language_file($path);
     foreach ($entries as $key => [$text, $line]) {
         if (isset($master[$key]) === false) {
@@ -173,20 +192,36 @@ foreach (glob("$langDir/*.txt") as $path) {
         }
         $english = $master[$key][0] !== '' ? $master[$key][0] : $key;
         if ($text !== '' && placeholders($text) !== placeholders($english)) {
-            report('error', $path, $line, "Placeholders differ from en_US.txt: " . json_encode(placeholders($english)) . " there, " . json_encode(placeholders($text)) . " here.");
+            report('error', $path, $line, 'Placeholders differ from en_US.txt: ' . json_encode(placeholders($english)) . ' there, ' . json_encode(placeholders($text)) . ' here.');
         }
     }
-    foreach ($sections as $tag => $line) {
-        if (isset($masterSections[$tag]) === false) {
-            report('warning', $path, $line, "Section :$tag: is not in en_US.txt any more.");
-        }
+    foreach (array_diff_key($sections, $masterSections) as $tag => $line) {
+        report('warning', $path, $line, "Section :$tag: is not in en_US.txt any more.");
     }
     $missing = array_filter(array_keys($master), fn($k) => ($entries[$k][0] ?? '') === '');
-    $missingSections = array_diff(array_keys($masterSections), array_keys($sections));
+    $missingSections = array_diff_key($masterSections, $sections);
     if (count($missing) > 0 || count($missingSections) > 0) {
         report('warning', $path, 0, count($missing) . ' entries and ' . count($missingSections) . ' sections of en_US.txt are not translated yet (they show in English).');
     }
 }
 
+$pluginDir = rtrim($argv[1] ?? '', '/');
+$langDir = "$pluginDir/languages";
+if ($pluginDir === '' || is_dir($langDir) === false) {
+    fwrite(STDERR, "usage: php check-languages.php <plugin directory holding languages/>\n");
+    exit(2);
+}
+$masterPath = "$langDir/en_US.txt";
+if (is_file($masterPath) === false) {
+    report('error', $masterPath, 0, 'en_US.txt, the master file, is missing.');
+    exit(1);
+}
+[$master, $masterSections] = read_language_file($masterPath);
+check_used_texts(used_texts($pluginDir), $master);
+foreach (glob("$langDir/*.txt") as $path) {
+    if ($path !== $masterPath) {
+        check_translation($path, $master, $masterSections);
+    }
+}
 echo "language files: $errors errors, $warnings warnings\n";
 exit($errors > 0 ? 1 : 0);
