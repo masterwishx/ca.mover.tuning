@@ -1130,7 +1130,7 @@ _(Move files that are in use)_:
 
 <blockquote class="inline_help">
 :mover_tune_moveinuse_plug:
-<p><strong>No</strong> - A file that a program has open, such as a torrent being seeded or a video being played, stays where it is until a later run, as with Unraid's own mover. Moving it would not free its space until the program closes it, and anything the program writes to it after the copy would be lost.</p>
+<p><strong>No</strong> - A file that a program has open stays where it is and is moved on a later run, once it is closed. Moving it while open would not free its space.</p>
 <p><strong>Yes</strong> - Move open files too.</p>
 :end
 </blockquote>
