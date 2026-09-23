@@ -1689,7 +1689,8 @@ decideMoveActions() {
 
             # Handle hardlinks
             if ($10 > 1) {
-                key = $1 "|" $2 "|" $3 "|" $11
+                # inode numbers repeat across filesystems, so the disk or pool the file is on is part of its identity
+                key = $1 "|" $2 "|" $3 "|" storage_pool "|" $11
                 if (key in group_view) {
                     $8 = 0
                 }
@@ -2109,10 +2110,17 @@ processTheMoves() {
             # Check File by validate function and skip if error; rsync gets every hardlink name, so check them all
             if [ "$VALIDATE_FILENAMES" = "yes" ]; then
                 for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
+                    # a name already gone is counted as vanished after the transfer, never as invalid
+                    [ -e "${f//\/.\//\/}" ] || continue
                     validate_filename "$(basename "$f")" && continue
                     mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
                     # a staged row's failure is counted once, by its sync row, which fails the same check
-                    [ "$STAGE_ROW" = 0 ] && not_moved "$(( ${#SYNCED_FILES_ARR[@]} > 0 ? ${#SYNCED_FILES_ARR[@]} : 1 ))"
+                    if [ "$STAGE_ROW" = 0 ]; then
+                        gone=0
+                        for g in "${SYNCED_FILES_ARR[@]}"; do [ -e "${g//\/.\//\/}" ] || gone=$((gone + 1)); done
+                        not_moved "$(( ${#SYNCED_FILES_ARR[@]} - gone > 0 ? ${#SYNCED_FILES_ARR[@]} - gone : 1 ))"
+                        [ "$FILETYPE" = "f" ] && VANISHEDFILES=$((VANISHEDFILES + gone))
+                    fi
                     continue 2
                 done
             fi
