@@ -76,6 +76,7 @@ NOTMOVEDSIZE=0
 NOTMOVEDFOLDERS=0
 VANISHEDFILES=0
 VANISHEDFOLDERS=0
+INUSEFILES=0
 SYNCFAILED=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
@@ -1587,6 +1588,39 @@ createFilteredFilelist() {
     mv -f "$reorderfile" "$FILTERED_FILELIST"
 }
 
+# A file some process holds open is left where it is, as Unraid's move does: a moved copy would not free
+# the space until that process closes it. Held at planning so the plan picks other files; processTheMoves checks again.
+holdOpenFiles() {
+    local tmp held files bytes
+    [ -s "$FILTERED_FILELIST" ] || return
+    tmp=$(mktemp -d)
+    # device:inode of every open file, whatever path the process sees it by (a share, a container mount)
+    find /proc/[0-9]*/fd -mindepth 1 -maxdepth 1 -type l -print0 2>/dev/null | xargs -0 -r stat -L -c '%d:%i' 2>/dev/null | sort -u >"$tmp/open"
+    awk -F'|' 'FNR > 1 && $12 == "f" && $4 != "skipped" { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; printf "%s\0", p }' "$FILTERED_FILELIST" |
+        xargs -0 -r stat -c '%d:%i|%n' 2>/dev/null >"$tmp/ids"
+    if ! held=$(awk -F'|' -v OFS='|' -v out="$tmp/list" '
+        function full_path(   p, i) { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; return p }
+        FILENAME == ARGV[1] { open[$0] = 1; next }
+        FILENAME == ARGV[2] { i = index($0, "|"); id[substr($0, i + 1)] = substr($0, 1, i - 1); next }
+        FNR > 1 && $12 == "f" && $4 != "skipped" && (p = full_path()) in id && id[p] in open {
+            $4 = "skipped"; files++
+            if (!(id[p] in seen)) { seen[id[p]] = 1; bytes += $8 }
+        }
+        { print > out }
+        END { printf "%d %d\n", files, bytes }' "$tmp/open" "$tmp/ids" "$FILTERED_FILELIST"); then
+        rm -rf "$tmp"
+        return
+    fi
+    mv -f "$tmp/list" "$FILTERED_FILELIST"
+    rm -rf "$tmp"
+    read -r files bytes <<<"$held"
+    if [ "$files" -gt 0 ]; then
+        # a held file was not synced either, so lastCacheSync must not move past it
+        SYNCFAILED=1
+        mvlogger "$files files representing $(bytes_to_human "$bytes") stay where they are: a process has them open"
+    fi
+}
+
 # processTheMoves refuses a file whose hardlinks are not all listed: hold it at planning like an
 # ignored file. That refusal marks the sync incomplete through not_moved, so holding early must do
 # the same, or lastCacheSync moves past a held file and later runs no longer consider it.
@@ -2000,6 +2034,8 @@ processTheMoves() {
     local -A CHARGED_BYTES=()
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
+    local -A STAGED_INUSE=()
+    command -v fuser >/dev/null || mvlogger "fuser not found: files in use are not checked before they move"
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -2112,6 +2148,20 @@ processTheMoves() {
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 [ "$STAGE_ROW" = 0 ] && not_moved "$(( NBFILES > 0 ? NBFILES : 1 ))"
+                continue
+            fi
+
+            # an open name keeps its source copy alive, so moving it frees nothing: skip it like Unraid's move
+            # (fuser takes no "--": with it, psmisc fuser reports an open file as not in use)
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && fuser -s "${SYNCED_FILES_ARR[@]//\/.\//\/}" 2>/dev/null; then
+                mvlogger "In use, left for a later run: $SYNCED_FILES"
+                if [ "$STAGE_ROW" = 1 ]; then STAGED_INUSE[$chain_key]=1; else INUSEFILES=$((INUSEFILES + NBFILES)); fi
+                continue
+            fi
+            # a chain whose staged move was in use is left whole for a later run; its sync mark must wait too
+            if [ "$ACTION" = "sync unattended to secondary" ] && [ -n "${STAGED_INUSE[$chain_key]}" ]; then
+                INUSEFILES=$((INUSEFILES + NBFILES))
+                SYNCFAILED=1
                 continue
             fi
 
@@ -2504,6 +2554,7 @@ processTheMoves() {
         done <<<"$(awk -F'|' -v a="$ACTION_PASS" '$11 == a' "$MOVER_ACTIONLIST")"
     done
 
+    [ "$INUSEFILES" -gt 0 ] && mvlogger "$INUSEFILES files were in use and stay on the source until a later run"
     mvlogger "$(titleLine "Cleaning up" '-')"
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
@@ -2657,6 +2708,7 @@ start() {
 
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
+    [ ! -e $SOFTSTOPFILE ] && holdOpenFiles
     [ ! -e $SOFTSTOPFILE ] && holdPartialHardlinks
     [ ! -e $SOFTSTOPFILE ] && decideMoveActions
 
