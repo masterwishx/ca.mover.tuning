@@ -6,10 +6,11 @@
 
 ; PART 1: single line entries.
 
+%s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=Плагину Mover Tuning не удалось переместить/синхронизировать %s файлов и %s папок общим объёмом %s.
 All community developers=Все разработчики сообщества
 Allow force mover schedule to run during a parity checkrebuild=Разрешить запуск расписания принудительного перемещения во время проверки/восстановления четности
 Array → Cache=Массив → Кэш
-A total of %s files representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Всего %s файлов общим объемом %s были успешно перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Всего %s файлов и %s папок общим объемом %s были успешно перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Перед продолжением нажмите на параметр или F1, чтобы прочитать подробные описания всех настроек.
 by=от
 Cache disk not enabled=Кэш-диск не включён!
@@ -131,7 +132,7 @@ Sync files based on maximum size=Синхронизировать файлы н�
 Sync files that are smaller than this size In MB=Синхронизировать файлы меньше указанного размера (в МБ)
 Synchronize Primary files to Secondary=Синхронизировать файлы основного с вторичным
 Test Mode - no files will be movedsynced=Тестовый режим — файлы не будут перемещены/синхронизированы.
-TEST MODE A total of %s files representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: всего %s файлов общим объёмом %s были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: всего %s файлов и %s папок общим объёмом %s были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Test Mode dry run=Тестовый режим (пробный запуск)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: файлы не были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Thank you for using this plugin=Спасибо за использование этого плагина.
