@@ -2114,12 +2114,14 @@ processTheMoves() {
                     [ -e "${f//\/.\//\/}" ] || continue
                     validate_filename "$(basename "$f")" && continue
                     mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
-                    # a staged row's failure is counted once, by its sync row, which fails the same check
+                    gone=0
+                    for g in "${SYNCED_FILES_ARR[@]}"; do [ -e "${g//\/.\//\/}" ] || gone=$((gone + 1)); done
+                    # a staged row is counted once, by its sync row, which finds the move incomplete and takes the gone names from here
                     if [ "$STAGE_ROW" = 0 ]; then
-                        gone=0
-                        for g in "${SYNCED_FILES_ARR[@]}"; do [ -e "${g//\/.\//\/}" ] || gone=$((gone + 1)); done
                         not_moved "$(( ${#SYNCED_FILES_ARR[@]} - gone > 0 ? ${#SYNCED_FILES_ARR[@]} - gone : 1 ))"
                         [ "$FILETYPE" = "f" ] && VANISHEDFILES=$((VANISHEDFILES + gone))
+                    else
+                        STAGED_VANISHED[$chain_key]=$gone
                     fi
                     continue 2
                 done
