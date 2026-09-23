@@ -1,0 +1,36 @@
+name: Language files
+
+# Reads languages/*.txt the way Unraid does: a file or key Unraid cannot use fails the check,
+# text that has drifted from en_US.txt or the pages is reported as a warning.
+on:
+  pull_request:
+    paths:
+      - 'source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/languages/**'
+      - 'source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/*.page'
+      - 'source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/age_mover'
+      - '.github/scripts/check-languages.php'
+      - '.github/workflows/languages.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/languages/**'
+      - 'source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/*.page'
+      - 'source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/age_mover'
+      - '.github/scripts/check-languages.php'
+      - '.github/workflows/languages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
+
+    - name: Check the language files
+      run: php .github/scripts/check-languages.php source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning
