@@ -1606,8 +1606,9 @@ holdOpenFiles() {
     local tmp held files bytes
     [ -s "$FILTERED_FILELIST" ] || return
     tmp=$(mktemp -d)
-    # device:inode of every open file, whatever path the process sees it by (a share, a container mount)
-    find /proc/[0-9]*/fd -mindepth 1 -maxdepth 1 -type l -print0 2>/dev/null | xargs -0 -r stat -L -c '%d:%i' 2>/dev/null | sort -u >"$tmp/open"
+    # device:inode of every open or mapped file, whatever path the process sees it by (a share, a container mount);
+    # map_files is stat'ed like fd because /proc/<pid>/maps shows other device numbers on Btrfs
+    find /proc/[0-9]*/fd /proc/[0-9]*/map_files -mindepth 1 -maxdepth 1 -type l -print0 2>/dev/null | xargs -0 -r stat -L -c '%d:%i' 2>/dev/null | sort -u >"$tmp/open"
     awk -F'|' 'FNR > 1 && $12 == "f" && $4 != "skipped" { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; printf "%s\0", p }' "$FILTERED_FILELIST" |
         xargs -0 -r stat -c '%d:%i|%n' 2>/dev/null >"$tmp/ids"
     if ! held=$(awk -F'|' -v out="$tmp/list" '
