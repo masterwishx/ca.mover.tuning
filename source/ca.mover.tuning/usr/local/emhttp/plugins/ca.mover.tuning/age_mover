@@ -74,6 +74,8 @@ MOVEDSIZE=0
 NOTMOVEDFILES=0
 NOTMOVEDSIZE=0
 NOTMOVEDFOLDERS=0
+TOOLERRORFILES=0
+TOOLERRORFOLDERS=0
 VANISHEDFILES=0
 VANISHEDFOLDERS=0
 SYNCFAILED=0
@@ -1361,6 +1363,8 @@ createFilteredFilelist() {
 
         # Add skipped files and folders
         FINDSTR="$FINDSTR -not -name '.placeholder'" #do not move placeholders
+        # a file deleted while still open, kept by FUSE until the last close: not data to move
+        FINDSTR="$FINDSTR -not -name '.fuse_hidden*'"
 
         # Add files from ignore list
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")" ]; then
@@ -1687,11 +1691,10 @@ decideMoveActions() {
 
             # Handle hardlinks
             if ($10 > 1) {
-                key = $1 "|" $2 "|" $3 "|" $11
-                if (prev[key]) {
+                # inode numbers repeat across filesystems, so the disk or pool the file is on is part of its identity
+                key = $1 "|" $2 "|" $3 "|" storage_pool "|" $11
+                if (key in group_view) {
                     $8 = 0
-                } else {
-                    prev[key] = 1
                 }
             }
 
@@ -1705,6 +1708,16 @@ decideMoveActions() {
             # arrivals on the primary add, departures subtract - so a pool carrying both
             # cache:yes and cache:prefer shares stays consistent across both.
             remaining_bytes_used[$1] = pool_bytes_used[$1] + net_delta[$1]
+
+            # later names are judged on the projection the first name saw: after its size was counted
+            # they would fall below the threshold and be kept, and processTheMoves refuses a split group
+            if ($10 > 1) {
+                if (key in group_view) {
+                    remaining_bytes_used[$1] = group_view[key]
+                } else {
+                    group_view[key] = remaining_bytes_used[$1]
+                }
+            }
 
             ### Check if share has Sync override ###
             # Set current sharename
@@ -1971,6 +1984,20 @@ not_moved() {
     fi
 }
 
+# Takes names ($1) and bytes ($2) that are no longer waiting off the remaining-work counters of this row's direction.
+remaining_done() {
+    if [[ "$ACTION" =~ "unattended" ]]; then
+        REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - $2))
+        if [ "$FILETYPE" = "f" ]; then REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - $1)); else REMAINING_UNATTENDED_FOLDERS=$((REMAINING_UNATTENDED_FOLDERS - $1)); fi
+    elif [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
+        REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - $2))
+        if [ "$FILETYPE" = "f" ]; then REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - $1)); else REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - $1)); fi
+    else
+        REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - $2))
+        if [ "$FILETYPE" = "f" ]; then REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - $1)); else REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - $1)); fi
+    fi
+}
+
 # Internal move engine
 processTheMoves() {
     if [ -e $SOFTSTOPFILE ]; then
@@ -1997,6 +2024,7 @@ processTheMoves() {
     REMAINING_UNATTENDED_FILES=$TOTALUNATTENDEDFILES
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
     local -A HANDLED_LINKS=()
+    local -A GONE_BEFORE=()
     local -A CHARGED_BYTES=()
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
@@ -2099,10 +2127,20 @@ processTheMoves() {
             # Check File by validate function and skip if error; rsync gets every hardlink name, so check them all
             if [ "$VALIDATE_FILENAMES" = "yes" ]; then
                 for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
+                    # a name already gone is counted as vanished after the transfer, never as invalid
+                    [ -e "${f//\/.\//\/}" ] || continue
                     validate_filename "$(basename "$f")" && continue
                     mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
-                    # a staged row's failure is counted once, by its sync row, which fails the same check
-                    [ "$STAGE_ROW" = 0 ] && not_moved "$(( ${#SYNCED_FILES_ARR[@]} > 0 ? ${#SYNCED_FILES_ARR[@]} : 1 ))"
+                    gone=0
+                    for g in "${SYNCED_FILES_ARR[@]}"; do [ -e "${g//\/.\//\/}" ] || gone=$((gone + 1)); done
+                    # a staged row is counted once, by its sync row, which finds the move incomplete and takes the gone names from here
+                    if [ "$STAGE_ROW" = 0 ]; then
+                        not_moved "$(( ${#SYNCED_FILES_ARR[@]} - gone > 0 ? ${#SYNCED_FILES_ARR[@]} - gone : 1 ))"
+                        [ "$FILETYPE" = "f" ] && VANISHEDFILES=$((VANISHEDFILES + gone))
+                        remaining_done "$gone" 0
+                    else
+                        STAGED_VANISHED[$chain_key]=$gone
+                    fi
                     continue 2
                 done
             fi
@@ -2118,9 +2156,13 @@ processTheMoves() {
             # the sync row of a chain has nothing to sync unless its staged move delivered every name
             if [ "$ACTION" = "sync unattended to secondary" ] && [ -z "${STAGED_OK[$chain_key]}" ]; then
                 mvlogger "Not syncing $SYNCED_FILES: its move to the primary did not complete"
-                not_moved "$(( NBFILES > 0 ? NBFILES : 1 ))"
                 # names already gone when the staged move ran were never the mover's to move
-                if [ "$FILETYPE" = "f" ]; then VANISHEDFILES=$((VANISHEDFILES + ${STAGED_VANISHED[$chain_key]:-0})); else VANISHEDFOLDERS=$((VANISHEDFOLDERS + ${STAGED_VANISHED[$chain_key]:-0})); fi
+                gone=${STAGED_VANISHED[$chain_key]:-0}
+                failed=$(( (NBFILES > 0 ? NBFILES : 1) - gone ))
+                [ "$failed" -gt 0 ] && not_moved "$failed"
+                if [ "$FILETYPE" = "f" ]; then VANISHEDFILES=$((VANISHEDFILES + gone)); else VANISHEDFOLDERS=$((VANISHEDFOLDERS + gone)); fi
+                # gone names are no longer waiting; the group's bytes go with them once none is left
+                remaining_done "$gone" "$(( gone > 0 && failed <= 0 ? FILESIZE : 0 ))"
                 continue
             fi
 
@@ -2146,6 +2188,14 @@ processTheMoves() {
             else
                 filetype="folder"
             fi
+
+            # names already gone before the transfer: a copy found for them afterwards is not this run's, and
+            # rsync gets only the present ones, since it exits 23 for a missing argument and would hide a real error
+            present=()
+            GONE_BEFORE=()
+            for f in "${SYNCED_FILES_ARR[@]}"; do
+                if [ -e "${f//\/.\//\/}" ]; then present+=("$f"); else GONE_BEFORE[$f]=1; fi
+            done
 
             rc=0
             # Check if action and move files tool is unraid move
@@ -2175,7 +2225,11 @@ processTheMoves() {
                     mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
                     # Perform rsync. relative paths and hardlinks
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
-                        "${RSYNC_CMD[@]}" "${SYNCED_FILES_ARR[@]}" "$DESTINATION/" || rc=$?
+                        if [ ${#present[@]} -gt 0 ]; then
+                            # rsync's errors join the mover log: on stderr they reach syslog only when cron pipes them there
+                            rsync_err=$("${RSYNC_CMD[@]}" "${present[@]}" "$DESTINATION/" 2>&1 >/dev/null) || rc=$?
+                            [ -n "$rsync_err" ] && while IFS= read -r line; do mvlogger "$line"; done <<<"$rsync_err"
+                        fi
                     else
                         mvlogger_t "Error: No files found to move for %s" "failure" "$(qp "$SOURCE/$FILEPATH")"
                         rc=1
@@ -2186,47 +2240,65 @@ processTheMoves() {
             # a dry run counts every name as done; a real run counts only verified arrivals below
             names=${#SYNCED_FILES_ARR[@]}
             arrived=$names
+            vanished=0
+            tool_error=0
+            # names no longer waiting on the source: arrived, or already gone before their turn
+            left=$names
             # Unraid move exits 0 even when it fails or skips an existing target, so check every name
             if [ "$TESTMODE" != "yes" ]; then
                 arrived=0
-                vanished=0
                 for f in "${SYNCED_FILES_ARR[@]}"; do
                     rel=${f#"$SOURCE/./"}
-                    # a name already gone from the source was not the mover's to move: counted, never notified
-                    if [ ! -e "$DESTINATION/$rel" ]; then
-                        [ -e "$SOURCE/$rel" ] || vanished=$((vanished + 1))
-                        continue
-                    fi
+                    reason=""
+                    if [ -n "${GONE_BEFORE[$f]}" ]; then
+                        reason="Gone from the source before its turn"
+                    elif [ ! -e "$DESTINATION/$rel" ]; then
+                        reason="Did not arrive"
                     # a synced file counts only when the copy matches: rsync --archive keeps size and mtime
-                    if [[ "$ACTION" =~ "sync" && "$FILETYPE" = "f" ]] && [ "$(stat -c '%s %Y' "$SOURCE/$rel" 2>/dev/null)" != "$(stat -c '%s %Y' "$DESTINATION/$rel" 2>/dev/null)" ]; then
-                        [ -e "$SOURCE/$rel" ] || vanished=$((vanished + 1))
+                    elif [[ "$ACTION" =~ "sync" && "$FILETYPE" = "f" ]] && [ "$(stat -c '%s %Y' "$SOURCE/$rel" 2>/dev/null)" != "$(stat -c '%s %Y' "$DESTINATION/$rel" 2>/dev/null)" ]; then
+                        reason="Copy does not match the source"
+                    # rsync leaves a moved folder's source behind, so only a file must be gone
+                    elif [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" && -e "$SOURCE/$rel" ]]; then
+                        reason="Still on the source after the move"
+                    fi
+                    if [ -n "$reason" ]; then
+                        # a name already gone from the source was not the mover's to move: counted, never notified
+                        if [ -n "${GONE_BEFORE[$f]}" ] || [ ! -e "$SOURCE/$rel" ]; then
+                            reason="Gone from the source before its turn"
+                            vanished=$((vanished + 1))
+                        fi
+                        mvlogger "$reason: $(qp "$SOURCE/$rel")"
                         continue
                     fi
-                    # rsync leaves a moved folder's source behind, so only a file must be gone
-                    [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" && -e "$SOURCE/$rel" ]] && continue
                     arrived=$((arrived + 1))
                 done
-                # the group's bytes count as moved only once every name arrived: until then the file is
-                # still on the source and its space was not freed, so they belong to the not-moved side
+                left=$((arrived + vanished))
+                # rsync never gets a name that was already gone, so any exit code is its own error, except 24 when names vanished mid-transfer
+                if [ "$rc" != 0 ] && ! { [ "$rc" = 24 ] && [ "$vanished" -gt 0 ]; }; then tool_error=1; fi
+                # the group's bytes count as moved once no name is left on the source and one arrived: until then
+                # its space was not freed, and a group that was entirely gone moved nothing
                 if [ "$STAGE_ROW" = 0 ]; then
                     [ "$FILETYPE" = "f" ] && [ "$arrived" -gt 0 ] && MOVEDFILES=$((MOVEDFILES + arrived))
                     [ "$FILETYPE" = "d" ] && [ "$arrived" -gt 0 ] && MOVEDFOLDERS=$((MOVEDFOLDERS + 1))
-                    [ "$FILETYPE" = "f" ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
+                    [ "$FILETYPE" = "f" ] && [ "$arrived" -gt 0 ] && [ "$left" = "$names" ] && MOVEDSIZE=$((MOVEDSIZE + FILESIZE))
                     [ "$FILETYPE" = "f" ] && VANISHEDFILES=$((VANISHEDFILES + vanished))
                     [ "$FILETYPE" = "d" ] && VANISHEDFOLDERS=$((VANISHEDFOLDERS + vanished))
                     if [ "$names" -eq 0 ]; then
                         not_moved
-                    elif [ "$arrived" != "$names" ]; then
-                        not_moved "$((names - arrived))"
-                    elif [ "$rc" != 0 ]; then
-                        # every name arrived yet the tool reported an error: hold the sync mark, count nothing
+                    elif [ "$left" != "$names" ]; then
+                        # vanished names are counted apart above, so the failure notice lists only real failures
+                        not_moved "$((names - left))"
+                    elif [ "$tool_error" = 1 ]; then
+                        # every name arrived or was gone, yet rsync reported an error: hold the sync mark and report it apart
                         not_moved 0 0
+                        [ "$FILETYPE" = "f" ] && TOOLERRORFILES=$((TOOLERRORFILES + arrived))
+                        [ "$FILETYPE" = "d" ] && [ "$arrived" -gt 0 ] && TOOLERRORFOLDERS=$((TOOLERRORFOLDERS + 1))
                     fi
                 fi
             fi
 
             # a staged move that delivered every name lets its sync row proceed; one that found names gone says so
-            [ "$STAGE_ROW" = 1 ] && [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && STAGED_OK[$chain_key]=1
+            [ "$STAGE_ROW" = 1 ] && [ "$arrived" -gt 0 ] && [ "$left" = "$names" ] && [ "$tool_error" = 0 ] && STAGED_OK[$chain_key]=1
             [ "$STAGE_ROW" = 1 ] && [ "${vanished:-0}" -gt 0 ] && STAGED_VANISHED[$chain_key]=$vanished
 
             # Clean parent folder of files if empty
@@ -2447,21 +2519,14 @@ processTheMoves() {
                 fi
             fi
 
-            # Setting mover status: only verified arrivals leave the remaining-work counters, and a
-            # group's bytes leave once every name arrived, the same rule as MOVEDSIZE above
+            # Setting mover status: a name leaves the remaining-work counters once it arrived or was found gone,
+            # and a group's bytes leave once none of its names is still waiting on the source
             done_bytes=0
-            [ "$names" -gt 0 ] && [ "$arrived" = "$names" ] && done_bytes=$FILESIZE
+            [ "$names" -gt 0 ] && [ "$left" = "$names" ] && done_bytes=$FILESIZE
             # a staged move leaves the remaining counters to its sync row as well
-            [ "$STAGE_ROW" = 1 ] && { arrived=0; done_bytes=0; }
+            [ "$STAGE_ROW" = 1 ] && { left=0; done_bytes=0; }
+            remaining_done "$left" "$done_bytes"
             if [[ "$ACTION" =~ "unattended" ]]; then
-                REMAINING_UNATTENDED_SIZE=$((REMAINING_UNATTENDED_SIZE - done_bytes))
-                # Check if there are any files or folders left
-                if [[ "$FILETYPE" = "f" ]]; then
-                    REMAINING_UNATTENDED_FILES=$((REMAINING_UNATTENDED_FILES - arrived))
-                else
-                    REMAINING_UNATTENDED_FOLDERS=$((REMAINING_UNATTENDED_FOLDERS - arrived))
-                fi
-
                 if [[ "$ACTION" =~ "unattended to secondary" ]]; then
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
@@ -2479,23 +2544,17 @@ processTheMoves() {
                 fi
             else
                 if [[ "$SOURCE" =~ $PRIMARYSTORAGENAME ]]; then
-                    REMAINING_CACHE_SIZE=$((REMAINING_CACHE_SIZE - done_bytes))
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
-                        REMAINING_CACHE_FILES=$((REMAINING_CACHE_FILES - arrived))
                         mvlogger "$REMAINING_CACHE_FILES files remaining from caches to array ($(bytes_to_human "$REMAINING_CACHE_SIZE"))"
                     else
-                        REMAINING_CACHE_FOLDERS=$((REMAINING_CACHE_FOLDERS - arrived))
                         mvlogger "$REMAINING_CACHE_FOLDERS folders remaining from caches to array"
                     fi
                 else
-                    REMAINING_ARRAY_SIZE=$((REMAINING_ARRAY_SIZE - done_bytes))
                     # Check if there are any files or folders left
                     if [[ "$FILETYPE" = "f" ]]; then
-                        REMAINING_ARRAY_FILES=$((REMAINING_ARRAY_FILES - arrived))
                         mvlogger "$REMAINING_ARRAY_FILES files remaining from array to caches ($(bytes_to_human "$REMAINING_ARRAY_SIZE"))"
                     else
-                        REMAINING_ARRAY_FOLDERS=$((REMAINING_ARRAY_FOLDERS - arrived))
                         mvlogger "$REMAINING_ARRAY_FOLDERS folders remaining from array to caches"
                     fi
                 fi
@@ -2755,16 +2814,23 @@ start() {
             unraid_notify "$(translate_text "TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "warning"
         fi
     else
-        # a name that had already gone is nothing to act on, so it raises no notification by itself
-        real_failed=$((NOTMOVEDFILES - VANISHEDFILES + NOTMOVEDFOLDERS - VANISHEDFOLDERS))
+        # a name that had already gone is nothing to act on: it is counted apart and raises no notification
         if [ $((MOVEDFILES + MOVEDFOLDERS)) -gt 0 ]; then
             unraid_notify "$(translate_text "A total of %s files and %s folders representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s" "$MOVEDFILES" "$MOVEDFOLDERS" "$(bytes_to_human "$MOVEDSIZE")" "$ELAPSED_TIME")" "success"
-        elif [ "$real_failed" -eq 0 ]; then
+        elif [ $((NOTMOVEDFILES + NOTMOVEDFOLDERS)) -eq 0 ]; then
             unraid_notify "$(translate_text "No files were moved/synced by Mover Tuning plugin. Elapsed time: %s" "$ELAPSED_TIME")" "success"
         fi
+        if [ $((VANISHEDFILES + VANISHEDFOLDERS)) -gt 0 ]; then
+            mvlogger "$VANISHEDFILES files and $VANISHEDFOLDERS folders were gone from the source before their turn."
+        fi
         if [ $((NOTMOVEDFILES + NOTMOVEDFOLDERS)) -gt 0 ]; then
-            mvlogger "$NOTMOVEDFILES files and $NOTMOVEDFOLDERS folders representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced, $((VANISHEDFILES + VANISHEDFOLDERS)) of them gone from the source before their turn."
-            [ "$real_failed" -gt 0 ] && unraid_notify "$(translate_text "%s files and %s folders representing %s could not be moved/synced by Mover Tuning plugin." "$NOTMOVEDFILES" "$NOTMOVEDFOLDERS" "$(bytes_to_human "$NOTMOVEDSIZE")")" "failure"
+            mvlogger "$NOTMOVEDFILES files and $NOTMOVEDFOLDERS folders representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced."
+            unraid_notify "$(translate_text "%s files and %s folders representing %s could not be moved/synced by Mover Tuning plugin." "$NOTMOVEDFILES" "$NOTMOVEDFOLDERS" "$(bytes_to_human "$NOTMOVEDSIZE")")" "failure"
+        fi
+        # files that arrived although rsync reported an error: not a failed move, but worth a look
+        if [ $((TOOLERRORFILES + TOOLERRORFOLDERS)) -gt 0 ]; then
+            mvlogger "$TOOLERRORFILES files and $TOOLERRORFOLDERS folders were moved/synced, but rsync reported errors for them (see the rsync lines above)."
+            unraid_notify "$(translate_text "%s files and %s folders were moved/synced, but rsync reported errors for them. Check the Mover Tuning log." "$TOOLERRORFILES" "$TOOLERRORFOLDERS")" "failure"
         fi
     fi
 

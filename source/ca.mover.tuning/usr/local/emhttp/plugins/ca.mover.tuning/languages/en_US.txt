@@ -9,6 +9,7 @@
 ; (Yes, No, Apply, Done, ...) are not repeated here.
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s files and %s folders representing %s could not be moved/synced by Mover Tuning plugin.
+%s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s files and %s folders were moved/synced, but rsync reported errors for them. Check the Mover Tuning log.
 All community developers=
 Allow force mover schedule to run during a parity checkrebuild=Allow force mover schedule to run during a parity check/rebuild
 Array → Cache=
