@@ -2171,7 +2171,8 @@ processTheMoves() {
             # (fuser takes no "--": with it, psmisc fuser reports an open file as not in use)
             if [ "$MOVE_IN_USE" != "yes" ] && [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && { [ "$fuser_missing" = 1 ] || fuser -s "${SYNCED_FILES_ARR[@]//\/.\//\/}" 2>/dev/null; }; then
                 mvlogger "In use, left for a later run: $SYNCED_FILES"
-                if [ "$STAGE_ROW" = 1 ]; then STAGED_INUSE[$chain_key]=1; else INUSEFILES=$((INUSEFILES + NBFILES)); fi
+                # a held file keeps lastCacheSync where it is, as holdOpenFiles does; a staged row leaves that to its sync row
+                if [ "$STAGE_ROW" = 1 ]; then STAGED_INUSE[$chain_key]=1; else INUSEFILES=$((INUSEFILES + NBFILES)); SYNCFAILED=1; fi
                 continue
             fi
             # a chain whose staged move was in use is left whole for a later run; its sync mark must wait too
