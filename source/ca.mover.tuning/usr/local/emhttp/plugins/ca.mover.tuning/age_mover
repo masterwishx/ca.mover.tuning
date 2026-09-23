@@ -76,6 +76,8 @@ NOTMOVEDSIZE=0
 NOTMOVEDFOLDERS=0
 VANISHEDFILES=0
 VANISHEDFOLDERS=0
+TOOLERRORFILES=0
+TOOLERRORFOLDERS=0
 SYNCFAILED=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
@@ -2239,6 +2241,7 @@ processTheMoves() {
             names=${#SYNCED_FILES_ARR[@]}
             arrived=$names
             vanished=0
+            tool_error=0
             # names no longer waiting on the source: arrived, or already gone before their turn
             left=$names
             # Unraid move exits 0 even when it fails or skips an existing target, so check every name
@@ -2270,6 +2273,8 @@ processTheMoves() {
                     arrived=$((arrived + 1))
                 done
                 left=$((arrived + vanished))
+                # rsync never gets a name that was already gone, so any exit code is its own error, except 24 when names vanished mid-transfer
+                if [ "$rc" != 0 ] && ! { [ "$rc" = 24 ] && [ "$vanished" -gt 0 ]; }; then tool_error=1; fi
                 # the group's bytes count as moved once no name is left on the source and one arrived: until then
                 # its space was not freed, and a group that was entirely gone moved nothing
                 if [ "$STAGE_ROW" = 0 ]; then
@@ -2280,23 +2285,20 @@ processTheMoves() {
                     [ "$FILETYPE" = "d" ] && VANISHEDFOLDERS=$((VANISHEDFOLDERS + vanished))
                     if [ "$names" -eq 0 ]; then
                         not_moved
-                    elif [ "$arrived" != "$names" ]; then
-                        # vanished names are counted apart above, so the failure notice lists only real failures;
-                        # rsync never got them, so any exit code but 24 (a name gone mid-transfer) is its own error
-                        if [ "$left" != "$names" ]; then
-                            not_moved "$((names - left))"
-                        elif [ "$rc" != 0 ] && [ "$rc" != 24 ]; then
-                            not_moved 0 0
-                        fi
-                    elif [ "$rc" != 0 ]; then
-                        # every name arrived yet the tool reported an error: hold the sync mark, count nothing
+                    elif [ "$left" != "$names" ]; then
+                        # vanished names are counted apart above, so the failure notice lists only real failures
+                        not_moved "$((names - left))"
+                    elif [ "$tool_error" = 1 ]; then
+                        # every name arrived or was gone, yet rsync reported an error: hold the sync mark and report it apart
                         not_moved 0 0
+                        [ "$FILETYPE" = "f" ] && TOOLERRORFILES=$((TOOLERRORFILES + arrived))
+                        [ "$FILETYPE" = "d" ] && [ "$arrived" -gt 0 ] && TOOLERRORFOLDERS=$((TOOLERRORFOLDERS + 1))
                     fi
                 fi
             fi
 
             # a staged move that delivered every name lets its sync row proceed; one that found names gone says so
-            [ "$STAGE_ROW" = 1 ] && [ "$arrived" -gt 0 ] && [ "$left" = "$names" ] && STAGED_OK[$chain_key]=1
+            [ "$STAGE_ROW" = 1 ] && [ "$arrived" -gt 0 ] && [ "$left" = "$names" ] && [ "$tool_error" = 0 ] && STAGED_OK[$chain_key]=1
             [ "$STAGE_ROW" = 1 ] && [ "${vanished:-0}" -gt 0 ] && STAGED_VANISHED[$chain_key]=$vanished
 
             # Clean parent folder of files if empty
@@ -2824,6 +2826,11 @@ start() {
         if [ $((NOTMOVEDFILES + NOTMOVEDFOLDERS)) -gt 0 ]; then
             mvlogger "$NOTMOVEDFILES files and $NOTMOVEDFOLDERS folders representing $(bytes_to_human "$NOTMOVEDSIZE") could not be moved/synced."
             unraid_notify "$(translate_text "%s files and %s folders representing %s could not be moved/synced by Mover Tuning plugin." "$NOTMOVEDFILES" "$NOTMOVEDFOLDERS" "$(bytes_to_human "$NOTMOVEDSIZE")")" "failure"
+        fi
+        # files that arrived although rsync reported an error: not a failed move, but worth a look
+        if [ $((TOOLERRORFILES + TOOLERRORFOLDERS)) -gt 0 ]; then
+            mvlogger "$TOOLERRORFILES files and $TOOLERRORFOLDERS folders were moved/synced, but rsync reported errors for them (see the rsync lines above)."
+            unraid_notify "$(translate_text "%s files and %s folders were moved/synced, but rsync reported errors for them. Check the Mover Tuning log." "$TOOLERRORFILES" "$TOOLERRORFOLDERS")" "failure"
         fi
     fi
 
