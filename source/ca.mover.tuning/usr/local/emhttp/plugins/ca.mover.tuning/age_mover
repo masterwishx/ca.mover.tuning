@@ -912,6 +912,17 @@ getMoverSettings() {
         mvlogger "Move empty folders: $MOVE_EMPTY_FOLDERS"
     fi
 
+    if [ -z "$(cfg moveInUse)" ]; then
+        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+            mvlogger "No Move files that are in use argument provided, defaulting to no"
+            MOVE_IN_USE="no"
+            echo 'moveInUse="no"' >>"$config_file"
+        fi
+    else
+        MOVE_IN_USE=$(cfg moveInUse)
+        mvlogger "Move files that are in use: $MOVE_IN_USE"
+    fi
+
     # Share size calculation
     if [ -z "$(cfg shareCalculation)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -2035,7 +2046,9 @@ processTheMoves() {
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
     local -A STAGED_INUSE=()
-    command -v fuser >/dev/null || mvlogger "fuser not found: files in use are not checked before they move"
+    if [ "$MOVE_IN_USE" != "yes" ] && ! command -v fuser >/dev/null; then
+        mvlogger "fuser not found: files in use are not checked before they move"
+    fi
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -2153,7 +2166,7 @@ processTheMoves() {
 
             # an open name keeps its source copy alive, so moving it frees nothing: skip it like Unraid's move
             # (fuser takes no "--": with it, psmisc fuser reports an open file as not in use)
-            if [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && fuser -s "${SYNCED_FILES_ARR[@]//\/.\//\/}" 2>/dev/null; then
+            if [ "$MOVE_IN_USE" != "yes" ] && [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && fuser -s "${SYNCED_FILES_ARR[@]//\/.\//\/}" 2>/dev/null; then
                 mvlogger "In use, left for a later run: $SYNCED_FILES"
                 if [ "$STAGE_ROW" = 1 ]; then STAGED_INUSE[$chain_key]=1; else INUSEFILES=$((INUSEFILES + NBFILES)); fi
                 continue
@@ -2708,7 +2721,7 @@ start() {
 
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
-    [ ! -e $SOFTSTOPFILE ] && holdOpenFiles
+    [ ! -e $SOFTSTOPFILE ] && [ "$MOVE_IN_USE" != "yes" ] && holdOpenFiles
     [ ! -e $SOFTSTOPFILE ] && holdPartialHardlinks
     [ ! -e $SOFTSTOPFILE ] && decideMoveActions
 
