@@ -82,6 +82,7 @@ Move files off Primary cache based on age=Dateien basierend auf Alter aus dem Pr
 Move files off Primary cache based on sparseness=Dateien basierend auf Ausdünnung aus dem Primärspeicher (Cache) verschieben
 Move files that are greater than this many days old=Dateien verschieben, die älter sind als diese Anzahl Tage
 Move files that are greater than this sparseness=Dateien verschieben, deren Ausdünnung größer ist als dieser Wert
+Move files that are in use=Dateien verschieben, die gerade verwendet werden
 Move files that are larger than this size In MB=Dateien verschieben, die größer sind als diese Größe (in MB)
 Move files tool=Werkzeug zum Verschieben von Dateien
 Move files to Primary cache based on age=Dateien basierend auf Alter in den Primärspeicher (Cache) verschieben
@@ -394,6 +395,11 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p>Legt fest, welches Werkzeug zum Verschieben von Dateien unter Verwendung der Plugin‑Filter genutzt wird: <strong>Rsync</strong> oder <strong>Move</strong> (Unraid‑Standard).</p>
 <p><strong>Move</strong> – verwendet Unraid‑Move zum Verschieben, aber weiterhin <strong>Rsync</strong> zum Synchronisieren.</p>
 <p><strong>Rsync</strong> – verwendet Rsync zum Verschieben und Synchronisieren.</p>
+:end
+
+:mover_tune_moveinuse_plug:
+<p><strong>Nein</strong> – Eine Datei, die ein Programm geöffnet hat, etwa ein Torrent, der gerade geteilt wird, oder ein Video, das gerade abgespielt wird, bleibt bis zu einem späteren Lauf, wo sie ist – wie beim Mover von Unraid selbst. Würde sie verschoben, würde ihr Platz erst frei, wenn das Programm sie schließt, und alles, was das Programm nach dem Kopieren hineinschreibt, ginge verloren.</p>
+<p><strong>Ja</strong> – verschiebt auch geöffnete Dateien.</p>
 :end
 
 :mover_tune_moveemptyfolders_plug:

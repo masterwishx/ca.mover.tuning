@@ -83,6 +83,7 @@ Move files off Primary cache based on age=Déplacer les fichiers hors du cache p
 Move files off Primary cache based on sparseness=Déplacer les fichiers hors du cache primaire selon leur parcimonie
 Move files that are greater than this many days old=Déplacer les fichiers plus anciens que ce nombre de jours
 Move files that are greater than this sparseness=Déplacer les fichiers dont la parcimonie dépasse cette valeur
+Move files that are in use=Déplacer les fichiers en cours d’utilisation
 Move files that are larger than this size In MB=Déplacer les fichiers plus grands que cette taille (en Mo)
 Move files tool=Outil de déplacement des fichiers
 Move files to Primary cache based on age=Déplacer les fichiers vers le cache primaire selon leur âge
@@ -402,6 +403,11 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p>Change l’outil utilisé pour déplacer les fichiers avec filtres.</p>
 <p><strong>Move</strong> — utilise l’outil interne Unraid pour déplacer, Rsync pour synchroniser.</p>
 <p><strong>Rsync</strong> — utilise Rsync pour déplacer et synchroniser.</p>
+:end
+
+:mover_tune_moveinuse_plug:
+<p><strong>Non</strong> — un fichier ouvert par un programme, par exemple un torrent en partage ou une vidéo en cours de lecture, reste en place jusqu’à une exécution ultérieure, comme avec le mover d’Unraid. Le déplacer ne libérerait son espace qu’une fois le fichier fermé par le programme, et tout ce que le programme y écrirait après la copie serait perdu.</p>
+<p><strong>Oui</strong> — déplace aussi les fichiers ouverts.</p>
 :end
 
 :mover_tune_moveemptyfolders_plug:
