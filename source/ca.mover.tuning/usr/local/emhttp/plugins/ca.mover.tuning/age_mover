@@ -913,15 +913,16 @@ getMoverSettings() {
         mvlogger "Move empty folders: $MOVE_EMPTY_FOLDERS"
     fi
 
-    if [ -z "$(cfg moveInUse)" ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+    # global only: holdOpenFiles runs while the last share's override settings are still loaded
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        MOVE_IN_USE=$(cfg moveInUse)
+        if [ -z "$MOVE_IN_USE" ]; then
             mvlogger "No Move files that are in use argument provided, defaulting to no"
             MOVE_IN_USE="no"
             echo 'moveInUse="no"' >>"$config_file"
+        else
+            mvlogger "Move files that are in use: $MOVE_IN_USE"
         fi
-    else
-        MOVE_IN_USE=$(cfg moveInUse)
-        mvlogger "Move files that are in use: $MOVE_IN_USE"
     fi
 
     # Share size calculation
