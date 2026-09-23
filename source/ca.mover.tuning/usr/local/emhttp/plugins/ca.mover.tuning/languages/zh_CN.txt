@@ -398,7 +398,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_moveinuse_plug:
-<p><strong>否</strong> - 程序正在打开的文件（例如正在做种的种子或正在播放的视频）会留在原处，等以后的运行再移动，与 Unraid 自带的 Mover 相同。移动这样的文件时，在程序关闭文件之前不会释放空间，而且程序在复制之后写入的任何内容都会丢失。</p>
+<p><strong>否</strong> - 程序正在打开的文件会留在原处，关闭后在以后的运行中再移动。在文件打开时移动它并不会释放其占用的空间。</p>
 <p><strong>是</strong> - 同样移动已打开的文件。</p>
 :end
 
