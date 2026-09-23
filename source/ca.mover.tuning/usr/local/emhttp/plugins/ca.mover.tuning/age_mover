@@ -2022,10 +2022,10 @@ processTheMoves() {
     REMAINING_UNATTENDED_FILES=$TOTALUNATTENDEDFILES
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
     local -A HANDLED_LINKS=()
+    local -A GONE_BEFORE=()
     local -A CHARGED_BYTES=()
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
-    local -A GONE_BEFORE=()
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
