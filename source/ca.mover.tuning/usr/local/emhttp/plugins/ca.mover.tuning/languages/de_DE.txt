@@ -6,11 +6,12 @@
 
 ; PART 1: single line entries.
 
+%s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s Dateien und %s Ordner mit einer Größe von %s konnten vom Mover Tuning Plugin nicht verschoben/synchronisiert werden.
 All community developers=Alle Entwickler der Community
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s Dateien und %s Ordner wurden verschoben/synchronisiert, aber rsync hat dabei Fehler gemeldet. Bitte das Mover‑Tuning‑Protokoll prüfen.
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
 Array → Cache=Speicherverbund → Cache
-A total of %s files representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
+A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien und %s Ordner mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Bevor du fortfährst, klicke auf eine Option oder drücke F1, um detaillierte Beschreibungen aller Einstellungen zu lesen.
 by=von
 Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
@@ -62,7 +63,7 @@ Ignore All hidden files and directories=Alle versteckten Dateien und Ordner igno
 Ignore files and folders listed inside of a text file=Dateien und Ordner ignorieren, die in einer Textdatei aufgelistet sind
 Ignore file types=Dateitypen ignorieren
 Invalid characters to block=Ungültige Zeichen zum Blockieren
-Let scheduled mover run during a parity check / rebuild=Zeitplan für Datenverschiebung während Paritätsprüfung/Wiederherstellung erlauben
+Let scheduled mover run during a parity check rebuild=Zeitplan für Datenverschiebung während Paritätsprüfung/Wiederherstellung erlauben
 Log Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins protokollieren
 Logs parent folder for Mover Tuning plugin=Übergeordneter Ordner für Protokolle des Mover‑Tuning‑Plugins
 Low=Niedrig
@@ -133,7 +134,7 @@ Sync files based on maximum size=Dateien basierend auf Maximalgröße synchronis
 Sync files that are smaller than this size In MB=Dateien synchronisieren, die kleiner sind als diese Größe (in MB)
 Synchronize Primary files to Secondary=Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren
 Test Mode - no files will be movedsynced=Testmodus – es werden keine Dateien verschoben/synchronisiert.
-TEST MODE A total of %s files representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Insgesamt würden %s Dateien mit einer Gesamtgröße von %s verschoben/synchronisiert werden. Verstrichene Zeit %s
+TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Insgesamt würden %s Dateien und %s Ordner mit einer Gesamtgröße von %s verschoben/synchronisiert werden. Verstrichene Zeit %s
 Test Mode dry run=Testmodus (Trockenlauf)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Es würden keine Dateien verschoben/synchronisiert werden. Verstrichene Zeit %s
 Thank you for using this plugin=Danke, dass du dieses Plugin verwendest.
