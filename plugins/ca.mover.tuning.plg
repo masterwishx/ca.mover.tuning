@@ -761,8 +761,8 @@ if ! pgrep -f "age_mover" >/dev/null 2>&amp;1; then
     fi
   done
 else
-  echo "WARNING: age_mover is still running - aborting plugin removal."
-  exit 1
+  # no exit here: the permissions, symlink and cron refresh below must run even during a mover run
+  echo "age_mover is running - leaving its lock/stop files in place."
 fi
 
 # Renaming mover.cron.disabled to mover.cron if exists (from old cron fix)
