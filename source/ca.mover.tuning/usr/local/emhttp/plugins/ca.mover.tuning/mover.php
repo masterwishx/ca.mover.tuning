@@ -63,25 +63,28 @@ function runMover($cmd)
     }
 }
 
+// The forced move runs Unraid's own mover on its own schedule, with its own parity option; the Mover Tuning
+// settings below do not apply to it.
+function forceMove()
+{
+    global $vars, $cfg;
+
+    if ($cfg['forceParity'] !== "yes" && empty($vars['mdResyncPos']) === false) {
+        logger("Parity Check / Rebuild in Progress.  Not running forced move");
+        return;
+    }
+    logger("Starting forced move (Unraid mover)");
+    if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '<') === true) {
+        passthru("/usr/local/sbin/mover.old start");
+    } else {
+        passthru("/usr/local/sbin/mover start");
+    }
+}
+
 //function startMover($options = "start")
 function startMover()
 {
-    global $vars, $cfg, $cron, $bash, $force, $argv, $args;
-
-    // the forced move runs Unraid's own mover on its own schedule, with its own parity option
-    if ($force === true) {
-        if ($cfg['forceParity'] !== "yes" && empty($vars['mdResyncPos']) === false) {
-            logger("Parity Check / Rebuild in Progress.  Not running forced move");
-            exit();
-        }
-        logger("Starting forced move (Unraid mover)");
-        if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '<') === true) {
-            passthru("/usr/local/sbin/mover.old start");
-        } else {
-            passthru("/usr/local/sbin/mover start");
-        }
-        return;
-    }
+    global $vars, $cfg, $cron, $bash, $argv, $args;
 
     logger("Starting Mover Tuning ...");
 
@@ -198,13 +201,17 @@ function startMover()
     }
 }
 
+if ($force === true) {
+    forceMove();
+    exit();
+}
+
 if ($cron && $cfg['moverDisabled'] == 'yes') {
     logger("Mover Tuning schedule disabled");
     exit();
 }
 
-// the forced move follows only its own parity option, checked in startMover()
-if ($force !== true && $cfg['parity'] === 'no' && empty($vars['mdResyncPos']) === false) {
+if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
     logger("Parity Check / rebuild in progress.  Not running mover");
     exit();
 }
