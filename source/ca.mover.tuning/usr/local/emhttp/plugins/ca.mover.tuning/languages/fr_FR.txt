@@ -281,8 +281,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p>Définir un cron forcé exécutera le mover à l’heure programmée.</p>
 <p>Exemple : dans les paramètres du mover, vous avez un horaire « Hourly ». Les règles ci‑dessus s’appliquent.</p>
 <p>Un cron forcé comme <strong>30 03 * * *</strong> déplacera tous les fichiers à <strong>3:30</strong> chaque jour, peu importe les règles.</p>
-<p>L’option forceParity permet d’ignorer les règles et de déplacer tous les fichiers.</p>
-<p>Aucune vérification d’erreur n’est faite sur l’entrée cron — elle doit être valide.</p>
+<p><strong>Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité</strong> : avec <strong>Non</strong>, un déplacement forcé qui tombe pendant une vérification de parité ou une reconstruction de disque est ignoré jusqu’à sa prochaine heure programmée ; avec <strong>Oui</strong>, il s’exécute quand même.</p>
+<p>La planification doit être une entrée cron valide : une entrée invalide n’est pas appliquée, et l’erreur est écrite dans le syslog.</p>
 :end
 
 :mover_tune_beforescript_plug:

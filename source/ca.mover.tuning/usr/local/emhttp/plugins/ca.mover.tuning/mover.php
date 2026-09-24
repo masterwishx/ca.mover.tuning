@@ -7,6 +7,8 @@ $vars = @parse_ini_file("/var/local/emhttp/var.ini");
 $cron = $argv[1] == "crond";
 $bash = $argv[1] == "bash";
 $args = [];
+// the forced-move schedule (updateCron.php make_cron) calls: mover.php force start
+$force = ($argv[1] ?? "") === "force";
 
 // Read-only status check (no state change, no CSRF risk)
 if (!empty($_GET['check'])) {
@@ -64,7 +66,22 @@ function runMover($cmd)
 //function startMover($options = "start")
 function startMover()
 {
-    global $vars, $cfg, $cron, $bash, $argv, $args;
+    global $vars, $cfg, $cron, $bash, $force, $argv, $args;
+
+    // the forced move runs Unraid's own mover on its own schedule, with its own parity option
+    if ($force === true) {
+        if ($cfg['forceParity'] !== "yes" && empty($vars['mdResyncPos']) === false) {
+            logger("Parity Check / Rebuild in Progress.  Not running forced move");
+            exit();
+        }
+        logger("Starting forced move (Unraid mover)");
+        if (version_compare($vars['version'] ?? '0.0.0', '7.2.1', '<') === true) {
+            passthru("/usr/local/sbin/mover.old start");
+        } else {
+            passthru("/usr/local/sbin/mover start");
+        }
+        return;
+    }
 
     logger("Starting Mover Tuning ...");
 
@@ -147,14 +164,6 @@ function startMover()
         }
     }
 
-    // If Force move enabled
-    if ($cfg['force'] == "yes") {
-        if ($cfg['forceParity'] == "no" && $vars['mdResyncPos']) {
-            logger("Parity Check / Rebuild in Progress.  Not running forced move");
-            exit();
-        }
-    }
-
     // Check if Move Now button follows plug-in filters
     if ($cfg['movenow'] == "yes") {
         $mover_str = "/usr/local/emhttp/plugins/ca.mover.tuning/age_mover";
@@ -194,7 +203,8 @@ if ($cron && $cfg['moverDisabled'] == 'yes') {
     exit();
 }
 
-if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
+// the forced move follows only its own parity option, checked in startMover()
+if ($force !== true && $cfg['parity'] === 'no' && empty($vars['mdResyncPos']) === false) {
     logger("Parity Check / rebuild in progress.  Not running mover");
     exit();
 }
