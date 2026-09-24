@@ -97,7 +97,7 @@ function section_text(string $path, string $line, int $n, string $tag): void
 // A key=text line outside the sections.
 function entry_line(string $path, string $line, int $n, array &$entries): void
 {
-    if (trim($line) === '' || $line[0] === ';') {
+    if (trim($line) === '' || ltrim($line)[0] === ';') {
         return;
     }
     if (strpos($line, '=') === false) {
@@ -141,8 +141,8 @@ function read_language_file(string $path): array
     return [$entries, $sections];
 }
 
-// Texts the pages and the notifications look up, each with where it first appears.
-function used_texts(string $pluginDir): array
+// Texts the pages look up, each with where it first appears.
+function page_texts(string $pluginDir): array
 {
     $used = [];
     // _(text)_ markers are taken as written; _('text') calls are PHP strings, so their escapes are undone
@@ -156,13 +156,25 @@ function used_texts(string $pluginDir): array
             }
         }
     }
+    return $used;
+}
+
+// Templates age_mover translates for its notifications and log, each with where it first appears.
+function mover_texts(string $pluginDir): array
+{
     $mover = "$pluginDir/age_mover";
-    if (is_file($mover) === true) {
-        $code = file_get_contents($mover);
-        preg_match_all('/(?:translate_text|mvlogger_t) "((?:[^"\\\\]|\\\\.)*)"/', $code, $m, PREG_OFFSET_CAPTURE);
-        foreach ($m[1] as [$text, $offset]) {
-            $used[stripcslashes($text)] ??= [$mover, substr_count($code, "\n", 0, $offset) + 1];
+    if (is_file($mover) === false) {
+        return [];
+    }
+    $used = [];
+    $code = file_get_contents($mover);
+    preg_match_all('/(?:translate_text|mvlogger_t) "((?:[^"\\\\]|\\\\.)*)"/', $code, $m, PREG_OFFSET_CAPTURE);
+    foreach ($m[1] as [$text, $offset]) {
+        // an unescaped $ is a shell variable: the text is only known at run time
+        if (preg_match('/(?<!\\\\)\$/', $text) === 1) {
+            continue;
         }
+        $used[stripcslashes($text)] ??= [$mover, substr_count($code, "\n", 0, $offset) + 1];
     }
     return $used;
 }
@@ -171,8 +183,8 @@ function used_texts(string $pluginDir): array
 function check_used_texts(array $used, array $master): void
 {
     foreach ($used as $text => [$file, $line]) {
-        // _() returns '' for blank text; shell variables are not templates
-        if (trim($text) === '' || strpos($text, '$') !== false || in_array($text, CORE_WORDS, true) === true) {
+        // _() returns '' for blank text
+        if (trim($text) === '' || in_array($text, CORE_WORDS, true) === true) {
             continue;
         }
         if (isset($master[lookup_key($text)]) === false) {
@@ -217,7 +229,7 @@ if (is_file($masterPath) === false) {
     exit(1);
 }
 [$master, $masterSections] = read_language_file($masterPath);
-check_used_texts(used_texts($pluginDir), $master);
+check_used_texts(page_texts($pluginDir) + mover_texts($pluginDir), $master);
 foreach (glob("$langDir/*.txt") as $path) {
     if ($path !== $masterPath) {
         check_translation($path, $master, $masterSections);
