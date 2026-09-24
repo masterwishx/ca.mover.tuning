@@ -781,6 +781,11 @@ if [[ -x /usr/local/emhttp/plugins/&name;/age_mover ]]; then
   echo "Created symlink: /usr/local/sbin/age_mover → plugin age_mover"
 fi
 
+# The forced move runs through mover.php again so its parity option applies; rewrite schedules saved before that
+if [[ -f /boot/config/plugins/&name;/mover.cron ]]; then
+  sed -i -E 's#/usr/local/sbin/mover(\.old)? (start|force)#/usr/local/emhttp/plugins/&name;/mover.php force start#' /boot/config/plugins/&name;/mover.cron
+fi
+
 # Refresh cron
 /usr/local/sbin/update_cron
 

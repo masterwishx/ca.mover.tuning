@@ -118,12 +118,9 @@ function make_tune_cron()
 	}
 }
 
-// Cron for forced move (unraid mover)
+// Cron for forced move: mover.php force applies its parity option, then runs Unraid's mover
 function make_cron()
 {
-	global $vars;
-	$version = $vars['version'] ?? '0.0.0';
-	$mover = version_compare($version, '7.2.1', '<') ? '/usr/local/sbin/mover.old' : '/usr/local/sbin/mover';
 	$cron = trim(post_string('cron'));
 	if (empty($cron)) {
 		logger("Error: No cron schedule provided for forced move.");
@@ -133,7 +130,7 @@ function make_cron()
 		logger("Error: Invalid cron schedule for forced move: " . preg_replace('/[^[:print:]]/', '?', $cron));
 		return;
 	}
-	$cronFile = "# Generated schedule for forced move:\n{$cron} {$mover} start |& logger -t move\n\n";
+	$cronFile = "# Generated schedule for forced move:\n{$cron} /usr/local/emhttp/plugins/ca.mover.tuning/mover.php force start |& logger -t move\n\n";
 	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.cron", $cronFile) === false) {
 		logger("Error: Failed to write forced mover.cron file.");
 	}

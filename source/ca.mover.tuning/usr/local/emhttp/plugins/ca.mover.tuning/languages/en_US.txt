@@ -280,8 +280,8 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 <p>Setting a cron schedule to force a move will run mover on that schedule.</p>
 <p>Example: In Mover Settings you would have a schedule of Hourly. During that schedule the rules above are followed.</p>
 <p>The cron schedule for a force move could be set to <strong>30 03 * * *</strong> which would force all files to be moved at <strong>3:30 AM</strong> every day regardless of the rules</p>
-<p>The forceParity setting allows you to override this behavior and force all files to be moved regardless of the rules.</p>
-<p>Note that no error checking is done on the cron schedule. It must be a valid entry.</p>
+<p><strong>Allow force mover schedule to run during a parity check/rebuild</strong>: with <strong>No</strong>, a forced move that falls during a parity check or disk rebuild is skipped until its next scheduled time; with <strong>Yes</strong>, it runs anyway.</p>
+<p>The schedule must be a valid cron entry: an invalid one is not applied, and the error is written to the syslog.</p>
 :end
 
 :mover_tune_beforescript_plug:
