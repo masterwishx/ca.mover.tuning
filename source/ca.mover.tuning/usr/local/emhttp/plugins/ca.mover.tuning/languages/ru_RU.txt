@@ -83,6 +83,7 @@ Move files off Primary cache based on age=Перемещать файлы с о�
 Move files off Primary cache based on sparseness=Перемещать файлы с основного (кэш-пула) на основе разреженности
 Move files that are greater than this many days old=Перемещать файлы старше указанного количества дней
 Move files that are greater than this sparseness=Перемещать файлы, разреженность которых превышает указанное значение
+Move files that are in use=Перемещать файлы, которые сейчас используются
 Move files that are larger than this size In MB=Перемещать файлы, размер которых превышает указанный (в МБ)
 Move files tool=Инструмент перемещения файлов
 Move files to Primary cache based on age=Перемещать файлы на основной (<em>кэш-пул</em>) на основе возраста
@@ -393,6 +394,11 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 <p>Это изменит инструмент, используемый для перемещения файлов с <strong>фильтрами плагина</strong>, позволяя выбирать между <strong>Rsync</strong> и <strong>Move</strong> — встроенной утилитой Unraid для перемещения файлов.</p>
 <p><strong>Move</strong> — использовать встроенный инструмент Unraid для перемещения файлов, но продолжать использовать <strong>Rsync</strong> для синхронизации файлов.</p>
 <p><strong>Rsync</strong> — использовать Rsync как для перемещения, так и для синхронизации файлов.</p>
+:end
+
+:mover_tune_moveinuse_plug:
+<p><strong>Нет</strong> — файл, открытый программой, остаётся на месте и будет перемещён при следующем запуске, когда его закроют. Перемещение открытого файла не освободило бы занимаемое им место.</p>
+<p><strong>Да</strong> — перемещать и открытые файлы.</p>
 :end
 
 :mover_tune_moveemptyfolders_plug:

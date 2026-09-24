@@ -1122,6 +1122,19 @@ _(Move files tool)_:
 :end
 </blockquote>
 
+_(Move files that are in use)_:
+: <select name='moveInUse' size='1'>
+<?=mk_option($cfg['moveInUse'],"no",_('No'))?>
+<?=mk_option($cfg['moveInUse'],"yes",_('Yes'))?>
+</select>
+
+<blockquote class="inline_help">
+:mover_tune_moveinuse_plug:
+<p><strong>No</strong> - A file that a program has open stays where it is and is moved on a later run, once it is closed. Moving it while open would not free its space.</p>
+<p><strong>Yes</strong> - Move open files too.</p>
+:end
+</blockquote>
+
 _(Move empty folders)_:
 : <select name='moveEmptyFolders' size='1'>
 <?=mk_option($cfg['moveEmptyFolders'],"no",_('No'))?>

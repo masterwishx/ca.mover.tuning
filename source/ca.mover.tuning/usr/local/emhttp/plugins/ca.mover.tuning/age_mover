@@ -78,6 +78,7 @@ TOOLERRORFILES=0
 TOOLERRORFOLDERS=0
 VANISHEDFILES=0
 VANISHEDFOLDERS=0
+INUSEFILES=0
 SYNCFAILED=0
 COUNT_SECONDARY_FILES=0
 overrideFlag=0
@@ -102,6 +103,7 @@ fi
 
 NOW=$(date +"%FT%H%M%S")
 FILTERED_FILELIST="${LOGFOLDER}/ca.mover.tuning/Filtered_files_$NOW.list"
+HELD_FILELIST="${LOGFOLDER}/ca.mover.tuning/Held_files_$NOW.list"
 MOVER_ACTIONLIST="${LOGFOLDER}/ca.mover.tuning/Mover_action_$NOW.list"
 STATS_FILE="${LOGFOLDER}/ca.mover.tuning/Summary_$NOW.txt"
 MOVER_STATUS="/usr/local/emhttp/state/mover.ini"
@@ -913,6 +915,18 @@ getMoverSettings() {
         mvlogger "Move empty folders: $MOVE_EMPTY_FOLDERS"
     fi
 
+    # global only: holdOpenFiles runs while the last share's override settings are still loaded
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        MOVE_IN_USE=$(cfg moveInUse)
+        if [ -z "$MOVE_IN_USE" ]; then
+            mvlogger "No Move files that are in use argument provided, defaulting to no"
+            MOVE_IN_USE="no"
+            echo 'moveInUse="no"' >>"$config_file"
+        else
+            mvlogger "Move files that are in use: $MOVE_IN_USE"
+        fi
+    fi
+
     # Share size calculation
     if [ -z "$(cfg shareCalculation)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -1591,6 +1605,38 @@ createFilteredFilelist() {
     mv -f "$reorderfile" "$FILTERED_FILELIST"
 }
 
+# A file some process holds open is not moved, as Unraid's move does not: a moved copy would not free
+# the space until that process closes it. Held at planning so the plan picks other files; processTheMoves checks again.
+holdOpenFiles() {
+    local tmp held files bytes
+    [ -s "$FILTERED_FILELIST" ] || return
+    tmp=$(mktemp -d)
+    # device:inode of every open or mapped file, whatever path the process sees it by (a share, a container mount);
+    # map_files is stat'ed like fd because /proc/<pid>/maps shows other device numbers on Btrfs
+    find /proc/[0-9]*/fd /proc/[0-9]*/map_files -mindepth 1 -maxdepth 1 -type l -print0 2>/dev/null | xargs -0 -r stat -L -c '%d:%i' 2>/dev/null | sort -u >"$tmp/open"
+    awk -F'|' 'FNR > 1 && $12 == "f" && $4 != "skipped" { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; printf "%s\0", p }' "$FILTERED_FILELIST" |
+        xargs -0 -r stat -c '%d:%i|%n' 2>/dev/null >"$tmp/ids"
+    if ! held=$(awk -F'|' -v out="$tmp/list" '
+        function full_path(   p, i) { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; return p }
+        FILENAME == ARGV[1] { open[$0] = 1; next }
+        FILENAME == ARGV[2] { i = index($0, "|"); id[substr($0, i + 1)] = substr($0, 1, i - 1); next }
+        FNR > 1 && $12 == "f" && $4 != "skipped" && (p = full_path()) in id && id[p] in open {
+            print p > out; files++
+            if (!(id[p] in seen)) { seen[id[p]] = 1; bytes += $8 }
+        }
+        END { printf "%d %d\n", files, bytes }' "$tmp/open" "$tmp/ids" "$FILTERED_FILELIST"); then
+        rm -rf "$tmp"
+        return
+    fi
+    read -r files bytes <<<"$held"
+    if [ "$files" -gt 0 ]; then
+        # only their moves wait: decideMoveActions still keeps and syncs these files as usual
+        mv -f "$tmp/list" "$HELD_FILELIST"
+        mvlogger "$files files representing $(bytes_to_human "$bytes") stay where they are: a process has them open"
+    fi
+    rm -rf "$tmp"
+}
+
 # processTheMoves refuses a file whose hardlinks are not all listed: hold it at planning like an
 # ignored file. That refusal marks the sync incomplete through not_moved, so holding early must do
 # the same, or lastCacheSync moves past a held file and later runs no longer consider it.
@@ -1646,7 +1692,7 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFYTIME
     # $6:PRIMARYSIZETHRESH $7:POOLUSED $8:FILESIZE $9:SPARSENESS $10:NBLINKS $11:INODE $12:FILETYPE $13:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" '
+    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
         # the path is the last field and may itself contain the separator
         function full_path(   p, i) { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; return p }
         BEGIN {
@@ -1664,6 +1710,10 @@ decideMoveActions() {
 
             # Check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
+
+            # files holdOpenFiles found open: never moved, but kept and synced like any other file
+            while ((getline held_line < HELD_FILELIST) > 0) held_paths[held_line] = 1
+            close(HELD_FILELIST)
 
             # Print new header
             printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
@@ -1759,9 +1809,10 @@ decideMoveActions() {
             ### ###
 
             # Take decision
+            held = (full_path() in held_paths)
             if (storage_pool == $1) {
                 # Make decision to move or keep:
-                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
+                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
 
                 if (action == "keep on primary") {
                     source = storage_path
@@ -1794,7 +1845,7 @@ decideMoveActions() {
             } else {
                 if (storage_pool == "user" || ($2 == "user0" && storage_pool ~ /^disk[0-9]+$/)) {
                     # Make decision to move or keep:
-                    action = (($4 == "only" && REBALANCESHARES == "yes") || ($4 == "prefer" && remaining_bytes_used[$1] <= $6 && (AGE == -1 || AGE >= 0))) ? "move from secondary" : "keep on secondary"
+                    action = (!held && (($4 == "only" && REBALANCESHARES == "yes") || ($4 == "prefer" && remaining_bytes_used[$1] <= $6 && (AGE == -1 || AGE >= 0)))) ? "move from secondary" : "keep on secondary"
 
                     if (action == "keep on secondary") {
                         source = storage_path
@@ -1817,7 +1868,7 @@ decideMoveActions() {
                         pool_stats[$1]["total_size_from_secondary"] += $8
                     }
                 } else {
-                    if (REBALANCESHARES == "yes" && $4 != "skipped") {
+                    if (REBALANCESHARES == "yes" && $4 != "skipped" && !held) {
                         action = ($4 == "only" || ($4 == "prefer" && remaining_bytes_used[$1] <= $6)) ? "move unattended to primary" : "move unattended to secondary"
                         if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
@@ -2028,6 +2079,13 @@ processTheMoves() {
     local -A CHARGED_BYTES=()
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
+    local -A STAGED_INUSE=()
+    # without fuser an open file cannot be told apart, so none is moved while moveInUse is no
+    local fuser_missing=0
+    if [ "$MOVE_IN_USE" != "yes" ] && ! command -v fuser >/dev/null; then
+        fuser_missing=1
+        mvlogger "fuser not found: files stay where they are, since they cannot be checked for use. Set 'Move files that are in use' to Yes to move them anyway."
+    fi
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -2102,6 +2160,8 @@ processTheMoves() {
             if [ "$TESTMODE" = "yes" ]; then
                 RSYNC_CMD+=(--dry-run)
             fi
+            # a folder row carries only the folder: files that appeared in it since planning were never filtered or checked for use
+            [ "$FILETYPE" = "d" ] && RSYNC_CMD+=(--no-recursive --dirs)
 
             # print to debug $SYNCED_FILES $FILEPATH
             #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
@@ -2150,6 +2210,22 @@ processTheMoves() {
             if [ -f "${SOURCE}/${FILEPATH}" ] && [ $NBFILES != "$NBLINKS" ]; then
                 mvlogger "Expected $NBLINKS files, got $NBFILES. Not moving $SYNCED_FILES to prevent breaking hardlinks"
                 [ "$STAGE_ROW" = 0 ] && not_moved "$(( NBFILES > 0 ? NBFILES : 1 ))"
+                continue
+            fi
+
+            # an open name keeps its source copy alive, so moving it frees nothing: skip it like Unraid's move
+            # (fuser takes no "--": with it, psmisc fuser reports an open file as not in use)
+            if [ "$MOVE_IN_USE" != "yes" ] && [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && { [ "$fuser_missing" = 1 ] || fuser -s "${SYNCED_FILES_ARR[@]//\/.\//\/}" 2>/dev/null; }; then
+                mvlogger "In use, left for a later run: $SYNCED_FILES"
+                # a move from primary left in place was not synced either, so lastCacheSync must wait; a staged row leaves that to its sync row
+                if [ "$STAGE_ROW" = 1 ]; then STAGED_INUSE[$chain_key]=1; else INUSEFILES=$((INUSEFILES + NBFILES)); fi
+                [ "$ACTION" = "move from primary" ] && SYNCFAILED=1
+                continue
+            fi
+            # a chain whose staged move was in use is left whole for a later run; its sync mark must wait too
+            if [ "$ACTION" = "sync unattended to secondary" ] && [ -n "${STAGED_INUSE[$chain_key]}" ]; then
+                INUSEFILES=$((INUSEFILES + NBFILES))
+                SYNCFAILED=1
                 continue
             fi
 
@@ -2204,14 +2280,11 @@ processTheMoves() {
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
                     mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
-                    # Unraid move keeps hardlinks only among names given in one run and skips the file otherwise
+                    # Unraid move keeps hardlinks only among names given in one run and skips the file otherwise;
+                    # a folder row sends only the folder, which move leaves on the source while anything is in it
                     MOVE_DEBUG_ARGS=()
                     read -r -a MOVE_DEBUG_ARGS <<<"$DEBUGGING"
-                    if [ "$FILETYPE" = "f" ]; then
-                        printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" >>"$MOVER_DEBUG_LOG" 2>&1
-                    else
-                        find "$SOURCE/$FILEPATH" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" >>"$MOVER_DEBUG_LOG" 2>&1
-                    fi
+                    printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" >>"$MOVER_DEBUG_LOG" 2>&1
                 fi
             else
                 # If action is sync/move and move files tool is rsync
@@ -2563,6 +2636,7 @@ processTheMoves() {
         done <<<"$(awk -F'|' -v a="$ACTION_PASS" '$11 == a' "$MOVER_ACTIONLIST")"
     done
 
+    [ "$INUSEFILES" -gt 0 ] && mvlogger "$INUSEFILES files were in use and stay on the source until a later run"
     mvlogger "$(titleLine "Cleaning up" '-')"
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
@@ -2716,6 +2790,7 @@ start() {
 
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
+    [ ! -e $SOFTSTOPFILE ] && [ "$MOVE_IN_USE" != "yes" ] && holdOpenFiles
     [ ! -e $SOFTSTOPFILE ] && holdPartialHardlinks
     [ ! -e $SOFTSTOPFILE ] && decideMoveActions
 

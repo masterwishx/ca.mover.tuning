@@ -86,6 +86,7 @@ Move files off Primary cache based on age=Move files off Primary (<em>cache</em>
 Move files off Primary cache based on sparseness=Move files off Primary (cache) based on sparseness
 Move files that are greater than this many days old=
 Move files that are greater than this sparseness=
+Move files that are in use=
 Move files that are larger than this size In MB=Move files that are larger than this size (In MB)
 Move files tool=
 Move files to Primary cache based on age=Move files to Primary (<em>cache</em>) based on age
@@ -397,6 +398,11 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 <p>This will change the tool used for moving files with <strong>plugin filters</strong>, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.</p>
 <p><strong>Move</strong> - Use Unraid's built-in file-moving tool for moving, but continue to use <strong>Rsync</strong> for syncing files.</p>
 <p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
+:end
+
+:mover_tune_moveinuse_plug:
+<p><strong>No</strong> - A file that a program has open stays where it is and is moved on a later run, once it is closed. Moving it while open would not free its space.</p>
+<p><strong>Yes</strong> - Move open files too.</p>
 :end
 
 :mover_tune_moveemptyfolders_plug:
