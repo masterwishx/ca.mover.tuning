@@ -3023,10 +3023,23 @@ watchdog() {
         pool_usage "$pool"
         [[ "$POOLPCTUSED" =~ ^[0-9]+$ ]] && [ "$POOLPCTUSED" -ge "$threshold" ] || continue
         touch "$WATCHDOGSTAMP"
-        [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at $POOLPCTUSED%, at or above the trigger level of $threshold%. Starting Mover Tuning."
-        NOTIFY=$(grep '^notify=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
-        unraid_notify "$(translate_text "Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning." "$pool" "$POOLPCTUSED%" "$threshold%")" "warning"
-        /usr/local/emhttp/plugins/ca.mover.tuning/mover.php watchdog start
+        # mover.php decides whether the run may start (parity check, a run already active), so announce only
+        # once the run has claimed the pid file, as mover.php's own runMover waits for it
+        /usr/local/emhttp/plugins/ca.mover.tuning/mover.php watchdog start &
+        local run=$! i
+        for i in $(seq 50); do
+            [ -f "$PIDFILE" ] && break
+            kill -0 "$run" 2>/dev/null || break
+            sleep 0.1
+        done
+        if [ -f "$PIDFILE" ]; then
+            [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at $POOLPCTUSED%, at or above the trigger level of $threshold%. Starting Mover Tuning."
+            NOTIFY=$(grep '^notify=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+            unraid_notify "$(translate_text "Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning." "$pool" "$POOLPCTUSED%" "$threshold%")" "warning"
+        else
+            [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at $POOLPCTUSED%, but Mover Tuning did not start; mover.php logged why."
+        fi
+        wait "$run"
         exit 0
     done
     exit 0
