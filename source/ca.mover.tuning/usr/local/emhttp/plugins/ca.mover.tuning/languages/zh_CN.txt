@@ -8,7 +8,7 @@
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=Mover Tuning 插件未能移动/同步 %s 个文件和 %s 个文件夹，共 %s。
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s 个文件和 %s 个文件夹已移动/同步，但 rsync 报告了错误。请查看 Mover Tuning 日志。
 All community developers=所有社区开发者
-Allow force mover schedule to run during a parity checkrebuild=奇偶校验期间强制移动
+Allow force mover schedule to run during a parity checkrebuild=允许强制移动计划在奇偶校验/重建期间运行
 Array → Cache=阵列 → 缓存
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件已成功移动/同步 %s 个文件和 %s 个文件夹，共 %s。耗时：%s
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=继续之前，请点击选项名称或按 F1 查看所有设置的详细说明。
@@ -18,24 +18,24 @@ Cache → Array=缓存 → 阵列
 Clean empty folders=清理空文件夹
 Clean empty ZFS datasets=清理空的 ZFS 数据集
 CLI help commands=命令行帮助
-Comma separated list of file types=文件扩展名列表
+Comma separated list of file types=以逗号分隔的文件扩展名列表
 Cron Schedule to force move all of files=强制移动所有文件的 Cron 计划
 Debug Log Mover Tuning plugin actions=调试日志记录
 Defaults=默认值
 Delete Mover helper files over than this days old=辅助文件保留天数
 Delete Mover Log files over than this days old=日志文件保留天数
-Disable Mover running on a schedule=禁用 Mover 定时任务
-disables test mode=关闭测试模式
-disables the plugins schedule=禁用插件的定时计划
-disables validation of input filenames=关闭文件名验证
+Disable Mover running on a schedule=禁用 Mover 按计划运行
+disables test mode=禁用测试模式
+disables the plugins schedule=禁用插件的计划
+disables validation of input filenames=禁用文件名验证
 enable smart caching=启用智能缓存
 Error checking mover status Please refresh the page=检查 Mover 状态时出错，请刷新页面。
 Error Config file %s not found=错误：找不到配置文件“%s”。
 Error Failed to convert CRLF line endings in %s Check file permissions=错误：无法转换 %s 中的 CRLF 换行符，请检查文件权限。
-Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=错误：文件名路径无效：%s。请修改为有效的文件名，或关闭“验证文件名防止攻击”选项。
+Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=错误：文件名路径无效：%s。请修改为有效的文件名，或禁用“验证文件名防止攻击”选项。
 Error No files found to move for %s=错误：未找到 %s 中需要移动的文件
 Errors Only=仅错误
-Failed to destroy ZFS dataset %s — attempting to remount=删除 ZFS 数据集 [%s] 失败，正在尝试重新挂载。
+Failed to destroy ZFS dataset %s — attempting to remount=销毁 ZFS 数据集 [%s] 失败，正在尝试重新挂载。
 Failed to remount dataset %s=重新挂载数据集 [%s] 失败
 Failed to start Mover Tuning Check the logs=启动 Mover Tuning 失败，请查看日志。
 Failed to unmount ZFS dataset %s=卸载 ZFS 数据集 [%s] 失败
@@ -45,42 +45,42 @@ Fatal error cache not present, or only cache present, and less than 2 pools set 
 File and Syslog=文件（及系统日志）
 File list path=忽略列表文件路径
 File Only=仅文件
-Fill upprime up to this level of used Primary cache space=缓存填充目标
+Fill upprime up to this level of used Primary cache space=填充至主存储（<em>缓存</em>）的此使用率
 Fill up to this level of used Primary cache space=填充至主存储（<em>缓存</em>）的此使用率
 Force move of all files on a schedule=定时强制移动所有文件
 Force turbo write during mover=Mover 运行时强制启用 Turbo 写入
-Free downprime up to this level of used Primary cache space=缓存释放目标
+Free downprime up to this level of used Primary cache space=释放/填充至主存储（<em>缓存</em>）的此使用率
 Free down to this level of used Primary cache space=释放至主存储（<em>缓存</em>）的此使用率
 Freeing threshold lowered to %1 to stay at or below the moving threshold=释放阈值已降至 %1，以保持不高于移动阈值。
 GitHub repository=GitHub 仓库
 Happy New Year=新年快乐！
 Idle=空闲
 If you like the work, you can donate via=如果喜欢这个插件，欢迎通过以下方式捐赠：
-If you need assistance, you can ask in the Unraid community for help=如果需要帮助，可以在 Unraid 中文社区寻求支持
+If you need assistance, you can ask in the Unraid community for help=如果需要帮助，可以在 Unraid 社区寻求帮助。
 If you want Mover Tuning to fully manage scheduling, disable it in Mover Settings=如果希望完全由 Mover Tuning 管理计划，请在 Mover 设置中将其禁用。
 Ignore All hidden files and directories=忽略隐藏文件和目录
 Ignore files and folders listed inside of a text file=忽略列表中的文件和文件夹
 Ignore file types=忽略指定文件类型
 Invalid characters to block=要阻止的无效字符
-Let scheduled mover run during a parity check rebuild=奇偶校验期间运行 Mover
-Log Mover Tuning plugin actions=记录 Mover Tuning插件日志
+Let scheduled mover run during a parity check rebuild=允许计划的 Mover 在奇偶校验/重建期间运行
+Log Mover Tuning plugin actions=记录 Mover Tuning 插件日志
 Logs parent folder for Mover Tuning plugin=日志文件保存路径
 Low=低
 Maintainers=维护者
 make those plugins with ❤️ and a lot of ☕=用 ❤️（和很多 ☕）制作了这些插件。
 Move ALL files from current pool wont use mover settings=从当前存储池移出**所有**文件（不使用 Mover 设置）
 Move ALL files to current pool wont use mover settings=将**所有**文件移入当前存储池（不使用 Mover 设置）
-Move All from Primary->Secondary cacheyes shares pool percentage=强制移动阈值（cache:yes 共享）
-Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=缓存超限强制移动
-Move All from Primary->Secondary shares pool percentage=强制移动阈值
-Move All threshold raised to %1 to stay above the moving threshold=强制移动阈值已升至 %1，以保持高于移动阈值。
+Move All from Primary->Secondary cacheyes shares pool percentage=主存储->次存储（cache:yes）共享全部移动的存储池百分比
+Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=当磁盘使用率超过一定百分比时，将主存储->次存储（cache:yes）共享全部移动
+Move All from Primary->Secondary shares pool percentage=主存储->次存储共享全部移动的存储池百分比
+Move All threshold raised to %1 to stay above the moving threshold=全部移动阈值已升至 %1，以保持高于移动阈值。
 Moved Only=仅已移动
 Move empty folders=移动空文件夹
-Move files based on minimum size=按文件大小过滤
+Move files based on minimum size=按最小文件大小移动文件
 Move files based on size=按文件大小移动
 Move files based on sparseness=按稀疏度移动
-Move files off Primary cache based on age=按文件年龄从主存储(<em>缓存</em>)移出文件移动
-Move files off Primary cache based on sparseness=按稀疏度过滤
+Move files off Primary cache based on age=按文件年龄从主存储（<em>缓存</em>）移出文件
+Move files off Primary cache based on sparseness=按稀疏度从主存储（缓存）移出文件
 Move files that are greater than this many days old=文件年龄阈值
 Move files that are greater than this sparseness=稀疏度阈值
 Move files that are in use=移动正在使用的文件
@@ -107,7 +107,7 @@ Not Applicable Share Does Not Exist Yet=不适用（共享尚不存在）
 Notify Mover Tuning plugin actions=通知设置
 Only move files larger than this in MB=仅移动大于此大小的文件（MB）
 Only move files that are older than this in days=仅移动早于此天数的文件（天）
-Only move if above this threshold of used Primary cache space=缓存使用率移动阈值
+Only move if above this threshold of used Primary cache space=仅当主存储（<em>缓存</em>）使用率超过此阈值时移动
 Open=访问
 Override Mover Tuning settings for this share=为此共享覆盖 Mover Tuning 设置
 Plugin mover=插件 Mover
@@ -138,7 +138,7 @@ Test Mode dry run=测试模式（演练）
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=测试模式：Mover Tuning 插件不会移动/同步任何文件。耗时：%s
 Thank you for using this plugin=感谢使用本插件。
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=已保存的释放阈值为 %1，高于移动阈值 %2。Mover 在 %2 时开始、在 %1 时停止，因此存储池使用率介于两者之间时不会移动任何文件。此页面现在显示 %3，保存后将使用该值。
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=已保存的强制移动阈值为 %1，不高于移动阈值 %2。在达到移动阈值之前，cache:yes 共享上的所有文件都会被移动，并忽略跳过列表和过滤器。此页面现在显示 %3，保存后将使用该值。
+The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=已保存的全部移动阈值为 %1，不高于移动阈值 %2。在达到移动阈值之前，cache:yes 共享上的所有文件都会被移动，并忽略跳过列表和过滤器。此页面现在显示 %3，保存后将使用该值。
 Top Folder=顶层文件夹
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Unraid Mover 计划当前为**启用**状态
@@ -197,7 +197,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :mover_tune_validate_plug:
 <p> <strong><em>在网络安全中，文件名可能成为潜在攻击和系统漏洞的重要途径。未经清理的文件名会带来重大风险，可能危及系统的完整性和安全性。</em></strong></p>
 <p> 验证文件名会在 Mover 处理每个文件名之前进行检查，确保<strong>只接受有效</strong>的文件名，<strong>降低</strong>攻击和漏洞的<strong>风险</strong>。</p>
-<p> <strong>仅</strong>当需要移动大量文件，并且<strong>确定</strong>所有文件名都<strong>有效</strong>、不含任何潜在安全风险时，才关闭此选项。</p>
+<p> <strong>仅</strong>当需要移动大量文件，并且<strong>确定</strong>所有文件名都<strong>有效</strong>、不含任何潜在安全风险时，才禁用此选项。</p>
 <p> 1. <strong>检查文件名长度</strong> - 文件名超过 255 个字符将被拒绝。</p>
 <p> 2. <strong>检查无效字符</strong> - 文件名不应包含任何被视为无效的字符，例如
 (<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> | </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>)。</p>
@@ -221,42 +221,42 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_logging_plug:
 <p> 启用或禁用本插件的日志记录。</p>
-<p><strong>文件（及系统日志）</strong>将同时记录到 <strong>SYSLOG</strong> 和日志文件。</p>
+<p><strong>文件（及系统日志）</strong>将同时记录到<strong>系统日志</strong>和日志文件。</p>
 <p><strong>仅文件</strong>将<strong>只</strong>记录到日志文件。</p>
-<p> 日志显示在 <strong>SYSLOG</strong> 中，默认保存在 <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong>。</p>
+<p> 日志显示在<strong>系统日志</strong>中，默认保存在 <strong><em>/tmp/ca.mover.tuning/Mover_tuning_xxx.log</em></strong>。</p>
 :end
 
 :mover_tune_debuglogging_plug:
 <p> 启用或禁用本插件的调试日志记录。</p>
-<p><strong>文件（及系统日志）</strong>将同时记录到 <strong>SYSLOG</strong> 和日志文件。</p>
+<p><strong>文件（及系统日志）</strong>将同时记录到<strong>系统日志</strong>和日志文件。</p>
 <p><strong>仅文件</strong>将<strong>只</strong>记录到日志文件。</p>
-<p> 调试日志显示在 <strong>SYSLOG</strong> 中，默认保存在 <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong>。</p>
+<p> 调试日志显示在<strong>系统日志</strong>中，默认保存在 <strong><em>/tmp/ca.mover.tuning/Debug_Mover_tuning_xxx.log</em></strong>。</p>
 :end
 
 :mover_tune_notify_plug:
 <p>启用或禁用本插件的通知。通知显示在 Unraid 界面中。</p>
-<p><strong>仅错误</strong>只在发生错误时发送通知。</p>
-<p><strong>仅已移动</strong>只在有文件被移动或发生错误时发送通知，而不是每次 Mover 运行时都发送。</p>
+<p><strong>仅错误</strong>将<strong>只</strong>在发生错误时发送通知。</p>
+<p><strong>仅已移动</strong>将<strong>只</strong>在有文件被移动或发生错误时发送通知，而不是每次 Mover 运行时都发送。</p>
 :end
 
 :mover_tune_loggingfolder_plug:
-> 日志文件的父目录路径，默认为<strong><em>/tmp</em></strong>。日志会保存在此路径下的<strong><em>ca.mover.tuning</em></strong>文件夹中.
+> 日志文件的父目录路径，默认为<strong><em>/tmp</em></strong>。日志会保存在此路径下的<strong><em>ca.mover.tuning</em></strong>文件夹中。
 :end
 
 :mover_tune_logfilesdaysold_plug:
-> 自动删除超过指定天数的日志文件（**_*.log_**）和文本文件（**_*.txt_**）.
+> 自动删除超过指定**天数**的日志文件（**_*.log_**）和文本文件（**_*.txt_**）。
 :end
 
 :mover_tune_listfilesdaysold_plug:
-> 自动删除超过指定天数的列表文件（**<em>*.list</em>**）.
+> 自动删除超过指定**天数**的列表文件（**<em>*.list</em>**）。
 :end
 
 :mover_tune_advancedsettings_plug:
-> 显示高级设置选项。注意：即使隐藏，已配置的高级设置仍然有效.
+> 显示高级设置选项。注意：即使隐藏，已配置的高级设置仍然有效。
 :end
 
 :mover_tune_parity_plug:
-> 如果正在进行奇偶校验检查或磁盘重建，是否允许 Mover 运行.
+> 如果正在进行奇偶校验检查或磁盘重建，是否允许 Mover 运行。
 :end
 
 :mover_tune_moverio_plug:
@@ -282,11 +282,11 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_beforescript_plug:
-> 在 Mover 开始前运行的脚本路径。无论是否有文件需要移动，此脚本都会执行.
+> 在 Mover 开始前运行的脚本路径。无论是否有文件需要移动，此脚本都会执行。
 :end
 
 :mover_tune_afterscript_plug:
-> 在 Mover 完成后运行的脚本路径。此脚本总是会执行.
+> 在 Mover 完成后运行的脚本路径。此脚本总是会执行。
 :end
 
 :mover_tune_movenow_plug:
@@ -294,39 +294,39 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_movingthreshold_plug:
-<p> 设置<strong><em>缓存→阵列</em></strong> (cache:<strong>yes</strong>) 的触发阈值。当缓存使用率达到此阈值时，Mover 开始将数据从缓存移动到阵列</p>
-<p> <u>提示：</u>如果发现<strong>Mover 未能及时移动数据</strong>，可以尝试<strong>提高移动阈值</strong>，增大移动阈值和释放阈值之间的差距</p>
-<p> Mover 计算缓存已用空间和待移动文件大小的总和。如果文件过大，可能无法在释放阈值内完成移动</p>
+<p> 设置<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）驱动器上触发 Mover 运行的磁盘使用量。达到此阈值时，Mover 开始运行，将数据移出缓存池。</p>
+<p> <u>提示：</u>如果发现<strong>Mover 未能及时移动数据</strong>，可以尝试<strong>提高移动阈值</strong>，增大移动阈值和释放阈值之间的差距。</p>
+<p> Mover 会累计缓存池已用空间与文件大小之和，直到超过释放阈值。如果文件很大，可能无法恰好落在为释放阈值分配的空间内。</p>
 :end
 
 :mover_tune_freeingthreshold_plug:
-<p> 设置 Mover 完成后<strong><em>缓存→阵列</em></strong> (cache:<strong>yes</strong>) 的目标使用率。设置为 (<strong><em>0%</em></strong>) 表示移动所有数据到阵列</p>
-<p> <u>提示：</u>如果发现<strong>Mover 未能及时移动数据</strong>，可以尝试<strong>降低释放阈值</strong>，增大移动阈值和释放阈值之间的差距</p>
-<p> Mover 计算缓存已用空间和待移动文件大小的总和。如果文件过大，可能无法在释放阈值内完成移动</p>
+<p> 设置 Mover 运行完成后<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）驱动器上的磁盘使用量。设置为 (<strong><em>0%</em></strong>) 表示 Mover 会一直运行，直到所有数据都移出缓存池。</p>
+<p> <u>提示：</u>如果发现<strong>Mover 未能及时移动数据</strong>，可以尝试<strong>降低释放阈值</strong>，增大移动阈值和释放阈值之间的差距。</p>
+<p> Mover 会累计缓存池已用空间与文件大小之和，直到超过释放阈值。如果文件很大，可能无法恰好落在为释放阈值分配的空间内。</p>
 :end
 
 :mover_tune_fillupthreshold_plug:
-> 设置 Mover 完成后<strong><em>阵列→缓存</em></strong> (cache:<strong>prefer</strong>) 的目标使用率。设置为 (<strong><em>95%</em></strong>) 表示将缓存填充到 <strong><em>95%</em></strong>.
+> 设置 Mover 运行完成后<strong><em>次存储->主存储</em></strong>（cache:<strong>prefer</strong>）驱动器上的磁盘使用量。设置为 (<strong><em>95%</em></strong>) 表示 Mover 会一直运行，直到缓存池填充到 <strong><em>95%</em></strong>。
 :end
 
 :mover_tune_age_plug:
-> 是否根据文件的年龄（天数）来决定是否移动文件.
+> 选择是否按文件年龄（天数）从主存储（缓存）移出文件。
 :end
 
 :mover_tune_daysold_plug:
-> 移动超过指定天数的文件（最多1年）。<strong>自动</strong>模式会从最旧的文件开始移动，直到达到空间阈值.
+> 选择文件需要达到的**天数**才会被移动（最多 1 年）。自动模式会从最旧的文件移动到最新的文件，直到达到阈值。
 :end
 
 :mover_tune_advancedfilters_plug:
-> 显示高级过滤器选项。注意：即使隐藏，已配置的过滤器仍然有效.
+> 显示高级过滤器选项。注意：即使隐藏，已配置的过滤器仍然有效。
 :end
 
 :mover_tune_ctime_plug:
-> 在查找命令中使用<strong>创建时间</strong>而不是<strong>修改时间</strong>来判断文件年龄.
+> 在 find 命令中使用 <strong>CTIME</strong><em>（创建时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄。
 :end
 
 :mover_tune_atime_plug:
-> 在查找命令中使用<strong>访问时间</strong>而不是<strong>修改时间</strong>来判断文件年龄.
+> 在 find 命令中使用 <strong>ATIME</strong><em>（访问时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄。
 :end
 
 :mover_tune_sizef_plug:
@@ -346,11 +346,11 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_sparsnessf_plug:
-> 是否根据文件的稀疏度来决定是否移动文件（稀疏文件是指含有大量空数据块的文件）.
+> 是否根据文件的稀疏度来决定是否移动文件（稀疏文件是指含有大量空数据块的文件）。
 :end
 
 :mover_tune_sparsnessv_plug:
-> 移动稀疏度大于此值的文件.
+> 移动稀疏度大于此值的文件。
 :end
 
 :mover_tune_filelistv_plug:
@@ -367,34 +367,34 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_filetypesv_plug:
-> 用<strong>逗号</strong>分隔的文件扩展名列表，如：jpg,png,mp4.
+> 用<strong>逗号</strong>分隔的文件扩展名列表，如：jpg,png,mp4。
 :end
 
 :mover_tune_ignorehidden_plug:
-<p>很少有用户需要使用此功能，建议保持为"否"</p>
-<p>忽略所有以点号 (<strong><em>.</em></strong>) 开头的文件或目录</p>
-<p>等同于在查找命令末尾添加 (<strong><em>-not -path '*/\.*'</em></strong>)</p>
+<p>很少有用户需要使用此功能，建议保持为“否”。</p>
+<p>忽略所有以点号 (<strong><em>.</em></strong>) 开头的文件或目录。</p>
+<p>等同于在 find 命令末尾添加 (<strong><em>-not -path '*/\.*'</em></strong>)。</p>
 :end
 
 :mover_tune_omovercfg_plug:
-<p>设置为<strong>是</strong>时，当缓存使用率超过下方百分比阈值，会将<strong><em>缓存→阵列</em></strong> (cache:<strong>yes</strong>) 共享中的所有文件移动到阵列</p>
-<p>这类似于原始 Mover 的行为，不会应用本插件的任何过滤规则</p>
+<p>设置为<strong>是</strong>时，当缓存使用率超过下方百分比，会将<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）共享中的所有文件移动到阵列。</p>
+<p>这类似于原始 Mover，不会对发送给 mover 程序的 find 命令应用本插件的任何过滤器。</p>
 :end
 
 :mover_tune_omoverthresh_plug:
-<p>设置缓存池使用率阈值，当超过此阈值时启动<strong><em>缓存→阵列</em></strong> (cache:<strong>yes</strong>) 共享的全部文件移动</p>
-<p>未达到此阈值的其他池仍会按照过滤规则运行</p>
-<p>此阈值应该至少比上面的<strong><em>缓存使用率移动阈值</em></strong>设置<strong>高出5%</strong></p>
+<p>设置主存储池的磁盘使用量，达到后启动<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）共享中所有文件的移动。</p>
+<p>对于未达到此阈值的其余存储池，之后仍会运行过滤器。</p>
+<p>此阈值应至少比上方的<strong><em>仅当主存储（缓存）使用率超过此阈值时移动</em></strong>设置<strong>高出 5%</strong>。</p>
 :end
 
 :mover_tune_enableturbo_plug:
-> 在 Mover 运行时强制 unRaid 切换到 Turbo 写入模式（重构写入）.
+> 在 Mover 运行时强制 unRaid 切换到 Turbo 写入模式（重构写入）。
 :end
 
 :mover_tune_movefilestool_plug:
-<p>选择用于移动文件的工具（应用<strong>插件过滤器</strong>时），可以在<strong>Rsync</strong>和 Unraid 内置的<strong>Move</strong>工具之间选择</p>
-<p><strong>Move</strong> - 使用 Unraid 内置的文件移动工具，但文件同步仍使用<strong>Rsync</strong></p>
-<p><strong>Rsync</strong> - 文件移动和同步都使用 Rsync</p>
+<p>选择应用<strong>插件过滤器</strong>时用于移动文件的工具，可以在 <strong>Rsync</strong> 和 Unraid 内置的文件移动工具<strong>移动</strong>之间选择。</p>
+<p><strong>移动</strong> - 使用 Unraid 内置的文件移动工具移动文件，但文件同步仍使用 <strong>Rsync</strong>。</p>
+<p><strong>Rsync</strong> - 文件移动和同步都使用 Rsync。</p>
 :end
 
 :mover_tune_moveinuse_plug:
@@ -412,7 +412,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_cleandatasets_plug:
-> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>空的父 ZFS 数据集，<strong>仅在不包含</strong>子数据集时执行.
+> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>空的父 ZFS 数据集，<strong>仅在不包含</strong>子数据集时执行。
 :end
 
 :mover_tune_sharecalculation_plug:
@@ -431,7 +431,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_advancedoptions_plug:
-> 显示高级选项。注意：即使隐藏，已配置的高级选项仍然有效.
+> 显示高级选项。注意：即使隐藏，已配置的高级选项仍然有效。
 :end
 
 :mover_tune_rebalanceshares_plug:
@@ -495,11 +495,11 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_share_movingthreshold_plug:
-> 设置<strong><em>缓存→阵列</em></strong> (cache:<strong>yes</strong>) 的触发阈值。当缓存使用率达到此阈值时，Mover 开始将数据从缓存移动到阵列.
+> 设置<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）驱动器上触发 Mover 运行的磁盘使用量。达到此阈值时，Mover 开始运行，将数据移出缓存池。
 :end
 
 :mover_tune_share_freeingthreshold_plug:
-> 设置 Mover 完成后<strong><em>缓存→阵列</em></strong> (cache:<strong>yes</strong>) 的目标使用率。设置为 (<strong><em>0%</em></strong>) 表示移动所有数据到阵列.
+> 设置 Mover 运行完成后<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）驱动器上的磁盘使用量。设置为 (<strong><em>0%</em></strong>) 表示 Mover 会一直运行，直到所有数据都移出缓存池。
 :end
 
 :mover_tune_share_age_yes_plug:
