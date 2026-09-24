@@ -147,7 +147,7 @@ function startMover()
         else if ($cron) {
             logger("Auto executed (crond)\n");
         }
-        else if ($watchdog) {
+        else if ($watchdog === true) {
             logger("Auto executed (cache watchdog)\n");
         }
         // If run manually by button, $argv[1] is not set (""), then log it as move button
@@ -232,11 +232,11 @@ function startMover()
     }
 
     // names the run in its log; age_mover then logs to syslog itself, as the watchdog's cron line discards output
-    if ($watchdog) {
+    if ($watchdog === true) {
         putenv("MOVER_RUN_METHOD=cache watchdog");
     }
 
-    if ($cron or $watchdog or $cfg['movenow'] == "yes") {
+    if ($cron === true || $watchdog === true || $cfg['movenow'] === "yes") {
         //exec("echo 'running from cron or move now question is yes' >> /var/log/syslog");
 
         if ($cfg['movingThreshold'] >= 0 or $cfg['fillupThreshold'] >= 0 or $cfg['age'] == "yes" or $cfg['sizef'] == "yes" or $cfg['sparsnessf'] == "yes" or $cfg['filelistf'] == "yes" or $cfg['filetypesf'] == "yes" or $cfg['beforeScript'] != '' or $cfg['afterScript'] != '' or $cfg['testmode'] == "yes") {
