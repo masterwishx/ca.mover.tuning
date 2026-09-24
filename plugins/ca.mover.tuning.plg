@@ -858,6 +858,10 @@ if [[ -e /boot/config/plugins/&name;/mover.cron ]]; then
   rm -f /boot/config/plugins/&name;/mover.cron
 fi
 
+if [[ -e /boot/config/plugins/&name;/mover.watchdog.cron ]]; then
+  rm -f /boot/config/plugins/&name;/mover.watchdog.cron
+fi
+
 # Remove config folder only if empty
 if [[ -d /boot/config/plugins/&name; ]] &amp;&amp; [[ -z $(ls -A /boot/config/plugins/&name;) ]]; then
   rmdir /boot/config/plugins/&name;

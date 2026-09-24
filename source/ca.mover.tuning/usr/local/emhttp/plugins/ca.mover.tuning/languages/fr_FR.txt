@@ -15,6 +15,8 @@ A total of %s files and %s folders representing %s were successfully movedsynced
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Avant de continuer, cliquez sur une option ou appuyez sur F1 pour lire les descriptions détaillées de tous les paramètres.
 by=par
 Cache disk not enabled=Disque cache non activé !
+Cache watchdog=Surveillance du cache
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Surveillance du cache : %s est rempli à %s, au niveau ou au-dessus du seuil de déclenchement de %s. Démarrage de Mover Tuning.
 Cache → Array=Cache → Array
 Clean empty folders=Nettoyer les dossiers vides
 Clean empty ZFS datasets=Nettoyer les datasets ZFS vides
@@ -140,6 +142,7 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=M
 Thank you for using this plugin=Merci d’utiliser ce plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Le seuil de libération enregistré est %1, au-dessus du seuil de déplacement %2. Le mover démarre à %2 et s’arrête à %1, donc rien n’est déplacé tant que le pool reste entre ces valeurs. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Le seuil « tout déplacer » enregistré est %1, au niveau ou en dessous du seuil de déplacement %2. Tout sur les parts cache:yes est déplacé, la liste d’exclusion et les filtres sont ignorés avant d’atteindre le seuil de déplacement. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
+The schedule is disabled, so only the watchdog starts runs Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs=La planification est désactivée : seule la surveillance du cache lance des exécutions. Les déplacements vers le pool, la synchronisation, le rééquilibrage et les déplacements selon l’âge sous le seuil de déclenchement n’ont lieu que lors des exécutions planifiées.
 Top Folder=Dossier principal
 Unraid mover=Mover Unraid
 Unraid Mover schedule is currently enabled=La planification du mover Unraid est actuellement **activée**
@@ -150,6 +153,8 @@ User shares not enabled=Les parts utilisateur ne sont pas activées !
 Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
 Very Low=Très faible
 Want to support the developer and say Thank You=Vous souhaitez soutenir le développeur et dire **Merci** ?
+Watchdog trigger level=Seuil de déclenchement de la surveillance
+Watchdog trigger level raised to %1 to stay above the moving threshold=Seuil de déclenchement de la surveillance augmenté à %1 pour rester au-dessus du seuil de déplacement.
 We=Nous
 Wishing you a stable array, fast mover runs, and zero parity errors=Nous vous souhaitons un array stable, des déplacements rapides et zéro erreur de parité!
 Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisation !
@@ -182,6 +187,16 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
   <li>Appuyez sur <strong>« Move »</strong> dans la page <strong>Main</strong>.</li>
   <li>Lancez <strong>« mover start »</strong> depuis la <strong>CLI</strong>.</li>
 </ul>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Vérifie toutes les 5 minutes si le pool primaire (<em>cache</em>) d’un partage cache:<strong>yes</strong> a atteint le <strong>seuil de déclenchement de la surveillance</strong>. Si c’est le cas, elle lance Mover Tuning, avec tous ses réglages et filtres, entre les exécutions planifiées.</p>
+<p>C’est un filet de sécurité à côté de la planification, pas un remplacement : les déplacements vers le pool (cache:<strong>prefer</strong>), la synchronisation, le rééquilibrage et les déplacements selon l’âge sous le seuil de déclenchement n’ont lieu que lors des exécutions planifiées.</p>
+<p>Elle lance au plus une exécution par heure, envoie alors une notification et respecte le réglage du contrôle de parité. Sous le seuil de déclenchement, une vérification prend quelques millisecondes et ne fait rien d’autre.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Espace utilisé du pool primaire (<em>cache</em>) à partir duquel la surveillance lance une exécution. Il reste au-dessus du seuil de déplacement, car une exécution lancée en dessous ne déplacerait rien.</p>
 :end
 
 :mover_tune_movertunecron_plug:

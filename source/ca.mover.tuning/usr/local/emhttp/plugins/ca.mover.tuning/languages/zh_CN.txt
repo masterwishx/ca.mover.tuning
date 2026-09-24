@@ -14,6 +14,8 @@ A total of %s files and %s folders representing %s were successfully movedsynced
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=继续之前，请点击选项名称或按 F1 查看所有设置的详细说明。
 by=作者
 Cache disk not enabled=缓存磁盘未启用
+Cache watchdog=缓存看门狗
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=缓存看门狗：%s 已使用 %s，达到或超过触发阈值 %s。正在启动 Mover Tuning。
 Cache → Array=缓存 → 阵列
 Clean empty folders=清理空文件夹
 Clean empty ZFS datasets=清理空的 ZFS 数据集
@@ -139,6 +141,7 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=�
 Thank you for using this plugin=感谢使用本插件。
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=已保存的释放阈值为 %1，高于移动阈值 %2。Mover 在 %2 时开始、在 %1 时停止，因此存储池使用率介于两者之间时不会移动任何文件。此页面现在显示 %3，保存后将使用该值。
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=已保存的全部移动阈值为 %1，不高于移动阈值 %2。在达到移动阈值之前，cache:yes 共享上的所有文件都会被移动，并忽略跳过列表和过滤器。此页面现在显示 %3，保存后将使用该值。
+The schedule is disabled, so only the watchdog starts runs Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs=计划已禁用，因此只有看门狗会启动运行。移回存储池、同步、重新平衡以及低于触发阈值时按年龄的移动，只会在按计划运行时进行。
 Top Folder=顶层文件夹
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Unraid Mover 计划当前为**启用**状态
@@ -149,6 +152,8 @@ User shares not enabled=用户共享未启用
 Validate input filenames to prevent attacks=验证文件名防止攻击
 Very Low=很低
 Want to support the developer and say Thank You=想支持开发者并说声**谢谢**吗？
+Watchdog trigger level=看门狗触发阈值
+Watchdog trigger level raised to %1 to stay above the moving threshold=看门狗触发阈值已升至 %1，以保持高于移动阈值。
 We=我们
 Wishing you a stable array, fast mover runs, and zero parity errors=祝您阵列稳定、Mover 运行飞快、奇偶校验零错误！
 Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
@@ -181,6 +186,16 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
   <li>在<strong>主页面</strong>上点击 <strong>“移动”</strong>。</li>
   <li>在<strong>命令行</strong>中运行 <strong>“mover start”</strong>。</li>
 </ul>
+:end
+
+:mover_tune_watchdog_plug:
+<p>每 5 分钟检查一次 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池是否达到<strong>看门狗触发阈值</strong>。如果达到，就在按计划运行之间启动 Mover Tuning，并应用其全部设置和过滤器。</p>
+<p>它是计划之外的安全保障，而不是计划的替代：移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡以及低于触发阈值时按年龄的移动，只会在按计划运行时进行。</p>
+<p>它每小时最多启动一次运行，启动时发送一条通知，并遵循奇偶校验设置。低于触发阈值时，每次检查只需几毫秒，不做其他任何事。</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>看门狗启动运行时主存储（<em>缓存</em>）池的已用空间。它始终高于移动阈值，因为低于移动阈值启动的运行不会移动任何文件。</p>
 :end
 
 :mover_tune_movertunecron_plug:

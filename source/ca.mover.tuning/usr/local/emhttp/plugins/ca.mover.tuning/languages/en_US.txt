@@ -17,6 +17,8 @@ A total of %s files and %s folders representing %s were successfully movedsynced
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.
 by=
 Cache disk not enabled=Cache disk not enabled!
+Cache watchdog=
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning.
 Cache → Array=
 Clean empty folders=
 Clean empty ZFS datasets=
@@ -142,6 +144,7 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=T
 Thank you for using this plugin=Thank you for using this plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=The saved freeing threshold is %1, above the moving threshold of %2. The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them. This page now shows %3, and saving will store that.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=The saved Move All threshold is %1, at or below the moving threshold of %2. Everything on cache:yes shares moves, skip list and filters ignored, before the moving threshold is reached. This page now shows %3, and saving will store that.
+The schedule is disabled, so only the watchdog starts runs Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs=The schedule is disabled, so only the watchdog starts runs. Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs.
 Top Folder=
 Unraid mover=
 Unraid Mover schedule is currently enabled=Unraid Mover schedule is currently **enabled**
@@ -152,6 +155,8 @@ User shares not enabled=User shares not enabled!
 Validate input filenames to prevent attacks=
 Very Low=
 Want to support the developer and say Thank You=Want to support the developer and say **Thank You**?
+Watchdog trigger level=
+Watchdog trigger level raised to %1 to stay above the moving threshold=Watchdog trigger level raised to %1 to stay above the moving threshold.
 We=
 Wishing you a stable array, fast mover runs, and zero parity errors=Wishing you a stable array, fast mover runs, and zero parity errors!
 Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
@@ -184,6 +189,16 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
   <li>Press <strong>“Move”</strong> on the <strong>Main</strong> page.</li>
   <li>Run <strong>“mover start”</strong> from the <strong>CLI</strong>.</li>
 </ul>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Checks every 5 minutes whether the Primary (<em>cache</em>) pool of a cache:<strong>yes</strong> share has reached the <strong>Watchdog trigger level</strong>. If it has, it starts Mover Tuning, with all its settings and filters, between scheduled runs.</p>
+<p>It is a safety net next to the schedule, not a replacement: moves back to the pool (cache:<strong>prefer</strong>), sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs.</p>
+<p>It starts at most one run per hour, sends one notification when it does, and follows the parity check setting. Below the trigger level a check takes a few milliseconds and does nothing else.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Used space on the Primary (<em>cache</em>) pool at which the watchdog starts a run. It stays above the moving threshold, because a run started below it would move nothing.</p>
 :end
 
 :mover_tune_movertunecron_plug:

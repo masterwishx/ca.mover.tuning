@@ -39,6 +39,7 @@
 
 PIDFILE="/var/run/mover.pid"
 SOFTSTOPFILE="/var/run/moversoft.stop"
+WATCHDOGSTAMP="/var/run/mover.watchdog"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
@@ -238,6 +239,16 @@ pool_fstype() {
 
 is_zfs_pool() {
     pool_fstype "$1" && [ "$POOLFSTYPE" = "zfs" ]
+}
+
+pool_usage() {
+    # sets POOLPCTUSED, POOLBYTEUSED and POOLSIZE (bytes) for pool $1; never call it inside $(...).
+    # POOLSIZE is used+avail, not df's size: on btrfs those differ by the unallocated chunks.
+    if is_zfs_pool "$1"; then
+        read -r POOLPCTUSED POOLBYTEUSED POOLSIZE < <(zfs list -Hpo available,used "$1" | awk '{print int(($2 / ($1 + $2)) * 100), $2, $1 + $2}')
+    else
+        read -r POOLPCTUSED POOLBYTEUSED POOLSIZE < <(df --output=pcent,used,avail --block-size=1 "/mnt/$1" | tail -n 1 | awk '{sub(/%/, "", $1); print $1, $2, $2 + $3}')
+    fi
 }
 
 is_zfs_dataset_mountpoint() {
@@ -1087,18 +1098,7 @@ createFilteredFilelist() {
             fi
         fi
 
-        # Pool usage and size in bytes. POOLSIZE is used+avail, not df's size: on
-        # btrfs those differ by the unallocated chunks, and POOLPCTUSED is measured against used+avail.
-        pool_fstype "$PRIMARYSTORAGENAME"
-        if is_zfs_pool "$PRIMARYSTORAGENAME"; then
-            POOLPCTUSED=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print int(($2 / ($1 + $2)) * 100)}')
-            POOLBYTEUSED=$(zfs list -Hpo used "$PRIMARYSTORAGENAME")
-            POOLSIZE=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print $1 + $2}')
-        else
-            POOLPCTUSED=$(df --output=pcent "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | tr -d '%')
-            POOLBYTEUSED=$(df --output=used --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1)
-            POOLSIZE=$(df --output=used,avail --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | awk '{print $1 + $2}')
-        fi
+        pool_usage "$PRIMARYSTORAGENAME"
 
         # Calculate primary storage size thresholds in bytes
         if [ "$SHAREUSECACHE" = "prefer" ]; then
@@ -2986,6 +2986,7 @@ usage() {
     echo "  status   - Check if the mover is running."
     echo "  reset    - Reset plugin config to default values and delete the override config folder."
     echo "  debug    - Create plugin diagnostics ZIP at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
+    echo "  watchdog - Start a run when a cache:yes share's primary pool reaches the Cache watchdog trigger level (run by cron)."
     exit 1
 }
 
@@ -2998,6 +2999,37 @@ status() {
         echo "mover: not running"
     fi
     exit
+}
+
+# Cache watchdog, run by cron every 5 minutes (updateCron.php): starts a run between scheduled runs when the
+# primary pool of a cache:yes share reaches watchdogThreshold. Must stay silent and cheap when there is nothing to do.
+watchdog() {
+    local threshold pool last
+    local -A pools=()
+    [ "$(grep '^watchdog=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = "yes" ] || exit 0
+    grep -qs '^mdState="STARTED"' /var/local/emhttp/var.ini || exit 0
+    [ -f "$PIDFILE" ] && exit 0
+    # the cooldown keeps a pool that stays full, such as one the filters cannot free, from starting a run every check
+    last=$(stat -c %Y "$WATCHDOGSTAMP" 2>/dev/null || echo 0)
+    [ $(($(date +%s) - last)) -ge 3600 ] || exit 0
+    threshold=$(grep '^watchdogThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+    [[ "$threshold" =~ ^[0-9]+$ ]] || threshold=90
+    # only a cache:yes share's primary pool: a run frees nothing on a pool that holds only cache:only or cache:prefer shares
+    while IFS= read -r pool; do
+        [ -d "/mnt/$pool" ] && pools[$pool]=1
+    done < <(awk -F'"' 'FNR == 1 { use = ""; pool = "" } /^shareUseCache=/ { use = $2 } /^shareCachePool=/ { pool = $2 }
+        ENDFILE { if (use == "yes" && pool != "") print pool }' "$CFGPATH"/*.cfg 2>/dev/null)
+    for pool in "${!pools[@]}"; do
+        pool_usage "$pool"
+        [[ "$POOLPCTUSED" =~ ^[0-9]+$ ]] && [ "$POOLPCTUSED" -ge "$threshold" ] || continue
+        touch "$WATCHDOGSTAMP"
+        [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at $POOLPCTUSED%, at or above the trigger level of $threshold%. Starting Mover Tuning."
+        NOTIFY=$(grep '^notify=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+        unraid_notify "$(translate_text "Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning." "$pool" "$POOLPCTUSED%" "$threshold%")" "warning"
+        /usr/local/emhttp/plugins/ca.mover.tuning/mover.php watchdog start
+        exit 0
+    done
+    exit 0
 }
 
 if [ "$#" -ne 1 ]; then
@@ -3023,6 +3055,9 @@ reset)
     ;;
 debug)
     debug
+    ;;
+watchdog)
+    watchdog
     ;;
 *)
     usage
