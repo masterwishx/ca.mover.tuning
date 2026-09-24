@@ -2132,6 +2132,8 @@ processTheMoves() {
             if [ "$TESTMODE" = "yes" ]; then
                 RSYNC_CMD+=(--dry-run)
             fi
+            # a folder row carries only the folder: files that appeared in it since planning were never filtered or checked for use
+            [ "$FILETYPE" = "d" ] && RSYNC_CMD+=(--no-recursive --dirs)
 
             # print to debug $SYNCED_FILES $FILEPATH
             #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
