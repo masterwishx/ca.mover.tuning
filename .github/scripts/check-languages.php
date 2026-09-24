@@ -105,7 +105,8 @@ function entry_line(string $path, string $line, int $n, array &$entries): void
         return;
     }
     [$key, $text] = explode('=', $line, 2);
-    $key = trim($key);
+    // parse_lang_file stores a bare INI keyword (yes, no, ...) with a trailing dot, the form _() looks up
+    $key = preg_replace('/^(null|yes|no|true|false|on|off|none)$/i', '$1.', trim($key));
     if (isset($entries[$key]) === true) {
         report('error', $path, $n, "Key \"$key\" appears twice (first on line {$entries[$key][1]}).");
         return;
@@ -114,8 +115,11 @@ function entry_line(string $path, string $line, int $n, array &$entries): void
     if ($expected !== $key) {
         report('error', $path, $n, "Key \"$key\" can never be looked up: Unraid turns the text into \"$expected\" first (it drops & ? { } | ~ ! [ ] ( ) / \\ : * ^ . \" ' and HTML tags, and adds . to a bare yes/no).");
     }
+    // Unraid drops an empty text (English shows) but keeps one of only blanks, which shows as an empty label;
     // the caller fills the placeholders of its own text, which the key keeps, so every text in every file must match them
-    if ($text !== '' && placeholders($text) !== placeholders($key)) {
+    if ($text !== '' && preg_match('/^[\s\x{00A0}]*$/u', $text) === 1) {
+        report('error', $path, $n, 'The text is only blanks: Unraid shows an empty label instead of the English text.');
+    } elseif ($text !== '' && placeholders($text) !== placeholders($key)) {
         report('error', $path, $n, 'Placeholders differ from the key: ' . json_encode(placeholders($key)) . ' there, ' . json_encode(placeholders($text)) . ' here.');
     }
     $entries[$key] = [$text, $n];
@@ -201,9 +205,10 @@ function check_used_texts(array $used, array $master): void
 function check_translation(string $path, array $master, array $masterSections): void
 {
     [$entries, $sections] = read_language_file($path);
+    $coreKeys = array_map('lookup_key', CORE_WORDS);
     foreach ($entries as $key => [, $line]) {
-        if (isset($master[$key]) === false) {
-            report('warning', $path, $line, "Key \"$key\" is not in en_US.txt any more; this text shows in English.");
+        if (isset($master[$key]) === false && in_array($key, $coreKeys, true) === false) {
+            report('warning', $path, $line, "Key \"$key\" is not in en_US.txt: nothing uses it any more, or en_US.txt misses it.");
         }
     }
     foreach (array_diff_key($sections, $masterSections) as $tag => $line) {
