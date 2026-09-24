@@ -114,6 +114,10 @@ function entry_line(string $path, string $line, int $n, array &$entries): void
     if ($expected !== $key) {
         report('error', $path, $n, "Key \"$key\" can never be looked up: Unraid turns the text into \"$expected\" first (it drops & ? { } | ~ ! [ ] ( ) / \\ : * ^ . \" ' and HTML tags, and adds . to a bare yes/no).");
     }
+    // the caller fills the placeholders of its own text, which the key keeps, so every text in every file must match them
+    if ($text !== '' && placeholders($text) !== placeholders($key)) {
+        report('error', $path, $n, 'Placeholders differ from the key: ' . json_encode(placeholders($key)) . ' there, ' . json_encode(placeholders($text)) . ' here.');
+    }
     $entries[$key] = [$text, $n];
 }
 
@@ -193,18 +197,13 @@ function check_used_texts(array $used, array $master): void
     }
 }
 
-// One translation against en_US.txt: placeholders are an error, drift is a warning.
+// One translation against en_US.txt: drift is a warning (read_language_file reports the errors).
 function check_translation(string $path, array $master, array $masterSections): void
 {
     [$entries, $sections] = read_language_file($path);
-    foreach ($entries as $key => [$text, $line]) {
+    foreach ($entries as $key => [, $line]) {
         if (isset($master[$key]) === false) {
             report('warning', $path, $line, "Key \"$key\" is not in en_US.txt any more; this text shows in English.");
-            continue;
-        }
-        $english = $master[$key][0] !== '' ? $master[$key][0] : $key;
-        if ($text !== '' && placeholders($text) !== placeholders($english)) {
-            report('error', $path, $line, 'Placeholders differ from en_US.txt: ' . json_encode(placeholders($english)) . ' there, ' . json_encode(placeholders($text)) . ' here.');
         }
     }
     foreach (array_diff_key($sections, $masterSections) as $tag => $line) {
