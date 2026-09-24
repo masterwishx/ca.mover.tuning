@@ -3004,7 +3004,7 @@ status() {
 # Cache watchdog, run by cron every 5 minutes (updateCron.php): starts a run between scheduled runs when the
 # primary pool of a cache:yes share reaches watchdogThreshold. Must stay silent and cheap when there is nothing to do.
 watchdog() {
-    local threshold pool last
+    local threshold global moving override share pool level last
     local -A pools=()
     [ "$(grep '^watchdog=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = "yes" ] || exit 0
     grep -qs '^mdState="STARTED"' /var/local/emhttp/var.ini || exit 0
@@ -3014,14 +3014,27 @@ watchdog() {
     [ $(($(date +%s) - last)) -ge 3600 ] || exit 0
     threshold=$(grep '^watchdogThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
     [[ "$threshold" =~ ^[0-9]+$ ]] || threshold=90
-    # only a cache:yes share's primary pool: a run frees nothing on a pool that holds only cache:only or cache:prefer shares
-    while IFS= read -r pool; do
-        [ -d "/mnt/$pool" ] && pools[$pool]=1
-    done < <(awk -F'"' 'FNR == 1 { use = ""; pool = "" } /^shareUseCache=/ { use = $2 } /^shareCachePool=/ { pool = $2 }
-        ENDFILE { if (use == "yes" && pool != "") print pool }' "$CFGPATH"/*.cfg 2>/dev/null)
+    global=$(grep '^movingThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+    [[ "$global" =~ ^[0-9]+$ ]] || global=85
+    # a cache:yes share's pool counts from the higher of the trigger level and the share's moving threshold, below which the
+    # run skips the share; an override with moverOverride="yes" may set its own threshold, as getMoverSettings reads it
+    while IFS='|' read -r share pool; do
+        [ -d "/mnt/$pool" ] || continue
+        moving=$global
+        if grep -qs 'moverOverride="yes"' "$MOVERTUNING_OVERRIDE_CFGFOLDER/$share.cfg"; then
+            override=$(grep '^movingThreshold=' "$MOVERTUNING_OVERRIDE_CFGFOLDER/$share.cfg" | cut -d '"' -f 2)
+            [[ "$override" =~ ^[0-9]+$ ]] && moving=$override
+        fi
+        level=$((moving > threshold ? moving : threshold))
+        if [ -z "${pools[$pool]}" ] || [ "$level" -lt "${pools[$pool]}" ]; then
+            pools[$pool]=$level
+        fi
+    done < <(awk -F'"' 'FNR == 1 { use = ""; pool = ""; share = FILENAME; sub(/.*\//, "", share); sub(/\.cfg$/, "", share) }
+        /^shareUseCache=/ { use = $2 } /^shareCachePool=/ { pool = $2 }
+        ENDFILE { if (use == "yes" && pool != "") print share "|" pool }' "$CFGPATH"/*.cfg 2>/dev/null)
     for pool in "${!pools[@]}"; do
         pool_usage "$pool"
-        [[ "$POOLPCTUSED" =~ ^[0-9]+$ ]] && [ "$POOLPCTUSED" -ge "$threshold" ] || continue
+        [[ "$POOLPCTUSED" =~ ^[0-9]+$ ]] && [ "$POOLPCTUSED" -ge "${pools[$pool]}" ] || continue
         touch "$WATCHDOGSTAMP"
         # mover.php decides whether the run may start (parity check, a run already active), so announce only
         # once the run has claimed the pid file, as mover.php's own runMover waits for it
