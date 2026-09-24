@@ -3001,14 +3001,28 @@ status() {
     exit
 }
 
+# True when process $1 is $2 or runs under it, a few levels down at most.
+descends_from() {
+    local p=$1 n
+    for n in 1 2 3 4 5 6; do
+        [ "$p" = "$2" ] && return 0
+        p=$(awk '/^PPid:/ {print $2}' "/proc/$p/status" 2>/dev/null)
+        [ -n "$p" ] && [ "$p" != 0 ] || return 1
+    done
+    return 1
+}
+
 # Cache watchdog, run by cron every 5 minutes (updateCron.php): starts a run between scheduled runs when the
 # primary pool of a cache:yes share reaches watchdogThreshold. Must stay silent and cheap when there is nothing to do.
 watchdog() {
-    local threshold global moving override share pool level last
+    local threshold global moving override share pool level parity last
     local -A pools=()
     [ "$(grep '^watchdog=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = "yes" ] || exit 0
     grep -qs '^mdState="STARTED"' /var/local/emhttp/var.ini || exit 0
     [ -f "$PIDFILE" ] && exit 0
+    # mirrors mover.php's parity rule so a parity check does not bring a refused launch every 5 minutes
+    parity=$(grep '^parity=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+    [ "${parity:-no}" = no ] && grep -qs '^mdResyncPos="[1-9]' /var/local/emhttp/var.ini && exit 0
     # the cooldown keeps a pool that stays full, such as one the filters cannot free, from starting a run every check
     last=$(stat -c %Y "$WATCHDOGSTAMP" 2>/dev/null || echo 0)
     [ $(($(date +%s) - last)) -ge 3600 ] || exit 0
@@ -3035,17 +3049,20 @@ watchdog() {
     for pool in "${!pools[@]}"; do
         pool_usage "$pool"
         [[ "$POOLPCTUSED" =~ ^[0-9]+$ ]] && [ "$POOLPCTUSED" -ge "${pools[$pool]}" ] || continue
-        touch "$WATCHDOGSTAMP"
-        # mover.php decides whether the run may start (parity check, a run already active), so announce only
-        # once the run has claimed the pid file, as mover.php's own runMover waits for it
+        # mover.php decides whether the run may start (parity check, a run already active), so announce and start the
+        # cooldown only once this launch's run holds the pid file, as mover.php's own runMover waits for it
         /usr/local/emhttp/plugins/ca.mover.tuning/mover.php watchdog start &
-        local run=$! i
+        local run=$! i started=no
         for i in $(seq 50); do
-            [ -f "$PIDFILE" ] && break
+            if [ -f "$PIDFILE" ] && descends_from "$(cat "$PIDFILE" 2>/dev/null)" "$run"; then
+                started=yes
+                break
+            fi
             kill -0 "$run" 2>/dev/null || break
             sleep 0.1
         done
-        if [ -f "$PIDFILE" ]; then
+        if [ "$started" = yes ]; then
+            touch "$WATCHDOGSTAMP"
             [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at $POOLPCTUSED%, at or above the trigger level of $threshold%. Starting Mover Tuning."
             NOTIFY=$(grep '^notify=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
             unraid_notify "$(translate_text "Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning." "$pool" "$POOLPCTUSED%" "$threshold%")" "warning"
