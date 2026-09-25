@@ -558,7 +558,7 @@ getMoverSettings() {
         fi
     fi
 
-    if [ -z $(cfg afterScript) ]; then
+    if [ -z "$(cfg afterScript)" ]; then
         #mvlogger "No After Script argument provided"
         [[ ! "$config_file" =~ shareOverrideConfig ]] && AFTERSCRIPT=""
     else
@@ -566,7 +566,7 @@ getMoverSettings() {
         mvlogger "After script: $AFTERSCRIPT"
     fi
 
-    if [ -z $(cfg beforeScript) ]; then
+    if [ -z "$(cfg beforeScript)" ]; then
         #mvlogger "No Before Script argument provided"
         [[ ! "$config_file" =~ shareOverrideConfig ]] && BEFORESCRIPT=""
     else
@@ -830,7 +830,7 @@ getMoverSettings() {
         mvlogger "Debug Logging: $(cfg debuglogging)"
     fi
 
-    if [ -z $(cfg loggingFolder) ]; then
+    if [ -z "$(cfg loggingFolder)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Log parent folder argument provided, defaulting to /tmp"
             echo 'loggingFolder="/tmp"' >>$config_file
