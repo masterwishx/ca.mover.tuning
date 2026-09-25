@@ -663,11 +663,14 @@ getMoverSettings() {
             ###echo "Skipfiletypes supplied"
             SKIPFILETYPES=$(cfg filetypesv)
             SKIPFILETYPES=$(echo "$SKIPFILETYPES" | awk -F, '{for(i=1;i<=NF;i++) {gsub(/\.| /, "", $i); printf "%s%s", $i, (i<NF?" ":"")}}')
+            # a share's Yes adds its types to the global ones, each once
+            [[ "$config_file" =~ shareOverrideConfig ]] && SKIPFILETYPES=$(tr ' ' '\n' <<<"$SKIPFILETYPES $globalSkipFileTypes" | awk 'NF && !seen[$0]++' | tr '\n' ' ')
             mvlogger "Skip filetypes: $SKIPFILETYPES"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SKIPFILETYPES=""
         fi
     fi
+    [[ ! "$config_file" =~ shareOverrideConfig ]] && globalSkipFileTypes=$SKIPFILETYPES
 
     if [ -z $(cfg ignoreHidden) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -1031,8 +1034,6 @@ createFilteredFilelist() {
             [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
             return
         fi
-
-        globalSkipFileTypes=$SKIPFILETYPES
 
         #Gathering information
         #Sharename
@@ -1464,16 +1465,18 @@ createFilteredFilelist() {
 
         #Add Skipfilelist to find string
         TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=0
-        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -n "$SKIPFILETYPES" ]; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
-            for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
+            # split without pathname expansion: start() turns on nullglob, and a type may hold * ? or [
+            read -ra SKIP_EXTS <<<"$SKIPFILETYPES"
+            for ext in "${SKIP_EXTS[@]}"; do
                 FINDSTR="$FINDSTR -not -name '*.${ext//\'/\'\\\'\'}'"
                 if SKIPPED_FILETYPES_DU="$(set -o pipefail; find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null)" &&
                     SKIPPED_FILETYPES_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_FILETYPES_DU" | cut -f1) && [ -n "$SKIPPED_FILETYPES_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|f|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
-                    mvlogger "Error calculating size for ${globalSkipFileTypes}"
+                    mvlogger "Error calculating size for ${ext}"
                 fi
             done
             mvlogger "    Ignored filetypes are using $(bytes_to_human $TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE)"
