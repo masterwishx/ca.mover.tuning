@@ -32,6 +32,21 @@ $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $version = ($cfg['version']);
 $moverRunning = file_exists('/var/run/mover.pid');
 $showMoverButton = version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=');
+// the global Resynchronize also resyncs a share whose override syncs on its own; age_mover matches these two lines
+$overrideSync = false;
+$overrideFiles = glob('/boot/config/plugins/' . $plugin . '/shareOverrideConfig/*.cfg');
+if (is_array($overrideFiles) === true) {
+  foreach ($overrideFiles as $overrideFile) {
+    if (is_file($overrideFile) === false || is_readable($overrideFile) === false) {
+      continue;
+    }
+    $overrideText = (string)file_get_contents($overrideFile);
+    if (strpos($overrideText, 'moverOverride="yes"') !== false && strpos($overrideText, 'synchronizeCache="yes"') !== false) {
+      $overrideSync = true;
+      break;
+    }
+  }
+}
 
 ?>
 
@@ -69,6 +84,12 @@ function toggleAge(val) {
     toggleTime('ctime');
     toggleTime('atime');
   }
+}
+
+// Resynchronize does nothing unless Synchronize is on, here or in a share override
+var mtOverrideSync = <?=$overrideSync === true ? 'true' : 'false'?>;
+function toggleResync() {
+  $('select[name="resynchronizeCache"]').prop('disabled', $('select[name="synchronizeCache"]').val() !== 'yes' && mtOverrideSync === false);
 }
 
 function updateCron() {
@@ -318,6 +339,7 @@ $(function() {
   toggleTime('ctime');
   toggleTime('atime');
   toggleAge($('select[name="age"]').val());
+  toggleResync();
 
   // the share page omits these selects for cache:prefer and unavailable shares
   var $moving = $('select[name="movingThreshold"]');
@@ -1187,7 +1209,7 @@ _(Share size calculation)_:
 </blockquote>
 
 _(Synchronize Primary files to Secondary)_:
-: <select name='synchronizeCache' size='1'>
+: <select name='synchronizeCache' size='1' onchange="toggleResync()">
 <?=mk_option($cfg['synchronizeCache'],"no",_('No'))?>
 <?=mk_option($cfg['synchronizeCache'],"yes",_('Yes'))?>
 </select>
@@ -1244,6 +1266,7 @@ _(Resynchronize all Primary files to Secondary)_:
 :mover_tune_resynchronizecache_plug:
 <p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
 <p>All files will be synchronized again independently of modification time.</p>
+<p>It resynchronizes the shares that synchronize, through <strong>Synchronize Primary files to Secondary</strong> here or in a share's own Mover Tuning settings, and is greyed out while no share does.</p>
 <p>After lowering the number of days of the age filter, or setting it to No or Auto, set this to <strong>Run once</strong>: files the filter held back are not synchronized otherwise.</p>
 <p>This can be a long operation. Run-once setting will reset back to <strong>No</strong> after next run. A run in Test Mode leaves it set.</p>
 :end

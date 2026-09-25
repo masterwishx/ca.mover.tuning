@@ -446,6 +446,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :mover_tune_resynchronizecache_plug:
 <p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
 <p>All files will be synchronized again independently of modification time.</p>
+<p>It resynchronizes the shares that synchronize, through <strong>Synchronize Primary files to Secondary</strong> here or in a share's own Mover Tuning settings, and is greyed out while no share does.</p>
 <p>After lowering the number of days of the age filter, or setting it to No or Auto, set this to <strong>Run once</strong>: files the filter held back are not synchronized otherwise.</p>
 <p>This can be a long operation. Run-once setting will reset back to <strong>No</strong> after next run. A run in Test Mode leaves it set.</p>
 :end

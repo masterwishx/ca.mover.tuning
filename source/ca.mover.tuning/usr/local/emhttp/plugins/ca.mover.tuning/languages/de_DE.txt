@@ -445,6 +445,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :mover_tune_resynchronizecache_plug:
 <p>Dies wird alle Dateien im Primärspeicher (Cache) sowohl auf dem Primär‑ als auch auf dem Sekundärspeicher (Array) erneut synchronisieren, sodass sie gesichert und durch Parität geschützt sind.</p>
 <p>Alle Dateien werden unabhängig von ihrer Änderungszeit erneut synchronisiert.</p>
+<p>Gilt für die Freigaben, die synchronisieren – über <strong>Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren</strong> hier oder in den eigenen Mover‑Tuning‑Einstellungen einer Freigabe – und ist ausgegraut, solange keine Freigabe synchronisiert.</p>
 <p>Nach dem Verringern der Tage des Altersfilters oder dem Umstellen auf Nein oder Auto hier <strong>Einmal ausführen</strong> wählen, sonst werden die vom Filter zurückgehaltenen Dateien nicht synchronisiert.</p>
 <p>Dies kann ein sehr langer Vorgang sein. Die Einstellung „Einmal ausführen“ wird nach dem nächsten Durchlauf automatisch wieder auf <strong>Nein</strong> gesetzt. Ein Durchlauf im Testmodus lässt sie unverändert.</p>
 :end
