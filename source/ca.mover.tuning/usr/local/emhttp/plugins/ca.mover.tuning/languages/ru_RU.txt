@@ -75,6 +75,7 @@ Move All from Primary->Secondary cacheyes shares pool percentage=Перемес�
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Переместить всё из Основного->Вторичного (cache:yes) шар, когда диск заполнен выше определённого процента
 Move All from Primary->Secondary shares pool percentage=Переместить всё из Основного->Вторичного — процент заполнения пула шар
 Move All threshold raised to %1 to stay above the moving threshold=Порог «Переместить всё» повышен до %1, чтобы оставаться выше порога перемещения.
+Move All threshold set to %1, as the global settings have none=Порог «Переместить всё» установлен на %1, так как в глобальных настройках его нет.
 Moved Only=Только перемещённые
 Move empty folders=Перемещать пустые папки
 Move files based on minimum size=Перемещать файлы на основе минимального размера
@@ -140,11 +141,13 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=�
 Thank you for using this plugin=Спасибо за использование этого плагина.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Сохранённый порог освобождения — %1, выше порога перемещения %2. Mover запускается при %2 и останавливается при %1, поэтому ничего не перемещается, пока пул находится между ними. Эта страница показывает %3, и сохранение установит это значение.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Сохранённый порог перемещения всех — %1, на уровне или ниже порога перемещения %2. Всё на cache:yes перемещается, список пропусков и фильтры игнорируются до достижения порога. Эта страница показывает %3, и сохранение установит это значение.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Глобальный порог «Переместить всё» %1 не выше порога перемещения этой шары (%2), поэтому всё на этой шаре перемещается начиная с %1.
 Top Folder=Верхняя папка
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Расписание Unraid Mover сейчас **включено**
 Use ATIME=Использовать ATIME
 Use CTIME=Использовать CTIME
+Use global=Глобальная настройка
 Used IDE=Используемый IDE
 User shares not enabled=Пользовательские шары не включены!
 Validate input filenames to prevent attacks=Проверять имена файлов для предотвращения атак
@@ -448,7 +451,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_moveroverride_plug:
-> Выберите **Да**, чтобы переопределить основные настройки Mover Tuning для этой шары.
+> Выберите **Да**, чтобы задать ниже собственные настройки Mover Tuning для этой шары. **Глобальная настройка** означает, что параметр следует глобальному, в том числе при его последующих изменениях; любой другой выбор, включая **Нет**, действует для этой шары вместо глобальной настройки.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -472,7 +475,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_filelistf_plug:
-> Выберите **Да**, чтобы пропускать файлы, перечисленные в указанном текстовом файле.
+> **Да** — пропускать файлы и папки из текстового файла ниже вместо глобального списка. **Нет** — для этой шары не пропускаются файлы из списков. **Глобальная настройка** — следовать глобальной настройке списка.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -480,7 +483,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_filetypesf_plug:
-> Выберите **Да**, чтобы пропускать определённые типы файлов в дополнение к выбранным глобально.
+> **Да** — пропускать типы файлов ниже в дополнение к глобальным. **Нет** — для этой шары не пропускаются никакие типы файлов, даже глобальные. **Глобальная настройка** — следовать глобальной настройке.
 :end
 
 :mover_tune_share_filetypesv_plug:

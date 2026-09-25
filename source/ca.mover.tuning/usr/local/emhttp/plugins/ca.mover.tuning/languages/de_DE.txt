@@ -75,6 +75,7 @@ Move All from Primary->Secondary cacheyes shares pool percentage=Alles vom Prim�
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben (cache:yes), wenn der Füllstand über einem bestimmten Wert liegt
 Move All from Primary->Secondary shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben – Pool‑Prozent
 Move All threshold raised to %1 to stay above the moving threshold=Grenze „Alles verschieben“ auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
+Move All threshold set to %1, as the global settings have none=Grenze „Alles verschieben“ auf %1 gesetzt, da die globalen Einstellungen keine haben.
 Moved Only=Nur verschobene Dateien
 Move empty folders=Leere Ordner verschieben
 Move files based on minimum size=Dateien basierend auf Mindestgröße verschieben
@@ -140,11 +141,13 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=T
 Thank you for using this plugin=Danke, dass du dieses Plugin verwendest.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Die gespeicherte Freigabegrenze beträgt %1 und liegt über der Verschiebegrenze %2. Die Datenverschiebung startet bei %2 und stoppt bei %1, daher wird nichts verschoben, solange der Pool zwischen diesen Werten liegt. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Die gespeicherte „Alles verschieben“-Grenze beträgt %1 und liegt auf oder unter der Verschiebegrenze %2. Alles auf cache:yes‑Freigaben wird verschoben, Skip‑Liste und Filter werden ignoriert, bevor die Verschiebegrenze erreicht wird. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Die globale „Alles verschieben“-Grenze von %1 liegt auf oder unter der Verschiebegrenze dieser Freigabe (%2), daher wird ab %1 alles auf dieser Freigabe verschoben.
 Top Folder=Oberster Ordner
 Unraid mover=Unraid‑Mover
 Unraid Mover schedule is currently enabled=Unraid‑Mover‑Zeitplan ist derzeit **aktiviert**
 Use ATIME=ATIME verwenden
 Use CTIME=CTIME verwenden
+Use global=Global verwenden
 Used IDE=Verwendete IDE
 User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
 Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
@@ -450,7 +453,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_moveroverride_plug:
-> Wähle **Ja**, um die primären Mover‑Tuning‑Einstellungen für diese Freigabe zu überschreiben.
+> Wähle **Ja**, um unten eigene Mover‑Tuning‑Einstellungen für diese Freigabe festzulegen. **Global verwenden** lässt eine Einstellung der globalen folgen, auch wenn diese sich später ändert; jede andere Wahl, auch **Nein**, gilt für diese Freigabe statt der globalen Einstellung.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -474,7 +477,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filelistf_plug:
-> Wähle **Ja**, um Dateien zu überspringen, die in einer angegebenen Textdatei gelistet sind.
+> **Ja** überspringt die Dateien und Ordner aus der Textdatei unten, statt der globalen Liste. **Nein** überspringt für diese Freigabe keine gelisteten Dateien. **Global verwenden** folgt der globalen Einstellung der Liste.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -482,7 +485,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filetypesf_plug:
-> Wähle **Ja**, um bestimmte Dateitypen zusätzlich zu den globalen auszuschließen.
+> **Ja** schließt die Dateitypen unten zusätzlich zu den globalen aus. **Nein** schließt für diese Freigabe keine Dateitypen aus, auch nicht die globalen. **Global verwenden** folgt der globalen Einstellung.
 :end
 
 :mover_tune_share_filetypesv_plug:

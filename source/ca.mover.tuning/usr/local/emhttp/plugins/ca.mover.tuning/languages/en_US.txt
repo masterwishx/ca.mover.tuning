@@ -77,6 +77,7 @@ Move All from Primary->Secondary cacheyes shares pool percentage=Move All from P
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage
 Move All from Primary->Secondary shares pool percentage=
 Move All threshold raised to %1 to stay above the moving threshold=Move All threshold raised to %1 to stay above the moving threshold.
+Move All threshold set to %1, as the global settings have none=Move All threshold set to %1, as the global settings have none.
 Moved Only=
 Move empty folders=
 Move files based on minimum size=
@@ -142,11 +143,13 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=T
 Thank you for using this plugin=Thank you for using this plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=The saved freeing threshold is %1, above the moving threshold of %2. The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them. This page now shows %3, and saving will store that.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=The saved Move All threshold is %1, at or below the moving threshold of %2. Everything on cache:yes shares moves, skip list and filters ignored, before the moving threshold is reached. This page now shows %3, and saving will store that.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1.
 Top Folder=
 Unraid mover=
 Unraid Mover schedule is currently enabled=Unraid Mover schedule is currently **enabled**
 Use ATIME=
 Use CTIME=
+Use global=
 Used IDE=
 User shares not enabled=User shares not enabled!
 Validate input filenames to prevent attacks=
@@ -451,7 +454,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_moveroverride_plug:
-> Select **Yes** to override the primary Mover Tuning settings for this share.
+> Select **Yes** to set this share's own Mover Tuning settings below. **Use global** makes a setting follow the global one, also when that changes later; any other choice, **No** included, applies to this share instead of the global setting.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -475,7 +478,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_filelistf_plug:
-> Select **Yes** to skip files which have been listed in a specified text file.
+> **Yes** skips the files and folders listed in the text file below, instead of the global list. **No** skips no listed files for this share. **Use global** follows the global skip list setting.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -483,7 +486,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_filetypesf_plug:
-> Select **Yes** to skip specific file types in addition to those selected globally.
+> **Yes** skips the file types below in addition to the global ones. **No** skips no file types for this share, not even the global ones. **Use global** follows the global setting.
 :end
 
 :mover_tune_share_filetypesv_plug:

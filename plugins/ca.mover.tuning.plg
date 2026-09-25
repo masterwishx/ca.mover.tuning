@@ -783,6 +783,20 @@ if [[ -f /boot/config/plugins/&name;/mover.cron ]]; then
   sed -i -E 's#/usr/local/sbin/mover(\.old)? (start|force)#/usr/local/emhttp/plugins/&name;/mover.php force start#' /boot/config/plugins/&name;/mover.cron
 fi
 
+# Once per install history: a share override saved before Use global existed followed the global setting where it said No
+# for these keys. The marker is also in default.cfg, so a No saved after Defaults is never rewritten.
+if [[ -f "$config_file" ]] &amp;&amp; ! grep -q '^migratedOverrideNo=' "$config_file"; then
+  keys='filelistf|filetypesf|sizef|sparsnessf|sizefSync|omovercfg|synchronizeCache'
+  for f in /boot/config/plugins/&name;/shareOverrideConfig/*.cfg; do
+    [[ -f "$f" ]] || continue
+    changed=$(grep -oE "^($keys)=(\"no\"|no)"$'\r'"?\$" "$f" | cut -d= -f1 | tr '\n' ' ')
+    [[ -n "$changed" ]] || continue
+    sed -i -E "s/^($keys)=\"no\"(\r?)\$/\1=\"\"\2/; s/^($keys)=no(\r?)\$/\1=\2/" "$f" &amp;&amp; echo "- Share override $(basename "$f" .cfg): ${changed% } now Use global (was No, which followed the global setting)"
+  done
+  [[ -n "$(tail -c1 "$config_file")" ]] &amp;&amp; echo >> "$config_file"
+  echo 'migratedOverrideNo="yes"' >> "$config_file"
+fi
+
 # Refresh cron
 /usr/local/sbin/update_cron
 
