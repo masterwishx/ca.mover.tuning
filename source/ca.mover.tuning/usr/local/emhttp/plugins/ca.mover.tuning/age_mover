@@ -469,20 +469,40 @@ mvDebuglogger() {
 getMoverSettings() {
     #Use the config file instead of input variables (ease execution from command line)
     local config_file="$1"
+    # the share's cache mode when config_file is its override
+    local share_mode="$2"
+    # cfg KEY [FILE]: FILE defaults to config_file
     cfg() {
         local param="$1"
         local value
+        # a key the share page cannot show for this cache mode (left from another mode) reads as unset: Use global
+        if [ -z "$2" ] && [ -n "$share_mode" ]; then
+            case "$param" in
+            movingThreshold | freeingThreshold | synchronizeCache | omovercfg | omoverthresh | sizefSync | sizeinMSync) [ "$share_mode" != "yes" ] && return ;;
+            fillupThreshold) [ "$share_mode" != "prefer" ] && return ;;
+            esac
+        fi
         while IFS='=' read -r key val; do
             [ "$key" == "$param" ] && {
                 value="$val"
                 break
             }
-        done <"$config_file"
+        done <"${2:-$config_file}"
         #echo "${value//\"/}" # Print value or empty string if not found, without quotes
 
         # Strip only *outer* quotes, keep inner ones
         value="${value%\"}" # remove trailing "
         value="${value#\"}" # remove leading "
+        echo "$value"
+    }
+    # the value of a filter a share turns on; left on Use global (empty) it is the global one, as the global page shows it
+    cfg_dep() {
+        local value
+        value=$(cfg "$1")
+        if [ -z "$value" ] && [[ "$config_file" =~ shareOverrideConfig ]]; then
+            value=$(cfg "$1" "$MOVERTUNINGCFGFILE")
+            [ -z "$value" ] && value=$(cfg "$1" "$MOVERTUNING_DEFAULT_CFGFILE")
+        fi
         echo "$value"
     }
 
@@ -540,8 +560,9 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg omovercfg) = "yes" ]; then
-            OMOVERTHRESH=$(cfg omoverthresh)
+            OMOVERTHRESH=$(cfg_dep omoverthresh)
             [ -n "$OMOVERTHRESH" ] && mvlogger "Primary threshold to Move all Primary->Secondary shares to secondary: $OMOVERTHRESH %"
+            [ -z "$OMOVERTHRESH" ] && mvlogger "Warning: Move All from Primary->Secondary shares is on without a percentage, so it never moves all files"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && OMOVERTHRESH=""
         fi
@@ -556,7 +577,7 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg age) = "yes" ]; then
-            AGE=$(cfg daysold)
+            AGE=$(cfg_dep daysold)
             if [ $AGE -eq -1 ]; then
                 mvlogger "Age: Automatic (smart caching)"
             else
@@ -713,7 +734,7 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg sizef) = "yes" ]; then
-            SIZE=$(cfg sizeinM)
+            SIZE=$(cfg_dep sizeinM)
             [ $SIZE -gt 0 ] && mvlogger "Move Size supplied: $SIZE"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SIZE=0
@@ -728,7 +749,7 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg sparsnessf) = "yes" ]; then
-            SPARSENESS=$(cfg sparsnessv)
+            SPARSENESS=$(cfg_dep sparsnessv)
             [ $SPARSENESS -gt 0 ] && mvlogger "Sparness supplied: $SPARSENESS"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SPARSENESS=0
@@ -780,7 +801,7 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg sizefSync) = "yes" ]; then
-            SYNC_SIZE=$(cfg sizeinMSync)
+            SYNC_SIZE=$(cfg_dep sizeinMSync)
             [ $SYNCHRONIZECACHE == "yes" ] || [ $RESYNCHRONIZECACHE == "yes" ] && [ $SYNC_SIZE -gt 0 ] && mvlogger "Sync Size supplied: $SYNC_SIZE"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SYNC_SIZE=0
@@ -1051,6 +1072,9 @@ createFilteredFilelist() {
         # Share title line
         mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
 
+        # Determine Cache mode
+        SHAREUSECACHE=$(grep shareUseCache "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
         SHARETUNINGFILE="${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg"
         if grep -qs 'moverOverride="yes"' "$SHARETUNINGFILE"; then
@@ -1059,7 +1083,7 @@ createFilteredFilelist() {
             overrideFlag=1
             mvlogger "Settings override:"
             mvlogger "------------------"
-            getMoverSettings "$SHARETUNINGFILE"
+            getMoverSettings "$SHARETUNINGFILE" "$SHAREUSECACHE"
             mvlogger "------------------------------------------------------------------------"
         elif [ $overrideFlag = 1 ]; then
             #else if overrideFLag set from previous loop then restore global settings
@@ -1070,9 +1094,6 @@ createFilteredFilelist() {
             getMoverSettings "$MOVERTUNINGCFGFILE"
             mvlogger "------------------------------------------------------------------------"
         fi
-
-        # Determine Cache mode
-        SHAREUSECACHE=$(grep shareUseCache "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
 
         # Determine primary storage
         PRIMARYSTORAGENAME=$(grep "shareCachePool=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
