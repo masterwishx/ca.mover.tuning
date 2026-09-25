@@ -1725,6 +1725,31 @@ decideMoveActions() {
     SHARE_PLAN_RULES="$SHARE_PLAN_RULES" awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
         # the path is the last field and may itself contain the separator
         function full_path(   p, i) { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; return p }
+        # the Synchronize and lastCacheSync a share syncs with: the global ones, or while the global Synchronize is off those of its active override
+        function share_sync(share,    cfgfile, line, override, sync, mark, m) {
+            if (share in sync_on) return
+            sync_on[share] = global_sync
+            sync_mark[share] = global_mark
+            if (!shareOverrideCfgDir_exist || global_sync != "no") return
+            sync_on[share] = "no"
+            sync_mark[share] = ""
+            cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" share ".cfg"
+            while ((getline line < cfgfile) > 0) {
+                if (line ~ /moverOverride="yes"/) override = 1
+                if (line ~ /synchronizeCache="yes"/) sync = 1
+                if (match(line, /lastCacheSync="([^"]+)"/, m)) mark = m[1]
+            }
+            close(cfgfile)
+            if (override && sync) {
+                sync_on[share] = "yes"
+                sync_mark[share] = mark
+            }
+        }
+        # whether share syncs a kept file of that time and size: at or after its lastCacheSync minus its age window, under its size limit
+        function share_syncs(share, t, size) {
+            share_sync(share)
+            return sync_on[share] == "yes" && (t >= sync_mark[share] - sync_window[share] || RESYNCHRONIZECACHE == "yes") && (!sync_max[share] || size < sync_max[share])
+        }
         BEGIN {
             FS = OFS = "|"
 
@@ -1734,9 +1759,9 @@ decideMoveActions() {
             # Initialize previous inode and dictionary for pool sums
             previous_inode = 0
 
-            # Init variables for track last share for Sync overrides
-            prev_share = ""
+            # the global Synchronize and lastCacheSync, which share_sync applies an active share override over
             global_sync = SYNCHRONIZECACHE
+            global_mark = LASTCACHESYNC
 
             # Check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
@@ -1750,6 +1775,17 @@ decideMoveActions() {
             n = split(ENVIRON["SHARE_PLAN_RULES"], rules, "\n")
             for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)\|([0-9]+)$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0; sync_window[r[1]] = r[4] * 86400 }
 
+            # the first pass can change a plan only when shares keep, sync, limit or date their syncs differently; otherwise the list is read once
+            for (share in keep_primary) {
+                share_sync(share)
+                sig = keep_primary[share] "|" sync_max[share] "|" sync_window[share] "|" sync_on[share] "|" sync_mark[share]
+                if (first_sig != "" && sig != first_sig) groups = 1
+                first_sig = sig
+            }
+            pass = 2
+            if (groups) pass = 1
+            else ARGV[1] = ""
+
             # Print new header
             printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
             "PRIMARYSTORAGENAME","SHARENAME","SHAREUSECACHE","MODIFYTIME",
@@ -1757,23 +1793,23 @@ decideMoveActions() {
             "ACTION","FROM","TO","FILETYPE","FILEPATH"
         }
 
-        # first pass: the names of a hardlink group can sit in several cache:yes shares; the group is kept if one of them
-        # keeps its primary files, and synced with the widest window and the largest size limit among them
-        NR == FNR {
+        # first pass: the names of a hardlink group (keyed as in holdPartialHardlinks) can sit in several cache:yes shares; the group
+        # keeps its primary files if one of those shares does, and is synced if one of them would sync it
+        FNR == 1 && NR > 1 { pass = 2 }
+        pass == 1 {
             if (FNR > 1 && $10 > 1 && $4 == "yes") {
                 split(full_path(), parts, "/")
-                group = parts[3] "|" $11
+                group = parts[3] "|" $10 "|" $11 "|" $5
                 group_seen[group] = 1
                 if (keep_primary[$3]) group_keep[group] = 1
-                if (!sync_max[$3]) group_nolimit[group] = 1
-                else if (sync_max[$3] > group_limit[group]) group_limit[group] = sync_max[$3]
-                if (sync_window[$3] > group_window[group]) group_window[group] = sync_window[$3]
+                if (share_syncs($3, $5, $8)) group_sync[group] = 1
             }
             next
         }
 
         FNR > 1 { # Main loop, skip header line
-            if (system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
+            # on the first row, then every 1000 rows: a system() call per row slows a big list down
+            if (FNR % 1000 == 2 && system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
                 exit 1
             }
 
@@ -1791,13 +1827,14 @@ decideMoveActions() {
 
             # the sync size must judge every name of a hardlink group by its real size: the block below zeroes later names
             file_size = $8
-            # one decision for a hardlink group, whatever share each of its names is in: see the first pass
-            group = storage_pool "|" $11
-            if ($10 > 1 && group in group_seen) {
-                keep = group_keep[group]; limit = (group in group_nolimit) ? 0 : group_limit[group]; window = group_window[group]
-            } else {
-                keep = keep_primary[$3]; limit = sync_max[$3]; window = sync_window[$3]
+            # a hardlink group gets one keep-primary and one sync decision whatever share each name is in (first pass);
+            # the projection below still judges the names of each share apart
+            grouped = 0
+            if (groups && $10 > 1) {
+                group = storage_pool "|" $10 "|" $11 "|" $5
+                grouped = (group in group_seen)
             }
+            keep = grouped ? (group in group_keep) : keep_primary[$3]
 
             # Handle hardlinks
             if ($10 > 1) {
@@ -1829,44 +1866,10 @@ decideMoveActions() {
                 }
             }
 
-            ### Check if share has Sync override ###
-            # Set current sharename
-            sharename = $3
-            
-            # Check at the start using previous state
-            if (shareOverrideCfgDir_exist && global_sync == "no" && sharename != prev_share) {
-
-            # Initialize for this share
-            cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" sharename ".cfg"
-            SYNCHRONIZECACHE = "no"
-            LASTCACHESYNC = ""
-            moverOverride = 0
-            synchronizeCache = 0
-
-            # Check file exists
-            if ((getline test < cfgfile) > 0) {
-                close(cfgfile)
-
-                # parse the file
-                while ((getline line < cfgfile) > 0) {
-                    if (line ~ /moverOverride="yes"/)
-                        moverOverride = 1
-                    if (line ~ /synchronizeCache="yes"/)
-                        synchronizeCache = 1
-                    if (match(line, /lastCacheSync="([^"]+)"/, m))
-                        LASTCACHESYNC = m[1]
-                }
-                close(cfgfile)
-
-                if (moverOverride && synchronizeCache) {
-                    SYNCHRONIZECACHE = "yes"
-                }
-            }
-
-            # remember current state for next record
-            prev_share = sharename
-            }
-            ### ###
+            # the Synchronize and lastCacheSync of this share; the syncs from secondary and from unattended storage below read them too
+            share_sync($3)
+            SYNCHRONIZECACHE = sync_on[$3]
+            LASTCACHESYNC = sync_mark[$3]
 
             # Take decision
             held = (full_path() in held_paths)
@@ -1876,7 +1879,7 @@ decideMoveActions() {
 
                 if (action == "keep on primary") {
                     source = storage_path
-                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC - window || RESYNCHRONIZECACHE == "yes") && (!limit || file_size < limit)) {
+                    if (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (grouped ? (group in group_sync) : share_syncs($3, $5, file_size))) {
                         action = "sync from primary"
                         destination = "/mnt/" $2
                         if ($12 == "d") {
@@ -2713,6 +2716,8 @@ processTheMoves() {
                     if grep -q "lastCacheSync=" "$config_file"; then
                         sed -i "s/lastCacheSync=.*$/lastCacheSync=\"$EPOCH\"/" "$config_file"
                     else
+                        # a file without a final newline would glue the mark onto its last key
+                        [ -n "$(tail -c 1 "$config_file")" ] && echo >>"$config_file"
                         echo "lastCacheSync=\"$EPOCH\"" >>"$config_file"
                     fi
                     mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previous CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
