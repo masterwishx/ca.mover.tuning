@@ -2923,6 +2923,10 @@ reset() {
     rm -rf "$MOVERTUNING_OVERRIDE_CFGFOLDER"
     # Copy default config
     cp -a "$MOVERTUNING_DEFAULT_CFGFILE" "$MOVERTUNINGCFGFILE"
+    # Remove the schedule files, then write back the ones default.cfg sets
+    rm -f "${MOVERTUNINGCFGFILE%/*}/mover.cron" "${MOVERTUNINGCFGFILE%/*}/mover.tuning.cron"
+    /usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/updateCron.php sync
+    /usr/local/sbin/update_cron
     exit
 }
 
@@ -2984,7 +2988,7 @@ usage() {
     echo "  stop     - Forced stop mover."
     echo "  softstop - Soft stop mover. (Recommended)"
     echo "  status   - Check if the mover is running."
-    echo "  reset    - Reset plugin config to default values and delete the override config folder."
+    echo "  reset    - Reset plugin config and schedules to default values and delete the override config folder."
     echo "  debug    - Create plugin diagnostics ZIP at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
     exit 1
 }

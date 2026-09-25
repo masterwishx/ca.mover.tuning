@@ -177,8 +177,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-function resetDefaults() { 
-  $.post("/plugins/ca.mover.tuning/reset.php");
+function resetDefaults() {
+  swal({
+    title:"_(Reset Mover Tuning to defaults?)_",
+    text:"_(All plugin settings return to their defaults, including the Mover Tuning schedule and the forced move schedule, and the override settings of every share are deleted.)_",
+    html:true,
+    type:'warning',
+    showCancelButton:true,
+    confirmButtonText:"_(Defaults)_",
+    cancelButtonText:"_(Cancel)_"
+  },function(confirmed){
+    if (confirmed) $.post("/plugins/ca.mover.tuning/reset.php").always(function(){location.reload();});
+  });
 }
 
 function updateScreenMoverTuningSettings(option,slow) {
@@ -1255,7 +1265,7 @@ _(Resynchronize all Primary files to Secondary)_:
 : <span class="buttons-spaced">
     <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
-    <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
+    <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults()">
 <?if ($showMoverButton):?>
     <button type="button" id="StartTuneMoverBtn" class="button" title="_(Run Mover Tuning...)_" aria-label="_(Start Mover Tuning)_" aria-disabled="<?=$moverRunning ? 'true' : 'false'?>" <?if($moverRunning) echo 'disabled';?>>
     <i id="MoverWrench" class="fa fa-wrench" style="color:<?=$moverRunning ? 'var(--gray-500)' : 'var(--blue-700)'?>;"></i> _(Move now)_
