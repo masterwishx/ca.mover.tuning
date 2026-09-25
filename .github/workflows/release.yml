@@ -91,8 +91,8 @@ jobs:
           due() {  # $1 channel, $2 branch, $3 the branch's commit
             local latest merged released
             latest=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "release/$1" --base "$2" \
-              --limit 20 --json number,mergeCommit,mergedAt \
-              --jq 'sort_by(.mergedAt) | last | "\(.number // "") \(.mergeCommit.oid // "")"') || return 1
+              --limit 20 --json number,mergeCommit,mergedAt,isCrossRepository \
+              --jq '[.[] | select(.isCrossRepository | not)] | sort_by(.mergedAt) | last | "\(.number // "") \(.mergeCommit.oid // "")"') || return 1
             merged="${latest#* }"
             [ -n "$merged" ] && git merge-base --is-ancestor "$merged" "$3" 2>/dev/null || return 0
             released=$(git tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]*' --contains "$merged") || return 1

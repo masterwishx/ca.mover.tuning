@@ -14,6 +14,8 @@ plg_merge() {
   git show "$from:$PLG" > "$theirs"
   git show "$from:$CHANGELOG" > "$theirs_cl"
   if ! git merge --no-ff --no-commit "$from" >/dev/null; then
+    # a refused merge (an untracked file in the way) leaves no MERGE_HEAD and nothing unmerged to resolve
+    git rev-parse -q --verify MERGE_HEAD >/dev/null || { echo "::error::could not merge $from"; return 1; }
     while IFS= read -r -d '' f; do
       case "$f" in
         "$PLG"|"$CHANGELOG") ;;

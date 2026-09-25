@@ -257,6 +257,9 @@ def merge_manifest(base: str, ours: str, theirs: str) -> str:
             path.write_text(_without_release_fields(text), encoding="utf-8")
             paths.append(str(path))
         r = subprocess.run(["git", "merge-file", "-p", *paths], capture_output=True, text=True)
+    # 1-127 counts conflicts; anything else means merge-file itself failed (binary input, unreadable file)
+    if not 0 <= r.returncode <= 127:
+        raise ChangelogError(f"git merge-file failed: {r.stderr.strip()}")
     if r.returncode != 0:
         raise ChangelogError("both branches changed the same part of the manifest outside its release fields; merge it by hand")
     keep = {m.group(2): m.group(3) for m in RELEASE_ENTITY_RE.finditer(ours)}

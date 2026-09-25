@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -1015,3 +1016,49 @@ def test_refresh_stops_rather_than_drop_a_code_change_on_the_release_pr(channels
     r = channels.run("plg_release_pr.sh", ok=False, CHANNEL="beta", BASE="beta")
     assert r.returncode != 0 and Channels.PLG in r.stdout + r.stderr
     assert "echo installed fine" in channels.show("release/beta", Channels.PLG), "the edit is still on the PR"
+
+
+def test_merge_manifest_reports_a_failed_merge_file_as_a_failure():
+    """merge-file exits 255 when it cannot run (binary input); that is not a clash between the branches."""
+    ours = _manifest(install="chmod 644 /usr/local/sbin/x\0")
+    with pytest.raises(pr.ChangelogError, match="git merge-file failed: .*binary"):
+        pr.merge_manifest(_manifest(), ours, _manifest(branch="beta"))
+
+
+def test_merge_stops_when_git_refuses_to_merge(tmp_path):
+    """An untracked file in the way makes git refuse without a conflict; nothing may be committed as if merged."""
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "master")
+    _git(repo, "config", "user.email", "t@example.com")
+    _git(repo, "config", "user.name", "t")
+    (repo / "p.plg").write_text(_manifest())
+    (repo / "CHANGELOG.md").write_text("# Changelog\n\n## 2026.09.19\n\n- Notes for 2026.09.19\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "base")
+    _git(repo, "switch", "-q", "-c", "other")
+    (repo / "x").write_text("from other")
+    _git(repo, "add", "x")
+    _git(repo, "commit", "-qm", "add x")
+    _git(repo, "switch", "-q", "master")
+    (repo / "x").write_text("untracked, in the way")
+    script = (f'set -euo pipefail\nPLG=p.plg CHANGELOG=CHANGELOG.md PLGR="python3 {SCRIPTS}/plg_release.py"\n'
+              f'. "{SCRIPTS}/plg_release_merge.sh"\nplg_merge other stable\n')
+    r = subprocess.run(["bash", "-c", script], cwd=repo, capture_output=True, text=True)
+    assert r.returncode != 0 and "could not merge other" in r.stdout + r.stderr
+
+
+def test_decide_ignores_a_merged_pr_from_a_fork_with_the_release_branch_name(tmp_path, decide_repo):
+    """Only the managed release branch cuts a release; a fork's branch of the same name is somebody's PR."""
+    repo, merged = decide_repo
+    listing = [{"number": 9, "isCrossRepository": True, "mergedAt": "2026-09-25T00:00:00Z", "mergeCommit": {"oid": merged}}]
+
+    def gh(prs):
+        return ('while [ $# -gt 0 ]; do [ "$1" = --jq ] && { f="$2"; break; }; shift; done\n'
+                f"jq -r \"$f\" <<'JSON'\n{json.dumps(prs)}\nJSON")
+
+    r, out = _run_decide(tmp_path, repo, "auto", gh(listing))
+    assert r.returncode == 0, r.stderr
+    assert out["mode"] == "pr"
+    listing[0]["isCrossRepository"] = False
+    assert _run_decide(tmp_path, repo, "auto", gh(listing))[1]["mode"] == "release"
