@@ -107,8 +107,13 @@ $PLGR check --changelog "$CHANGELOG" --plg "$PLG" --channel "$CHANNEL" --branch 
 git push -q origin "HEAD:$BASE"
 trap - ERR
 
-# The branch has done its job; left behind, its Unreleased would be carried into the next release PR.
-git push -q origin --delete "release/$CHANNEL" || echo "::warning::could not delete release/$CHANNEL"
+# The branch has done its job; left behind, its Unreleased would be carried into the next release PR. Only while it
+# is still what was merged: a refresh may have rebuilt it for a new PR since, and deleting it would close that PR.
+if [ -n "$PR_NUMBER" ]; then
+  { merged_head=$(gh pr view "$PR_NUMBER" --json headRefOid --jq .headRefOid) \
+    && git push -q --force-with-lease="refs/heads/release/$CHANNEL:$merged_head" origin ":refs/heads/release/$CHANNEL"; } \
+    || echo "::warning::left release/$CHANNEL in place"
+fi
 
 # Non-fatal: the release is already published and verified; a failed courtesy comment must not red the run.
 if [ -n "$PR_NUMBER" ]; then

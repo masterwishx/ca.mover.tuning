@@ -7,9 +7,11 @@ import argparse
 import datetime as dt
 import hashlib
 import http.client
+import os
 import re
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.request
 from dataclasses import dataclass, field
@@ -186,7 +188,8 @@ def parse_changes(content: list[str]) -> Changelog:
             continue
         flush()
         m = PLG_HEADING_RE.match(line)
-        current = Section(m.group("ver"), rest=m.group("rest")) if m else Section(_xml_unescape(line[3:]), note=True)
+        current = (Section(m.group("ver"), rest=_xml_unescape(m.group("rest"))) if m
+                   else Section(_xml_unescape(line[3:]), note=True))
         log.sections.append(current)
         buf = []
     flush()
@@ -202,7 +205,7 @@ def render_changes(log: Changelog, channel: str) -> list[str]:
         if s.note:
             blocks.append([f"###{_xml_escape(s.version)}"] + [_xml_escape(ln) for ln in s.body])
         elif s.released and (channel == "beta" or not s.beta):
-            blocks.append([f"###{s.version}{s.rest}"] + [_xml_escape(ln) for ln in s.body])
+            blocks.append([f"###{s.version}{_xml_escape(s.rest)}"] + [_xml_escape(ln) for ln in s.body])
     for i, block in enumerate(blocks):
         if i:
             out.append("")
@@ -236,6 +239,32 @@ def plg_entities(text: str) -> dict[str, str]:
     return ents
 
 
+RELEASE_ENTITY_RE = re.compile(r'(<!ENTITY\s+(version|md5|pluginURL)\s+")([^"]*)("\s*>)')
+
+
+def _without_release_fields(text: str) -> str:
+    """The manifest with its per-branch parts blanked: release entities and the CHANGES block."""
+    head, _, tail = split_plg(RELEASE_ENTITY_RE.sub(r"\1\4", text))
+    return "\n".join(head + tail) + "\n"
+
+
+def merge_manifest(base: str, ours: str, theirs: str) -> str:
+    """Merge two branches' manifests, keeping ours' release entities; CHANGES is left empty for render."""
+    with tempfile.TemporaryDirectory() as tmp:
+        paths = []
+        for name, text in (("ours", ours), ("base", base), ("theirs", theirs)):
+            path = Path(tmp) / name
+            path.write_text(_without_release_fields(text), encoding="utf-8")
+            paths.append(str(path))
+        r = subprocess.run(["git", "merge-file", "-p", *paths], capture_output=True, text=True)
+    if r.returncode != 0:
+        raise ChangelogError("both branches changed the same part of the manifest outside its release fields; merge it by hand")
+    keep = {m.group(2): m.group(3) for m in RELEASE_ENTITY_RE.finditer(ours)}
+    if len(keep) != 3:
+        raise ChangelogError("the manifest must declare version, md5 and pluginURL entities")
+    return RELEASE_ENTITY_RE.sub(lambda m: m.group(1) + keep[m.group(2)] + m.group(4), r.stdout)
+
+
 def package_url(text: str) -> str:
     m = re.search(r'<FILE\s+Name="[^"]*\.txz"[^>]*>\s*<URL>\s*([^<]+?)\s*</URL>', text)
     if not m:
@@ -266,9 +295,14 @@ def git(repo: Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True).stdout
 
 
-def commit_bullets(repo: Path, since: str, until: str) -> list[str]:
+def commit_bullets(repo: Path, since: str, until: str, changelog: Path | None = None) -> list[str]:
     rng = f"{since}..{until}" if since else until
-    raw = git(repo, "log", "--no-merges", "--format=%h%x1f%s%x1f%an", rng)
+    paths = []
+    if changelog is not None:
+        rel = os.path.relpath(changelog.resolve(), repo.resolve())
+        # an edit that only rewrites the notes (a web-UI "Update CHANGELOG.md") is not a change to announce
+        paths = ["--", ".", f":(top,exclude){rel}"] if not rel.startswith("..") else []
+    raw = git(repo, "log", "--no-merges", "--format=%h%x1f%s%x1f%an", rng, *paths)
     bullets = []
     for rec in raw.splitlines():
         sha, subject, author = rec.split("\x1f", 2)
@@ -330,8 +364,8 @@ def cmd_seed(a) -> int:
     if a.carry_from and a.carry_from.exists():
         old = load_changelog(a.carry_from).unreleased()
         if old:
-            # release/<channel> outlives its cut: never carry a bullet a released section already has
-            shipped = {b for s in log.sections if s.released for b in s.bullets()}
+            # release/<channel> outlives its cut: never carry a bullet this channel has released
+            shipped = {b for s in log.released(a.channel) for b in s.bullets()}
             old.body = [line for line in old.body if line not in shipped]
             log.sections = [s for s in log.sections if s is not log.unreleased()]
             log.sections.insert(0, old)
@@ -339,14 +373,17 @@ def cmd_seed(a) -> int:
     if section is None:
         section = Section(UNRELEASED)
         log.sections.insert(0, section)
+    new = []
     if a.beta_sections:
-        new = []
+        # only betas newer than the ones this PR already took, so its edits and deletions stand
+        after = Section(a.beta_after).sort_key() if a.beta_after else ()
         for s in log.released("beta"):
             if not s.beta:
                 break
-            new = s.bullets() + new
-    else:
-        new = commit_bullets(a.repo, a.since, a.until)
+            if s.sort_key() > after:
+                new = s.bullets() + new
+    if a.since is not None:
+        new += commit_bullets(a.repo, a.since, a.until, a.changelog)
     existing = set(section.bullets())
     added = [b for b in new if b not in existing and not (existing.add(b))]
     section.body += added
@@ -402,7 +439,7 @@ def unreleased_problems(log: Changelog, a) -> list[str]:
         return []
     # a bullet still word for word what `seed` wrote from a commit subject has not been edited
     since = a.since if a.since is not None else since_ref(a.repo, log, a.channel)
-    seeded = set(commit_bullets(a.repo, since, "HEAD"))
+    seeded = set(commit_bullets(a.repo, since, "HEAD", a.changelog))
     raw = [b for b in section.bullets() if b in seeded]
     return ["Unreleased still has bullets copied from commit subjects:\n  " + "\n  ".join(raw)] if raw else []
 
@@ -458,6 +495,21 @@ def cmd_since_ref(a) -> int:
     return 0
 
 
+def cmd_merge_manifest(a) -> int:
+    base, ours, theirs = (p.read_text(encoding="utf-8") for p in (a.base, a.ours, a.theirs))
+    a.out.write_text(merge_manifest(base, ours, theirs), encoding="utf-8")
+    print(f"merged the manifest into {a.out}")
+    return 0
+
+
+def cmd_last_beta(a) -> int:
+    """Print the newest beta release in the changelog, or nothing."""
+    newest = max((s for s in load_changelog(a.changelog).released("beta") if s.beta), key=Section.sort_key, default=None)
+    if newest:
+        print(newest.version)
+    return 0
+
+
 def cmd_merge_changelog(a) -> int:
     """Insert theirs-only released sections into ours by version; ours keeps its order."""
     ours, theirs = load_changelog(a.ours), load_changelog(a.theirs)
@@ -505,7 +557,8 @@ def build_parser() -> argparse.ArgumentParser:
     add("render", cmd_render, **{"--plg": dict(type=Path, required=True), "--changelog": dict(type=Path, required=True),
         "--channel": dict(choices=["stable", "beta"], required=True), "--check": dict(action="store_true")})
     add("seed", cmd_seed, **{"--changelog": dict(type=Path, required=True), "--carry-from": dict(type=Path),
-        "--since": dict(default=""), "--until": dict(default="HEAD"), "--beta-sections": dict(action="store_true"),
+        "--channel": dict(choices=["stable", "beta"], required=True), "--since": dict(default=None),
+        "--until": dict(default="HEAD"), "--beta-sections": dict(action="store_true"), "--beta-after": dict(default=""),
         **repo})
     add("stamp", cmd_stamp, **{"--changelog": dict(type=Path, required=True), "--version": dict(required=True),
         "--beta": dict(action="store_true"), "--allow-empty": dict(action="store_true")})
@@ -520,6 +573,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--tz": dict(default="UTC"), "--date": dict(default=""), **repo})
     add("since-ref", cmd_since_ref, **{"--changelog": dict(type=Path, required=True),
         "--channel": dict(choices=["stable", "beta"], required=True), **repo})
+    add("merge-manifest", cmd_merge_manifest, **{"--base": dict(type=Path, required=True),
+        "--ours": dict(type=Path, required=True), "--theirs": dict(type=Path, required=True),
+        "--out": dict(type=Path, required=True)})
+    add("last-beta", cmd_last_beta, **{"--changelog": dict(type=Path, required=True)})
     add("merge-changelog", cmd_merge_changelog, **{"--ours": dict(type=Path, required=True),
         "--theirs": dict(type=Path, required=True), "--out": dict(type=Path, required=True)})
     add("last-version", cmd_last_version, **{"--changelog": dict(type=Path, required=True),

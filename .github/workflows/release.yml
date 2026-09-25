@@ -45,6 +45,10 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # the built-in token starts the other channel's run; RELEASE_TOKEN does everything else
+      actions: write
     if: github.event_name != 'push' || (!contains(github.event.head_commit.message, '[skip ci]') && !endsWith(github.actor, '[bot]'))
     steps:
       - name: Checkout
@@ -66,6 +70,7 @@ jobs:
         id: decide
         env:
           MODE_IN: ${{ inputs.mode || 'auto' }}
+          DISPATCH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           case "$MODE_IN" in
@@ -73,31 +78,39 @@ jobs:
             *) echo "::error::mode must be auto, pr or release (got '$MODE_IN')"; exit 1 ;;
           esac
           if [ "$GITHUB_REF_NAME" = "$STABLE_BRANCH" ]; then
-            ch="stable"
+            ch="stable" other="beta" other_branch="$BETA_BRANCH"
           elif [ "$GITHUB_REF_NAME" = "$BETA_BRANCH" ]; then
-            ch="beta"
+            ch="beta" other="stable" other_branch="$STABLE_BRANCH"
           else
             echo "::notice::$GITHUB_REF_NAME is not a release channel"
             echo "mode=skip" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          # From state, not from the pushed commit: a merged release PR is due until a release tag contains its merge.
+          # Prints the PR number when due. set -e does not reach into $( ), so every failure returns 1 itself.
+          due() {  # $1 channel, $2 branch, $3 the branch's commit
+            local latest merged released
+            latest=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "release/$1" --base "$2" \
+              --limit 20 --json number,mergeCommit,mergedAt \
+              --jq 'sort_by(.mergedAt) | last | "\(.number // "") \(.mergeCommit.oid // "")"') || return 1
+            merged="${latest#* }"
+            [ -n "$merged" ] && git merge-base --is-ancestor "$merged" "$3" 2>/dev/null || return 0
+            released=$(git tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]*' --contains "$merged") || return 1
+            [ -n "$released" ] || echo "${latest%% *}"
+          }
           mode="$MODE_IN"
           pr=""
           if [ "$mode" = auto ]; then
-            # From state, not from the pushed commit: a merged release PR is due until a release tag contains
-            # its merge, so a run cancelled in the queue is picked up by the next one.
-            latest=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "release/$ch" --base "$GITHUB_REF_NAME" \
-              --limit 20 --json number,mergeCommit,mergedAt \
-              --jq 'sort_by(.mergedAt) | last | "\(.number // "") \(.mergeCommit.oid // "")"')
-            merged="${latest#* }"
-            mode="pr"
-            if [ -n "$merged" ] && git merge-base --is-ancestor "$merged" HEAD 2>/dev/null; then
-              # an assignment, so a failing git stops the run instead of reading as "not released yet"
-              released=$(git tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]*' --contains "$merged")
-              if [ -z "$released" ]; then
-                mode="release"
-                pr="${latest%% *}"
-              fi
+            pr=$(due "$ch" "$GITHUB_REF_NAME" HEAD)
+            if [ -n "$pr" ]; then mode="release"; else mode="pr"; fi
+          fi
+          # Both branches share one queue, so this push may have cancelled the other channel's waiting release:
+          # start it again. Only from pushes, so two stuck channels cannot keep starting runs for each other.
+          if [ "${GITHUB_EVENT_NAME:-}" = push ]; then
+            other_pr=$(due "$other" "$other_branch" "origin/$other_branch")
+            if [ -n "$other_pr" ]; then
+              GH_TOKEN="$DISPATCH_TOKEN" gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$other_branch" -f mode=auto
+              echo "::notice::#$other_pr is merged into $other_branch without a release yet: started a Release run for it"
             fi
           fi
           {

@@ -231,7 +231,7 @@ def decide_repo(tmp_path):
     return repo, shas[1]
 
 
-def _run_decide(tmp_path, repo, mode, gh_body, ref_name="master"):
+def _run_decide(tmp_path, repo, mode, gh_body, ref_name="master", event=None):
     """Run the workflow's 'Decide channel and mode' step against a stub gh."""
     bindir = tmp_path / "bin"
     bindir.mkdir(exist_ok=True)
@@ -241,7 +241,10 @@ def _run_decide(tmp_path, repo, mode, gh_body, ref_name="master"):
     out.write_text("")
     env = {**os.environ, "PATH": f"{bindir}:{os.environ['PATH']}", "MODE_IN": mode, "GITHUB_REF_NAME": ref_name,
            "STABLE_BRANCH": "master", "BETA_BRANCH": "beta", "GITHUB_OUTPUT": str(out),
-           "GITHUB_REPOSITORY": "someone/plugin"}
+           "GITHUB_REPOSITORY": "someone/plugin", "DISPATCH_TOKEN": "dispatch-token"}
+    env.pop("GITHUB_EVENT_NAME", None)
+    if event:
+        env["GITHUB_EVENT_NAME"] = event
     r = subprocess.run(["bash", "-c", _step("decide")], cwd=repo, env=env, capture_output=True, text=True)
     return r, dict(line.split("=", 1) for line in out.read_text().splitlines())
 
@@ -356,7 +359,7 @@ def test_require_edited_flags_bullets_still_copied_from_commits(repo):
 def test_git_failure_surfaces_stderr(tmp_path, capsys):
     changelog = tmp_path / "c.md"
     changelog.write_text("# Changelog\n\n## 2026.09.05\n\n- x\n")
-    assert run("seed", "--changelog", changelog, "--since", "does-not-exist", "--repo", tmp_path) == 2
+    assert run("seed", "--changelog", changelog, "--channel", "beta", "--since", "does-not-exist", "--repo", tmp_path) == 2
     err = capsys.readouterr().err
     assert "not a git repository" in err.lower() or "unknown revision" in err.lower()
 
@@ -461,11 +464,11 @@ def test_seed_is_append_only_and_carries_edits(repo):
     changelog.write_text("# Changelog\n\n## 2026.09.04\n\n- Old\n")
     old = repo / "old.md"
     old.write_text("# Changelog\n\n## Unreleased\n\n- Share order is kept (#63)\n\n## 2026.09.04\n\n- Old\n")
-    run("seed", "--changelog", changelog, "--carry-from", old, "--since", "2026.09.04", "--repo", repo)
+    run("seed", "--changelog", changelog, "--channel", "beta", "--carry-from", old, "--since", "2026.09.04", "--repo", repo)
     body = pr.load_changelog(changelog).unreleased().bullets()
     assert body[0] == "- Share order is kept (#63)"
     assert "- feat: new thing" in body and "- fix(ui): keep share order (#63)" in body
-    run("seed", "--changelog", changelog, "--since", "2026.09.04", "--repo", repo)
+    run("seed", "--changelog", changelog, "--channel", "beta", "--since", "2026.09.04", "--repo", repo)
     assert pr.load_changelog(changelog).unreleased().bullets() == body
 
 
@@ -477,7 +480,7 @@ def test_seed_carry_keeps_the_headings_that_are_not_versions(repo):
     old = repo / "old.md"
     old.write_text("# Changelog\n\n## Unreleased\n\n- Pending\n\n## 2026.09.04\n\n- Old\n")
     before = changelog.read_text()
-    run("seed", "--changelog", changelog, "--carry-from", old, "--since", "HEAD", "--repo", repo)
+    run("seed", "--changelog", changelog, "--channel", "beta", "--carry-from", old, "--since", "HEAD", "--repo", repo)
     assert changelog.read_text() == "# Changelog\n\n## Unreleased\n\n- Pending\n\n" + before.split("\n\n", 1)[1]
 
 
@@ -487,7 +490,7 @@ def test_seed_from_beta_sections_stops_at_last_stable(tmp_path):
         "# Changelog\n\n## 2026.09.06b (beta)\n\n- Newer beta\n\n## 2026.09.06a (beta)\n\n- Older beta\n- Shared\n\n"
         "## 2026.09.01\n\n- Stable\n\n## 2026.08.30a (beta)\n\n- Ancient beta\n"
     )
-    run("seed", "--changelog", changelog, "--beta-sections")
+    run("seed", "--changelog", changelog, "--channel", "stable", "--beta-sections")
     assert pr.load_changelog(changelog).unreleased().bullets() == ["- Older beta", "- Shared", "- Newer beta"]
 
 
@@ -531,16 +534,16 @@ def test_seed_does_not_carry_bullets_that_already_shipped(repo):
     changelog.write_text("# Changelog\n\n## 2026.09.05\n\n- Shipped in the cut\n\n## 2026.09.04\n\n- Old\n")
     old = repo / "old.md"
     old.write_text("# Changelog\n\n## Unreleased\n\n- Shipped in the cut\n- Still pending\n\n## 2026.09.04\n\n- Old\n")
-    run("seed", "--changelog", changelog, "--carry-from", old, "--since", "HEAD", "--repo", repo)
+    run("seed", "--changelog", changelog, "--channel", "stable", "--carry-from", old, "--since", "HEAD", "--repo", repo)
     assert pr.load_changelog(changelog).unreleased().bullets() == ["- Still pending"]
 
 
 def test_cut_retires_the_release_branch_only_after_the_base_push():
     """A surviving release/<channel> would carry its released bullets into the next release PR."""
     body = (SCRIPTS / "plg_release_cut.sh").read_text()
-    push, disarm, delete = (body.index(t) for t in
-                            ('git push -q origin "HEAD:$BASE"', "trap - ERR", 'git push -q origin --delete "release/$CHANNEL"'))
-    assert push < disarm < delete, "the branch goes only once the release is fully published"
+    delete = 'git push -q --force-with-lease="refs/heads/release/$CHANNEL:$merged_head" origin ":refs/heads/release/$CHANNEL"'
+    push, disarm, gone = (body.index(t) for t in ('git push -q origin "HEAD:$BASE"', "trap - ERR", delete))
+    assert push < disarm < gone, "the branch goes only once the release is fully published"
 
 
 def test_merge_changelog_inserts_missing_sections_and_keeps_our_order(tmp_path):
@@ -665,3 +668,325 @@ def test_the_committed_manifest_is_what_the_changelog_renders():
     assert pr.changes_diff(plg_path, log, channel) is None
     _, content, _ = pr.split_plg(text)
     assert pr.render_changes(pr.parse_changes(content), channel) == content
+
+
+def _manifest(branch="master", version="2026.09.19", md5="0" * 32, install="chmod 644 /usr/local/sbin/x"):
+    return (
+        "<?xml version='1.0' standalone='yes'?>\n<!DOCTYPE PLUGIN [\n"
+        '<!ENTITY name      "p">\n'
+        f'<!ENTITY version   "{version}">\n'
+        f'<!ENTITY md5       "{md5}">\n'
+        f'<!ENTITY pluginURL "https://raw.githubusercontent.com/someone/&name;/{branch}/plugins/&name;.plg">\n'
+        ']>\n<PLUGIN name="&name;" version="&version;" pluginURL="&pluginURL;">\n'
+        f"<CHANGES>\n###{version}\n- Notes for {version}\n\n</CHANGES>\n"
+        f'<FILE Run="/bin/bash">\n<INLINE>\n{install}\necho step one\necho step two\necho installed\n</INLINE>\n</FILE>\n</PLUGIN>\n'
+    )
+
+
+def test_merge_manifest_takes_the_other_branch_installer_and_keeps_our_release_fields():
+    base = _manifest()
+    ours = _manifest(version="2026.09.20", md5="a" * 32)
+    theirs = _manifest(branch="beta", version="2026.09.21a", md5="b" * 32, install="chmod 755 /usr/local/sbin/x")
+    merged = pr.merge_manifest(base, ours, theirs)
+    assert "chmod 755 /usr/local/sbin/x" in merged
+    assert pr.plg_entities(merged) | {"name": "p"} == pr.plg_entities(ours) | {"name": "p"}
+    assert pr.split_plg(merged)[1] == [], "CHANGES is left for render"
+
+
+def test_merge_manifest_keeps_an_installer_fix_made_on_our_side():
+    base = _manifest(branch="beta", version="2026.09.21a")
+    ours = _manifest(branch="beta", version="2026.09.22a", install="chmod 755 /usr/local/sbin/x")
+    theirs = _manifest(version="2026.09.21", md5="c" * 32)
+    merged = pr.merge_manifest(base, ours, theirs)
+    assert "chmod 755 /usr/local/sbin/x" in merged
+    assert pr.plg_entities(merged)["version"] == "2026.09.22a"
+    assert "/beta/plugins/" in pr.plg_entities(merged)["pluginURL"]
+
+
+def test_merge_manifest_refuses_both_branches_changing_the_same_installer_line(tmp_path):
+    base = _manifest()
+    ours = _manifest(install="chmod 700 /usr/local/sbin/x")
+    theirs = _manifest(branch="beta", install="chmod 755 /usr/local/sbin/x")
+    with pytest.raises(pr.ChangelogError):
+        pr.merge_manifest(base, ours, theirs)
+    files = []
+    for name, text in (("base", base), ("ours", ours), ("theirs", theirs)):
+        (tmp_path / name).write_text(text)
+        files += [f"--{name}", tmp_path / name]
+    assert run("merge-manifest", *files, "--out", tmp_path / "out") == 2
+
+
+def test_last_beta_is_the_newest_beta_release(tmp_path, capsys):
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text("# Changelog\n\n## 2026.09.21\n\n- s\n\n## 2026.09.20b (beta)\n\n- b\n\n"
+                         "## 2026.09.22a (beta)\n\n- newest\n\n## 2026.09.20a (beta)\n\n- a\n")
+    assert run("last-beta", "--changelog", changelog) == 0
+    assert capsys.readouterr().out.strip() == "2026.09.22a"
+    changelog.write_text("# Changelog\n\n## 2026.09.21\n\n- s\n")
+    assert run("last-beta", "--changelog", changelog) == 0
+    assert capsys.readouterr().out == ""
+
+
+def test_stable_refresh_keeps_edits_and_adds_only_newer_betas(tmp_path):
+    """Released beta notes are not shipped on the stable channel, so the stable PR's edits and deletions stand."""
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text("# Changelog\n\n## 2026.09.22a (beta)\n\n- Four\n\n"
+                         "## 2026.09.21a (beta)\n\n- One\n- Two\n- Three\n\n## 2026.09.19\n\n- Old\n")
+    old = tmp_path / "old.md"
+    old.write_text("# Changelog\n\n## Unreleased\n\n- One, reworded\n- Three\n\n## 2026.09.19\n\n- Old\n")
+    run("seed", "--changelog", changelog, "--channel", "stable", "--carry-from", old,
+        "--beta-sections", "--beta-after", "2026.09.21a")
+    assert pr.load_changelog(changelog).unreleased().bullets() == ["- One, reworded", "- Three", "- Four"]
+
+
+def test_promotion_seeds_master_commits_beside_the_beta_notes(repo):
+    changelog = repo / "CHANGELOG.md"
+    changelog.write_text("# Changelog\n\n## 2026.09.05a (beta)\n\n- Beta note\n\n## 2026.09.04\n\n- Old\n")
+    run("seed", "--changelog", changelog, "--channel", "stable", "--beta-sections",
+        "--since", "2026.09.04", "--until", "HEAD", "--repo", repo)
+    bullets = pr.load_changelog(changelog).unreleased().bullets()
+    assert bullets[0] == "- Beta note" and "- feat: new thing" in bullets
+
+
+def test_seed_skips_commits_that_only_edit_the_changelog(repo):
+    sh = lambda *a: subprocess.run(["git", *a], cwd=repo, check=True, capture_output=True)  # noqa: E731
+    changelog = repo / "CHANGELOG.md"
+    changelog.write_text("# Changelog\n\n## 2026.09.04\n\n- Old\n")
+    sh("add", "CHANGELOG.md")
+    sh("commit", "-qm", "Update CHANGELOG.md")
+    changelog.write_text(changelog.read_text() + "\n")
+    (repo / "f").write_text("both")
+    sh("commit", "-qam", "Plain change with notes")
+    subjects = [b.split(" (")[0] for b in pr.commit_bullets(repo, "2026.09.04", "HEAD", changelog)]
+    assert "- Update CHANGELOG.md" not in subjects and "- Plain change with notes" in subjects
+
+
+def test_heading_suffix_is_escaped_in_the_manifest(tmp_path):
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text("# Changelog\n\n## 2026.09.26 - Fixes & <tweaks>\n\n- x\n")
+    content = pr.render_changes(pr.load_changelog(changelog), "stable")
+    assert content[0] == "###2026.09.26 - Fixes &amp; &lt;tweaks>"
+    assert pr.parse_changes(content).sections[0].rest == " - Fixes & <tweaks>"
+
+
+def test_decide_restarts_the_other_channels_waiting_release(tmp_path, decide_repo):
+    """A push to one branch can cancel the other branch's queued release run; the push's run starts it again."""
+    repo, merged = decide_repo
+    _git(repo, "tag", "2026.09.26", "HEAD")
+    _git(repo, "switch", "-q", "-c", "beta", "HEAD~2")
+    (repo / "f").write_text("beta release PR merge")
+    _git(repo, "commit", "-qam", "Merge pull request #9 from someone/release/beta")
+    beta_merged = _git(repo, "rev-parse", "HEAD")
+    _git(repo, "update-ref", "refs/remotes/origin/beta", beta_merged)
+    _git(repo, "switch", "-q", "master")
+    gh = ('case "$*" in\n  *"release/stable"*) echo "7 ' + merged + '" ;;\n  *"release/beta"*) echo "9 ' + beta_merged + '" ;;\n'
+          '  *"workflow run"*) echo "$GH_TOKEN $*" >> dispatched ;;\nesac')
+    r, out = _run_decide(tmp_path, repo, "auto", gh, event="push")
+    assert r.returncode == 0, r.stderr
+    assert out["mode"] == "pr"
+    dispatched = (repo / "dispatched").read_text()
+    assert dispatched.startswith("dispatch-token workflow run release.yml") and "--ref beta" in dispatched
+    (repo / "dispatched").unlink()
+    _run_decide(tmp_path, repo, "auto", gh, event="workflow_dispatch")
+    assert not (repo / "dispatched").exists(), "a started run never starts another"
+
+
+def test_decide_stops_when_the_other_channels_lookup_fails(tmp_path, decide_repo):
+    repo, merged = decide_repo
+    gh = 'case "$*" in\n  *"release/stable"*) echo " " ;;\n  *) echo "HTTP 502" >&2; exit 1 ;;\nesac'
+    r, out = _run_decide(tmp_path, repo, "auto", gh, event="push")
+    assert r.returncode != 0 and "mode" not in out
+
+
+class Channels:
+    """A bare origin with master and beta, driven through the real release scripts."""
+
+    PLG = "plugins/p.plg"
+
+    def __init__(self, tmp):
+        self.tmp, self.origin, self.work, self.user = tmp, tmp / "origin.git", tmp / "work", tmp / "user"
+        bindir = tmp / "bin"
+        bindir.mkdir()
+        (bindir / "gh").write_text('#!/bin/bash\necho "gh $*" >> "' + str(tmp / "gh.log") + '"\n')
+        (bindir / "gh").chmod(0o755)
+        ident = {f"GIT_{who}_{what}": val for who in ("AUTHOR", "COMMITTER") for what, val in (("NAME", "t"), ("EMAIL", "t@example.com"))}
+        self.env = {**os.environ, **ident, "PATH": f"{bindir}:{os.environ['PATH']}", "SCRIPTS": str(SCRIPTS),
+                    "PLG": self.PLG, "CHANGELOG": "CHANGELOG.md", "GIT_USER": "t", "GIT_EMAIL": "t@example.com",
+                    "BETA_BRANCH": "beta", "STABLE_BRANCH": "master", "DRY_RUN": "false"}
+        for key in ("GH_TOKEN", "GITHUB_REPOSITORY"):
+            self.env.pop(key, None)
+        self.sh(tmp, "init", "-q", "--bare", "-b", "master", str(self.origin))
+        self.sh(tmp, "clone", "-q", str(self.origin), str(self.user))
+        self.sh(self.user, "switch", "-q", "-c", "master")
+        (self.user / "plugins").mkdir()
+        (self.user / "CHANGELOG.md").write_text("# Changelog\n\n## 2026.09.19\n\n- Old stable\n")
+        self.write_manifest("master", "2026.09.19", "stable")
+        (self.user / "f").write_text("0")
+        self.sh(self.user, "add", "-A")
+        self.sh(self.user, "commit", "-qm", "chore: initial")
+        self.sh(self.user, "tag", "2026.09.19")
+        self.sh(self.user, "push", "-q", "origin", "master", "--tags")
+        self.sh(self.user, "switch", "-q", "-c", "beta")
+        self.write_manifest("beta", "2026.09.19", "beta")
+        self.sh(self.user, "commit", "-qam", "chore(beta): beta manifest")
+        self.sh(self.user, "push", "-q", "origin", "beta")
+        self.sh(tmp, "clone", "-q", str(self.origin), str(self.work))
+
+    def sh(self, cwd, *args):
+        return subprocess.run(["git", *args], cwd=cwd, env=self.env, check=True, capture_output=True, text=True).stdout
+
+    def write_manifest(self, branch, version, channel, install="chmod 644 /usr/local/sbin/x"):
+        plg = self.user / self.PLG
+        plg.write_text(_manifest(branch, version, "0123456789abcdef0123456789abcdef", install))
+        assert run("render", "--plg", plg, "--changelog", self.user / "CHANGELOG.md", "--channel", channel) == 0
+
+    def on(self, branch):
+        self.sh(self.user, "fetch", "-q", "origin", "--tags")
+        self.sh(self.user, "switch", "-q", "-C", branch, f"origin/{branch}")
+
+    def commit(self, branch, subject, path=None, edit=None):
+        self.on(branch)
+        target = self.user / (path or "src" / Path(re.sub(r"\W+", "-", subject)))
+        target.parent.mkdir(exist_ok=True)
+        target.write_text(edit(target.read_text()) if edit else subject)
+        self.sh(self.user, "add", "-A")
+        self.sh(self.user, "commit", "-qm", subject)
+        self.sh(self.user, "push", "-q", "origin", branch)
+
+    def release(self, branch, version, bullets, channel):
+        """A release as the cut leaves it: a stamped section, CHANGES rendered, version set, tagged."""
+        self.on(branch)
+        cl = self.user / "CHANGELOG.md"
+        head, rest = cl.read_text().split("\n## ", 1)
+        marker = " (beta)" if channel == "beta" else ""
+        cl.write_text(f"{head}\n## {version}{marker}\n\n{bullets}\n\n## {rest}")
+        plg = self.user / self.PLG
+        plg.write_text(re.sub(r'<!ENTITY version   "[^"]*"', f'<!ENTITY version   "{version}"', plg.read_text()))
+        assert run("render", "--plg", plg, "--changelog", cl, "--channel", channel) == 0
+        self.sh(self.user, "commit", "-qam", f"chore(release): {version} [skip ci]")
+        self.sh(self.user, "tag", version)
+        self.sh(self.user, "push", "-q", "origin", branch, "--tags")
+
+    def merge_pr(self, head, base):
+        self.on(base)
+        self.sh(self.user, "merge", "-q", "--no-ff", "-m", f"Merge pull request from {head}", f"origin/{head}")
+        self.sh(self.user, "push", "-q", "origin", base)
+
+    def cut(self, branch, version, channel):
+        """What the release job does to the branch after a release PR merges, short of building and publishing."""
+        self.on(branch)
+        cl, plg = self.user / "CHANGELOG.md", self.user / self.PLG
+        assert run("stamp", "--changelog", cl, "--version", version, *(["--beta"] if channel == "beta" else [])) == 0
+        plg.write_text(re.sub(r'<!ENTITY version   "[^"]*"', f'<!ENTITY version   "{version}"', plg.read_text()))
+        assert run("render", "--plg", plg, "--changelog", cl, "--channel", channel) == 0
+        self.sh(self.user, "commit", "-qam", f"chore(release): {version} [skip ci]")
+        self.sh(self.user, "tag", version)
+        self.sh(self.user, "push", "-q", "origin", branch, "--tags")
+
+    def run(self, script, **env):
+        self.sh(self.work, "fetch", "-q", "origin", "--tags")
+        self.sh(self.work, "reset", "-q", "--hard")
+        self.sh(self.work, "checkout", "-q", "--detach", "origin/master")
+        r = subprocess.run(["bash", str(SCRIPTS / script)], cwd=self.work, env={**self.env, **env},
+                           capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout + r.stderr
+        return r.stdout
+
+    def show(self, ref, path):
+        self.sh(self.user, "fetch", "-q", "origin")
+        return self.sh(self.user, "show", f"origin/{ref}:{path}")
+
+    def check(self, ref, channel, branch):
+        """The release check against a branch as origin has it."""
+        plg, cl = self.tmp / f"{channel}.plg", self.tmp / f"{channel}.md"
+        plg.write_text(self.show(ref, self.PLG))
+        cl.write_text(self.show(ref, "CHANGELOG.md"))
+        return run("check", "--changelog", cl, "--plg", plg, "--channel", channel, "--branch", branch)
+
+    def unreleased(self, ref):
+        return pr.parse_changelog(self.show(ref, "CHANGELOG.md")).unreleased().bullets()
+
+    def log(self, rng):
+        return self.sh(self.user, "log", "--no-merges", "--format=%s", rng).splitlines()
+
+
+@pytest.fixture
+def channels(tmp_path):
+    return Channels(tmp_path)
+
+
+def test_stable_pr_carries_an_urgent_master_fix_after_a_stable_release(channels):
+    """Once a beta release is in stable and merged back, beta is always ahead; that alone is no promotion."""
+    channels.commit("beta", "fix: beta fix")
+    channels.release("beta", "2026.09.21a", "- Beta fix", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    channels.merge_pr("release/stable", "master")
+    channels.cut("master", "2026.09.21", "stable")
+    channels.run("plg_release_backmerge.sh", BASE="master", VERSION="2026.09.21")
+    channels.commit("beta", "feat: unreleased beta work")
+    channels.commit("master", "fix: urgent data-loss fix")
+    out = channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    assert "nothing to release" not in out
+    assert channels.unreleased("release/stable") == ["- fix: urgent data-loss fix"]
+    assert "feat: unreleased beta work" not in channels.log("origin/master..origin/release/stable")
+    assert channels.check("release/stable", "stable", "master") == 0
+
+
+def test_stable_pr_promotes_the_beta_release_not_unreleased_beta_work(channels):
+    channels.commit("beta", "fix: beta fix one")
+    channels.release("beta", "2026.09.21a", "- Beta fix one, reworded", "beta")
+    channels.commit("beta", "feat: unreleased, untested beta work")
+    channels.commit("master", "fix: urgent data-loss fix")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    assert channels.unreleased("release/stable") == ["- Beta fix one, reworded", "- fix: urgent data-loss fix"]
+    brought = channels.log("origin/master..origin/release/stable")
+    assert "fix: beta fix one" in brought and "feat: unreleased, untested beta work" not in brought
+
+
+def test_stable_pr_edits_survive_the_next_beta_release(channels):
+    channels.release("beta", "2026.09.21a", "- One\n- Two\n- Three", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    channels.commit("release/stable", "Update CHANGELOG.md", "CHANGELOG.md",
+                    lambda t: t.replace("- One\n", "- One, reworded\n", 1).replace("- Two\n", "", 1))
+    channels.release("beta", "2026.09.22a", "- Four", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    assert channels.unreleased("release/stable") == ["- One, reworded", "- Three", "- Four"]
+
+
+def test_installer_changes_cross_between_the_channels(channels):
+    channels.commit("beta", "fix: keep x executable after install", Channels.PLG,
+                    lambda t: t.replace("chmod 644 /usr/local/sbin/x", "chmod 755 /usr/local/sbin/x"))
+    channels.release("beta", "2026.09.21a", "- x stays executable", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    stable = channels.show("release/stable", Channels.PLG)
+    assert "chmod 755 /usr/local/sbin/x" in stable
+    assert pr.plg_entities(stable)["version"] == "2026.09.19" and "/master/plugins/" in pr.plg_entities(stable)["pluginURL"]
+    assert channels.check("release/stable", "stable", "master") == 0
+    channels.commit("master", "fix: log the install", Channels.PLG, lambda t: t.replace("echo installed", "echo installed ok"))
+    channels.release("master", "2026.09.22", "- Install logs", "stable")
+    channels.run("plg_release_backmerge.sh", BASE="master", VERSION="2026.09.22")
+    beta = channels.show("beta", Channels.PLG)
+    assert "echo installed ok" in beta and "chmod 755 /usr/local/sbin/x" in beta
+    assert pr.plg_entities(beta)["version"] == "2026.09.21a" and "/beta/plugins/" in pr.plg_entities(beta)["pluginURL"]
+    assert channels.check("beta", "beta", "beta") == 0
+
+
+def test_beta_pr_edits_survive_a_refresh(channels):
+    channels.commit("beta", "fix: A thing")
+    channels.commit("beta", "Plain subject B")
+    channels.run("plg_release_pr.sh", CHANNEL="beta", BASE="beta")
+    channels.commit("release/beta", "Update CHANGELOG.md", "CHANGELOG.md",
+                    lambda t: re.sub(r"- Plain subject B \([0-9a-f]+\)\n", "",
+                                     t.replace("- fix: A thing\n", "- A thing is fixed for every share\n")))
+    channels.commit("beta", "feat: C")
+    channels.run("plg_release_pr.sh", CHANNEL="beta", BASE="beta")
+    assert channels.unreleased("release/beta") == ["- A thing is fixed for every share", "- feat: C"]
+
+
+def test_a_notes_only_edit_is_not_a_bullet_after_the_back_merge(channels):
+    channels.commit("master", "Update CHANGELOG.md", "CHANGELOG.md", lambda t: t + "\n")
+    channels.release("master", "2026.09.20", "- Stable twenty", "stable")
+    channels.run("plg_release_backmerge.sh", BASE="master", VERSION="2026.09.20")
+    channels.commit("beta", "fix: beta work")
+    channels.run("plg_release_pr.sh", CHANNEL="beta", BASE="beta")
+    assert channels.unreleased("release/beta") == ["- fix: beta work"]
