@@ -513,7 +513,7 @@ _(Test Mode (dry run))_:
 </select>
 <span><i class="fa fa-info i"></i>&nbsp;&nbsp;<strong>_(No)_</strong> <em>- _(disables test mode)_</em></span>
 <span id="testmode_warning" class="orange-text" style="display:<?= ($cfg['testmode'] == 'yes') ? 'block' : 'none' ?>; font-style:italic;">
-  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced.') ?></span>
+  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced by Mover Tuning (the original Mover can still run, see help).') ?></span>
 
 <script>
 function toggleTestModeWarning(val) {
@@ -524,7 +524,7 @@ function toggleTestModeWarning(val) {
 <blockquote class="inline_help">
 :mover_tune_testmode_plug:
 <p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>.</p>
-<p> Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.</p>
+<p> Caution - Test Mode does not stop original Mover: it still runs on the "Force move of all files on a schedule" schedule, and from the Move Now button if "Move Now button follows plug-in filters" is set to <strong>No</strong>. On Unraid 7.2.1 and later, Unraid's own Mover schedule and Move buttons always run the original Mover.</p>
 :end
 </blockquote>
 
@@ -834,7 +834,7 @@ _(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
 
 :end
 
-_(Move files off Primary (<em>cache</em>) based on age)_?
+_(Move files based on age)_?
 : <select name="age" size='1' onchange="toggleAge(this.value)">
   <?=mk_option($cfg['age'],'no',_('No'))?>
   <?=mk_option($cfg['age'],'yes',_('Yes'))?>
@@ -842,7 +842,7 @@ _(Move files off Primary (<em>cache</em>) based on age)_?
 
 :mover_tune_age_plug:
 
-> Select if you want to move files off of the Primary (cache) based on their age - days old.
+> Select if you want to move files based on their age - days old. Applies to cache:<strong>yes</strong> shares (moved off the Primary) and to cache:<strong>prefer</strong> shares (moved onto the Primary).
 
 :end
 
@@ -979,7 +979,7 @@ _(Sync files that are smaller than this size (In MB))_.
 
 :end
 
-_(Move files off Primary (cache) based on sparseness)_?
+_(Move files based on sparseness)_?
 : <select name="sparsnessf" size='1' onchange='$(".mysparsnessf").toggleAttr("disabled")'>
   <?=mk_option($cfg['sparsnessf'],'no',_('No'))?>
   <?=mk_option($cfg['sparsnessf'],'yes',_('Yes'))?>
@@ -1148,7 +1148,7 @@ _(Move empty folders)_:
 :end
 
 _(Clean empty folders)_:
-: <select name='cleanFolders' size='1'>
+: <select name='cleanFolders' size='1' onchange="toggleCleanDatasets(this.value)">
 <?=mk_option($cfg['cleanFolders'],"no",_('No'))?>
 <?=mk_option($cfg['cleanFolders'],"yes",_('Yes'))?>
 <?=mk_option($cfg['cleanFolders'],"topFolder",_('Top Folder'))?>
@@ -1169,9 +1169,19 @@ _(Clean empty ZFS datasets)_:
 
 :mover_tune_cleandatasets_plug:
 
-> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
+> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within. Works only when <strong>Clean empty folders</strong> is set to <strong>Yes</strong> or <strong>Top Folder</strong>.
 
 :end
+
+<script>
+// age_mover destroys a dataset only after the Clean empty folders pass
+function toggleCleanDatasets(cleanFolders) {
+  $('select[name="cleanDatasets"]').prop('disabled', cleanFolders === 'no');
+}
+$(function() {
+  toggleCleanDatasets($('select[name="cleanFolders"]').val());
+});
+</script>
 
 _(Share size calculation)_:
 : <select name='shareCalculation' size='1'>
