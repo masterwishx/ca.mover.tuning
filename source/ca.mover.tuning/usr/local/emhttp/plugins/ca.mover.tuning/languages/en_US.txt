@@ -146,7 +146,7 @@ Top Folder=
 Unraid mover=
 Unraid Mover schedule is currently enabled=Unraid Mover schedule is currently **enabled**
 Use ATIME=
-Use CTIME=
+Use CTIME change time=Use CTIME (change time)
 Used IDE=
 User shares not enabled=User shares not enabled!
 Validate input filenames to prevent attacks=
@@ -325,7 +325,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_ctime_plug:
-> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 :end
 
 :mover_tune_atime_plug:

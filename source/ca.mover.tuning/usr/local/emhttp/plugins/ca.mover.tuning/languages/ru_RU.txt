@@ -144,7 +144,7 @@ Top Folder=Верхняя папка
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Расписание Unraid Mover сейчас **включено**
 Use ATIME=Использовать ATIME
-Use CTIME=Использовать CTIME
+Use CTIME change time=Использовать CTIME (время изменения статуса)
 Used IDE=Используемый IDE
 User shares not enabled=Пользовательские шары не включены!
 Validate input filenames to prevent attacks=Проверять имена файлов для предотвращения атак
@@ -322,7 +322,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_ctime_plug:
-> Используйте <strong>CTIME</strong> <em>(время создания)</em> вместо <strong>MTIME</strong> <em>(время изменения)</em> в команде find.
+> Используйте <strong>CTIME</strong> <em>(время изменения статуса)</em> вместо <strong>MTIME</strong> <em>(время изменения)</em>, чтобы определять возраст файла и изменился ли он после последней синхронизации. Время изменения статуса обновляется при любом изменении содержимого или атрибутов файла (имя, владелец, права доступа); это не время создания.
 :end
 
 :mover_tune_atime_plug:

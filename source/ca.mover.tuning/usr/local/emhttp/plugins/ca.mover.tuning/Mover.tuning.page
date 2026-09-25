@@ -883,7 +883,7 @@ _(Show advanced filters)_:
 :end
 
 <div markdown="1" id="moverAdvancedFilters">
-_(Use CTIME)_:
+_(Use CTIME (change time))_:
 : <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> onchange="toggleTime('ctime')">
   <?=mk_option($cfg['ctime'],'no',_('No'))?>
   <?=mk_option($cfg['ctime'],'yes',_('Yes'))?>
@@ -891,7 +891,7 @@ _(Use CTIME)_:
 
 :mover_tune_ctime_plug:
 
-> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 
 :end
 

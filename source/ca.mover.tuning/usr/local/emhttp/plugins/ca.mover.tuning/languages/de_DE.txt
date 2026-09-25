@@ -144,7 +144,7 @@ Top Folder=Oberster Ordner
 Unraid mover=Unraid‑Mover
 Unraid Mover schedule is currently enabled=Unraid‑Mover‑Zeitplan ist derzeit **aktiviert**
 Use ATIME=ATIME verwenden
-Use CTIME=CTIME verwenden
+Use CTIME change time=CTIME (Statusänderungszeit) verwenden
 Used IDE=Verwendete IDE
 User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
 Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
@@ -324,7 +324,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_ctime_plug:
-> <strong>CTIME</strong> (Erstellungszeit) statt <strong>MTIME</strong> (Änderungszeit) im <em>find</em>‑Befehl verwenden.
+> <strong>CTIME</strong> (Statusänderungszeit) statt <strong>MTIME</strong> (Änderungszeit) verwenden, um das Alter einer Datei zu bestimmen und ob sie sich seit der letzten Synchronisation geändert hat. Die Statusänderungszeit wird aktualisiert, sobald sich der Inhalt oder die Attribute (Name, Besitzer, Berechtigungen) einer Datei ändern; sie ist nicht die Erstellungszeit.
 :end
 
 :mover_tune_atime_plug:

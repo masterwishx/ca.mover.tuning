@@ -143,7 +143,7 @@ Top Folder=顶层文件夹
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Unraid Mover 计划当前为**启用**状态
 Use ATIME=使用访问时间（ATIME）
-Use CTIME=使用创建时间（CTIME）
+Use CTIME change time=使用状态更改时间（CTIME）
 Used IDE=开发工具
 User shares not enabled=用户共享未启用
 Validate input filenames to prevent attacks=验证文件名防止攻击
@@ -322,7 +322,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_ctime_plug:
-> 在 find 命令中使用 <strong>CTIME</strong><em>（创建时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄。
+> 使用 <strong>CTIME</strong><em>（状态更改时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄以及文件自上次同步后是否有变化。文件内容或属性（名称、所有者、权限）发生任何变化时，状态更改时间都会更新；它不是创建时间。
 :end
 
 :mover_tune_atime_plug:

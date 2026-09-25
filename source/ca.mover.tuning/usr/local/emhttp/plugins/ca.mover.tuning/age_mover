@@ -1368,9 +1368,9 @@ createFilteredFilelist() {
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$AGE" -ge 1 ]; then
             mvlogger "Adding Age"
             RAGE=$((AGE - 1))
-            # Use Creation time or modification time according to settings
+            # Use change time, access time or modification time according to settings
             if [ "$CTIME" == "yes" ]; then
-                mvlogger "Age (creation time) ${AGE}"
+                mvlogger "Age (change time) ${AGE}"
                 FINDSTR="${FINDSTR} -ctime +${RAGE}"
             elif [ "$ATIME" == "yes" ]; then
                 mvlogger "Age (access time) ${AGE}"
@@ -1527,10 +1527,10 @@ createFilteredFilelist() {
         FINDSTR="$FINDSTR path = \$7; for (i = 8; i < NF; i++) path = path \"|\" \$i;"
         # a line break in a name would split this newline-delimited row into a forged one: the name is skipped
         FINDSTR="$FINDSTR if (path ~ /[\\n\\r]/) { gsub(/[\\n\\r]/, \"?\", path); print \"Skipping a name holding a line break: \" path > \"/dev/stderr\"; next }"
-        # Birth time (CTIME option) or access time (ATIME) comes from stat, which awk runs through
+        # Change time (CTIME option, the time find -ctime tests) or access time (ATIME) comes from stat, which awk runs through
         # sh: the path goes in single quotes with each embedded quote escaped, never bare
         STATFMT=""
-        [ "$CTIME" == "yes" ] && STATFMT="%W"
+        [ "$CTIME" == "yes" ] && STATFMT="%Z"
         [ "$ATIME" == "yes" ] && STATFMT="%X"
         if [ -n "$STATFMT" ]; then
             FINDSTR="$FINDSTR q = path; gsub(/\\047/, \"\\047\\\"\\047\\\"\\047\", q);
@@ -1569,7 +1569,7 @@ createFilteredFilelist() {
         fi
     done
 
-    # Sort the file list by PRIMARYSTORAGENAME, shareusecache, creation/modification time, and inode, keeping /mnt/disk at the end
+    # Sort the file list by PRIMARYSTORAGENAME, shareusecache, file time (modification, change or access), and inode, keeping /mnt/disk at the end
     sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
     # Need to remove duplicate (cache and array)
     if awk -F'|' '$13 ~ /^\/mnt\/disk[0-9]+\// { found = 1; exit } END { exit !found }' "$FILTERED_FILELIST"; then

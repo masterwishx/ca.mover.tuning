@@ -222,7 +222,7 @@ _(Only move files that are older than this (in days))_:
 
 :end
 
-_(Use CTIME)_:
+_(Use CTIME (change time))_:
 : <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $lockCtime ?> onchange='$(".atime").toggleAttr("disabled")'>
   <?=mk_option($cfg['ctime'],'no',_('No'))?>
   <?=mk_option($cfg['ctime'],'yes',_('Yes'))?>
@@ -230,7 +230,7 @@ _(Use CTIME)_:
 
 :mover_tune_ctime_plug:
 
-> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 
 :end
 
@@ -465,7 +465,7 @@ _(Only move files that are older than this (in days))_:
 
 :end
 
-_(Use CTIME)_:
+_(Use CTIME (change time))_:
 : <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $lockCtime ?> onchange='$(".atime").toggleAttr("disabled")'>
   <?=mk_option($cfg['ctime'],'no',_('No'))?>
   <?=mk_option($cfg['ctime'],'yes',_('Yes'))?>
@@ -473,7 +473,7 @@ _(Use CTIME)_:
 
 :mover_tune_ctime_plug:
 
-> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 
 :end
 
