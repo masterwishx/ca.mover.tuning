@@ -368,6 +368,32 @@ def test_execution_errors_exit_2_not_1(tmp_path):
     assert run("next-version", "--channel", "stable", "--tz", "Mars/Olympus", "--repo", tmp_path) == 2
 
 
+@pytest.mark.parametrize("old,new", [
+    ('"https://raw.githubusercontent.com/&github;/beta/plugins/&name;.plg"', '"https://example.invalid/&name;.plg"'),
+    ('"0123456789abcdef0123456789abcdef"', '"not-a-digest"'),
+    ('<!ENTITY version   "2026.08.28">', '<!ENTITY version   "2026.08.29">'),
+])
+def test_check_refuses_a_manifest_the_changelog_or_branch_does_not_back(plg, old, new):
+    p, changelog = plg
+    run("migrate", "--plg", p, "--changelog", changelog)
+    args = ("check", "--changelog", changelog, "--plg", p, "--channel", "beta", "--branch", "beta")
+    assert run(*args) == 0
+    p.write_text(p.read_text().replace(old, new, 1))
+    assert run(*args) == 1
+
+
+def test_require_nonempty_needs_bullets_in_unreleased(plg):
+    p, changelog = plg
+    run("migrate", "--plg", p, "--changelog", changelog)
+    args = ("check", "--changelog", changelog, "--plg", p, "--channel", "beta", "--branch", "beta", "--require-nonempty")
+    assert run(*args) == 1, "no Unreleased section"
+    text = changelog.read_text()
+    changelog.write_text(text.replace("\n## 2026.08.28\n", "\n## Unreleased\n\n## 2026.08.28\n", 1))
+    assert run(*args) == 1, "an Unreleased section without bullets"
+    changelog.write_text(text.replace("\n## 2026.08.28\n", "\n## Unreleased\n\n- A note\n\n## 2026.08.28\n", 1))
+    assert run(*args) == 0
+
+
 def test_check_reports_unsynced_plg(plg):
     p, changelog = plg
     run("migrate", "--plg", p, "--changelog", changelog)

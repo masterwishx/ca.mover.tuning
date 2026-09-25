@@ -380,44 +380,53 @@ def cmd_notes(a) -> int:
     return 0
 
 
-def cmd_check(a) -> int:
-    log = load_changelog(a.changelog)
-    text = a.plg.read_text(encoding="utf-8")
+def manifest_problems(ents: dict[str, str], log: Changelog, channel: str, branch: str) -> list[str]:
     problems = []
-    diff = changes_diff(a.plg, log, a.channel)
-    if diff:
-        problems.append(diff)
-    ents = plg_entities(text)
     m = PLUGIN_URL_BRANCH_RE.match(ents.get("pluginURL", ""))
     if not m:
         problems.append(f"pluginURL entity is not a raw.githubusercontent URL: {ents.get('pluginURL')!r}")
-    elif m.group("branch") != a.branch:
-        problems.append(f"pluginURL points at branch {m.group('branch')!r}, expected {a.branch!r}")
+    elif m.group("branch") != branch:
+        problems.append(f"pluginURL points at branch {m.group('branch')!r}, expected {branch!r}")
     if not re.fullmatch(r"[0-9a-f]{32}", ents.get("md5", "")):
         problems.append("md5 entity is not a 32-char hex digest")
-    if not any(s.version == ents.get("version") for s in log.released(a.channel)):
-        problems.append(f"version entity {ents.get('version')!r} has no matching CHANGELOG section for channel {a.channel}")
+    if not any(s.version == ents.get("version") for s in log.released(channel)):
+        problems.append(f"version entity {ents.get('version')!r} has no matching CHANGELOG section for channel {channel}")
+    return problems
+
+
+def unreleased_problems(log: Changelog, a) -> list[str]:
     section = log.unreleased()
-    if a.require_nonempty and (section is None or not section.bullets()):
-        problems.append("Unreleased section is missing or has no bullets")
-    if a.require_edited and section:
-        # a bullet still word for word what `seed` wrote from a commit subject has not been edited
-        since = a.since if a.since is not None else since_ref(a.repo, log, a.channel)
-        seeded = set(commit_bullets(a.repo, since, "HEAD"))
-        raw = [b for b in section.bullets() if b in seeded]
-        if raw:
-            problems.append("Unreleased still has bullets copied from commit subjects:\n  " + "\n  ".join(raw))
+    if section is None or not section.bullets():
+        return ["Unreleased section is missing or has no bullets"] if a.require_nonempty else []
+    if not a.require_edited:
+        return []
+    # a bullet still word for word what `seed` wrote from a commit subject has not been edited
+    since = a.since if a.since is not None else since_ref(a.repo, log, a.channel)
+    seeded = set(commit_bullets(a.repo, since, "HEAD"))
+    raw = [b for b in section.bullets() if b in seeded]
+    return ["Unreleased still has bullets copied from commit subjects:\n  " + "\n  ".join(raw)] if raw else []
+
+
+def asset_problems(text: str, md5: str | None) -> list[str]:
+    url = package_url(text)
+    try:
+        digest = fetch_md5(url)
+    except OSError as e:
+        return [f"could not download {url}: {e}"]
+    if digest != md5:
+        return [f"asset at {url} has md5 {digest}, plg says {md5}"]
+    print(f"asset md5 verified: {url}")
+    return []
+
+
+def cmd_check(a) -> int:
+    log = load_changelog(a.changelog)
+    text = a.plg.read_text(encoding="utf-8")
+    ents = plg_entities(text)
+    diff = changes_diff(a.plg, log, a.channel)
+    problems = ([diff] if diff else []) + manifest_problems(ents, log, a.channel, a.branch) + unreleased_problems(log, a)
     if a.verify_asset and not problems:
-        url = package_url(text)
-        try:
-            digest = fetch_md5(url)
-        except OSError as e:
-            problems.append(f"could not download {url}: {e}")
-        else:
-            if digest != ents.get("md5"):
-                problems.append(f"asset at {url} has md5 {digest}, plg says {ents.get('md5')}")
-            else:
-                print(f"asset md5 verified: {url}")
+        problems = asset_problems(text, ents.get("md5"))
     for p in problems:
         print(f"ERROR: {p}")
     if not problems:
