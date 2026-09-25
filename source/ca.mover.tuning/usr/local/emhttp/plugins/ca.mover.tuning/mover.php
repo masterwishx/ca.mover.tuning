@@ -4,12 +4,14 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini");
-$cron = $argv[1] == "crond";
-$watchdog = $argv[1] == "watchdog";
-$bash = $argv[1] == "bash";
+// a web request (Move button, status check) may have no $argv[1]
+$mode = $argv[1] ?? "";
+$cron = $mode === "crond";
+$watchdog = $mode === "watchdog";
+$bash = $mode === "bash";
 $args = [];
 // the forced-move schedule (updateCron.php make_cron) calls: mover.php force start
-$force = ($argv[1] ?? "") === "force";
+$force = $mode === "force";
 
 // Read-only status check (no state change, no CSRF risk)
 if (!empty($_GET['check'])) {
@@ -134,7 +136,7 @@ function startMover()
 
     logger("Starting Mover Tuning ...");
 
-    if ($argv[2]) {
+    if (empty($argv[2]) === false) {
         $args[] = trim($argv[2]);
     }
 
