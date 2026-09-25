@@ -951,7 +951,7 @@ _(Sync files based on maximum size)_?
 
 :mover_tune_sizefsync_plug:
 
-> Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
+> Select <strong>yes</strong> to copy only files smaller than the size below (in <strong>MB</strong>) when files kept on the Primary of cache:yes shares are synchronized to the Secondary. It applies while <strong>Synchronize Primary files to Secondary</strong> is <strong>Yes</strong>, Resynchronize runs included. Files brought back to cache:prefer shares and rebalanced files are not limited.
 
 :end
 

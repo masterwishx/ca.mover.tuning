@@ -340,7 +340,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_sizefsync_plug:
-> Wähle <strong>Ja</strong>, um Dateien basierend auf ihrer Größe (in MB) zu synchronisieren. Nur aktiv, wenn Synchronisieren/Neu‑Synchronisieren aktiviert ist.
+> Wähle <strong>Ja</strong>, damit beim Synchronisieren der auf dem Primärspeicher verbleibenden Dateien von cache:yes‑Freigaben nur Dateien kopiert werden, die kleiner als die unten gewählte Größe (in MB) sind. Gilt, solange <strong>Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren</strong> auf <strong>Ja</strong> steht, auch bei Neu‑Synchronisierungen. Dateien, die auf cache:prefer‑Freigaben zurückgeholt oder neu verteilt werden, sind nicht begrenzt.
 :end
 
 :mover_tune_sizeinmsync_plug:

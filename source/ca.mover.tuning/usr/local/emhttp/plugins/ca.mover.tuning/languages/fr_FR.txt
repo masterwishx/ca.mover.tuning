@@ -346,8 +346,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_sizefsync_plug:
-> Synchroniser les fichiers selon leur taille (en Mo).  
-> Fonctionne uniquement avec Synchronize / Resynchronize.
+> Synchroniser uniquement les fichiers plus petits que la taille ci-dessous (en Mo), parmi les fichiers conservés sur le primaire des parts cache:yes.  
+> S’applique tant que <strong>Synchroniser les fichiers du primaire vers le secondaire</strong> est sur <strong>Oui</strong>, resynchronisations comprises. Les fichiers ramenés sur les parts cache:prefer et les fichiers rééquilibrés ne sont pas limités.
 :end
 
 :mover_tune_sizeinmsync_plug:

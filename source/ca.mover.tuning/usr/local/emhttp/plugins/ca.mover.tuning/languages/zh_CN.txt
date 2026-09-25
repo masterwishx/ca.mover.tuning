@@ -338,7 +338,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_sizefsync_plug:
-> 如果要按文件大小（<strong>MB</strong>）同步文件，请选择<strong>是</strong>。此选项仅在启用同步或重新同步功能时有效。
+> 选择<strong>是</strong>后，cache:yes 共享中保留在主存储上的文件同步到次存储时，只复制小于下方大小（<strong>MB</strong>）的文件。仅在<strong>主存储文件同步到次存储</strong>设为<strong>是</strong>时有效，重新同步时同样适用。移回 cache:prefer 共享的文件和重新平衡的文件不受限制。
 :end
 
 :mover_tune_sizeinmsync_plug:
