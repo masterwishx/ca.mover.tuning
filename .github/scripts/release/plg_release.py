@@ -295,14 +295,14 @@ def git(repo: Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True).stdout
 
 
-def commit_bullets(repo: Path, since: str, until: str, changelog: Path | None = None) -> list[str]:
-    rng = f"{since}..{until}" if since else until
+def commit_bullets(repo: Path, since: str, until: str, changelog: Path | None = None, exclude: str = "") -> list[str]:
+    rng = [f"{since}..{until}" if since else until] + ([f"^{exclude}"] if exclude else [])
     paths = []
     if changelog is not None:
         rel = os.path.relpath(changelog.resolve(), repo.resolve())
         # an edit that only rewrites the notes (a web-UI "Update CHANGELOG.md") is not a change to announce
         paths = ["--", ".", f":(top,exclude){rel}"] if not rel.startswith("..") else []
-    raw = git(repo, "log", "--no-merges", "--format=%h%x1f%s%x1f%an", rng, *paths)
+    raw = git(repo, "log", "--no-merges", "--format=%h%x1f%s%x1f%an", *rng, *paths)
     bullets = []
     for rec in raw.splitlines():
         sha, subject, author = rec.split("\x1f", 2)
@@ -383,7 +383,7 @@ def cmd_seed(a) -> int:
             if s.sort_key() > after:
                 new = s.bullets() + new
     if a.since is not None:
-        new += commit_bullets(a.repo, a.since, a.until, a.changelog)
+        new += commit_bullets(a.repo, a.since, a.until, a.changelog, a.exclude)
     existing = set(section.bullets())
     added = [b for b in new if b not in existing and not (existing.add(b))]
     section.body += added
@@ -558,7 +558,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--channel": dict(choices=["stable", "beta"], required=True), "--check": dict(action="store_true")})
     add("seed", cmd_seed, **{"--changelog": dict(type=Path, required=True), "--carry-from": dict(type=Path),
         "--channel": dict(choices=["stable", "beta"], required=True), "--since": dict(default=None),
-        "--until": dict(default="HEAD"), "--beta-sections": dict(action="store_true"), "--beta-after": dict(default=""),
+        "--until": dict(default="HEAD"), "--exclude": dict(default=""), "--beta-sections": dict(action="store_true"),
+        "--beta-after": dict(default=""),
         **repo})
     add("stamp", cmd_stamp, **{"--changelog": dict(type=Path, required=True), "--version": dict(required=True),
         "--beta": dict(action="store_true"), "--allow-empty": dict(action="store_true")})

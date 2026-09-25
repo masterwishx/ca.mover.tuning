@@ -945,6 +945,17 @@ def test_stable_pr_promotes_the_beta_release_not_unreleased_beta_work(channels):
     assert "fix: beta fix one" in brought and "feat: unreleased, untested beta work" not in brought
 
 
+def test_stable_pr_lists_master_commits_already_in_the_beta_only_once(channels):
+    """master merged into beta mid-cycle: the beta's notes describe those commits, so they are not listed again."""
+    channels.commit("master", "fix: fixed on master first")
+    channels.on("beta")
+    channels.sh(channels.user, "merge", "-q", "--no-ff", "-m", "Merge master into beta", "origin/master")
+    channels.sh(channels.user, "push", "-q", "origin", "beta")
+    channels.release("beta", "2026.09.21a", "- The fix, described for users", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    assert channels.unreleased("release/stable") == ["- The fix, described for users"]
+
+
 def test_stable_pr_edits_survive_the_next_beta_release(channels):
     channels.commit("beta", "fix: beta code change")
     channels.release("beta", "2026.09.21a", "- One\n- Two\n- Three", "beta")

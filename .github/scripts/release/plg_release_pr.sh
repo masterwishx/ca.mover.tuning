@@ -63,7 +63,8 @@ if [ -z "$since" ] || ! git merge-base --is-ancestor "$since" "origin/$BASE" 2>/
   since=$($PLGR since-ref --changelog "$CHANGELOG" --channel "$CHANNEL")
 fi
 seed_args=(--since "$since" --until "origin/$BASE")
-[ -z "$promote" ] || seed_args+=(--beta-sections --beta-after "$OLD_SYNC_BETA")
+# the promoted beta's notes already describe its commits, so they are not listed again from master
+[ -z "$promote" ] || seed_args+=(--beta-sections --beta-after "$OLD_SYNC_BETA" --exclude "refs/tags/$promote")
 carry=()
 [ -z "$OLD_CL" ] || carry=(--carry-from "$OLD_CL")
 $PLGR seed --changelog "$CHANGELOG" --channel "$CHANNEL" "${carry[@]}" "${seed_args[@]}"
