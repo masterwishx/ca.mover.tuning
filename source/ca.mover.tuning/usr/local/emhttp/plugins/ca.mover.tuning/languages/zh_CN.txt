@@ -174,6 +174,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
   <li>在 <strong>Mover Tuning - 选项</strong>中点击 <strong>“立即移动”</strong> 按钮。</li>
   <li>在<strong>命令行</strong>中运行 <strong>“age_mover start”</strong>。</li>
 </ul>
+<p><strong>强制移动</strong>仍会按其自己的计划运行：要一并停止，请将<strong>显示高级设置</strong>设为<strong>是</strong>，再将<strong>定时强制移动所有文件</strong>设为<strong>否</strong>。</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -184,6 +185,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
   <li>在<strong>主页面</strong>上点击 <strong>“移动”</strong>。</li>
   <li>在<strong>命令行</strong>中运行 <strong>“mover start”</strong>。</li>
 </ul>
+<p><strong>强制移动</strong>仍会按其自己的计划运行：要一并停止，请将<strong>显示高级设置</strong>设为<strong>是</strong>，再将<strong>定时强制移动所有文件</strong>设为<strong>否</strong>。</p>
 :end
 
 :mover_tune_movertunecron_plug:

@@ -175,6 +175,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
   <li>Appuyez sur le bouton <strong>« Déplacer maintenant »</strong> dans <strong>Mover Tuning – Options</strong>.</li>
   <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong>.</li>
 </ul>
+<p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -185,6 +186,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
   <li>Appuyez sur <strong>« Move »</strong> dans la page <strong>Main</strong>.</li>
   <li>Lancez <strong>« mover start »</strong> depuis la <strong>CLI</strong>.</li>
 </ul>
+<p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
 :end
 
 :mover_tune_movertunecron_plug:

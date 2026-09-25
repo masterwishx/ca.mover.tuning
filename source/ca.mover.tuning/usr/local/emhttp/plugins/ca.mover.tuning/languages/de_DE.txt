@@ -175,6 +175,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf die Schaltfläche <strong>„Jetzt verschieben“</strong> in <strong>Mover Tuning – Optionen</strong>.</li>
   <li>Führe <strong>„age_mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -185,6 +186,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf <strong>„Verschieben“</strong> auf der <strong>Hauptseite</strong>.</li>
   <li>Führe <strong>„mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
 :end
 
 :mover_tune_movertunecron_plug:
