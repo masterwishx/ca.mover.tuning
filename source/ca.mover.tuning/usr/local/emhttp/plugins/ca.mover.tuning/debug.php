@@ -2,10 +2,10 @@
 
 exec("/usr/bin/timeout -s9 90 /usr/local/emhttp/plugins/ca.mover.tuning/debug_mover 2>&1", $debug_result, $exit_code);
 
-if(!empty($debug_result)) {
-    if(strpos(end($debug_result), "DONE:") !== false) {
+if (empty($debug_result) === FALSE) {
+    if (strpos(end($debug_result), "DONE:") !== false) {
         $debugFile = explode(":", end($debug_result))[1];
-        if(!empty($debugFile) && file_exists($debugFile)) {
+        if (empty($debugFile) === FALSE && file_exists($debugFile) === TRUE) {
             http_response_code(200); // OK for successful file download
             header("Content-Disposition: attachment; filename=\"" . basename($debugFile) . "\"");
             header("Content-Type: application/octet-stream");
