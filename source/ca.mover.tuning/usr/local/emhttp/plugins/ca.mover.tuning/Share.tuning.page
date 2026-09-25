@@ -42,7 +42,7 @@ $f = $movingSaved;
 
 <script>
 function moveShareNow() {
-        $.post("/plugins/ca.mover.tuning/moveShareNow.php", {Share: <?= json_encode($shareName, JSON_HEX_TAG) ?>});
+        $.post("/plugins/ca.mover.tuning/moveShareNow.php", {Share: <?= json_encode($shareName, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>});
 	MoveShare.disabled = true;
 }
 
@@ -156,7 +156,7 @@ function mtEscapeQuotes(form) {
 </script>
 
 <form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtEscapeQuotes(this);">
-<input type="hidden" name="#file" value="<?=$shareCFG?>">
+<input type="hidden" name="#file" value="<?=htmlspecialchars($shareCFG, ENT_QUOTES | ENT_SUBSTITUTE)?>">
 
 <? if ($shareName != ""): ?>
 

@@ -502,7 +502,7 @@ _(Disable Mover running on a schedule)_:
 <?php if (version_compare($vars['version'], '7.2.1', '>=')): ?>
 
 _(Mover Tuning schedule)_:
-: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'])?>'>
+: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_movertunecron_plug:
 
@@ -558,7 +558,7 @@ _(Validate input filenames to prevent attacks)_:
 
 <div markdown="1" id="moverInvalidCharsToBlock">
 _(Invalid characters to block)_:
-: <input type='text' name='invalidFileChars' size='1' class='myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
+: <input type='text' name='invalidFileChars' size='1' class='myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 <blockquote class="inline_help">
 :mover_tune_invalidfilechars_plug:
@@ -626,7 +626,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
+: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_loggingfolder_plug:
 
@@ -635,7 +635,7 @@ _(Logs parent folder for Mover Tuning plugin)_:
 :end
 
 _(Delete Mover Log files over than this days old)_:
-: <select name="logfilesDaysold" size="1" class='logfilesDaysold' value='<?=$cfg['logfilesDaysold']?>'>
+: <select name="logfilesDaysold" size="1" class='logfilesDaysold'>
 <?=mk_option($cfg['logfilesDaysold'], 1, "1")?>
 <?=mk_option($cfg['logfilesDaysold'], 2, "2")?>
 <?=mk_option($cfg['logfilesDaysold'], 3, "3")?>
@@ -657,7 +657,7 @@ _(Delete Mover Log files over than this days old)_:
 :end
 
 _(Delete Mover helper files over than this days old)_:
-: <select name="listfilesDaysold" size="1" class='listfilesDaysold' value='<?=$cfg['listfilesDaysold']?>'>
+: <select name="listfilesDaysold" size="1" class='listfilesDaysold'>
 <?=mk_option($cfg['listfilesDaysold'], 1, "1")?>
 <?=mk_option($cfg['listfilesDaysold'], 2, "2")?>
 <?=mk_option($cfg['listfilesDaysold'], 3, "3")?>
@@ -738,7 +738,7 @@ _(Force move of all files on a schedule)_:
 :end
 
 _(Cron Schedule to force move all of files)_:
-: <input type='text' id='cronSchedule' name='cron' size='1' class='mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
+: <input type='text' id='cronSchedule' name='cron' size='1' class='mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$cronDisabled?>>
 
 :mover_tune_cron_plug:
 
@@ -763,7 +763,7 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 </blockquote>
 
 _(Script to run before mover (No checks, always runs))_:
-: <input type='text' name='beforeScript' size='1' class='mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
+: <input type='text' name='beforeScript' size='1' class='mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_beforescript_plug:
 
@@ -772,7 +772,7 @@ _(Script to run before mover (No checks, always runs))_:
 :end
 
 _(Script to run after mover (No checks, always runs))_:
-: <input type='text' name='afterScript' size='1' class='myafter' placeholder='/mnt/user/Files/script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
+: <input type='text' name='afterScript' size='1' class='myafter' placeholder='/mnt/user/Files/script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_afterscript_plug:
 
@@ -1025,7 +1025,7 @@ _(Ignore files and folders listed inside of a text file)_:
 </select>
 
 _(File list path)_:
-: <input type='text' name='filelistv' size='1' class='myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
+: <input type='text' name='filelistv' size='1' class='myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
 :mover_tune_filelistv_plug:
@@ -1049,7 +1049,7 @@ _(Ignore file types)_:
 </select>
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' size='1' class='myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'])?>' <?=$filetypesfDisabled?>>
+: <input type='text' name='filetypesv' size='1' class='myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filetypesfDisabled?>>
 
 :mover_tune_filetypesv_plug:
 
