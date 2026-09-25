@@ -277,6 +277,26 @@ def test_decide_releases_a_merged_release_pr_until_a_release_tag_contains_it(tmp
     assert _run_decide(tmp_path, repo, "auto", gh)[1]["mode"] == "pr"
 
 
+def test_decide_stops_on_a_release_tag_the_branch_does_not_have(tmp_path, decide_repo):
+    """The cut moves the branch last: a tag the branch lacks is a cut that stopped part way, not a release."""
+    repo, merged = decide_repo
+    gh = f"echo '7 {merged}'"
+
+    def tag_off_the_branch(tag):
+        _git(repo, "switch", "-q", "--detach", "master")
+        _git(repo, "commit", "-q", "--allow-empty", "-m", f"chore(release): {tag}")
+        _git(repo, "tag", tag)
+        _git(repo, "switch", "-q", "master")
+
+    tag_off_the_branch("2026.09.26")
+    r, out = _run_decide(tmp_path, repo, "auto", gh)
+    assert r.returncode != 0 and "mode" not in out
+    assert "master does not have 2026.09.26" in r.stderr and "stopped part way" in r.stderr
+    _git(repo, "merge", "-q", "--ff-only", "2026.09.26")
+    tag_off_the_branch("2026.09.27")
+    assert _run_decide(tmp_path, repo, "auto", gh)[1]["mode"] == "pr", "one release tag on the branch is enough"
+
+
 def test_decide_refreshes_the_pr_when_no_release_pr_is_due(tmp_path, decide_repo):
     repo, _ = decide_repo
     assert _run_decide(tmp_path, repo, "auto", "echo ' '")[1]["mode"] == "pr"
@@ -578,11 +598,12 @@ def test_last_version_and_entity(plg):
     assert run("entity", "--plg", p, "--name", "nope") == 2
 
 
-RELEASES = ('[{"tagName":"pr-12-2026.09.20.0260920101010","isPrerelease":true},'
-            '{"tagName":"2026.09.20b","isPrerelease":true},'
-            '{"tagName":"2026.09.19","isPrerelease":false},'
-            '{"tagName":"2026.09.18a","isPrerelease":true},'
-            '{"tagName":"2026.09.07","isPrerelease":false}]')
+RELEASES = ('[{"tag_name":"2026.09.21","prerelease":false,"draft":true},'
+            '{"tag_name":"pr-12-2026.09.20.0260920101010","prerelease":true,"draft":false},'
+            '{"tag_name":"2026.09.20b","prerelease":true,"draft":false},'
+            '{"tag_name":"2026.09.19","prerelease":false,"draft":false},'
+            '{"tag_name":"2026.09.18a","prerelease":true,"draft":false},'
+            '{"tag_name":"2026.09.07","prerelease":false,"draft":false}]')
 
 
 def _rollback_footer(tmp_path, gh_body, channel="stable", plgr_body="echo upgrade=minor", call="rollback_footer"):
@@ -601,10 +622,12 @@ def _rollback_footer(tmp_path, gh_body, channel="stable", plgr_body="echo upgrad
                           capture_output=True, text=True)
 
 
-def _gh_listing(releases=RELEASES):
-    """A gh stub that applies the script's own --jq filter to a canned release listing."""
-    return ('while [ $# -gt 0 ]; do [ "$1" = --jq ] && { f="$2"; break; }; shift; done\n'
-            f"jq -r \"$f\" <<'JSON'\n{releases}\nJSON")
+def _gh_listing(*pages):
+    """A gh stub that applies the script's own --jq filter to each page of a canned release listing."""
+    body = 'all=""\nwhile [ $# -gt 0 ]; do case "$1" in --jq) f="$2"; shift ;; --paginate) all=1 ;; esac; shift; done\n'
+    for n, page in enumerate(pages or (RELEASES,)):
+        body += ('[ -n "$all" ] || exit 0\n' if n else "") + f"jq -r \"$f\" <<'JSON'\n{page}\nJSON\n"
+    return body
 
 
 def test_stable_rollback_pins_the_previous_stable_release(tmp_path):
@@ -627,9 +650,19 @@ def test_beta_rollback_pins_the_previous_beta_and_offers_the_way_back_to_stable(
 
 
 def test_first_beta_offers_only_the_way_back_to_stable(tmp_path):
-    r = _rollback_footer(tmp_path, _gh_listing('[{"tagName":"2026.09.19","isPrerelease":false}]'), channel="beta")
+    r = _rollback_footer(tmp_path, _gh_listing('[{"tag_name":"2026.09.19","prerelease":false,"draft":false}]'),
+                         channel="beta")
     assert r.returncode == 0, r.stderr
     assert "Roll back" not in r.stdout and "go back to the stable release" in r.stdout
+
+
+def test_rollback_note_finds_the_previous_release_past_the_first_page(tmp_path):
+    """A run of betas can push the last stable release off the first page of the listing."""
+    betas = json.dumps([{"tag_name": f"2026.09.{n // 26 + 20}{chr(97 + n % 26)}", "prerelease": True, "draft": False}
+                        for n in range(99, -1, -1)])
+    r = _rollback_footer(tmp_path, _gh_listing(betas, RELEASES))
+    assert r.returncode == 0, r.stderr
+    assert "plugin install https://raw.githubusercontent.com/someone/plugin/2026.09.19/plugins/plugin.plg forced" in r.stdout.splitlines()
 
 
 def test_no_rollback_note_before_the_first_stable_release(tmp_path):
@@ -650,12 +683,14 @@ def test_an_unexpected_tag_never_reaches_the_pasted_command(tmp_path):
     assert not (tmp_path / "INJECTED").exists()
 
 
-@pytest.mark.parametrize("gh_body,plgr_body", [
-    ("echo 'HTTP 502' >&2; exit 1", "echo upgrade=minor"),  # the release lookup failed
-    (_gh_listing(), "echo 'HTTP Error 404' >&2; exit 2"),  # the rollback target no longer installs
+@pytest.mark.parametrize("channel,gh_body,plgr_body", [
+    ("stable", "echo 'HTTP 502' >&2; exit 1", "echo upgrade=minor"),  # the release lookup failed
+    ("stable", _gh_listing(), "echo 'HTTP Error 404' >&2; exit 2"),  # the rollback target no longer installs
+    ("beta", _gh_listing(), 'case "$*" in *"/master/"*) echo "HTTP Error 404" >&2; exit 2 ;; esac; echo upgrade=minor'),
 ])
-def test_a_rollback_note_that_cannot_be_made_right_stops_the_release(tmp_path, gh_body, plgr_body):
-    r = _rollback_footer(tmp_path, gh_body, plgr_body=plgr_body, call='rollback=$(rollback_footer); echo reached')
+def test_a_rollback_note_that_cannot_be_made_right_stops_the_release(tmp_path, channel, gh_body, plgr_body):
+    r = _rollback_footer(tmp_path, gh_body, channel=channel, plgr_body=plgr_body,
+                         call='rollback=$(rollback_footer); echo reached')
     assert r.returncode != 0 and "reached" not in r.stdout
 
 
