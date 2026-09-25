@@ -27,6 +27,17 @@ if [ -n "$OLD_SHA" ]; then
   OLD_SYNC_BETA=$(sed -n 's/^Release-Synced-Beta: //p' <<<"$trailers" | sed -n 1p)
   OLD_CL=$(mktemp)
   git show "origin/$RB:$CHANGELOG" > "$OLD_CL" 2>/dev/null || OLD_CL=""
+  # The rebuild below carries over only the notes: stop rather than drop anything else pushed to the PR.
+  not_promoted=()
+  if [ -n "$OLD_SYNC_BETA" ] && git rev-parse -q --verify "refs/tags/$OLD_SYNC_BETA" >/dev/null; then
+    not_promoted=(--not "refs/tags/$OLD_SYNC_BETA")
+  fi
+  edited=$(git log --no-merges --format= --name-only "origin/$BASE..origin/$RB" "${not_promoted[@]}" \
+    -- . ":(top,exclude)$CHANGELOG" | sort -u)
+  if [ -n "$edited" ]; then
+    echo "::error::$RB changes more than $CHANGELOG ($(tr '\n' ' ' <<<"$edited")); a refresh rebuilds it from $BASE and would drop that. Move it to $BASE, or remove it from $RB, then push again."
+    exit 1
+  fi
 fi
 
 git switch -q -C "$RB" "origin/$BASE"

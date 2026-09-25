@@ -14,7 +14,7 @@ New work goes to `beta` through pull requests. Only urgent fixes for the stable 
 The **Release** workflow (`.github/workflows/release.yml`) does all of this; nobody builds packages by hand.
 
 1. A push to `master` or `beta` that changes the plugin opens or updates that channel's release PR, titled `chore(<branch>): release`. It changes only `CHANGELOG.md`: an `## Unreleased` section with one bullet per new commit.
-2. Edit that section on the PR branch until it reads the way the release notes should. For a stable release, every bullet copied from a commit subject must be reworded or deleted (a subject ending in a commit hash, for example): the release refuses to go out with one left in. Later pushes add their commits to the PR but keep your edits and deletions.
+2. Edit that section on the PR branch until it reads the way the release notes should. For a stable release, every bullet copied from a commit subject must be reworded or deleted (a subject ending in a commit hash, for example): the release refuses to go out with one left in. Later pushes add their commits to the PR but keep your edits and deletions. Change only `CHANGELOG.md` there: code fixes go to `master` or `beta` through their own PRs, and a refresh stops (naming the files) rather than drop anything else pushed to the release PR.
 3. Merge the PR. The workflow then:
    - picks the version: today's date (UTC), or the date plus `a`, `b`, ... for another release the same day;
    - renames `## Unreleased` to that version and writes the notes into the `.plg` `<CHANGES>`;

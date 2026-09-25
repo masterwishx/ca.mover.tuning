@@ -883,12 +883,14 @@ class Channels:
         self.sh(self.user, "tag", version)
         self.sh(self.user, "push", "-q", "origin", branch, "--tags")
 
-    def run(self, script, **env):
+    def run(self, script, ok=True, **env):
         self.sh(self.work, "fetch", "-q", "origin", "--tags")
         self.sh(self.work, "reset", "-q", "--hard")
         self.sh(self.work, "checkout", "-q", "--detach", "origin/master")
         r = subprocess.run(["bash", str(SCRIPTS / script)], cwd=self.work, env={**self.env, **env},
                            capture_output=True, text=True)
+        if not ok:
+            return r
         assert r.returncode == 0, r.stdout + r.stderr
         return r.stdout
 
@@ -944,6 +946,7 @@ def test_stable_pr_promotes_the_beta_release_not_unreleased_beta_work(channels):
 
 
 def test_stable_pr_edits_survive_the_next_beta_release(channels):
+    channels.commit("beta", "fix: beta code change")
     channels.release("beta", "2026.09.21a", "- One\n- Two\n- Three", "beta")
     channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
     channels.commit("release/stable", "Update CHANGELOG.md", "CHANGELOG.md",
@@ -990,3 +993,14 @@ def test_a_notes_only_edit_is_not_a_bullet_after_the_back_merge(channels):
     channels.commit("beta", "fix: beta work")
     channels.run("plg_release_pr.sh", CHANNEL="beta", BASE="beta")
     assert channels.unreleased("release/beta") == ["- fix: beta work"]
+
+
+def test_refresh_stops_rather_than_drop_a_code_change_on_the_release_pr(channels):
+    """The rebuild carries over only the notes; anything else pushed to the release PR must not vanish silently."""
+    channels.commit("beta", "fix: A thing")
+    channels.run("plg_release_pr.sh", CHANNEL="beta", BASE="beta")
+    channels.commit("release/beta", "Update p.plg", Channels.PLG, lambda t: t.replace("echo installed", "echo installed fine"))
+    channels.commit("beta", "feat: C")
+    r = channels.run("plg_release_pr.sh", ok=False, CHANNEL="beta", BASE="beta")
+    assert r.returncode != 0 and Channels.PLG in r.stdout + r.stderr
+    assert "echo installed fine" in channels.show("release/beta", Channels.PLG), "the edit is still on the PR"
