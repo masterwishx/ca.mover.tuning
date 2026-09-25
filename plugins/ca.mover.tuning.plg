@@ -774,6 +774,9 @@ if [[ -f /boot/config/plugins/&name;/mover.cron ]]; then
   sed -i -E 's#/usr/local/sbin/mover(\.old)? (start|force)#/usr/local/emhttp/plugins/&name;/mover.php force start#' /boot/config/plugins/&name;/mover.cron
 fi
 
+# The plugin's own cron files follow the saved settings: missing ones are written back (reinstall), stale ones removed
+/usr/bin/php -q /usr/local/emhttp/plugins/&name;/updateCron.php sync
+
 # Refresh cron
 /usr/local/sbin/update_cron
 

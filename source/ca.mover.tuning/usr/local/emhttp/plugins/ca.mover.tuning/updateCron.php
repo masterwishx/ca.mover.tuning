@@ -4,6 +4,11 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini") ?: [];
+// var.ini does not exist yet while plugins install at boot, before emhttp starts; empty when neither file gives it
+if (isset($vars['version']) === false) {
+	$release = @parse_ini_file("/etc/unraid-version");
+	$vars['version'] = $release['version'] ?? '';
+}
 
 // Get config value of forced cron
 $cfg_cronEnabled = $cfg['force'];
@@ -12,7 +17,7 @@ $cfg_cron = trim($cfg['cron'] ?? '');
 // Get config value of mover disabled
 $cfg_moverDisabled = $cfg['moverDisabled'];
 // Get Mover Tuning cron time (normalized)
-$cfg_moverTuneCron = trim($cfg['moverTuneCron'] ?? $vars['shareMoverSchedule'] ?? '');
+$cfg_moverTuneCron = trim($cfg['moverTuneCron'] ?? '');
 
 /** Writes a message to syslog under the "move" tag when plugin logging is enabled; errors are always written */
 function logger($string)
@@ -141,8 +146,8 @@ function make_cron($cron)
 	return true;
 }
 
-/** Deletes a cron file; false, with an error logged, when it exists and cannot be deleted */
-function remove_cron_file($file)
+/** Deletes a cron file, logging $why when given; false, with an error logged, when it exists and cannot be deleted */
+function remove_cron_file($file, $why = '')
 {
 	if (file_exists($file) === false) {
 		return true;
@@ -151,7 +156,56 @@ function remove_cron_file($file)
 		logger("Error: Failed to remove $file.");
 		return false;
 	}
+	if ($why !== '') {
+		logger("Removed $file: $why.");
+	}
 	return true;
+}
+
+/** Makes the plugin's own cron files follow the saved settings: writes a missing one they call for, removes one they do not, never rewrites one */
+function sync_cron_files()
+{
+	global $vars, $cfg_cronEnabled, $cfg_cron, $cfg_moverDisabled, $cfg_moverTuneCron;
+
+	// parse_plugin_cfg reads it with my_parse_ini_file from Unraid 6.12.14, parse_ini_file before; a file that does not
+	// parse leaves only default.cfg in $cfg from 7.2.0 (null on 6.9), which would remove both cron files
+	$cfgFile = "/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg";
+	if (file_exists($cfgFile) === true) {
+		$saved = function_exists('my_parse_ini_file') === true ? @my_parse_ini_file($cfgFile) : @parse_ini_file($cfgFile);
+		if (is_array($saved) === false) {
+			logger("Error: $cfgFile does not parse, so the cron files are left as they are.");
+			return;
+		}
+	}
+
+	$forcedFile = "/boot/config/plugins/ca.mover.tuning/mover.cron";
+	if ($cfg_cronEnabled !== 'yes') {
+		remove_cron_file($forcedFile, "force move is off");
+	} elseif ($cfg_cron === '') {
+		remove_cron_file($forcedFile, "no forced move schedule is set");
+	} elseif (file_exists($forcedFile) === false && make_cron($cfg_cron) === true) {
+		logger("Forced move schedule written back from the saved settings.");
+	}
+
+	$tuneFile = "/boot/config/plugins/ca.mover.tuning/mover.tuning.cron";
+	if ($vars['version'] === '') {
+		logger("Error: The Unraid version is unknown, so $tuneFile is left as it is.");
+	} elseif (version_compare($vars['version'], '7.2.1', '<') === true) {
+		remove_cron_file($tuneFile, "Unraid before 7.2.1 has no separate Mover Tuning schedule");
+	} elseif ($cfg_moverDisabled === 'yes') {
+		remove_cron_file($tuneFile, "the Mover Tuning schedule is disabled");
+	} elseif ($cfg_moverTuneCron === '') {
+		remove_cron_file($tuneFile, "no Mover Tuning schedule is set");
+	} elseif (file_exists($tuneFile) === false && make_tune_cron($cfg_moverTuneCron) === true) {
+		logger("Mover Tuning schedule written back from the saved settings.");
+	}
+}
+
+// From the CLI (plugin install, age_mover reset) the plugin's cron files are brought in line with the saved settings;
+// the caller runs update_cron afterwards
+if (PHP_SAPI === 'cli' && ($argv[1] ?? '') === 'sync') {
+	sync_cron_files();
+	exit;
 }
 
 // Check if value was changed to prevent the logger of printing when cron was not changed and not make cron file when avalible already
