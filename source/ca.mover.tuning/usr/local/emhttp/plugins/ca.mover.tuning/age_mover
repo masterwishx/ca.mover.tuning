@@ -92,7 +92,7 @@ LAST_COUNT=-1
 LAST_FOLDER_COUNT=-1
 EMPTY_DIR_COUNT=-1
 declare -A POOL_FSTYPE_CACHE=()
-# per cache:yes share, from createFilteredFilelist: "name|keeps its primary files|sync size limit in bytes" lines for decideMoveActions
+# per cache:yes share, from createFilteredFilelist: "name|keeps its primary files|sync size limit in bytes|age filter days" lines for decideMoveActions
 SHARE_PLAN_RULES=""
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -1355,7 +1355,13 @@ createFilteredFilelist() {
             FINDSTR+=" -type f"
         fi
 
-        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY|$((SYNC_SIZE * 1048576))"$'\n'
+        # a fixed age filter holds younger files back; they stay due for syncing, also on a Move All run that lists without it
+        AGE_WINDOW=0
+        if [ "$AGE" -ge 1 ]; then
+            AGE_WINDOW=$AGE
+            [ "$SHAREUSECACHE" = "yes" ] && [ "$SYNCHRONIZECACHE" = "yes" ] && mvlogger "Synchronize: files dated up to ${AGE} days before the last sync date are synced too, as the age filter holds files back"
+        fi
+        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY|$((SYNC_SIZE * 1048576))|$AGE_WINDOW"$'\n'
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
@@ -1739,9 +1745,10 @@ decideMoveActions() {
             while ((getline held_line < HELD_FILELIST) > 0) held_paths[held_line] = 1
             close(HELD_FILELIST)
 
-            # a cache:yes share below its moving threshold keeps its primary files; a size limit keeps larger files unsynced, never unmoved
+            # a cache:yes share below its moving threshold keeps its primary files; a size limit keeps larger files unsynced, never unmoved;
+            # an age filter held younger files back, so the share syncs from that many days before lastCacheSync
             n = split(ENVIRON["SHARE_PLAN_RULES"], rules, "\n")
-            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0 }
+            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)\|([0-9]+)$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0; sync_window[r[1]] = r[4] * 86400 }
 
             # Print new header
             printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
@@ -1751,7 +1758,7 @@ decideMoveActions() {
         }
 
         # first pass: the names of a hardlink group can sit in several cache:yes shares; the group is kept if one of them
-        # keeps its primary files, and synced with the largest size limit among them
+        # keeps its primary files, and synced with the widest window and the largest size limit among them
         NR == FNR {
             if (FNR > 1 && $10 > 1 && $4 == "yes") {
                 split(full_path(), parts, "/")
@@ -1760,6 +1767,7 @@ decideMoveActions() {
                 if (keep_primary[$3]) group_keep[group] = 1
                 if (!sync_max[$3]) group_nolimit[group] = 1
                 else if (sync_max[$3] > group_limit[group]) group_limit[group] = sync_max[$3]
+                if (sync_window[$3] > group_window[group]) group_window[group] = sync_window[$3]
             }
             next
         }
@@ -1786,9 +1794,9 @@ decideMoveActions() {
             # one decision for a hardlink group, whatever share each of its names is in: see the first pass
             group = storage_pool "|" $11
             if ($10 > 1 && group in group_seen) {
-                keep = group_keep[group]; limit = (group in group_nolimit) ? 0 : group_limit[group]
+                keep = group_keep[group]; limit = (group in group_nolimit) ? 0 : group_limit[group]; window = group_window[group]
             } else {
-                keep = keep_primary[$3]; limit = sync_max[$3]
+                keep = keep_primary[$3]; limit = sync_max[$3]; window = sync_window[$3]
             }
 
             # Handle hardlinks
@@ -1868,7 +1876,7 @@ decideMoveActions() {
 
                 if (action == "keep on primary") {
                     source = storage_path
-                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC || RESYNCHRONIZECACHE == "yes") && (!limit || file_size < limit)) {
+                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC - window || RESYNCHRONIZECACHE == "yes") && (!limit || file_size < limit)) {
                         action = "sync from primary"
                         destination = "/mnt/" $2
                         if ($12 == "d") {
@@ -2700,13 +2708,14 @@ processTheMoves() {
         for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
             # If config file exist
             if [[ -f "$config_file" ]]; then
-                if grep -qs 'synchronizeCache="yes"' "$config_file"; then
+                # an override is read only while it is active, so an inactive one keeps its mark for when it is enabled again
+                if grep -qs 'synchronizeCache="yes"' "$config_file" && { [ "$config_file" = "$MOVERTUNINGCFGFILE" ] || grep -qs 'moverOverride="yes"' "$config_file"; }; then
                     if grep -q "lastCacheSync=" "$config_file"; then
-                        sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$config_file"
+                        sed -i "s/lastCacheSync=.*$/lastCacheSync=\"$EPOCH\"/" "$config_file"
                     else
-                        echo "lastCacheSync=$EPOCH" >>"$config_file"
+                        echo "lastCacheSync=\"$EPOCH\"" >>"$config_file"
                     fi
-                    mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previos CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
+                    mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previous CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
                 fi
             fi
         done

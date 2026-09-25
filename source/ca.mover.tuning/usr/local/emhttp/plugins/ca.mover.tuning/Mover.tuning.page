@@ -1244,6 +1244,7 @@ _(Resynchronize all Primary files to Secondary)_:
 :mover_tune_resynchronizecache_plug:
 <p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
 <p>All files will be synchronized again independently of modification time.</p>
+<p>After lowering the number of days of the age filter, or setting it to No or Auto, set this to <strong>Run once</strong>: files the filter held back are not synchronized otherwise.</p>
 <p>This can be a long operation. Run-once setting will reset back to <strong>No</strong> after next run.</p>
 :end
 </blockquote>

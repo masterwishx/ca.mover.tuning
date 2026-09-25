@@ -452,6 +452,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_resynchronizecache_plug:
 <p>Cela resynchronisera les fichiers du stockage Primaire (cache) sur le Primaire et le Secondaire (array) afin qu’ils soient sauvegardés et protégés par la parité.</p>
 <p>Tous les fichiers seront resynchronisés à nouveau, indépendamment de leur date de modification.</p>
+<p>Après avoir réduit le nombre de jours du filtre d’âge, ou l’avoir réglé sur Non ou Auto, choisissez ici <strong>Exécuter une fois</strong>, sinon les fichiers retenus par ce filtre ne sont pas synchronisés.</p>
 <p>Cela peut être une opération longue. Le réglage « Run once » reviendra automatiquement à <strong>No</strong> après la prochaine exécution.</p>
 :end
 
