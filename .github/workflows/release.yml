@@ -1,0 +1,164 @@
+name: Release
+
+# Pushes touching plugin files on master/beta refresh that channel's release PR; merging it cuts the release.
+# Needs the RELEASE_TOKEN secret. Mechanics: .github/scripts/release/ and RELEASING.md.
+
+on:
+  push:
+    branches: [master, beta]
+    paths:
+      - 'source/**'
+      - 'plugins/ca.mover.tuning.plg'
+      - 'CHANGELOG.md'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'auto = decide from the branch state; pr = refresh the release PR; release = cut a release from this branch'
+        type: choice
+        options: [auto, pr, release]
+        default: auto
+      dry_run:
+        description: 'Run everything except pushes, tags and the GitHub release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  PLG: plugins/ca.mover.tuning.plg
+  CHANGELOG: CHANGELOG.md
+  PKG_BUILD: source/ca.mover.tuning/pkg_build.sh
+  RELEASE_TITLE: Mover Tuning
+  STABLE_BRANCH: master
+  BETA_BRANCH: beta
+  GIT_USER: masterwishx
+  GIT_EMAIL: 28630321+masterwishx@users.noreply.github.com
+  TZ: UTC
+  DRY_RUN: ${{ inputs.dry_run || false }}
+  GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # the built-in token starts the other channel's run; RELEASE_TOKEN does everything else
+      actions: write
+    if: github.event_name != 'push' || (!contains(github.event.head_commit.message, '[skip ci]') && !endsWith(github.actor, '[bot]'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_TOKEN }}
+          # The scripts attach the token to origin themselves, around the pushes that need
+          # it, so it is absent from .git/config while the plugin's build runs.
+          persist-credentials: false
+
+      - name: Stage the release scripts
+        # the scripts switch branches in this checkout, so they run from a copy that cannot change under them
+        run: |
+          cp -r .github/scripts/release "$RUNNER_TEMP/release"
+          echo "SCRIPTS=$RUNNER_TEMP/release" >> "$GITHUB_ENV"
+
+      - name: Decide channel and mode
+        id: decide
+        env:
+          MODE_IN: ${{ inputs.mode || 'auto' }}
+          DISPATCH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          case "$MODE_IN" in
+            auto|pr|release) ;;
+            *) echo "::error::mode must be auto, pr or release (got '$MODE_IN')"; exit 1 ;;
+          esac
+          if [ "$GITHUB_REF_NAME" = "$STABLE_BRANCH" ]; then
+            ch="stable" other="beta" other_branch="$BETA_BRANCH"
+          elif [ "$GITHUB_REF_NAME" = "$BETA_BRANCH" ]; then
+            ch="beta" other="stable" other_branch="$STABLE_BRANCH"
+          else
+            echo "::notice::$GITHUB_REF_NAME is not a release channel"
+            echo "mode=skip" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # From state, not from the pushed commit: a merged release PR is due until a release tag contains its merge.
+          # Prints the PR number when due. set -e does not reach into $( ), so every failure returns 1 itself.
+          due() {  # $1 channel, $2 branch, $3 the branch's commit
+            local latest merged released
+            latest=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "release/$1" --base "$2" \
+              --limit 20 --json number,mergeCommit,mergedAt \
+              --jq 'sort_by(.mergedAt) | last | "\(.number // "") \(.mergeCommit.oid // "")"') || return 1
+            merged="${latest#* }"
+            [ -n "$merged" ] && git merge-base --is-ancestor "$merged" "$3" 2>/dev/null || return 0
+            released=$(git tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]*' --contains "$merged") || return 1
+            [ -n "$released" ] || echo "${latest%% *}"
+          }
+          mode="$MODE_IN"
+          pr=""
+          if [ "$mode" = auto ]; then
+            pr=$(due "$ch" "$GITHUB_REF_NAME" HEAD)
+            if [ -n "$pr" ]; then mode="release"; else mode="pr"; fi
+          fi
+          # Both branches share one queue, so this push may have cancelled the other channel's waiting release:
+          # start it again. Only from pushes, so two stuck channels cannot keep starting runs for each other.
+          if [ "${GITHUB_EVENT_NAME:-}" = push ]; then
+            other_pr=$(due "$other" "$other_branch" "origin/$other_branch")
+            if [ -n "$other_pr" ]; then
+              GH_TOKEN="$DISPATCH_TOKEN" gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$other_branch" -f mode=auto
+              echo "::notice::#$other_pr is merged into $other_branch without a release yet: started a Release run for it"
+            fi
+          fi
+          {
+            echo "channel=$ch"
+            echo "mode=$mode"
+            echo "pr_number=$pr"
+          } >> "$GITHUB_OUTPUT"
+          echo "channel=$ch mode=$mode pr=${pr:-none}"
+
+      - name: Refresh release PR
+        if: steps.decide.outputs.mode == 'pr'
+        env:
+          CHANNEL: ${{ steps.decide.outputs.channel }}
+          BASE: ${{ github.ref_name }}
+        run: bash "$SCRIPTS/plg_release_pr.sh"
+
+      - name: Install xmllint
+        if: steps.decide.outputs.mode == 'release'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils
+
+      - name: Cut release
+        id: cut
+        if: steps.decide.outputs.mode == 'release'
+        env:
+          CHANNEL: ${{ steps.decide.outputs.channel }}
+          BASE: ${{ github.ref_name }}
+          PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
+        run: bash "$SCRIPTS/plg_release_cut.sh"
+
+      # A beta release changes what the next stable will contain.
+      - name: Refresh stable release PR after a beta
+        if: steps.decide.outputs.mode == 'release' && steps.decide.outputs.channel == 'beta'
+        env:
+          CHANNEL: stable
+          BASE: ${{ env.STABLE_BRANCH }}
+        run: bash "$SCRIPTS/plg_release_pr.sh"
+
+      # A stable release flows back into beta, keeping beta's manifest.
+      - name: Merge stable back into beta
+        if: steps.decide.outputs.mode == 'release' && steps.decide.outputs.channel == 'stable'
+        env:
+          BASE: ${{ env.STABLE_BRANCH }}
+          VERSION: ${{ steps.cut.outputs.version }}
+        run: bash "$SCRIPTS/plg_release_backmerge.sh"
+
+      - name: Refresh beta release PR after a stable
+        if: steps.decide.outputs.mode == 'release' && steps.decide.outputs.channel == 'stable'
+        env:
+          CHANNEL: beta
+          BASE: ${{ env.BETA_BRANCH }}
+        run: bash "$SCRIPTS/plg_release_pr.sh"

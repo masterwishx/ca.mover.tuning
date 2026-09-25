@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [master, beta]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Manifest + build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install xmllint
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils
+
+      - name: Validate plugin manifest (XML)
+        run: xmllint --noout plugins/ca.mover.tuning.plg
+
+      # CHANGELOG.md must render to the committed CHANGES block for this branch's channel,
+      # pluginURL must point at this branch, and the manifest md5 must match the served package.
+      - name: Verify changelog, manifest and served package agree
+        run: |
+          branch="${GITHUB_BASE_REF:-$GITHUB_REF_NAME}"
+          channel=stable
+          [ "$branch" != beta ] || channel=beta
+          python3 .github/scripts/release/plg_release.py check \
+            --changelog CHANGELOG.md --plg plugins/ca.mover.tuning.plg \
+            --channel "$channel" --branch "$branch" --verify-asset
+
+      - name: Test build
+        run: |
+          bash source/ca.mover.tuning/pkg_build.sh --version 0000.00.00 --out "$RUNNER_TEMP/dist"
+          test -s "$RUNNER_TEMP/dist/ca.mover.tuning-0000.00.00-x86_64-1.txz"
+
+  release-scripts:
+    name: Release script tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependencies
+        run: pip install -r .github/scripts/release/tests/requirements.txt
+
+      - name: Run tests
+        run: python -m pytest .github/scripts/release/tests -q

@@ -2,13 +2,13 @@ name: Universal Discord Notifier
 
 on:
   release:
-    types: [published, created]
+    types: [published]
   pull_request:
     types: [opened, closed, reopened]
   issues:
     types: [opened, closed, reopened]
   workflow_run:
-    workflows: ["Build Mover Tuning Plugin"]
+    workflows: ["Release"]
     types: [completed]
   workflow_dispatch:
 
@@ -54,9 +54,9 @@ jobs:
       # 3. Build & send Discord embed
       # ---------------------------------------------------------
 
-      # Notify unless workflow_run succeeded without a new release
+      # Notify unless workflow_run succeeded without a new release, or was cancelled or skipped
       - name: Send Discord Notification
-        if: ${{ github.event_name != 'workflow_run' || env.NEW_RELEASE == 'true' || github.event.workflow_run.conclusion != 'success' }}
+        if: ${{ github.event_name != 'workflow_run' || env.NEW_RELEASE == 'true' || !contains(fromJSON('["success", "cancelled", "skipped"]'), github.event.workflow_run.conclusion) }}
 
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}

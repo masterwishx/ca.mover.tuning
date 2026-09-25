@@ -46,17 +46,14 @@ jobs:
 
     - name: Build the package
       env:
-        PKG_VERSION: ${{ steps.version.outputs.version }}
-      run: |
-        cd "$PLUGIN_NAME/source/$PLUGIN_NAME"
-        bash pkg_build.sh "$GITHUB_WORKSPACE"
+        VERSION: ${{ steps.version.outputs.version }}
+      run: bash "$PLUGIN_NAME/source/$PLUGIN_NAME/pkg_build.sh" --version "$VERSION" --out out
 
-    - name: Collect the package and manifest
+    - name: Collect the manifest
       env:
         VERSION: ${{ steps.version.outputs.version }}
       run: |
-        mkdir out
-        cp "$PLUGIN_NAME/archive/$PLUGIN_NAME-$VERSION-x86_64-1.txz" "$PLUGIN_NAME/plugins/$PLUGIN_NAME.plg" out/
+        cp "$PLUGIN_NAME/plugins/$PLUGIN_NAME.plg" out/
         echo "$VERSION" > out/version
 
     - name: Upload the build
