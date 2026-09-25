@@ -2780,7 +2780,7 @@ start() {
     if [ -n "$BEFORESCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
         if [ -f "$BEFORESCRIPT" ] && [ -x "$BEFORESCRIPT" ]; then
             mvlogger "Launching before script: $BEFORESCRIPT"
-            eval "$BEFORESCRIPT"
+            "$BEFORESCRIPT"
             mvlogger "Before script finished"
         else
             mvlogger "Before script file $BEFORESCRIPT does not exist or is not executable"
@@ -2818,7 +2818,7 @@ start() {
     if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
         if [ -f "$AFTERSCRIPT" ] && [ -x "$AFTERSCRIPT" ]; then
             mvlogger "Launching after script: $AFTERSCRIPT"
-            eval "$AFTERSCRIPT"
+            "$AFTERSCRIPT"
             rc=$?
             # rc is read instead of $?: [ overwrites $? before the || branch runs.
             mvlogger "After script finished with result: $([ "$rc" = 0 ] && echo "OK" || echo "$rc")"
