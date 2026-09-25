@@ -14,12 +14,12 @@ $cfg_moverDisabled = $cfg['moverDisabled'];
 // Get Mover Tuning cron time (normalized)
 $cfg_moverTuneCron = trim($cfg['moverTuneCron'] ?? $vars['shareMoverSchedule'] ?? '');
 
-// Write a message to syslog under the "move" tag when plugin logging is enabled
+/** Writes a message to syslog under the "move" tag when plugin logging is enabled; errors are always written */
 function logger($string)
 {
 	global $cfg;
 
-	if ($cfg['logging'] == 'yes') {
+	if ($cfg['logging'] === 'yes' || strpos($string, 'Error:') === 0) {
 		exec("logger -t move " . escapeshellarg($string));
 	}
 }
@@ -81,7 +81,7 @@ function cron_field_ok($field, $min, $max, $names)
 	return true;
 }
 
-// Unraid Mover cron for unraid v7.2.1+
+/** Writes Unraid's mover.cron from the Mover Settings schedule, before Unraid 7.2.1; true when the file was written */
 function make_unraid_cron()
 {
 	global $vars;
@@ -90,66 +90,85 @@ function make_unraid_cron()
 		$moverCron = trim($vars['shareMoverSchedule']);
 		if (valid_cron($moverCron) === false) {
 			logger("Error: Invalid Unraid mover schedule: " . preg_replace('/[^[:print:]]/', '?', $moverCron));
-			return;
+			return false;
 		}
 		$cronMoverFile = "# Generated mover schedule:\n" . $moverCron . " /usr/local/sbin/mover start |& logger -t move\n\n";
 		if (file_put_contents("/boot/config/plugins/dynamix/mover.cron", $cronMoverFile) === false) {
 			logger("Error: Failed to write mover.cron file.");
+			return false;
 		}
+		return true;
 	}
+	logger("No mover schedule set in Mover Settings.");
+	return false;
 }
 
-// Mover Tuning cron for unraid v7.2.1+
-function make_tune_cron()
+/** Writes mover.tuning.cron for the $tuneCron schedule, from Unraid 7.2.1; true when the file was written */
+function make_tune_cron($tuneCron)
 {
-	global $cfg_moverTuneCron;
-	$tuneCron = isset($_POST['tune_cron']) === true ? trim(post_string('tune_cron')) : $cfg_moverTuneCron;
 	if (empty($tuneCron)) {
-		logger("Error: No cron schedule provided for Mover Tuning move.");
-		return; // Nothing to write
+		logger("No cron schedule provided for Mover Tuning move.");
+		return false; // Nothing to write
 	}
 	if (valid_cron($tuneCron) === false) {
 		logger("Error: Invalid cron schedule for Mover Tuning move: " . preg_replace('/[^[:print:]]/', '?', $tuneCron));
-		return;
+		return false;
 	}
 	$cronTuneFile = "# Generated schedule for Mover Tuning move:\n" . $tuneCron . " /usr/local/emhttp/plugins/ca.mover.tuning/mover start |& logger -t move\n\n";
 	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron", $cronTuneFile) === false) {
 		logger("Error: Failed to write mover.tuning.cron file.");
+		return false;
 	}
+	return true;
 }
 
-// Cron for forced move: mover.php force applies its parity option, then runs Unraid's mover
-function make_cron()
+/** Writes the forced move's mover.cron for the $cron schedule, run through mover.php force; true when the file was written */
+function make_cron($cron)
 {
-	$cron = trim(post_string('cron'));
 	if (empty($cron)) {
-		logger("Error: No cron schedule provided for forced move.");
-		return;
+		logger("No cron schedule provided for forced move.");
+		return false;
 	}
 	if (valid_cron($cron) === false) {
 		logger("Error: Invalid cron schedule for forced move: " . preg_replace('/[^[:print:]]/', '?', $cron));
-		return;
+		return false;
 	}
 	$cronFile = "# Generated schedule for forced move:\n{$cron} /usr/local/emhttp/plugins/ca.mover.tuning/mover.php force start |& logger -t move\n\n";
 	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.cron", $cronFile) === false) {
 		logger("Error: Failed to write forced mover.cron file.");
+		return false;
 	}
+	return true;
+}
+
+/** Deletes a cron file; false, with an error logged, when it exists and cannot be deleted */
+function remove_cron_file($file)
+{
+	if (file_exists($file) === false) {
+		return true;
+	}
+	if (@unlink($file) === false) {
+		logger("Error: Failed to remove $file.");
+		return false;
+	}
+	return true;
 }
 
 // Check if value was changed to prevent the logger of printing when cron was not changed and not make cron file when avalible already
 if ($cfg_cronEnabled != $_POST['cronEnabled']) {
 	if ($_POST['cronEnabled'] == "yes") {
-		make_cron();
-		logger("Forced move schedule enabled successfully.");
-	} else {
-		@unlink("/boot/config/plugins/ca.mover.tuning/mover.cron");
+		if (make_cron(trim(post_string('cron'))) === true) {
+			logger("Forced move schedule enabled successfully.");
+		}
+	} elseif (remove_cron_file("/boot/config/plugins/ca.mover.tuning/mover.cron") === true) {
 		logger("Forced move schedule disabled successfully.");
 	}
 } else {
 	// If cron already enabled and cron time was changed update cron file
 	if ($cfg_cronEnabled == "yes" && $cfg_cron != $_POST['cron']) {
-		make_cron();
-		logger("Forced move schedule updated successfully.");
+		if (make_cron(trim(post_string('cron'))) === true) {
+			logger("Forced move schedule updated successfully.");
+		}
 	}
 }
 
@@ -159,38 +178,27 @@ if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 	if ($_POST['ismoverDisabled'] == "yes") {
 		if (version_compare($vars['version'], '7.2.1', '>=')) {
 			// Check if the file exists
-			if (file_exists("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron")) {
-				@unlink("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron");
+			if (file_exists("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron") === false) {
+				logger("Mover Tuning cron file does not exist");
+			} elseif (remove_cron_file("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron") === true) {
 				logger("Mover Tuning schedule disabled successfully.");
-			} else {
-				logger("Error: Mover Tuning cron file does not exist");
 			}
 		} else {
 			// Check if the file exists
-			if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
-				@unlink("/boot/config/plugins/dynamix/mover.cron");
+			if (file_exists("/boot/config/plugins/dynamix/mover.cron") === false) {
+				logger("Mover cron file does not exist");
+			} elseif (remove_cron_file("/boot/config/plugins/dynamix/mover.cron") === true) {
 				logger("Mover schedule disabled successfully.");
-			} else {
-				logger("Error: Mover cron file does not exist");
 			}
 		}
 	} else {
 		if (version_compare($vars['version'], '7.2.1', '>=')) {
-			// Check if the file exists
-			make_tune_cron();
-			if (file_exists("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron")) {
+			$tuneCron = isset($_POST['tune_cron']) === true ? trim(post_string('tune_cron')) : $cfg_moverTuneCron;
+			if (make_tune_cron($tuneCron) === true) {
 				logger("Mover Tuning schedule enabled successfully.");
-			} else {
-				logger("Error: Failed to create Mover Tuning cron file.");
 			}
-		} else {
-			// If mover schedule is enabled
-			make_unraid_cron();
-			if (file_exists("/boot/config/plugins/dynamix/mover.cron")) {
-				logger("Mover schedule enabled successfully.");
-			} else {
-				logger("Error: Failed to create mover cron file.");
-			}
+		} elseif (make_unraid_cron() === true) {
+			logger("Mover schedule enabled successfully.");
 		}
 	}
 }
@@ -199,12 +207,11 @@ if ($cfg_moverDisabled != $_POST["ismoverDisabled"]) {
 if (version_compare($vars['version'], '7.2.1', '>=') === true && ($_POST['ismoverDisabled'] ?? '') !== 'yes') {
 	$postTuneCron = post_string('tune_cron');
 	if ($cfg_moverTuneCron !== $postTuneCron) {
-		if (trim($postTuneCron) !== "") {
-			make_tune_cron();
-			logger("Mover Tuning cron schedule updated successfully.");
-		} else {
-			@unlink("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron");
+		$tuneCron = trim($postTuneCron);
+		if ($tuneCron === "" && remove_cron_file("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron") === true) {
 			logger("Mover Tuning cron schedule removed.");
+		} elseif ($tuneCron !== "" && make_tune_cron($tuneCron) === true) {
+			logger("Mover Tuning cron schedule updated successfully.");
 		}
 	}
 }
