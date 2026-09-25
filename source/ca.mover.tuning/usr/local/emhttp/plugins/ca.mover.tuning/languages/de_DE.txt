@@ -101,6 +101,7 @@ Mover Tuning - Share Settings=Mover‑Tuning – Freigaben‑Einstellungen
 Mover Tuning Debug Package zip=Mover‑Tuning‑Debug‑Paket (.zip)
 Mover Tuning Notification=Mover‑Tuning‑Benachrichtigung
 Mover Tuning schedule=Mover‑Tuning‑Zeitplan
+Mover Tuning settings are available for existing shares only=Mover‑Tuning‑Einstellungen sind nur für bestehende Freigaben verfügbar.
 Mover Tuning settings not available for this share=Mover‑Tuning‑Einstellungen für diese Freigabe nicht verfügbar
 Mover Tuning thresholds=Mover‑Tuning‑Schwellwerte
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Keine Dateien wurden durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s

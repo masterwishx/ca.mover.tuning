@@ -100,6 +100,7 @@ Mover Tuning - Share Settings=Mover Tuning - 共享设置
 Mover Tuning Debug Package zip=Mover Tuning 调试包（.zip）
 Mover Tuning Notification=Mover Tuning 通知
 Mover Tuning schedule=Mover Tuning 计划
+Mover Tuning settings are available for existing shares only=Mover Tuning 设置仅适用于已存在的共享。
 Mover Tuning settings not available for this share=此共享不可使用 Mover Tuning 设置
 Mover Tuning thresholds=Mover Tuning 阈值
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件没有移动/同步任何文件。耗时：%s

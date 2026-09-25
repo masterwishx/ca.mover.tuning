@@ -101,6 +101,7 @@ Mover Tuning - Share Settings=Réglage du mover – Paramètres de la part
 Mover Tuning Debug Package zip=Package de débogage Mover Tuning (.zip)
 Mover Tuning Notification=Notification Mover Tuning
 Mover Tuning schedule=Planification Mover Tuning
+Mover Tuning settings are available for existing shares only=Les paramètres Mover Tuning ne sont disponibles que pour une part existante.
 Mover Tuning settings not available for this share=Paramètres Mover Tuning non disponibles pour cette part
 Mover Tuning thresholds=Seuils Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Aucun fichier n’a été déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s

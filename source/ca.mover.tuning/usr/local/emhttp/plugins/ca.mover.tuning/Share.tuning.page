@@ -20,7 +20,11 @@ require_once("/usr/local/emhttp/plugins/ca.mover.tuning/perShareMover.php");
 ob_end_clean();
 
 $plugin='ca.mover.tuning';
-$shareName = $_GET['name'];
+$shareName = $_GET['name'] ?? '';
+if (mt_share_exists($shareName) === false) {
+  echo "<p class='notice'>"._('Mover Tuning settings are available for existing shares only.')."</p>";
+  return;
+}
 $shareCfgText = is_file("/boot/config/shares/$shareName.cfg") ? (string)file_get_contents("/boot/config/shares/$shareName.cfg") : '';
 $shareCFG = "/boot/config/plugins/$plugin/shareOverrideConfig/$shareName.cfg";
 $cfg = parse_share_cfg($plugin, $shareName);
@@ -42,7 +46,7 @@ $f = $movingSaved;
 
 <script>
 function moveShareNow() {
-        $.post("/plugins/ca.mover.tuning/moveShareNow.php", {Share: <?= json_encode($shareName, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>});
+        $.post("/plugins/ca.mover.tuning/moveShareNow.php", {Share: <?= json_encode($shareName, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE) ?>});
 	MoveShare.disabled = true;
 }
 

@@ -103,6 +103,7 @@ Mover Tuning - Share Settings=
 Mover Tuning Debug Package zip=Mover Tuning Debug Package (.zip)
 Mover Tuning Notification=
 Mover Tuning schedule=
+Mover Tuning settings are available for existing shares only=Mover Tuning settings are available for existing shares only.
 Mover Tuning settings not available for this share=
 Mover Tuning thresholds=
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=No files were moved/synced by Mover Tuning plugin. Elapsed time: %s

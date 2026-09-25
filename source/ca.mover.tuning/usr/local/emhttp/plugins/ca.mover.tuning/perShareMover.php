@@ -24,4 +24,12 @@ function parse_share_cfg($plugin, $shareName, $sections = false, $scanner = INI_
     return file_exists($rom) ? array_replace_recursive($cfg, parse_ini_file($rom, $sections, $scanner)) : $cfg;
 }
 #---------------------------------------------------------------------------------------------------------------------
+/** Whether a share name from the request names an existing share; rejects anything that could be a path */
+function mt_share_exists($shareName)
+{
+    if (is_string($shareName) === false || $shareName === '' || $shareName[0] === '.' || strpbrk($shareName, "/\\\0") !== false) {
+        return false;
+    }
+    return is_file("/boot/config/shares/$shareName.cfg");
+}
 ?>
