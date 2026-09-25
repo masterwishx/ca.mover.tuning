@@ -1,81 +1,46 @@
 #!/bin/bash
 set -euo pipefail
 
-# Get the directory of the script
+# Usage: pkg_build.sh --version YYYY.MM.DD[a] [--out DIR]
+# Writes <plugin>-<version>-x86_64-1.txz to DIR (default: dist/ at the repo root) and stamps its version and md5 into the .plg.
 DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
-
-# Set the temporary directory and plugin name
-tmpdir=/tmp/tmp.$(( RANDOM * 19318203981230 + 40 ))
 plugin=$(basename "${DIR}")
-archive="$(dirname "$(dirname "${DIR}")")/archive"
-# $2 is argument addition to date (a,b,c)
-version=$(date +"%Y.%m.%d")${2:-}
-# a test build passes its own version (.github/workflows/pr-build.yml)
-version=${PKG_VERSION:-$version}
-# $1 Path to the plugin directory
-config_file="$1/$plugin/plugins/$plugin.plg"
-readme_file="$1/$plugin/README.md"
-default_config_file="$1/$plugin/source/$plugin/usr/local/emhttp/plugins/$plugin/default.cfg"
-# Create the temporary directory and copy files
-mkdir -p $tmpdir
+root="$(dirname "$(dirname "${DIR}")")"
+config_file="$root/plugins/$plugin.plg"
+version=""
+out="$root/dist"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --version) version="${2:-}"; shift 2 ;;
+    --out) out="${2:-}"; shift 2 ;;
+    *) echo "Unknown option: $1" >&2; exit 1 ;;
+  esac
+done
+# the release workflow picks the version; a test build passes its own (.github/workflows/pr-build.yml)
+[[ "$version" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}[0-9a-z.]*$ ]] || { echo "--version YYYY.MM.DD[suffix] is required" >&2; exit 1; }
 
-# Get the content from .update file
-update_content="$(dirname "$(dirname "$DIR")")/.updates.txt"
-[ -s "$update_content" ] || { echo "Missing release notes: $update_content" >&2; exit 1; }
+mkdir -p "$out"
+out=$(cd "$out" && pwd)
+package="$out/${plugin}-${version}-x86_64-1.txz"
+tmpdir=$(mktemp -d)
+trap 'rm -rf -- "$tmpdir"' EXIT
 
-# Step 0: Change to current version in $default_config_file
-sed -i "s/version=.*/version=\"$version\"/" "$default_config_file"
-
+cd "$DIR"
 find . -type f ! \( -iname "pkg_build.sh" -o -iname "sftp-config.json" \) -exec cp --parents -f -t "$tmpdir/" {} +
+# only the packaged copy carries the version, so master and beta never differ on it
+sed -i "s/^version=.*/version=\"$version\"/" "$tmpdir/usr/local/emhttp/plugins/$plugin/default.cfg"
 
-cd $tmpdir
+cd "$tmpdir"
 
 # Same layout as `makepkg -l y -c y` (root-owned, 755 dirs), without needing Slackware
 find . -type d -exec chmod 755 {} +
-find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion --owner=0 --group=0 -T - -cJf "${archive}/${plugin}-${version}-x86_64-1.txz"
+find ./ | LC_COLLATE=C sort | sed '2,$s,^\./,,' | tar --no-recursion --owner=0 --group=0 -T - -cJf "$package"
 
-# Calculate the MD5 hash of the package
-package_md5=$(md5sum "${archive}/${plugin}-${version}-x86_64-1.txz" | awk '{print $1}')
-
-echo "Version: $version"
-echo "MD5: $package_md5"
-echo ""
-echo "Update Content: $update_content"
-echo ""
-echo "Updating $plugin.plg"
-echo "Updating README.md"
-echo "Updating default.cfg"
+package_md5=$(md5sum "$package" | awk '{print $1}')
 
 sed -i "s/<!ENTITY md5.*/<!ENTITY md5       \"$package_md5\">/" "$config_file"
 sed -i "s/<!ENTITY version.*/<!ENTITY version   \"$version\">/" "$config_file"
 
-# Define variables for your files and version
-tmp_config_file="$tmpdir/tmp_config_file.txt"
-tmp_readme_file="$tmpdir/tmp_readme_file.txt"
-
-# Modify the config file (*.plg) with changelog
-# Step 1: Cut content after ### from $config_file to $tmp_config_file
-sed -n '/###*/,$p' "$config_file" > "$tmp_config_file"
-# Step 2: Delete everything after ### in $config_file
-sed -i '/###*/,$d' "$config_file"
-# Step 3: Add version to $config_file
-sed -i '$a\###'${version}'' "$config_file"
-# Step 4: Add content from $update_content to $config_file
-cat "$update_content" >> "$config_file"; echo -e "\n" >> "$config_file"
-# Step 5: Add content from $tmp_config_file to $config_file
-cat "$tmp_config_file" >> "$config_file"
-
-# Modify the readme file with changelog
-# Step 1: Cut content after ## Changelog from $readme_file to $tmp_readme_file
-sed -n '/- 20*/,$p' "$readme_file" > "$tmp_readme_file"
-# Step 2: Delete everything after ## Changelog in $readme_file
-sed -i '/- 20*/,$d' "$readme_file"
-# Step 3: Add version to $readme_file
-sed -i '$a\- '${version}'' "$readme_file"
-# Step 4: Add content from $update_content to $readme_file
-cat "$update_content" | sed -e 's/^/    /' >> "$readme_file"; echo -e "\n" >> "$readme_file"
-# Step 5: Add content from $tmp_readme_file to $readme_file
-cat "$tmp_readme_file" >> "$readme_file"
-
-# Clean up the temporary directory
-rm -rf $tmpdir
+echo "Version: $version"
+echo "MD5: $package_md5"
+echo "Package: $package"

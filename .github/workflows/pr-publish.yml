@@ -94,7 +94,7 @@ jobs:
         # only the package download moves to the pull request release; after that it must be the manifest's one download
         tag="pr-$PR-$version"
         release_url="https://github.com/$GITHUB_REPOSITORY/releases/download/$tag"
-        sed -i "s|<URL>https://github.com/&github;/raw/&branch;/archive/&name;-&version;-x86_64-1.txz</URL>|<URL>$release_url/$package</URL>|" "$plg"
+        sed -i "s|<URL>https://github.com/&github;/releases/download/&version;/&name;-&version;-x86_64-1.txz</URL>|<URL>$release_url/$package</URL>|" "$plg"
         [ "$(xpath 'count(/PLUGIN/FILE/URL)')" = 1 ] && [ "$(xpath 'string(/PLUGIN/FILE/URL)')" = "$release_url/$package" ] \
           || { echo "::error::the manifest must have one download, $release_url/$package"; exit 1; }
         { echo "version=$version"; echo "tag=$tag"; echo "package=$package"; echo "md5=$md5"; echo "install_url=$release_url/$PLUGIN_NAME.plg"; } >> "$GITHUB_OUTPUT"
