@@ -1220,6 +1220,10 @@ createFilteredFilelist() {
             mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
         fi
 
+        # Move All (cache:yes shares only) above its threshold moves everything: none of the filters below applies
+        MOVE_ALL="no"
+        [ "$SHAREUSECACHE" = "yes" ] && [ -n "$OMOVERTHRESH" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ] && MOVE_ALL="yes"
+
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             mvlogger "Moving threshold: $PREFER_MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $PREFER_FILLUPPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
@@ -1236,7 +1240,7 @@ createFilteredFilelist() {
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
-            elif [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
+            elif [ "$MOVE_ALL" = "yes" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Move All from Primary->Secondary shares option is selected and pool is above move all threshold percentage:  $POOLPCTUSED% > $OMOVERTHRESH%."
                 mvlogger "=> Moving all files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME"
             elif [ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]; then
@@ -1333,9 +1337,8 @@ createFilteredFilelist() {
             FINDSTR+=" -type f"
         fi
 
-        #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$AGE" -ge 1 ]; then
+        if [ "$MOVE_ALL" = "no" ] && [ "$AGE" -ge 1 ]; then
             mvlogger "Adding Age"
             RAGE=$((AGE - 1))
             # Use Creation time or modification time according to settings
@@ -1352,7 +1355,7 @@ createFilteredFilelist() {
         fi
 
         # Add Size to find string
-        if [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; then
+        if [ "$MOVE_ALL" = "no" ]; then
             if [[ "$SYNCHRONIZECACHE" = "yes" ]] || [[ "$RESYNCHRONIZECACHE" = "yes" ]] && [[ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]] && [ "$SYNC_SIZE" -gt 0 ]; then
                 mvlogger "Adding Sync Size: ${SYNC_SIZE}"
                 FINDSTR="$FINDSTR -size -${SYNC_SIZE}M"
@@ -1363,7 +1366,7 @@ createFilteredFilelist() {
         fi
 
         # Add Ignore Hidden Files to find string
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
             # pipefail: a part-way find still hands du a valid list
@@ -1381,7 +1384,7 @@ createFilteredFilelist() {
         FINDSTR="$FINDSTR -not -name '.fuse_hidden*'"
 
         # Add files from ignore list
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")" ]; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")" ]; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
             mvlogger "List Path: ${SKIPFILESLIST}:"
 
@@ -1461,7 +1464,7 @@ createFilteredFilelist() {
 
         #Add Skipfilelist to find string
         TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=0
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
             for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
                 FINDSTR="$FINDSTR -not -name '*.${ext//\'/\'\\\'\'}'"
@@ -1487,7 +1490,7 @@ createFilteredFilelist() {
         -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH' \
         -v POOLBYTEUSED='$POOLBYTEUSED'"
 
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SPARSENESS" -gt 0 ]; then
+        if [ "$MOVE_ALL" = "no" ] && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
             FINDSTR="$FINDSTR ' \$6 == \"d\" || \$3 > (SPARSENESS / 10) {"
         else
