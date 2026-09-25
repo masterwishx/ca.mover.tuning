@@ -354,7 +354,8 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_filelistv_plug:
-<p> Полный путь к файлу, содержащему список файлов и папок, которые вы хотите исключить из перемещения с основного (кэш) пула.</p>
+<p> Полный путь к файлу со списком файлов и папок, которые mover оставляет на месте: на основном (кэш) пуле для шар cache:<strong>yes</strong> и на вторичном (массив) хранилище для шар cache:<strong>prefer</strong>.</p>
+<p> Указывайте каждую запись с путём основного пула шары (<strong><em>/mnt/cache_ssd/Files/...</em></strong>, как в примерах ниже) или с её пользовательским путём (<strong><em>/mnt/user/Files/...</em></strong>). Пути на вторичном хранилище, например <strong><em>/mnt/disk1/Files/...</em></strong>, не поддерживаются.</p>
 <p> Пример <strong>списка файлов</strong>: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , содержимое этого файла должно быть по одной записи на строку.</p>
 <p> Пример <strong>папки</strong>: <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> , <strong>НЕ</strong> ставьте (<strong><em> * </em></strong>) или (<strong><em> / </em></strong>) в конце строки.</p>
 <p> Пример <strong>файла</strong>: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>

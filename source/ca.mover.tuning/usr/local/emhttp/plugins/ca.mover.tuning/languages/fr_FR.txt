@@ -363,7 +363,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_filelistv_plug:
-<p> Chemin complet vers un fichier contenant une liste de fichiers et de dossiers que vous souhaitez ignorer lors du déplacement hors du pool Primaire (cache).</p>
+<p> Chemin complet vers un fichier listant les fichiers et dossiers que le mover laisse en place : sur le pool Primaire (cache) pour les parts cache:<strong>yes</strong>, et sur le Secondaire (array) pour les parts cache:<strong>prefer</strong>.</p>
+<p> Écrivez chaque entrée avec le chemin du pool Primaire de la part (<strong><em>/mnt/cache_ssd/Files/...</em></strong>, comme dans les exemples ci‑dessous) ou avec son chemin utilisateur (<strong><em>/mnt/user/Files/...</em></strong>). Les chemins du stockage Secondaire, comme <strong><em>/mnt/disk1/Files/...</em></strong>, ne sont pas pris en charge.</p>
 <p> Exemple de <strong>File List</strong> : <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> — le contenu de ce fichier doit comporter une entrée par ligne.</p>
 <p> Exemple de <strong>Dossier</strong> : <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> — ne mettez <strong>PAS</strong> (<strong><em>*</em></strong>) ni (<strong><em>/</em></strong>) à la fin de la ligne.</p>
 <p> Exemple de <strong>Fichier</strong> : <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong>.</p>

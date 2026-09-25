@@ -356,7 +356,8 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filelistv_plug:
-<p>Vollständiger Pfad zu einer Datei, die eine Liste von Dateien/Ordnern enthält, die nicht verschoben werden sollen.</p>
+<p>Vollständiger Pfad zu einer Datei mit Dateien und Ordnern, die der Mover dort lässt, wo sie sind: auf dem Primärspeicher (Cache) bei Freigaben mit cache:<strong>yes</strong> und auf dem Sekundärspeicher (Array) bei Freigaben mit cache:<strong>prefer</strong>.</p>
+<p>Einträge beginnen mit dem Pfad des Primär‑Pools der Freigabe (<em>/mnt/cache_ssd/Files/...</em>, wie in den Beispielen unten) oder mit ihrem User‑Share‑Pfad (<em>/mnt/user/Files/...</em>). Pfade auf dem Sekundärspeicher wie <em>/mnt/disk1/Files/...</em> werden nicht unterstützt.</p>
 <p><strong>Dateiliste</strong> Beispiel: <em>/mnt/user/Files/mover_ignore.txt</em> – eine Zeile pro Eintrag.</p>
 <p><strong>Ordner</strong> Beispiel: <em>/mnt/cache_ssd/Files/MyFolder</em> – kein (<em>*</em>) oder (<em>/</em>) am Ende.</p>
 <p><strong>Datei</strong> Beispiel: <em>/mnt/cache_ssd/Files/MyFile.txt</em></p>

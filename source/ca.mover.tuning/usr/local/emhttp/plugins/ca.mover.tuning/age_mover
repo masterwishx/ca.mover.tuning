@@ -275,15 +275,25 @@ du_total_bytes() {
     tail -n1 <<<"$out" | cut -f1
 }
 
-# Skip-list lines for this share. Literal match, not regex: share names may hold
-# regex metacharacters, and an unanchored substring also matches sibling shares.
+# Skip-list lines of $3 for share $2, written as /mnt/$1/$2/... or /mnt/user/$2/..., printed under each root in $4...
+# Literal match, not regex: share names may hold regex metacharacters, and an unanchored substring also matches sibling shares.
 skiplist_share_lines() {
-    # prefix via ENVIRON, not -v: awk expands escape sequences in a -v value
-    SKIPLIST_PFX="/mnt/$1/$2" awk '
-        BEGIN { pfx = ENVIRON["SKIPLIST_PFX"] }
+    local pool="$1" share="$2" list="$3"
+    shift 3
+    # prefixes via ENVIRON, not -v: awk expands escape sequences in a -v value
+    SKIPLIST_PFX="/mnt/$pool/$share" SKIPLIST_USER_PFX="/mnt/user/$share" SKIPLIST_ROOT_LINES="$(printf '%s\n' "$@")" awk '
+        BEGIN { pfx[1] = ENVIRON["SKIPLIST_PFX"]; pfx[2] = ENVIRON["SKIPLIST_USER_PFX"]; n = split(ENVIRON["SKIPLIST_ROOT_LINES"], roots, "\n") }
         { sub(/\r$/, "") }   # the gate calls this before the CRLF fix below
-        index($0, pfx) == 1 && (length($0) == length(pfx) || substr($0, length(pfx) + 1, 1) == "/")
-    ' "$3"
+        {
+            for (p = 1; p <= 2; p++) {
+                l = length(pfx[p])
+                if (index($0, pfx[p]) == 1 && (length($0) == l || substr($0, l + 1, 1) == "/")) {
+                    for (r = 1; r <= n; r++) print roots[r] substr($0, l + 1)
+                    next
+                }
+            }
+        }
+    ' "$list"
 }
 
 # Sanitize input filename to prevent attacks
@@ -1157,6 +1167,7 @@ createFilteredFilelist() {
         fi
 
         # Alterate SHAREPATH when RebalanceShare=true
+        UNATTENDED_ROOTS=()
         if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
             UNATTENDEDSTORAGE_SHAREPATH=""
             # Iterate over each unattended storage pool
@@ -1164,14 +1175,20 @@ createFilteredFilelist() {
                 # Skip if the share folder doesn't exist in this dir
                 if [[ -d "/mnt/$dir/$SHARENAME" ]]; then
                     UNATTENDEDSTORAGE_SHAREPATH+=" \"/mnt/$dir/$SHARENAME\""
+                    UNATTENDED_ROOTS+=("/mnt/$dir/$SHARENAME")
                 fi
             done
         fi
+
+        # skip-list entries are excluded under these roots: the pool, or the secondary paths a cache:prefer share walks,
+        # then the unattended storage a rebalance walks
+        SKIPLIST_ROOTS=("$SHAREPATH")
 
         # Alterate SHAREPATH on Cache=prefer
         if [[ "$SHAREUSECACHE" == "prefer" ]]; then
             COUNT_SECONDARY_FILES=0
             PREFER_SHAREPATH=""
+            SKIPLIST_ROOTS=()
             PRIMARY_SHAREPATH="$SHAREPATH"
 
             if [[ -n "$SECONDARYSTORAGENAME" ]]; then
@@ -1183,6 +1200,7 @@ createFilteredFilelist() {
                     SECONDARY_SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
                     if [[ -d "$SECONDARY_SHAREPATH" ]]; then
                         PREFER_SHAREPATH+=" \"$SECONDARY_SHAREPATH\""
+                        SKIPLIST_ROOTS+=("$SECONDARY_SHAREPATH")
                         # Count the number of files in the secondary storage directory
                         tmp=$(find "$SECONDARY_SHAREPATH" -type f | wc -l)
                         COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
@@ -1199,6 +1217,7 @@ createFilteredFilelist() {
                         if [[ -d "$SECONDARY_SHAREPATH" ]]; then
                             # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
                             PREFER_SHAREPATH+=" \"$SECONDARY_SHAREPATH\""
+                            SKIPLIST_ROOTS+=("$SECONDARY_SHAREPATH")
                             # Count the number of files in the secondary storage directory
                             tmp=$(find "$SECONDARY_SHAREPATH" -type f | wc -l)
                             COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
@@ -1214,6 +1233,8 @@ createFilteredFilelist() {
                 fi
             fi
         fi
+
+        SKIPLIST_ROOTS+=("${UNATTENDED_ROOTS[@]}")
 
         if [[ "$SHAREUSECACHE" == "prefer" ]]; then
             mvlogger "Share Information: Name: $SHARENAME - Path: $PRIMARY_SHAREPATH"
@@ -1385,7 +1406,7 @@ createFilteredFilelist() {
         FINDSTR="$FINDSTR -not -name '.fuse_hidden*'"
 
         # Add files from ignore list
-        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")" ]; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST" "${SKIPLIST_ROOTS[@]}")" ]; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
             mvlogger "List Path: ${SKIPFILESLIST}:"
 
@@ -1448,7 +1469,7 @@ createFilteredFilelist() {
                 # Exclusion-only row. The size for the whole list is carried by the
                 # aggregate row below, so these rows cannot double-count in pool_sums.
                 echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|0|0|0|0|$filetype|${skipped_path}" >>"$FILTERED_FILELIST"
-            done <<<"$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")"
+            done <<<"$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST" "${SKIPLIST_ROOTS[@]}")"
 
             if [ ${#SKIPPED_MEASURE_PATHS[@]} -gt 0 ]; then
                 # du exits nonzero on a partial read while still printing a total
@@ -1458,7 +1479,7 @@ createFilteredFilelist() {
                     mvlogger "Error calculating size for ${SKIPFILESLIST}"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
                 fi
-                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$TOTAL_SKIPPED_PATH_RESERVED_SPACE|0|0|0|f|${SHAREPATH}/ ignored files" >>"$FILTERED_FILELIST"
+                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$TOTAL_SKIPPED_PATH_RESERVED_SPACE|0|0|0|f|${SKIPLIST_ROOTS[0]}/ ignored files" >>"$FILTERED_FILELIST"
             fi
             mvlogger "    Ignored files are using $(bytes_to_human "$TOTAL_SKIPPED_PATH_RESERVED_SPACE")"
         fi

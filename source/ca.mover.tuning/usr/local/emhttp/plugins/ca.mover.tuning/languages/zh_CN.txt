@@ -354,7 +354,8 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_filelistv_plug:
-<p> 一个文件的完整路径，该文件列出了不希望从主存储（缓存）池移出的文件和文件夹。</p>
+<p> 一个文件的完整路径，该文件列出 Mover 保留在原处的文件和文件夹：cache:<strong>yes</strong> 共享的留在主存储（缓存）池上，cache:<strong>prefer</strong> 共享的留在次存储（阵列）上。</p>
+<p> 每个条目使用共享的主存储池路径（<strong><em>/mnt/cache_ssd/Files/...</em></strong>，如下方示例）或其用户共享路径（<strong><em>/mnt/user/Files/...</em></strong>）。不支持次存储上的路径，例如 <strong><em>/mnt/disk1/Files/...</em></strong>。</p>
 <p> <strong>文件列表</strong>示例：<strong><em>/mnt/user/Files/mover_ignore.txt</em></strong>，文件内容每行一个条目。</p>
 <p> <strong>文件夹</strong>示例：<strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong>，行尾<strong>不要</strong>加 (<strong><em> * </em></strong>) 或 (<strong><em> / </em></strong>)。</p>
 <p> <strong>文件</strong>示例：<strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong>。</p>
