@@ -79,6 +79,14 @@ function updateCron() {
 	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled});
 }
 
+// Unraid 6.10+ prefixes escapeQuotes(this) to this onsubmit once the page is ready; 6.9 never does
+function mtEscapeQuotes(form) {
+  if (/(^|;)escapeQuotes\(this\);/.test(form.getAttribute('onsubmit') || '')) return;
+  $(form).find('input[type=text]').each(function() {
+    $(this).val($(this).val().replace(/"/g, '\\"'));
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById("StartTuneMoverBtn");
     const status = document.getElementById("MoverStatus");
@@ -454,7 +462,7 @@ if (localStorage.getItem(newYearSeasonKey) === 'yes') {
 </div>
 
 <div class='moverUpdate'></div>
-<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
+<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtEscapeQuotes(this);updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 
 _(Disable Mover running on a schedule)_:
