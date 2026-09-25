@@ -2891,8 +2891,8 @@ start() {
 
     mvDebuglogger "after script completed" "after script END"
 
-    #Reset run-once settings
-    if [ ! -e $SOFTSTOPFILE ]; then
+    #Reset run-once settings; a test mode run synced and rebalanced nothing, so it keeps them
+    if [ ! -e $SOFTSTOPFILE ] && [ "$TESTMODE" != "yes" ]; then
         for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
             # If config file exist
             if [ -f "$config_file" ]; then
