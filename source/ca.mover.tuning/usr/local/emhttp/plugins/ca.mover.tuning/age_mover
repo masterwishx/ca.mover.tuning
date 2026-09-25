@@ -92,6 +92,8 @@ LAST_COUNT=-1
 LAST_FOLDER_COUNT=-1
 EMPTY_DIR_COUNT=-1
 declare -A POOL_FSTYPE_CACHE=()
+# per cache:yes share, from createFilteredFilelist: "name|keeps its primary files" lines for decideMoveActions
+SHARE_PLAN_RULES=""
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 
@@ -1220,6 +1222,8 @@ createFilteredFilelist() {
             mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
         fi
 
+        # set for a cache:yes share below its moving threshold; reset here because the find filters read it for every share
+        KEEP_PRIMARY=0
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             mvlogger "Moving threshold: $PREFER_MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $PREFER_FILLUPPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
@@ -1236,17 +1240,23 @@ createFilteredFilelist() {
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
-            elif [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
+            fi
+            # the files on the primary follow the thresholds whether or not misplaced files are rebalanced
+            if [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Move All from Primary->Secondary shares option is selected and pool is above move all threshold percentage:  $POOLPCTUSED% > $OMOVERTHRESH%."
                 mvlogger "=> Moving all files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME"
             elif [ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is below moving threshold percentage: $POOLPCTUSED% < $MOVINGPCTTHRESHOLD%."
-                if [ "$SYNCHRONIZECACHE" = "yes" ] || [ "$RESYNCHRONIZECACHE" = "yes" ]; then
-                    mvlogger "=> No file will be moved but share processed as Synchronize Primary->Secondary option is set"
+                # Resynchronize alone syncs nothing: decideMoveActions syncs only with Synchronize on
+                if [ "$SYNCHRONIZECACHE" = "yes" ]; then
+                    mvlogger "=> No file will be moved from $PRIMARYSTORAGENAME but share processed as Synchronize Primary->Secondary option is set"
+                elif [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+                    mvlogger "=> No file will be moved from $PRIMARYSTORAGENAME but share processed as Rebalance shares option is selected"
                 else
                     mvlogger "=> Skipping"
                     continue
                 fi
+                KEEP_PRIMARY=1
             else
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is above moving threshold percentage:  $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
                 mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
@@ -1332,6 +1342,8 @@ createFilteredFilelist() {
         else
             FINDSTR+=" -type f"
         fi
+
+        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY"$'\n'
 
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
@@ -1692,7 +1704,7 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFYTIME
     # $6:PRIMARYSIZETHRESH $7:POOLUSED $8:FILESIZE $9:SPARSENESS $10:NBLINKS $11:INODE $12:FILETYPE $13:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
+    SHARE_PLAN_RULES="$SHARE_PLAN_RULES" awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
         # the path is the last field and may itself contain the separator
         function full_path(   p, i) { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; return p }
         BEGIN {
@@ -1715,6 +1727,10 @@ decideMoveActions() {
             while ((getline held_line < HELD_FILELIST) > 0) held_paths[held_line] = 1
             close(HELD_FILELIST)
 
+            # a cache:yes share below its moving threshold keeps its primary files
+            n = split(ENVIRON["SHARE_PLAN_RULES"], rules, "\n")
+            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])$/, r)) keep_primary[r[1]] = r[2] + 0
+
             # Print new header
             printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
             "PRIMARYSTORAGENAME","SHARENAME","SHAREUSECACHE","MODIFYTIME",
@@ -1722,7 +1738,19 @@ decideMoveActions() {
             "ACTION","FROM","TO","FILETYPE","FILEPATH"
         }
 
-        NR > 1 { # Main loop, skip header line
+        # first pass: the names of a hardlink group can sit in several cache:yes shares; the group is kept if one of them
+        # keeps its primary files
+        NR == FNR {
+            if (FNR > 1 && $10 > 1 && $4 == "yes") {
+                split(full_path(), parts, "/")
+                group = parts[3] "|" $11
+                group_seen[group] = 1
+                if (keep_primary[$3]) group_keep[group] = 1
+            }
+            next
+        }
+
+        FNR > 1 { # Main loop, skip header line
             if (system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
                 exit 1
             }
@@ -1737,6 +1765,14 @@ decideMoveActions() {
                 if (i < length(path_parts)) {
                     file_path = file_path "/"
                 }
+            }
+
+            # one decision for a hardlink group, whatever share each of its names is in: see the first pass
+            group = storage_pool "|" $11
+            if ($10 > 1 && group in group_seen) {
+                keep = group_keep[group]
+            } else {
+                keep = keep_primary[$3]
             }
 
             # Handle hardlinks
@@ -1812,7 +1848,7 @@ decideMoveActions() {
             held = (full_path() in held_paths)
             if (storage_pool == $1) {
                 # Make decision to move or keep:
-                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
+                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && !keep && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
 
                 if (action == "keep on primary") {
                     source = storage_path
@@ -1954,7 +1990,7 @@ decideMoveActions() {
             # Print overall totals to stats file
             printf("TOTAL|%d|%d|%d|%d|%d|%d|%d|%d|%d\n", total_files_from_primary, total_size_from_primary, total_folders_from_primary, total_files_from_secondary, total_size_from_secondary, total_folders_from_secondary, total_files_from_unattended, total_size_from_unattended, total_folders_from_unattended) >> "'"${STATS_FILE}"'"
 
-    }' "$FILTERED_FILELIST" >"$MOVER_ACTIONLIST"
+    }' "$FILTERED_FILELIST" "$FILTERED_FILELIST" >"$MOVER_ACTIONLIST"
     if [ -e $SOFTSTOPFILE ]; then
         [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
         return
