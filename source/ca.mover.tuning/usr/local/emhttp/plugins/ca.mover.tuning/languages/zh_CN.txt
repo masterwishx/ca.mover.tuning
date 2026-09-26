@@ -143,7 +143,7 @@ Top Folder=顶层文件夹
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Unraid Mover 计划当前为**启用**状态
 Use ATIME=使用访问时间（ATIME）
-Use CTIME=使用创建时间（CTIME）
+Use CTIME change time=使用状态更改时间（CTIME）
 Used IDE=开发工具
 User shares not enabled=用户共享未启用
 Validate input filenames to prevent attacks=验证文件名防止攻击
@@ -322,7 +322,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_ctime_plug:
-> 在 find 命令中使用 <strong>CTIME</strong><em>（创建时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄。
+> 使用 <strong>CTIME</strong><em>（状态更改时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄以及文件自上次同步后是否有变化。文件内容或属性（名称、所有者、权限）发生任何变化时，状态更改时间都会更新；它不是创建时间。
 :end
 
 :mover_tune_atime_plug:
@@ -338,7 +338,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_sizefsync_plug:
-> 如果要按文件大小（<strong>MB</strong>）同步文件，请选择<strong>是</strong>。此选项仅在启用同步或重新同步功能时有效。
+> 选择<strong>是</strong>后，cache:yes 共享中保留在主存储上的文件同步到次存储时，只复制小于下方大小（<strong>MB</strong>）的文件。仅在<strong>主存储文件同步到次存储</strong>设为<strong>是</strong>时有效，重新同步时同样适用。移回 cache:prefer 共享的文件和重新平衡的文件不受限制。
 :end
 
 :mover_tune_sizeinmsync_plug:
@@ -437,13 +437,15 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :mover_tune_rebalanceshares_plug:
 <p>如果共享的文件分散在<strong><em>非指定存储</em></strong>（未分配为该共享主存储或次存储的磁盘/存储池）上，则将其移到共享的主存储和/或次存储。</p>
 <p>在允许的情况下（cache:prefer、cache:yes、cache:only），可能会把较旧的文件从<strong><em>主存储->次存储</em></strong>或<strong><em>次存储->主存储</em></strong>移动以释放空间。</p>
-<p>“运行一次”设置会在下次运行后重置为<strong>否</strong>。</p>
+<p>“运行一次”设置会在下次运行后重置为<strong>否</strong>。测试模式下的运行不会重置它。</p>
 :end
 
 :mover_tune_resynchronizecache_plug:
 <p>将主存储（缓存）上的文件重新同步到主存储和次存储（阵列），使其得到备份并受奇偶校验保护。</p>
 <p>所有文件都会重新同步，不考虑修改时间。</p>
-<p>这可能需要很长时间。“运行一次”设置会在下次运行后重置为<strong>否</strong>。</p>
+<p>作用于进行同步的共享：通过此处或共享自身 Mover Tuning 设置中的<strong>主存储文件同步到次存储</strong>启用。没有任何共享同步时显示为灰色。</p>
+<p>减少年龄过滤天数，或将其设为否或自动后，请在此选择<strong>运行一次</strong>，否则被该过滤条件暂缓的文件不会同步。</p>
+<p>这可能需要很长时间。“运行一次”设置会在下次运行后重置为<strong>否</strong>。测试模式下的运行不会重置它。</p>
 :end
 
 :mover_tune_moveroverride_plug:

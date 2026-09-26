@@ -92,6 +92,8 @@ LAST_COUNT=-1
 LAST_FOLDER_COUNT=-1
 EMPTY_DIR_COUNT=-1
 declare -A POOL_FSTYPE_CACHE=()
+# per cache:yes share, from createFilteredFilelist: "name|keeps its primary files|sync size limit in bytes|age filter days" lines for decideMoveActions
+SHARE_PLAN_RULES=""
 # Get parent Logs Folder from config, if blank set to default /tmp
 CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 
@@ -768,6 +770,16 @@ getMoverSettings() {
     else
         if [ $(cfg sizefSync) = "yes" ]; then
             SYNC_SIZE=$(cfg sizeinMSync)
+            # a hand-edited value must not reach the arithmetic in createFilteredFilelist, which would abort the run
+            if [[ $SYNC_SIZE =~ ^0*[0123456789]{1,7}$ ]]; then
+                SYNC_SIZE=$((10#$SYNC_SIZE))
+            elif [[ $SYNC_SIZE =~ ^[0123456789]+$ ]]; then
+                mvlogger "Sync Size \"$SYNC_SIZE\" MB is too large: no sync size limit"
+                SYNC_SIZE=0
+            else
+                mvlogger "Sync Size \"$SYNC_SIZE\" is not a whole number of MB: no sync size limit"
+                SYNC_SIZE=0
+            fi
             [ $SYNCHRONIZECACHE == "yes" ] || [ $RESYNCHRONIZECACHE == "yes" ] && [ $SYNC_SIZE -gt 0 ] && mvlogger "Sync Size supplied: $SYNC_SIZE"
         else
             [[ ! "$config_file" =~ shareOverrideConfig ]] && SYNC_SIZE=0
@@ -1220,6 +1232,8 @@ createFilteredFilelist() {
             mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
         fi
 
+        # set for a cache:yes share below its moving threshold; reset here because the find filters read it for every share
+        KEEP_PRIMARY=0
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
             mvlogger "Moving threshold: $PREFER_MOVINGPCTTHRESHOLD% ($(bytes_to_human $MOVESIZETHRESH)) ; Filling up threshold: $PREFER_FILLUPPCTLIMIT% ($(bytes_to_human $PRIMARYSIZETHRESH))"
@@ -1236,21 +1250,29 @@ createFilteredFilelist() {
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
-            elif [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
+            fi
+            # the files on the primary follow the thresholds whether or not misplaced files are rebalanced
+            if [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Move All from Primary->Secondary shares option is selected and pool is above move all threshold percentage:  $POOLPCTUSED% > $OMOVERTHRESH%."
                 mvlogger "=> Moving all files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME"
             elif [ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is below moving threshold percentage: $POOLPCTUSED% < $MOVINGPCTTHRESHOLD%."
-                if [ "$SYNCHRONIZECACHE" = "yes" ] || [ "$RESYNCHRONIZECACHE" = "yes" ]; then
-                    mvlogger "=> No file will be moved but share processed as Synchronize Primary->Secondary option is set"
+                # Resynchronize alone syncs nothing: decideMoveActions syncs only with Synchronize on
+                if [ "$SYNCHRONIZECACHE" = "yes" ]; then
+                    mvlogger "=> No file will be moved from $PRIMARYSTORAGENAME but share processed as Synchronize Primary->Secondary option is set"
+                elif [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
+                    mvlogger "=> No file will be moved from $PRIMARYSTORAGENAME but share processed as Rebalance shares option is selected"
                 else
                     mvlogger "=> Skipping"
                     continue
                 fi
+                KEEP_PRIMARY=1
             else
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Pool is above moving threshold percentage:  $POOLPCTUSED% >= $MOVINGPCTTHRESHOLD%."
                 mvlogger "=> Will smart move old files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME. Nothing will be moved from $SECONDARYSTORAGENAME to $PRIMARYSTORAGENAME"
             fi
+            # the sync size limits only syncs, so it is applied by decideMoveActions, not by find
+            [ "$SYNCHRONIZECACHE" = "yes" ] && [ "$((SYNC_SIZE))" -gt 0 ] && mvlogger "Sync Size: only files smaller than ${SYNC_SIZE} MB are synced"
         elif [ "$SHAREUSECACHE" = "only" ]; then
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: no action, only $PRIMARYSTORAGENAME used (cache:only). Rebalance shares option is selected"
@@ -1333,14 +1355,22 @@ createFilteredFilelist() {
             FINDSTR+=" -type f"
         fi
 
+        # a fixed age filter holds younger files back; they stay due for syncing, also on a Move All run that lists without it
+        AGE_WINDOW=0
+        if [ "$AGE" -ge 1 ]; then
+            AGE_WINDOW=$AGE
+            [ "$SHAREUSECACHE" = "yes" ] && [ "$SYNCHRONIZECACHE" = "yes" ] && mvlogger "Synchronize: files dated up to ${AGE} days before the last sync date are synced too, as the age filter holds files back"
+        fi
+        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY|$((SYNC_SIZE * 1048576))|$AGE_WINDOW"$'\n'
+
         #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
         if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$AGE" -ge 1 ]; then
             mvlogger "Adding Age"
             RAGE=$((AGE - 1))
-            # Use Creation time or modification time according to settings
+            # Use change time, access time or modification time according to settings
             if [ "$CTIME" == "yes" ]; then
-                mvlogger "Age (creation time) ${AGE}"
+                mvlogger "Age (change time) ${AGE}"
                 FINDSTR="${FINDSTR} -ctime +${RAGE}"
             elif [ "$ATIME" == "yes" ]; then
                 mvlogger "Age (access time) ${AGE}"
@@ -1353,9 +1383,9 @@ createFilteredFilelist() {
 
         # Add Size to find string
         if [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; then
-            if [[ "$SYNCHRONIZECACHE" = "yes" ]] || [[ "$RESYNCHRONIZECACHE" = "yes" ]] && [[ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]] && [ "$SYNC_SIZE" -gt 0 ]; then
-                mvlogger "Adding Sync Size: ${SYNC_SIZE}"
-                FINDSTR="$FINDSTR -size -${SYNC_SIZE}M"
+            if [ "$SIZE" -gt 0 ] && [ "$KEEP_PRIMARY" = 1 ] && [ "$SYNCHRONIZECACHE" = "yes" ]; then
+                mvlogger "Move Size not applied: no file is moved from $PRIMARYSTORAGENAME, so every file is a candidate for syncing"
+                [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ] && mvlogger "=> Nor does it limit rebalancing: files on $UNATTENDEDSTORAGE are rebalanced whatever their size"
             elif [ "$SIZE" -gt 0 ]; then
                 mvlogger "Adding Move Size: ${SIZE}"
                 FINDSTR="$FINDSTR -size +${SIZE}M"
@@ -1497,10 +1527,10 @@ createFilteredFilelist() {
         FINDSTR="$FINDSTR path = \$7; for (i = 8; i < NF; i++) path = path \"|\" \$i;"
         # a line break in a name would split this newline-delimited row into a forged one: the name is skipped
         FINDSTR="$FINDSTR if (path ~ /[\\n\\r]/) { gsub(/[\\n\\r]/, \"?\", path); print \"Skipping a name holding a line break: \" path > \"/dev/stderr\"; next }"
-        # Birth time (CTIME option) or access time (ATIME) comes from stat, which awk runs through
+        # Change time (CTIME option, the time find -ctime tests) or access time (ATIME) comes from stat, which awk runs through
         # sh: the path goes in single quotes with each embedded quote escaped, never bare
         STATFMT=""
-        [ "$CTIME" == "yes" ] && STATFMT="%W"
+        [ "$CTIME" == "yes" ] && STATFMT="%Z"
         [ "$ATIME" == "yes" ] && STATFMT="%X"
         if [ -n "$STATFMT" ]; then
             FINDSTR="$FINDSTR q = path; gsub(/\\047/, \"\\047\\\"\\047\\\"\\047\", q);
@@ -1539,7 +1569,7 @@ createFilteredFilelist() {
         fi
     done
 
-    # Sort the file list by PRIMARYSTORAGENAME, shareusecache, creation/modification time, and inode, keeping /mnt/disk at the end
+    # Sort the file list by PRIMARYSTORAGENAME, shareusecache, file time (modification, change or access), and inode, keeping /mnt/disk at the end
     sort -t '|' -k1,1 -k4,4 -k5,5nr -k11,11 -o "$FILTERED_FILELIST" "$FILTERED_FILELIST"
     # Need to remove duplicate (cache and array)
     if awk -F'|' '$13 ~ /^\/mnt\/disk[0-9]+\// { found = 1; exit } END { exit !found }' "$FILTERED_FILELIST"; then
@@ -1692,9 +1722,34 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFYTIME
     # $6:PRIMARYSIZETHRESH $7:POOLUSED $8:FILESIZE $9:SPARSENESS $10:NBLINKS $11:INODE $12:FILETYPE $13:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
+    SHARE_PLAN_RULES="$SHARE_PLAN_RULES" awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
         # the path is the last field and may itself contain the separator
         function full_path(   p, i) { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; return p }
+        # the Synchronize and lastCacheSync a share syncs with: the global ones, or while the global Synchronize is off those of its active override
+        function share_sync(share,    cfgfile, line, override, sync, mark, m) {
+            if (share in sync_on) return
+            sync_on[share] = global_sync
+            sync_mark[share] = global_mark
+            if (!shareOverrideCfgDir_exist || global_sync != "no") return
+            sync_on[share] = "no"
+            sync_mark[share] = ""
+            cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" share ".cfg"
+            while ((getline line < cfgfile) > 0) {
+                if (line ~ /moverOverride="yes"/) override = 1
+                if (line ~ /synchronizeCache="yes"/) sync = 1
+                if (match(line, /lastCacheSync="([^"]+)"/, m)) mark = m[1]
+            }
+            close(cfgfile)
+            if (override && sync) {
+                sync_on[share] = "yes"
+                sync_mark[share] = mark
+            }
+        }
+        # whether share syncs a kept file of that time and size: at or after its lastCacheSync minus its age window, under its size limit
+        function share_syncs(share, t, size) {
+            share_sync(share)
+            return sync_on[share] == "yes" && (t >= sync_mark[share] - sync_window[share] || RESYNCHRONIZECACHE == "yes") && (!sync_max[share] || size < sync_max[share])
+        }
         BEGIN {
             FS = OFS = "|"
 
@@ -1704,9 +1759,9 @@ decideMoveActions() {
             # Initialize previous inode and dictionary for pool sums
             previous_inode = 0
 
-            # Init variables for track last share for Sync overrides
-            prev_share = ""
+            # the global Synchronize and lastCacheSync, which share_sync applies an active share override over
             global_sync = SYNCHRONIZECACHE
+            global_mark = LASTCACHESYNC
 
             # Check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
             shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
@@ -1715,6 +1770,22 @@ decideMoveActions() {
             while ((getline held_line < HELD_FILELIST) > 0) held_paths[held_line] = 1
             close(HELD_FILELIST)
 
+            # a cache:yes share below its moving threshold keeps its primary files; a size limit keeps larger files unsynced, never unmoved;
+            # an age filter held younger files back, so the share syncs from that many days before lastCacheSync
+            n = split(ENVIRON["SHARE_PLAN_RULES"], rules, "\n")
+            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)\|([0-9]+)$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0; sync_window[r[1]] = r[4] * 86400 }
+
+            # the first pass can change a plan only when shares keep, sync, limit or date their syncs differently; otherwise the list is read once
+            for (share in keep_primary) {
+                share_sync(share)
+                sig = keep_primary[share] "|" sync_max[share] "|" sync_window[share] "|" sync_on[share] "|" sync_mark[share]
+                if (first_sig != "" && sig != first_sig) groups = 1
+                first_sig = sig
+            }
+            pass = 2
+            if (groups) pass = 1
+            else ARGV[1] = ""
+
             # Print new header
             printf "%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
             "PRIMARYSTORAGENAME","SHARENAME","SHAREUSECACHE","MODIFYTIME",
@@ -1722,8 +1793,23 @@ decideMoveActions() {
             "ACTION","FROM","TO","FILETYPE","FILEPATH"
         }
 
-        NR > 1 { # Main loop, skip header line
-            if (system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
+        # first pass: the names of a hardlink group (keyed as in holdPartialHardlinks) can sit in several cache:yes shares; the group
+        # keeps its primary files if one of those shares does, and is synced if one of them would sync it
+        FNR == 1 && NR > 1 { pass = 2 }
+        pass == 1 {
+            if (FNR > 1 && $10 > 1 && $4 == "yes") {
+                split(full_path(), parts, "/")
+                group = parts[3] "|" $10 "|" $11 "|" $5
+                group_seen[group] = 1
+                if (keep_primary[$3]) group_keep[group] = 1
+                if (share_syncs($3, $5, $8)) group_sync[group] = 1
+            }
+            next
+        }
+
+        FNR > 1 { # Main loop, skip header line
+            # on the first row, then every 1000 rows: a system() call per row slows a big list down
+            if (FNR % 1000 == 2 && system("[ -e \"" SOFTSTOPFILE "\" ]") == 0) {
                 exit 1
             }
 
@@ -1738,6 +1824,17 @@ decideMoveActions() {
                     file_path = file_path "/"
                 }
             }
+
+            # the sync size must judge every name of a hardlink group by its real size: the block below zeroes later names
+            file_size = $8
+            # a hardlink group gets one keep-primary and one sync decision whatever share each name is in (first pass);
+            # the projection below still judges the names of each share apart
+            grouped = 0
+            if (groups && $10 > 1) {
+                group = storage_pool "|" $10 "|" $11 "|" $5
+                grouped = (group in group_seen)
+            }
+            keep = grouped ? (group in group_keep) : keep_primary[$3]
 
             # Handle hardlinks
             if ($10 > 1) {
@@ -1769,54 +1866,20 @@ decideMoveActions() {
                 }
             }
 
-            ### Check if share has Sync override ###
-            # Set current sharename
-            sharename = $3
-            
-            # Check at the start using previous state
-            if (shareOverrideCfgDir_exist && global_sync == "no" && sharename != prev_share) {
-
-            # Initialize for this share
-            cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" sharename ".cfg"
-            SYNCHRONIZECACHE = "no"
-            LASTCACHESYNC = ""
-            moverOverride = 0
-            synchronizeCache = 0
-
-            # Check file exists
-            if ((getline test < cfgfile) > 0) {
-                close(cfgfile)
-
-                # parse the file
-                while ((getline line < cfgfile) > 0) {
-                    if (line ~ /moverOverride="yes"/)
-                        moverOverride = 1
-                    if (line ~ /synchronizeCache="yes"/)
-                        synchronizeCache = 1
-                    if (match(line, /lastCacheSync="([^"]+)"/, m))
-                        LASTCACHESYNC = m[1]
-                }
-                close(cfgfile)
-
-                if (moverOverride && synchronizeCache) {
-                    SYNCHRONIZECACHE = "yes"
-                }
-            }
-
-            # remember current state for next record
-            prev_share = sharename
-            }
-            ### ###
+            # the Synchronize and lastCacheSync of this share; the syncs from secondary and from unattended storage below read them too
+            share_sync($3)
+            SYNCHRONIZECACHE = sync_on[$3]
+            LASTCACHESYNC = sync_mark[$3]
 
             # Take decision
             held = (full_path() in held_paths)
             if (storage_pool == $1) {
                 # Make decision to move or keep:
-                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
+                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && !keep && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
 
                 if (action == "keep on primary") {
                     source = storage_path
-                    if (SYNCHRONIZECACHE == "yes" && ($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($5 >= LASTCACHESYNC || RESYNCHRONIZECACHE == "yes")) {
+                    if (($4 != "only" && $4 != "skipped" && $4 != "prefer") && (grouped ? (group in group_sync) : share_syncs($3, $5, file_size))) {
                         action = "sync from primary"
                         destination = "/mnt/" $2
                         if ($12 == "d") {
@@ -1954,7 +2017,7 @@ decideMoveActions() {
             # Print overall totals to stats file
             printf("TOTAL|%d|%d|%d|%d|%d|%d|%d|%d|%d\n", total_files_from_primary, total_size_from_primary, total_folders_from_primary, total_files_from_secondary, total_size_from_secondary, total_folders_from_secondary, total_files_from_unattended, total_size_from_unattended, total_folders_from_unattended) >> "'"${STATS_FILE}"'"
 
-    }' "$FILTERED_FILELIST" >"$MOVER_ACTIONLIST"
+    }' "$FILTERED_FILELIST" "$FILTERED_FILELIST" >"$MOVER_ACTIONLIST"
     if [ -e $SOFTSTOPFILE ]; then
         [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
         return
@@ -2648,13 +2711,16 @@ processTheMoves() {
         for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
             # If config file exist
             if [[ -f "$config_file" ]]; then
-                if grep -qs 'synchronizeCache="yes"' "$config_file"; then
+                # an override is read only while it is active, so an inactive one keeps its mark for when it is enabled again
+                if grep -qs 'synchronizeCache="yes"' "$config_file" && { [ "$config_file" = "$MOVERTUNINGCFGFILE" ] || grep -qs 'moverOverride="yes"' "$config_file"; }; then
                     if grep -q "lastCacheSync=" "$config_file"; then
-                        sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$config_file"
+                        sed -i "s/lastCacheSync=.*$/lastCacheSync=\"$EPOCH\"/" "$config_file"
                     else
-                        echo "lastCacheSync=$EPOCH" >>"$config_file"
+                        # a file without a final newline would glue the mark onto its last key
+                        [ -n "$(tail -c 1 "$config_file")" ] && echo >>"$config_file"
+                        echo "lastCacheSync=\"$EPOCH\"" >>"$config_file"
                     fi
-                    mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previos CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
+                    mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previous CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
                 fi
             fi
         done
@@ -2830,8 +2896,8 @@ start() {
 
     mvDebuglogger "after script completed" "after script END"
 
-    #Reset run-once settings
-    if [ ! -e $SOFTSTOPFILE ]; then
+    #Reset run-once settings; a test mode run synced and rebalanced nothing, so it keeps them
+    if [ ! -e $SOFTSTOPFILE ] && [ "$TESTMODE" != "yes" ]; then
         for config_file in "$MOVERTUNINGCFGFILE" "${MOVERTUNING_OVERRIDE_CFGFOLDER}"/*.cfg; do
             # If config file exist
             if [ -f "$config_file" ]; then

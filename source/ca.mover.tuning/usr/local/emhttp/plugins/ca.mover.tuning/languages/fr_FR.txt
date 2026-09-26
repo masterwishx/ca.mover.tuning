@@ -144,7 +144,7 @@ Top Folder=Dossier principal
 Unraid mover=Mover Unraid
 Unraid Mover schedule is currently enabled=La planification du mover Unraid est actuellement **activée**
 Use ATIME=Utiliser ATIME
-Use CTIME=Utiliser CTIME
+Use CTIME change time=Utiliser CTIME (date de changement d’état)
 Used IDE=IDE utilisé
 User shares not enabled=Les parts utilisateur ne sont pas activées !
 Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
@@ -330,7 +330,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_ctime_plug:
-> Utiliser <strong>CTIME</strong> (date de création) au lieu de <strong>MTIME</strong> (modification).
+> Utiliser <strong>CTIME</strong> (date de changement d’état) au lieu de <strong>MTIME</strong> (modification) pour juger l’âge d’un fichier et s’il a changé depuis la dernière synchronisation. La date de changement d’état est mise à jour dès que le contenu ou les attributs (nom, propriétaire, permissions) d’un fichier changent ; ce n’est pas la date de création.
 :end
 
 :mover_tune_atime_plug:
@@ -346,8 +346,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_sizefsync_plug:
-> Synchroniser les fichiers selon leur taille (en Mo).  
-> Fonctionne uniquement avec Synchronize / Resynchronize.
+> Synchroniser uniquement les fichiers plus petits que la taille ci-dessous (en Mo), parmi les fichiers conservés sur le primaire des parts cache:yes.  
+> S’applique tant que <strong>Synchroniser les fichiers du primaire vers le secondaire</strong> est sur <strong>Oui</strong>, resynchronisations comprises. Les fichiers ramenés sur les parts cache:prefer et les fichiers rééquilibrés ne sont pas limités.
 :end
 
 :mover_tune_sizeinmsync_plug:
@@ -446,13 +446,15 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_rebalanceshares_plug:
 <p>Déplace les fichiers vers leur stockage primaire/secondaire si dispersés sur des disques non assignés.</p>
 <p>Peut déplacer des fichiers anciens pour libérer de l’espace.</p>
-<p>Run-once revient à Non après exécution.</p>
+<p>Run-once revient à Non après exécution. Une exécution en mode test le laisse inchangé.</p>
 :end
 
 :mover_tune_resynchronizecache_plug:
 <p>Cela resynchronisera les fichiers du stockage Primaire (cache) sur le Primaire et le Secondaire (array) afin qu’ils soient sauvegardés et protégés par la parité.</p>
 <p>Tous les fichiers seront resynchronisés à nouveau, indépendamment de leur date de modification.</p>
-<p>Cela peut être une opération longue. Le réglage « Run once » reviendra automatiquement à <strong>No</strong> après la prochaine exécution.</p>
+<p>S’applique aux parts qui se synchronisent, via <strong>Synchroniser les fichiers du primaire vers le secondaire</strong> ici ou dans les paramètres Mover Tuning propres à une part ; grisé tant qu’aucune part ne se synchronise.</p>
+<p>Après avoir réduit le nombre de jours du filtre d’âge, ou l’avoir réglé sur Non ou Auto, choisissez ici <strong>Exécuter une fois</strong>, sinon les fichiers retenus par ce filtre ne sont pas synchronisés.</p>
+<p>Cela peut être une opération longue. Le réglage « Run once » reviendra automatiquement à <strong>No</strong> après la prochaine exécution. Une exécution en mode test le laisse inchangé.</p>
 :end
 
 :mover_tune_moveroverride_plug:
