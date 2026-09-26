@@ -121,6 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
         wrench.style.color = "var(--blue-700)";
     }
 
+    // mover.php answers 1 or 0 on the line after its #!/usr/bin/php, which php-fpm sends as part of the reply
+    function replySaysRunning(reply) {
+        return String(reply).trim().split("\n").pop() === "1";
+    }
+
     function startPolling() {
         let failureCount = 0;
         const MAX_FAILURES = 5;
@@ -130,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
             $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                 .done((running) => {
                     failureCount = 0;
-                    const isRunning = String(running).trim() === "1";
+                    const isRunning = replySaysRunning(running);
                     if (!isRunning) { // mover finished
                         clearInterval(pollingInterval);
                         pollingInterval = null;
@@ -174,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Immediate check to avoid race if mover finishes quickly
                 $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                     .done((running) => {
-                        const isRunning = String(running).trim() === "1";
+                        const isRunning = replySaysRunning(running);
                         if (!isRunning) {
                             updateUIFinished();
                             location.reload();
