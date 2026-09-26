@@ -8,6 +8,8 @@ set -euo pipefail
 DRY_RUN="${DRY_RUN:-false}"
 PR_NUMBER="${PR_NUMBER:-}"
 PLGR="python3 $SCRIPTS/plg_release.py"
+SCRATCH=$(mktemp -d)
+trap 'rm -rf "$SCRATCH"' EXIT
 
 . "$SCRIPTS/plg_release_git.sh"
 plg_git_setup
@@ -48,9 +50,11 @@ rollback_footer() {
   local pre=false prev url cmd info
   [ "$CHANNEL" = stable ] || pre=true
   # a failed lookup must stop the release, not ship it without this note: set -e does not reach into $( )
-  prev=$(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 100 --json tagName,isPrerelease \
-      --jq '[.[] | select(.isPrerelease == '"$pre"' and (.tagName | test("^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}[a-z]?$")))][0].tagName // empty') \
+  prev=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases?per_page=100" \
+      --jq '.[] | select((.draft | not) and .prerelease == '"$pre"' and (.tag_name | test("^[0-9]{4}\\.[0-9]{2}\\.[0-9]{2}[a-z]?$"))) | .tag_name') \
     || { echo "could not list releases for the rollback note" >&2; return 1; }
+  # every page, newest first: a run of betas can push the last stable release past the first
+  prev="${prev%%$'\n'*}"
   if [ -n "$prev" ]; then
     # the tag goes into a URL and a pasted root command: only a release version shape may pass
     [[ "$prev" =~ ^[0-9]{4}\.[0-9]{2}\.[0-9]{2}[a-z]?$ ]] || { echo "unexpected release tag '$prev'" >&2; return 1; }
@@ -61,7 +65,9 @@ rollback_footer() {
     [ "$info" != "upgrade=major" ] || echo "$prev is a major release: installing it turns test mode on, so turn it off again in the Mover Tuning settings afterwards."
   fi
   if [ "$CHANNEL" = beta ]; then
-    printf -v cmd 'plugin install %q forced' "${STABLE_PLUGIN_URL:?}"
+    $PLGR verify-manifest --url "${STABLE_PLUGIN_URL:?}" >/dev/null \
+      || { echo "the way back to stable would point at $STABLE_PLUGIN_URL, which does not install" >&2; return 1; }
+    printf -v cmd 'plugin install %q forced' "$STABLE_PLUGIN_URL"
     printf '%s\n' "" "To leave the beta and go back to the stable release:" '```' "$cmd" '```'
   elif [ -z "$prev" ]; then
     return 0
@@ -69,10 +75,10 @@ rollback_footer() {
   echo "If Auto Update Applications covers this plugin, turn it off for Mover Tuning until a fix is out, or it will update again."
 }
 
-stable_plg=$(mktemp)
+stable_plg="$SCRATCH/stable.plg"
 git show "origin/$STABLE_BRANCH:$PLG" > "$stable_plg"
 STABLE_PLUGIN_URL=$($PLGR entity --plg "$stable_plg" --name pluginURL)
-notes=$(mktemp)
+notes="$SCRATCH/notes.md"
 plugin_url=$($PLGR entity --plg "$PLG" --name pluginURL)
 rollback=$(rollback_footer)
 $PLGR notes --changelog "$CHANGELOG" --version "$version" --footer "Install / update URL: \`$plugin_url\`"$'\n'"$rollback" > "$notes"
