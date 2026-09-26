@@ -12,9 +12,12 @@ All community developers=Alle Entwickler der Community
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
 Array → Cache=Speicherverbund → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien und %s Ordner mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
+Backing off %s still %s after last run Next try %s, or at %s=Wartet: %s nach dem letzten Lauf noch %s. Nächster Versuch %s, oder bei %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Bevor du fortfährst, klicke auf eine Option oder drücke F1, um detaillierte Beschreibungen aller Einstellungen zu lesen.
 by=von
 Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
+Cache watchdog=Cache-Watchdog
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Mover Tuning wird gestartet.
 Cache → Array=Cache → Speicherverbund
 Clean empty folders=Leere Ordner bereinigen
 Clean empty ZFS datasets=Leere ZFS‑Datasets bereinigen
@@ -120,6 +123,7 @@ Resynchronize all Primary files to Secondary=Alle Dateien des Primärspeichers m
 Rsync=Rsync
 Run Mover Tuning=Mover‑Tuning ausführen…
 Run once=Einmal ausführen
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Zeitplan deaktiviert: Mover Tuning läuft nur, wenn der Pool die Auslöseschwelle des Watchdogs erreicht.
 Script to run after mover No checks, always runs=Skript nach der Datenverschiebung ausführen (keine Prüfungen, läuft immer)
 Script to run before mover No checks, always runs=Skript vor der Datenverschiebung ausführen (keine Prüfungen, läuft immer)
 Share size calculation=Freigabengrößenberechnung
@@ -150,6 +154,8 @@ User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
 Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
 Very Low=Sehr niedrig
 Want to support the developer and say Thank You=Möchtest du den Entwickler unterstützen und **Danke** sagen?
+Watchdog trigger level=Auslöseschwelle des Watchdogs
+Watchdog trigger level raised to %1 to stay above the moving threshold=Auslöseschwelle des Watchdogs auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
 We=Wir
 Wishing you a stable array, fast mover runs, and zero parity errors=Wir wünschen dir einen stabilen Speicherverbund, schnelle Datenverschiebungen und null Paritätsfehler!
 Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
@@ -182,6 +188,16 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf <strong>„Verschieben“</strong> auf der <strong>Hauptseite</strong>.</li>
   <li>Führe <strong>„mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er beachtet die Einstellung zur Paritätsprüfung.</p>
+<p>Er ist ein Sicherheitsnetz, kein Ersatz für den Zeitplan: Unterhalb der Auslöseschwelle verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
+<p>Kann ein Lauf den Pool nicht unter die Auslöseschwelle bringen, wartet der Watchdog vor dem nächsten Lauf länger: 2 h, dann 4 h, 8 h … bis 24 h. Das setzt sich zurück, sobald der Pool unter die Auslöseschwelle fällt.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Belegter Speicher im Primärspeicher (<em>Cache</em>), ab dem der Watchdog einen Lauf startet. Sie bleibt über der Verschiebegrenze, denn ein darunter gestarteter Lauf würde nichts verschieben.</p>
 :end
 
 :mover_tune_movertunecron_plug:

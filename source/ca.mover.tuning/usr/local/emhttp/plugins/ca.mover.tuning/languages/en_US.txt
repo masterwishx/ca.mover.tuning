@@ -14,9 +14,12 @@ All community developers=
 Allow force mover schedule to run during a parity checkrebuild=Allow force mover schedule to run during a parity check/rebuild
 Array → Cache=
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=A total of %s files and %s folders representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s
+Backing off %s still %s after last run Next try %s, or at %s=Backing off: %s still %s after last run. Next try %s, or at %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.
 by=
 Cache disk not enabled=Cache disk not enabled!
+Cache watchdog=
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning.
 Cache → Array=
 Clean empty folders=
 Clean empty ZFS datasets=
@@ -122,6 +125,7 @@ Resynchronize all Primary files to Secondary=
 Rsync=
 Run Mover Tuning=Run Mover Tuning...
 Run once=
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Schedule disabled: Mover Tuning only runs when the pool reaches the watchdog trigger level.
 Script to run after mover No checks, always runs=Script to run after mover (No checks, always runs)
 Script to run before mover No checks, always runs=Script to run before mover (No checks, always runs)
 Share size calculation=
@@ -152,6 +156,8 @@ User shares not enabled=User shares not enabled!
 Validate input filenames to prevent attacks=
 Very Low=
 Want to support the developer and say Thank You=Want to support the developer and say **Thank You**?
+Watchdog trigger level=
+Watchdog trigger level raised to %1 to stay above the moving threshold=Watchdog trigger level raised to %1 to stay above the moving threshold.
 We=
 Wishing you a stable array, fast mover runs, and zero parity errors=Wishing you a stable array, fast mover runs, and zero parity errors!
 Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
@@ -184,6 +190,16 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
   <li>Press <strong>“Move”</strong> on the <strong>Main</strong> page.</li>
   <li>Run <strong>“mover start”</strong> from the <strong>CLI</strong>.</li>
 </ul>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It follows the parity check setting.</p>
+<p>It is a safety net, not a replacement for the schedule: below the trigger level, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
+<p>If a run can't bring the pool below the trigger level, the watchdog waits longer before its next run: 2 h, then 4 h, 8 h … up to 24 h. It resets once the pool drops below the trigger level.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Used space on the Primary (<em>cache</em>) pool at which the watchdog starts a run. It stays above the moving threshold, because a run started below it would move nothing.</p>
 :end
 
 :mover_tune_movertunecron_plug:

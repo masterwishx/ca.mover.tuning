@@ -783,6 +783,17 @@ if [[ -f /boot/config/plugins/&name;/mover.cron ]]; then
   sed -i -E 's#/usr/local/sbin/mover(\.old)? (start|force)#/usr/local/emhttp/plugins/&name;/mover.php force start#' /boot/config/plugins/&name;/mover.cron
 fi
 
+# Uninstall removes the watchdog cron file but keeps the settings; same text as updateCron.php make_watchdog_cron()
+WATCHDOG_CRON_FILE="/boot/config/plugins/&name;/mover.watchdog.cron"
+if [[ ! -f "$WATCHDOG_CRON_FILE" ]] &amp;&amp; [[ "$(grep '^watchdog=' "$config_file" 2>/dev/null | cut -d '"' -f 2)" == "yes" ]]; then
+  echo "Restoring the cache watchdog schedule: $WATCHDOG_CRON_FILE"
+  {
+    echo "# Generated schedule for the Mover Tuning cache watchdog:"
+    echo "*/5 * * * * /usr/local/emhttp/plugins/&name;/age_mover watchdog >/dev/null 2>&amp;1"
+    echo ""
+  } > "$WATCHDOG_CRON_FILE"
+fi
+
 # Refresh cron
 /usr/local/sbin/update_cron
 
@@ -856,6 +867,10 @@ fi
 
 if [[ -e /boot/config/plugins/&name;/mover.cron ]]; then
   rm -f /boot/config/plugins/&name;/mover.cron
+fi
+
+if [[ -e /boot/config/plugins/&name;/mover.watchdog.cron ]]; then
+  rm -f /boot/config/plugins/&name;/mover.watchdog.cron
 fi
 
 # Remove config folder only if empty

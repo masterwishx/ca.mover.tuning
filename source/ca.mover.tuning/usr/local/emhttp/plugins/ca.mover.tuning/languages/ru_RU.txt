@@ -12,9 +12,12 @@ All community developers=Все разработчики сообщества
 Allow force mover schedule to run during a parity checkrebuild=Разрешить запуск расписания принудительного перемещения во время проверки/восстановления четности
 Array → Cache=Массив → Кэш
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Всего %s файлов и %s папок общим объемом %s были успешно перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+Backing off %s still %s after last run Next try %s, or at %s=Пауза: %s все еще %s после последнего запуска. Следующая попытка %s или при %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Перед продолжением нажмите на параметр или F1, чтобы прочитать подробные описания всех настроек.
 by=от
 Cache disk not enabled=Кэш-диск не включён!
+Cache watchdog=Наблюдение за кэшем
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Наблюдение за кэшем: %s заполнен на %s, что не ниже порога срабатывания %s. Запуск Mover Tuning.
 Cache → Array=Кэш → Массив
 Clean empty folders=Очистить пустые папки
 Clean empty ZFS datasets=Очистить пустые ZFS‑датасеты
@@ -120,6 +123,7 @@ Resynchronize all Primary files to Secondary=Повторно синхрониз
 Rsync=Rsync
 Run Mover Tuning=Запустить Mover Tuning...
 Run once=Запустить один раз
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Расписание отключено: Mover Tuning запускается, только когда пул достигает порога срабатывания наблюдения.
 Script to run after mover No checks, always runs=Скрипт для запуска после mover (без проверок, выполняется всегда)
 Script to run before mover No checks, always runs=Скрипт для запуска перед mover (без проверок, выполняется всегда)
 Share size calculation=Расчёт размера шары
@@ -150,6 +154,8 @@ User shares not enabled=Пользовательские шары не вклю�
 Validate input filenames to prevent attacks=Проверять имена файлов для предотвращения атак
 Very Low=Очень низкий
 Want to support the developer and say Thank You=Хотите поддержать разработчика и сказать **Спасибо**?
+Watchdog trigger level=Порог срабатывания наблюдения
+Watchdog trigger level raised to %1 to stay above the moving threshold=Порог срабатывания наблюдения повышен до %1, чтобы оставаться выше порога перемещения.
 We=Мы
 Wishing you a stable array, fast mover runs, and zero parity errors=Желаем вам стабильного массива, быстрой работы mover и отсутствия ошибок четности!
 Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, что пользуетесь!
@@ -181,6 +187,16 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
   <li>Нажмите <strong>«Переместить»</strong> на странице <strong>Главная</strong>.</li>
   <li>Выполните <strong>«mover start»</strong> из <strong>CLI</strong>.</li>
 </ul>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Каждые 5 минут проверяет основной пул (<em>кэш</em>) каждой шары cache:<strong>yes</strong>. При достижении <strong>порога срабатывания наблюдения</strong> начинает обычный запуск Mover Tuning, не чаще раза в час для каждого пула, с одним уведомлением. Учитывает настройку проверки четности.</p>
+<p>Это страховка, а не замена расписания: ниже порога срабатывания только запуски по расписанию перемещают файлы обратно в пул (cache:<strong>prefer</strong>), синхронизируют, перебалансируют или перемещают файлы по возрасту.</p>
+<p>Если запуск не может опустить пул ниже порога срабатывания, наблюдение ждет дольше перед следующим запуском: 2 ч, затем 4 ч, 8 ч … до 24 ч. Ожидание сбрасывается, как только пул опускается ниже порога срабатывания.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Занятое пространство основного пула (<em>кэш</em>), при котором наблюдение запускает перемещение. Порог остается выше порога перемещения, потому что запуск ниже него ничего бы не переместил.</p>
 :end
 
 :mover_tune_movertunecron_plug:

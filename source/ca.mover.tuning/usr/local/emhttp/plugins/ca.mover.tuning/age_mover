@@ -39,6 +39,7 @@
 
 PIDFILE="/var/run/mover.pid"
 SOFTSTOPFILE="/var/run/moversoft.stop"
+WATCHDOGSTAMP="/var/run/mover.watchdog"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
@@ -238,6 +239,16 @@ pool_fstype() {
 
 is_zfs_pool() {
     pool_fstype "$1" && [ "$POOLFSTYPE" = "zfs" ]
+}
+
+pool_usage() {
+    # sets POOLPCTUSED, POOLBYTEUSED and POOLSIZE (bytes) for pool $1; never call it inside $(...).
+    # POOLSIZE is used+avail, not df's size: on btrfs those differ by the unallocated chunks.
+    if is_zfs_pool "$1"; then
+        read -r POOLPCTUSED POOLBYTEUSED POOLSIZE < <(zfs list -Hpo available,used "$1" | awk '{print int(($2 / ($1 + $2)) * 100), $2, $1 + $2}')
+    else
+        read -r POOLPCTUSED POOLBYTEUSED POOLSIZE < <(df --output=pcent,used,avail --block-size=1 "/mnt/$1" | tail -n 1 | awk '{sub(/%/, "", $1); print $1, $2, $2 + $3}')
+    fi
 }
 
 is_zfs_dataset_mountpoint() {
@@ -1087,18 +1098,7 @@ createFilteredFilelist() {
             fi
         fi
 
-        # Pool usage and size in bytes. POOLSIZE is used+avail, not df's size: on
-        # btrfs those differ by the unallocated chunks, and POOLPCTUSED is measured against used+avail.
-        pool_fstype "$PRIMARYSTORAGENAME"
-        if is_zfs_pool "$PRIMARYSTORAGENAME"; then
-            POOLPCTUSED=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print int(($2 / ($1 + $2)) * 100)}')
-            POOLBYTEUSED=$(zfs list -Hpo used "$PRIMARYSTORAGENAME")
-            POOLSIZE=$(zfs list -Hpo available,used "$PRIMARYSTORAGENAME" | awk '{print $1 + $2}')
-        else
-            POOLPCTUSED=$(df --output=pcent "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | tr -d '%')
-            POOLBYTEUSED=$(df --output=used --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1)
-            POOLSIZE=$(df --output=used,avail --block-size=1 "/mnt/$PRIMARYSTORAGENAME" | tail -n 1 | awk '{print $1 + $2}')
-        fi
+        pool_usage "$PRIMARYSTORAGENAME"
 
         # Calculate primary storage size thresholds in bytes
         if [ "$SHAREUSECACHE" = "prefer" ]; then
@@ -2986,6 +2986,7 @@ usage() {
     echo "  status   - Check if the mover is running."
     echo "  reset    - Reset plugin config to default values and delete the override config folder."
     echo "  debug    - Create plugin diagnostics ZIP at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
+    echo "  watchdog - Start a run when a cache:yes share's primary pool reaches the Cache watchdog trigger level (run by cron)."
     exit 1
 }
 
@@ -2998,6 +2999,139 @@ status() {
         echo "mover: not running"
     fi
     exit
+}
+
+# True when process $1 is $2 or runs under it, a few levels down at most.
+descends_from() {
+    local p=$1 n
+    for n in 1 2 3 4 5 6; do
+        [ "$p" = "$2" ] && return 0
+        p=$(awk '/^PPid:/ {print $2}' "/proc/$p/status" 2>/dev/null)
+        [ -n "$p" ] && [ "$p" != 0 ] || return 1
+    done
+    return 1
+}
+
+# Per-pool watchdog state in "$WATCHDOGSTAMP.<pool>", also read by Mover.tuning.page: next = earliest start (epoch),
+# cooldown = seconds, backoff = yes while runs leave the pool at or above its level, after = the % the last run left.
+watchdog_get() {
+    grep "^$2=" "$1" 2>/dev/null | cut -d '"' -f 2
+}
+
+watchdog_set() {
+    printf 'next="%s"\ncooldown="%s"\nbackoff="%s"\nafter="%s"\nlevel="%s"\n' "$2" "$3" "$4" "$5" "$6" >"$1"
+}
+
+# Cache watchdog, run by cron every 5 minutes (updateCron.php): starts a run between scheduled runs when the
+# primary pool of a cache:yes share reaches watchdogThreshold. Must stay silent and cheap when there is nothing to do.
+watchdog() {
+    local threshold global moving override share pool level parity state now next after cooldown first=""
+    local -A pools=() used=() due=() backoff=()
+    [ "$(grep '^watchdog=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = "yes" ] || exit 0
+    grep -qs '^mdState="STARTED"' /var/local/emhttp/var.ini || exit 0
+    [ -f "$PIDFILE" ] && exit 0
+    # mirrors mover.php's parity rule so a parity check does not bring a refused launch every 5 minutes
+    parity=$(grep '^parity=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+    [ "${parity:-no}" = no ] && grep -qs '^mdResyncPos="[1-9]' /var/local/emhttp/var.ini && exit 0
+    threshold=$(grep '^watchdogThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+    [[ "$threshold" =~ ^[0-9]+$ ]] || threshold=90
+    global=$(grep '^movingThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+    [[ "$global" =~ ^[0-9]+$ ]] || global=85
+    # a cache:yes share's pool counts from the higher of the trigger level and the share's moving threshold, below which the
+    # run skips the share; an override with moverOverride="yes" may set its own threshold, as getMoverSettings reads it
+    while IFS='|' read -r share pool; do
+        [ -d "/mnt/$pool" ] || continue
+        moving=$global
+        if grep -qs 'moverOverride="yes"' "$MOVERTUNING_OVERRIDE_CFGFOLDER/$share.cfg"; then
+            override=$(grep '^movingThreshold=' "$MOVERTUNING_OVERRIDE_CFGFOLDER/$share.cfg" | cut -d '"' -f 2)
+            [[ "$override" =~ ^[0-9]+$ ]] && moving=$override
+        fi
+        level=$((moving > threshold ? moving : threshold))
+        if [ -z "${pools[$pool]}" ] || [ "$level" -lt "${pools[$pool]}" ]; then
+            pools[$pool]=$level
+        fi
+    done < <(awk -F'"' 'FNR == 1 { use = ""; pool = ""; share = FILENAME; sub(/.*\//, "", share); sub(/\.cfg$/, "", share) }
+        /^shareUseCache=/ { use = $2 } /^shareCachePool=/ { pool = $2 }
+        ENDFILE { if (use == "yes" && pool != "") print share "|" pool }' "$CFGPATH"/*.cfg 2>/dev/null)
+    # a pool no longer watched would keep a stale status on the settings page
+    for state in "$WATCHDOGSTAMP".*; do
+        [ -e "$state" ] && [ -z "${pools[${state#"$WATCHDOGSTAMP".}]}" ] && rm -f "$state"
+    done
+    now=$(date +%s)
+    for pool in "${!pools[@]}"; do
+        pool_usage "$pool"
+        [[ "$POOLPCTUSED" =~ ^[0-9]+$ ]] || continue
+        state="$WATCHDOGSTAMP.$pool"
+        if [ "$POOLPCTUSED" -lt "${pools[$pool]}" ]; then
+            [ "$(watchdog_get "$state" backoff)" = yes ] && rm -f "$state"
+            continue
+        fi
+        used[$pool]=$POOLPCTUSED
+        backoff[$pool]=$(watchdog_get "$state" backoff)
+        next=$(watchdog_get "$state" next)
+        after=$(watchdog_get "$state" after)
+        # the cooldown keeps a pool that stays full from starting a run every check; one that is backing off tries
+        # sooner once it grows 5 points past what its last run left, as the new files may be movable
+        if [ "${backoff[$pool]}" = yes ] && [[ "$after" =~ ^[0-9]+$ ]] && [ "$POOLPCTUSED" -ge $((after + 5)) ]; then
+            due[$pool]=1
+        elif ! [[ "$next" =~ ^[0-9]+$ ]] || [ "$now" -ge "$next" ]; then
+            due[$pool]=1
+        fi
+        if [ -n "${due[$pool]}" ] && { [ -z "$first" ] || [ "${backoff[$first]}" = yes ]; }; then
+            first=$pool
+        fi
+    done
+    [ -n "$first" ] || exit 0
+    # mover.php decides whether the run may start (parity check, a run already active), so announce and start the
+    # cooldown only once this launch's run holds the pid file, as mover.php's own runMover waits for it
+    /usr/local/emhttp/plugins/ca.mover.tuning/mover.php watchdog start &
+    local run=$! i started=no
+    for i in $(seq 50); do
+        if [ -f "$PIDFILE" ] && descends_from "$(cat "$PIDFILE" 2>/dev/null)" "$run"; then
+            started=yes
+            break
+        fi
+        kill -0 "$run" 2>/dev/null || break
+        sleep 0.1
+    done
+    if [ "$started" = no ]; then
+        [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $first is at ${used[$first]}%, but Mover Tuning did not start; mover.php logged why."
+        wait "$run"
+        exit 0
+    fi
+    # the run covers every pool, so each pool due now starts its cooldown
+    now=$(date +%s)
+    for pool in "${!due[@]}"; do
+        state="$WATCHDOGSTAMP.$pool"
+        cooldown=3600
+        [ "${backoff[$pool]}" = yes ] && cooldown=$(watchdog_get "$state" cooldown)
+        [[ "$cooldown" =~ ^[0-9]+$ ]] || cooldown=3600
+        watchdog_set "$state" $((now + cooldown)) "$cooldown" "${backoff[$pool]:-no}" "$(watchdog_get "$state" after)" "${pools[$pool]}"
+        [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at ${used[$pool]}%, at or above the trigger level of ${pools[$pool]}%. Starting Mover Tuning."
+    done
+    # a pool that is backing off retries without a notice; the settings page shows its state
+    if [ "${backoff[$first]}" != yes ]; then
+        NOTIFY=$(grep '^notify=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+        unraid_notify "$(translate_text "Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning." "$first" "${used[$first]}%" "${pools[$first]}%")" "warning"
+    fi
+    wait "$run"
+    # a test-mode run moves nothing, so it says nothing about whether the pool can be freed
+    [ "$(grep '^testmode=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = yes ] && exit 0
+    # a run that leaves a pool at or above its level could not free it: back off, doubling up to a day
+    for pool in "${!due[@]}"; do
+        state="$WATCHDOGSTAMP.$pool"
+        pool_usage "$pool"
+        if ! [[ "$POOLPCTUSED" =~ ^[0-9]+$ ]] || [ "$POOLPCTUSED" -lt "${pools[$pool]}" ]; then
+            watchdog_set "$state" $((now + 3600)) 3600 no "" "${pools[$pool]}"
+            continue
+        fi
+        cooldown=$(watchdog_get "$state" cooldown)
+        [[ "$cooldown" =~ ^[0-9]+$ ]] || cooldown=3600
+        cooldown=$((cooldown * 2 > 86400 ? 86400 : cooldown * 2))
+        watchdog_set "$state" $(($(date +%s) + cooldown)) "$cooldown" yes "$POOLPCTUSED" "${pools[$pool]}"
+        [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is still at $POOLPCTUSED% after the run, so what is left cannot be moved now. Next try in $((cooldown / 3600)) h, or sooner if it reaches $((POOLPCTUSED + 5))%."
+    done
+    exit 0
 }
 
 if [ "$#" -ne 1 ]; then
@@ -3023,6 +3157,9 @@ reset)
     ;;
 debug)
     debug
+    ;;
+watchdog)
+    watchdog
     ;;
 *)
     usage
