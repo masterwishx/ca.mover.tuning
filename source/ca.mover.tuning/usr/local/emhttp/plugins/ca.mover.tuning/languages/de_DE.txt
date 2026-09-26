@@ -10,12 +10,17 @@
 All community developers=Alle Entwickler der Community
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s Dateien und %s Ordner wurden verschoben/synchronisiert, aber rsync hat dabei Fehler gemeldet. Bitte das Mover‑Tuning‑Protokoll prüfen.
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Alle Plugin‑Einstellungen werden auf ihre Standardwerte zurückgesetzt, einschließlich des Mover‑Tuning‑Zeitplans, des Zeitplans für das erzwungene Verschieben und des Cache-Watchdogs, und die überschriebenen Einstellungen aller Freigaben werden gelöscht.
 Array → Cache=Speicherverbund → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien und %s Ordner mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
+Backing off %s still %s after last run Next try %s, or at %s=Wartet: %s nach dem letzten Lauf noch %s. Nächster Versuch %s, oder bei %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Bevor du fortfährst, klicke auf eine Option oder drücke F1, um detaillierte Beschreibungen aller Einstellungen zu lesen.
 by=von
 Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
+Cache watchdog=Cache-Watchdog
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Mover Tuning wird gestartet.
 Cache → Array=Cache → Speicherverbund
+Cancel=Abbrechen
 Clean empty folders=Leere Ordner bereinigen
 Clean empty ZFS datasets=Leere ZFS‑Datasets bereinigen
 CLI help commands=CLI‑Hilfebefehle
@@ -38,6 +43,7 @@ Error No files found to move for %s=Fehler: Keine Dateien zum Verschieben für %
 Errors Only=Nur Fehler
 Failed to destroy ZFS dataset %s — attempting to remount=ZFS‑Dataset %s konnte nicht gelöscht werden — erneutes Einhängen wird versucht.
 Failed to remount dataset %s=Dataset %s konnte nicht erneut eingehängt werden.
+Failed to reset Mover Tuning Check the logs=Zurücksetzen von Mover Tuning fehlgeschlagen. Bitte Protokolle prüfen.
 Failed to start Mover Tuning Check the logs=Start des Mover‑Tunings fehlgeschlagen. Bitte Protokolle prüfen.
 Failed to unmount ZFS dataset %s=ZFS‑Dataset %s konnte nicht ausgehängt werden.
 Fatal error %s does not exist, check this=Schwerer Fehler: %s existiert nicht. Bitte prüfen.
@@ -75,6 +81,7 @@ Move All from Primary->Secondary cacheyes shares pool percentage=Alles vom Prim�
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben (cache:yes), wenn der Füllstand über einem bestimmten Wert liegt
 Move All from Primary->Secondary shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben – Pool‑Prozent
 Move All threshold raised to %1 to stay above the moving threshold=Grenze „Alles verschieben“ auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
+Move All threshold set to %1, as the global settings have none=Grenze „Alles verschieben“ auf %1 gesetzt, da die globalen Einstellungen keine haben.
 Moved Only=Nur verschobene Dateien
 Move empty folders=Leere Ordner verschieben
 Move files based on age=Dateien basierend auf ihrem Alter verschieben
@@ -117,10 +124,12 @@ Plugin thread @ Unraid community=Plugin‑Thread in der Unraid‑Community
 Priority for disk IO=Priorität für Datenträger‑I/O
 Priority for mover process=Priorität für Datenverschiebungs‑Prozess
 Rebalance shares=Freigaben neu verteilen
+Reset Mover Tuning to defaults=Mover Tuning auf Standardwerte zurücksetzen?
 Resynchronize all Primary files to Secondary=Alle Dateien des Primärspeichers mit dem Sekundärspeicher neu synchronisieren
 Rsync=Rsync
 Run Mover Tuning=Mover‑Tuning ausführen…
 Run once=Einmal ausführen
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Zeitplan deaktiviert: Mover Tuning läuft nur, wenn der Pool die Auslöseschwelle des Watchdogs erreicht.
 Script to run after mover No checks, always runs=Skript nach der Datenverschiebung ausführen (keine Prüfungen, läuft immer)
 Script to run before mover No checks, always runs=Skript vor der Datenverschiebung ausführen (keine Prüfungen, läuft immer)
 Share size calculation=Freigabengrößenberechnung
@@ -141,16 +150,20 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=T
 Thank you for using this plugin=Danke, dass du dieses Plugin verwendest.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Die gespeicherte Freigabegrenze beträgt %1 und liegt über der Verschiebegrenze %2. Die Datenverschiebung startet bei %2 und stoppt bei %1, daher wird nichts verschoben, solange der Pool zwischen diesen Werten liegt. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Die gespeicherte „Alles verschieben“-Grenze beträgt %1 und liegt auf oder unter der Verschiebegrenze %2. Alles auf cache:yes‑Freigaben wird verschoben, Skip‑Liste und Filter werden ignoriert, bevor die Verschiebegrenze erreicht wird. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Die globale „Alles verschieben“-Grenze von %1 liegt auf oder unter der Verschiebegrenze dieser Freigabe (%2), daher wird ab %1 alles auf dieser Freigabe verschoben.
 Top Folder=Oberster Ordner
 Unraid mover=Unraid‑Mover
 Unraid Mover schedule is currently enabled=Unraid‑Mover‑Zeitplan ist derzeit **aktiviert**
 Use ATIME=ATIME verwenden
 Use CTIME=CTIME verwenden
+Use global=Global verwenden
 Used IDE=Verwendete IDE
 User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
 Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
 Very Low=Sehr niedrig
 Want to support the developer and say Thank You=Möchtest du den Entwickler unterstützen und **Danke** sagen?
+Watchdog trigger level=Auslöseschwelle des Watchdogs
+Watchdog trigger level raised to %1 to stay above the moving threshold=Auslöseschwelle des Watchdogs auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
 We=Wir
 Wishing you a stable array, fast mover runs, and zero parity errors=Wir wünschen dir einen stabilen Speicherverbund, schnelle Datenverschiebungen und null Paritätsfehler!
 Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
@@ -173,6 +186,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf die Schaltfläche <strong>„Jetzt verschieben“</strong> in <strong>Mover Tuning – Optionen</strong>.</li>
   <li>Führe <strong>„age_mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -183,6 +197,17 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf <strong>„Verschieben“</strong> auf der <strong>Hauptseite</strong>.</li>
   <li>Führe <strong>„mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er beachtet die Einstellung zur Paritätsprüfung.</p>
+<p>Er ist ein Sicherheitsnetz, kein Ersatz für den Zeitplan: Unterhalb der Auslöseschwelle verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
+<p>Kann ein Lauf den Pool nicht unter die Auslöseschwelle bringen, wartet der Watchdog vor dem nächsten Lauf länger: 2 h, dann 4 h, 8 h … bis 24 h. Das setzt sich zurück, sobald der Pool unter die Auslöseschwelle fällt.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Belegter Speicher im Primärspeicher (<em>Cache</em>), ab dem der Watchdog einen Lauf startet. Sie bleibt über der Verschiebegrenze, denn ein darunter gestarteter Lauf würde nichts verschieben.</p>
 :end
 
 :mover_tune_movertunecron_plug:
@@ -357,7 +382,8 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filelistv_plug:
-<p>Vollständiger Pfad zu einer Datei, die eine Liste von Dateien/Ordnern enthält, die nicht verschoben werden sollen.</p>
+<p>Vollständiger Pfad zu einer Datei mit Dateien und Ordnern, die der Mover dort lässt, wo sie sind: auf dem Primärspeicher (Cache) bei Freigaben mit cache:<strong>yes</strong> und auf dem Sekundärspeicher (Array) bei Freigaben mit cache:<strong>prefer</strong>.</p>
+<p>Einträge beginnen mit dem Pfad des Primär‑Pools der Freigabe (<em>/mnt/cache_ssd/Files/...</em>, wie in den Beispielen unten) oder mit ihrem User‑Share‑Pfad (<em>/mnt/user/Files/...</em>). Pfade auf dem Sekundärspeicher wie <em>/mnt/disk1/Files/...</em> werden nicht unterstützt.</p>
 <p><strong>Dateiliste</strong> Beispiel: <em>/mnt/user/Files/mover_ignore.txt</em> – eine Zeile pro Eintrag.</p>
 <p><strong>Ordner</strong> Beispiel: <em>/mnt/cache_ssd/Files/MyFolder</em> – kein (<em>*</em>) oder (<em>/</em>) am Ende.</p>
 <p><strong>Datei</strong> Beispiel: <em>/mnt/cache_ssd/Files/MyFile.txt</em></p>
@@ -450,7 +476,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_moveroverride_plug:
-> Wähle **Ja**, um die primären Mover‑Tuning‑Einstellungen für diese Freigabe zu überschreiben.
+> Wähle **Ja**, um unten eigene Mover‑Tuning‑Einstellungen für diese Freigabe festzulegen. **Global verwenden** lässt eine Einstellung der globalen folgen, auch wenn diese sich später ändert; jede andere Wahl, auch **Nein**, gilt für diese Freigabe statt der globalen Einstellung.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -474,7 +500,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filelistf_plug:
-> Wähle **Ja**, um Dateien zu überspringen, die in einer angegebenen Textdatei gelistet sind.
+> **Ja** überspringt die Dateien und Ordner aus der Textdatei unten, statt der globalen Liste. **Nein** überspringt für diese Freigabe keine gelisteten Dateien. **Global verwenden** folgt der globalen Einstellung der Liste.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -482,7 +508,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filetypesf_plug:
-> Wähle **Ja**, um bestimmte Dateitypen zusätzlich zu den globalen auszuschließen.
+> **Ja** schließt die Dateitypen unten zusätzlich zu den globalen aus. **Nein** schließt für diese Freigabe keine Dateitypen aus, auch nicht die globalen. **Global verwenden** folgt der globalen Einstellung.
 :end
 
 :mover_tune_share_filetypesv_plug:
