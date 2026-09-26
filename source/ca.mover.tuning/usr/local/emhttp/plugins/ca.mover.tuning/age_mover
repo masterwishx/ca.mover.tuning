@@ -2919,13 +2919,15 @@ reset() {
     # Reset to default config file
     echo "mover: Cleaning the configuration file to default values and removing any override configurations."
 
-    if [ -e "$MOVERTUNINGCFGFILE" ]; then
-        rm -f "$MOVERTUNINGCFGFILE" || failed=1
+    # Write the default config beside the old one, then rename it over, so a failed write changes nothing; plain cp,
+    # as cp -a fails on the vfat flash when it cannot keep the source file's owner
+    if ! cp "$MOVERTUNING_DEFAULT_CFGFILE" "$MOVERTUNINGCFGFILE.new" || ! mv -f "$MOVERTUNINGCFGFILE.new" "$MOVERTUNINGCFGFILE"; then
+        rm -f "$MOVERTUNINGCFGFILE.new"
+        echo "mover: Error: The default configuration could not be written, so nothing was reset."
+        exit 1
     fi
     # Also delete override configs folder
     rm -rf "$MOVERTUNING_OVERRIDE_CFGFOLDER" || failed=1
-    # Copy default config
-    cp -a "$MOVERTUNING_DEFAULT_CFGFILE" "$MOVERTUNINGCFGFILE" || failed=1
     # Remove the schedule files, then write back the ones default.cfg sets; this runs after a failed step too, so the
     # schedules follow whichever settings are left
     rm -f "${MOVERTUNINGCFGFILE%/*}/mover.cron" "${MOVERTUNINGCFGFILE%/*}/mover.tuning.cron" "${MOVERTUNINGCFGFILE%/*}/mover.watchdog.cron" || failed=1
