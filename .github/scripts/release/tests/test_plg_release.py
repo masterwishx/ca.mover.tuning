@@ -215,6 +215,46 @@ def _git(repo, *args):
     return subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
 
 
+def _named_steps():
+    import yaml
+
+    wf = yaml.safe_load((REPO / ".github/workflows/release.yml").read_text())
+    return {s.get("name"): s for s in wf["jobs"]["release"]["steps"]}
+
+
+def test_the_release_job_works_from_the_branch_tip():
+    """A queued or re-run job's event commit can be behind its branch, and a cut from it cannot push."""
+    assert _named_steps()["Checkout"]["with"]["ref"] == "${{ github.ref }}"
+
+
+def test_release_scripts_are_staged_from_the_commit_the_run_started_from(tmp_path):
+    """GitHub read this workflow at the event commit; the tip's scripts may belong to a newer one."""
+    repo = tmp_path / "repo"
+    scripts = repo / ".github/scripts/release"
+    scripts.mkdir(parents=True)
+    _git(repo, "init", "-q", "-b", "master")
+    shas = []
+    for text in ("started", "tip"):
+        (scripts / "plg_release_cut.sh").write_text(text)
+        _git(repo, "add", "-A")
+        _git(repo, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-qm", text)
+        shas.append(_git(repo, "rev-parse", "HEAD"))
+    runner_temp, env_file = tmp_path / "runner", tmp_path / "env"
+    runner_temp.mkdir()
+    env = {**os.environ, "GITHUB_SHA": shas[0], "RUNNER_TEMP": str(runner_temp), "GITHUB_ENV": str(env_file)}
+    subprocess.run(["bash", "-c", _named_steps()["Stage the release scripts"]["run"]], cwd=repo, env=env,
+                   check=True, capture_output=True)
+    assert (runner_temp / "release/plg_release_cut.sh").read_text() == "started"
+    assert env_file.read_text() == f"SCRIPTS={runner_temp}/release\n"
+
+
+def test_cross_channel_refreshes_wait_for_the_other_channels_merged_release():
+    """A refresh while that channel's merged release awaits its cut would reopen the released notes as a new PR."""
+    steps = _named_steps()
+    for name in ("Refresh stable release PR after a beta", "Refresh beta release PR after a stable"):
+        assert "steps.decide.outputs.other_pr == ''" in steps[name]["if"], name
+
+
 @pytest.fixture
 def decide_repo(tmp_path):
     """master: base commit, a merged release PR's merge commit, then one more push."""
@@ -259,7 +299,7 @@ def test_decide_rejects_an_unsupported_mode(tmp_path, decide_repo, mode):
 
 @pytest.mark.parametrize("mode", ["pr", "release"])
 def test_decide_takes_an_explicit_mode_as_given(tmp_path, decide_repo, mode):
-    r, out = _run_decide(tmp_path, decide_repo[0], mode, "exit 1")
+    r, out = _run_decide(tmp_path, decide_repo[0], mode, "echo ' '")
     assert r.returncode == 0, r.stderr
     assert out["mode"] == mode
 
@@ -833,11 +873,12 @@ def test_decide_restarts_the_other_channels_waiting_release(tmp_path, decide_rep
           '  *"workflow run"*) echo "$GH_TOKEN $*" >> dispatched ;;\nesac')
     r, out = _run_decide(tmp_path, repo, "auto", gh, event="push")
     assert r.returncode == 0, r.stderr
-    assert out["mode"] == "pr"
+    assert (out["mode"], out["other_pr"]) == ("pr", "9")
     dispatched = (repo / "dispatched").read_text()
     assert dispatched.startswith("dispatch-token workflow run release.yml") and "--ref beta" in dispatched
     (repo / "dispatched").unlink()
-    _run_decide(tmp_path, repo, "auto", gh, event="workflow_dispatch")
+    out = _run_decide(tmp_path, repo, "release", gh, event="workflow_dispatch")[1]
+    assert out["other_pr"] == "9", "a release run still learns the other channel is waiting"
     assert not (repo / "dispatched").exists(), "a started run never starts another"
 
 
@@ -1035,6 +1076,26 @@ def test_installer_changes_cross_between_the_channels(channels):
     assert channels.check("beta", "beta", "beta") == 0
 
 
+def test_release_scripts_leave_no_temporary_files(channels):
+    """Each script keeps its files in one scratch directory and removes it when it exits."""
+    scratch = channels.tmp / "scratch"
+    scratch.mkdir()
+    channels.release("beta", "2026.09.21a", "- Beta notes", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master", TMPDIR=str(scratch))
+    channels.sh(channels.user, "fetch", "-q", "origin")
+    assert "merge 2026.09.21a into master" in channels.sh(channels.user, "log", "--format=%s", "origin/master..origin/release/stable")
+    channels.release("master", "2026.09.22", "- Stable notes", "stable")
+    channels.run("plg_release_backmerge.sh", BASE="master", VERSION="2026.09.22", TMPDIR=str(scratch))
+    assert list(scratch.iterdir()) == []
+
+
+@pytest.mark.parametrize("script", ["plg_release_pr.sh", "plg_release_cut.sh", "plg_release_backmerge.sh"])
+def test_every_release_script_removes_its_scratch_directory(script):
+    body = (SCRIPTS / script).read_text()
+    assert "SCRATCH=$(mktemp -d)\ntrap 'rm -rf \"$SCRATCH\"' EXIT\n" in body
+    assert body.count("mktemp") == 1, "temporary files go in $SCRATCH"
+
+
 def test_beta_pr_edits_survive_a_refresh(channels):
     channels.commit("beta", "fix: A thing")
     channels.commit("beta", "Plain subject B")
@@ -1091,7 +1152,7 @@ def test_merge_stops_when_git_refuses_to_merge(tmp_path):
     _git(repo, "commit", "-qm", "add x")
     _git(repo, "switch", "-q", "master")
     (repo / "x").write_text("untracked, in the way")
-    script = (f'set -euo pipefail\nPLG=p.plg CHANGELOG=CHANGELOG.md PLGR="python3 {SCRIPTS}/plg_release.py"\n'
+    script = (f'set -euo pipefail\nPLG=p.plg CHANGELOG=CHANGELOG.md PLGR="python3 {SCRIPTS}/plg_release.py" SCRATCH="{tmp_path}"\n'
               f'. "{SCRIPTS}/plg_release_merge.sh"\nplg_merge other stable\n')
     r = subprocess.run(["bash", "-c", script], cwd=repo, capture_output=True, text=True)
     assert r.returncode != 0 and "could not merge other" in r.stdout + r.stderr

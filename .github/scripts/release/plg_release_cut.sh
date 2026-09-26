@@ -8,6 +8,8 @@ set -euo pipefail
 DRY_RUN="${DRY_RUN:-false}"
 PR_NUMBER="${PR_NUMBER:-}"
 PLGR="python3 $SCRIPTS/plg_release.py"
+SCRATCH=$(mktemp -d)
+trap 'rm -rf "$SCRATCH"' EXIT
 
 . "$SCRIPTS/plg_release_git.sh"
 plg_git_setup
@@ -73,10 +75,10 @@ rollback_footer() {
   echo "If Auto Update Applications covers this plugin, turn it off for Mover Tuning until a fix is out, or it will update again."
 }
 
-stable_plg=$(mktemp)
+stable_plg="$SCRATCH/stable.plg"
 git show "origin/$STABLE_BRANCH:$PLG" > "$stable_plg"
 STABLE_PLUGIN_URL=$($PLGR entity --plg "$stable_plg" --name pluginURL)
-notes=$(mktemp)
+notes="$SCRATCH/notes.md"
 plugin_url=$($PLGR entity --plg "$PLG" --name pluginURL)
 rollback=$(rollback_footer)
 $PLGR notes --changelog "$CHANGELOG" --version "$version" --footer "Install / update URL: \`$plugin_url\`"$'\n'"$rollback" > "$notes"

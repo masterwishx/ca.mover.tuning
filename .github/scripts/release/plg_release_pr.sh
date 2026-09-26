@@ -8,6 +8,8 @@ BETA_BRANCH="${BETA_BRANCH:-}"
 DRY_RUN="${DRY_RUN:-false}"
 RB="release/$CHANNEL"
 PLGR="python3 $SCRIPTS/plg_release.py"
+SCRATCH=$(mktemp -d)
+trap 'rm -rf "$SCRATCH"' EXIT
 
 . "$SCRIPTS/plg_release_git.sh"
 plg_git_setup
@@ -25,7 +27,7 @@ if [ -n "$OLD_SHA" ]; then
   trailers=$(git log --format=%B "origin/$BASE..origin/$RB")
   OLD_SYNC=$(sed -n 's/^Release-Synced: //p' <<<"$trailers" | sed -n 1p)
   OLD_SYNC_BETA=$(sed -n 's/^Release-Synced-Beta: //p' <<<"$trailers" | sed -n 1p)
-  OLD_CL=$(mktemp)
+  OLD_CL="$SCRATCH/old-changelog.md"
   git show "origin/$RB:$CHANGELOG" > "$OLD_CL" 2>/dev/null || OLD_CL=""
   # The rebuild below carries over only the notes: stop rather than drop anything else pushed to the PR.
   not_promoted=()
@@ -45,7 +47,7 @@ git switch -q -C "$RB" "origin/$BASE"
 # Promotion PR: bring the newest beta release (its tag, never unreleased work on beta) into the stable channel.
 promote=""
 if [ "$CHANNEL" = stable ] && [ -n "$BETA_BRANCH" ] && git cat-file -e "origin/$BETA_BRANCH:$CHANGELOG" 2>/dev/null; then
-  beta_cl=$(mktemp)
+  beta_cl="$SCRATCH/beta-changelog.md"
   git show "origin/$BETA_BRANCH:$CHANGELOG" > "$beta_cl"
   beta_tag=$($PLGR last-beta --changelog "$beta_cl")
   if [ -n "$beta_tag" ] && git rev-parse -q --verify "refs/tags/$beta_tag" >/dev/null \
@@ -96,7 +98,7 @@ else
   git push -q origin "$RB"
 fi
 
-body=$(mktemp)
+body="$SCRATCH/pr-body.md"
 {
   echo "Merge this PR to cut the next **$CHANNEL** release. Edit the Unreleased section of \`$CHANGELOG\` on this branch first; the release job stamps the version, renders it into the plugin manifest, and attaches the package."
   echo

@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
-# Sourced, not executed. Merges another ref into HEAD between the channel branches.
+# Sourced, not executed. Merges another ref into HEAD between the channel branches; its files go in the caller's $SCRATCH.
 
 # $1 = ref to merge, $2 = the channel of HEAD. The .plg merges three ways, keeping HEAD's version, md5 and
 # pluginURL, then CHANGES is rendered for $2; the changelog gains the other side's releases.
 plg_merge() {
-  local from=$1 channel=$2 base ours theirs theirs_cl
-  base=$(mktemp)
-  ours=$(mktemp)
-  theirs=$(mktemp)
-  theirs_cl=$(mktemp)
+  local from=$1 channel=$2 base="${SCRATCH:?}/base.plg" ours="$SCRATCH/ours.plg" theirs="$SCRATCH/theirs.plg"
+  local theirs_cl="$SCRATCH/theirs-changelog.md"
   git show "$(git merge-base HEAD "$from"):$PLG" > "$base"
   git show "HEAD:$PLG" > "$ours"
   git show "$from:$PLG" > "$theirs"
