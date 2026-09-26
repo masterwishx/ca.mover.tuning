@@ -30,9 +30,11 @@ if [ -n "$OLD_SHA" ]; then
   OLD_CL="$SCRATCH/old-changelog.md"
   git show "origin/$RB:$CHANGELOG" > "$OLD_CL" 2>/dev/null || OLD_CL=""
   # The rebuild below carries over only the notes: stop rather than drop anything else pushed to the PR.
+  # Beta work is never an edit here, promoted by tag or merged whole by an older refresh; ^ per ref, as --not toggles.
   not_promoted=()
+  [ -z "$BETA_BRANCH" ] || [ "$BASE" = "$BETA_BRANCH" ] || not_promoted=("^origin/$BETA_BRANCH")
   if [ -n "$OLD_SYNC_BETA" ] && git rev-parse -q --verify "refs/tags/$OLD_SYNC_BETA" >/dev/null; then
-    not_promoted=(--not "refs/tags/$OLD_SYNC_BETA")
+    not_promoted+=("^refs/tags/$OLD_SYNC_BETA")
   fi
   edited=$(git log --no-merges --format= --name-only "origin/$BASE..origin/$RB" "${not_promoted[@]}" \
     -- . ":(top,exclude)$CHANGELOG" | sort -u)

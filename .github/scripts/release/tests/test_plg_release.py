@@ -1076,6 +1076,27 @@ def test_installer_changes_cross_between_the_channels(channels):
     assert channels.check("beta", "beta", "beta") == 0
 
 
+def test_refresh_guard_leaves_out_beta_work_a_stable_pr_has_no_record_of(channels):
+    """A stable PR can hold beta work with no Release-Synced-Beta trailer to say so, for example beta merged in whole."""
+    channels.commit("beta", "feat: beta work")
+    channels.on("master")
+    channels.sh(channels.user, "switch", "-q", "-c", "release/stable")
+    channels.sh(channels.user, "merge", "-q", "--no-ff", "-m", "Merge beta into release/stable", "origin/beta")
+    channels.sh(channels.user, "push", "-q", "origin", "release/stable")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    channels.commit("release/stable", "fix: pushed to the release PR")
+    r = channels.run("plg_release_pr.sh", ok=False, CHANNEL="stable", BASE="master")
+    assert r.returncode == 1 and "src/fix-pushed-to-the-release-PR" in r.stdout, "a real edit still stops it"
+
+
+def test_refresh_guard_leaves_out_the_promoted_beta_after_beta_is_rewritten(channels):
+    """The promoted tag still marks its commits as beta work once beta itself no longer has them."""
+    channels.release("beta", "2026.09.21a", "- Beta notes", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    channels.sh(channels.user, "push", "-q", "--force", "origin", "origin/beta~1:refs/heads/beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+
+
 def test_release_scripts_leave_no_temporary_files(channels):
     """Each script keeps its files in one scratch directory and removes it when it exits."""
     scratch = channels.tmp / "scratch"
