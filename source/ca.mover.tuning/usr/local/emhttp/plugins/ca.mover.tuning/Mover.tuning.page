@@ -46,18 +46,26 @@ $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $version = ($cfg['version']);
 $moverRunning = file_exists('/var/run/mover.pid');
 $showMoverButton = version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=');
-// the global Resynchronize also resyncs a share whose override syncs on its own; age_mover matches these two lines
-$overrideSync = false;
-$overrideFiles = glob('/boot/config/plugins/' . $plugin . '/shareOverrideConfig/*.cfg');
-if (is_array($overrideFiles) === true) {
-  foreach ($overrideFiles as $overrideFile) {
-    if (is_file($overrideFile) === false || is_readable($overrideFile) === false) {
+// a cache:yes share syncs by its active override's own Synchronize, else by this page's; mirrors age_mover's getMoverSettings
+$syncOwnYes = false;
+$syncFollowsGlobal = false;
+$shareCfgs = glob('/boot/config/shares/*.cfg');
+if (is_array($shareCfgs) === true) {
+  foreach ($shareCfgs as $shareCfg) {
+    if (is_file($shareCfg) === false || is_readable($shareCfg) === false || strpos((string)file_get_contents($shareCfg), 'shareUseCache="yes"') === false) {
       continue;
     }
-    $overrideText = (string)file_get_contents($overrideFile);
-    if (strpos($overrideText, 'moverOverride="yes"') !== false && strpos($overrideText, 'synchronizeCache="yes"') !== false) {
-      $overrideSync = true;
-      break;
+    $overrideFile = '/boot/config/plugins/' . $plugin . '/shareOverrideConfig/' . basename($shareCfg);
+    $overrideText = is_file($overrideFile) === true && is_readable($overrideFile) === true ? (string)file_get_contents($overrideFile) : '';
+    $ownSync = '';
+    // what cfg()'s read loop sees: the first newline-ended synchronizeCache line, one outer quote stripped each side
+    if (strpos($overrideText, 'moverOverride="yes"') !== false && preg_match('/^synchronizeCache="?(.*?)"?\n/m', $overrideText, $m) === 1) {
+      $ownSync = $m[1];
+    }
+    if ($ownSync === 'yes') {
+      $syncOwnYes = true;
+    } elseif ($ownSync === '') {
+      $syncFollowsGlobal = true;
     }
   }
 }
@@ -100,10 +108,11 @@ function toggleAge(val) {
   }
 }
 
-// Resynchronize does nothing unless Synchronize is on, here or in a share override
-var mtOverrideSync = <?=$overrideSync === true ? 'true' : 'false'?>;
+// Resynchronize does nothing unless a cache:yes share synchronizes: by its own override, or by following this setting
+var mtSyncOwnYes = <?=$syncOwnYes === true ? 'true' : 'false'?>;
+var mtSyncFollowsGlobal = <?=$syncFollowsGlobal === true ? 'true' : 'false'?>;
 function toggleResync() {
-  $('select[name="resynchronizeCache"]').prop('disabled', $('select[name="synchronizeCache"]').val() !== 'yes' && mtOverrideSync === false);
+  $('select[name="resynchronizeCache"]').prop('disabled', mtSyncOwnYes === false && ($('select[name="synchronizeCache"]').val() !== 'yes' || mtSyncFollowsGlobal === false));
 }
 
 function updateCron() {
