@@ -10,17 +10,7 @@
 - fix: Notifications now only show real failures.
 - fix: Forced moves follow the parity, priority and turbo write settings again.
 - fix: The mover scripts are executable again after install.
-- Shorten the watchdog status line, warning and back-off help (b4df6b9)
-- Shorten the cache watchdog help (9fcc93d)
-- Give each pool its own watchdog cooldown and back off when a run cannot free it (843149b)
-- Restore the watchdog schedule when the plugin is reinstalled (91b4b01)
-- Say what a watchdog run does when the schedule is off (523f570)
-- Guard $argv in mover.php (bc023fb)
-- Start the watchdog cooldown only when its own run starts (e229092)
-- Count a share's own moving threshold in the watchdog (6dc7906)
-- Use strict comparisons on the watchdog lines in mover.php (7e3edaa)
-- Announce a watchdog run only once it has started (d86864c)
-- Add an opt-in cache watchdog that starts a run when the pool fills (398c060)
+- new: Add an opt-in cache watchdog that monitors cache and starts a run when the pool fills
 
 ## 2026.09.19
 
