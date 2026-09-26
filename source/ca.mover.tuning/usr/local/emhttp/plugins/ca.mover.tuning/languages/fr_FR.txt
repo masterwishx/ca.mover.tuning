@@ -43,6 +43,7 @@ Error No files found to move for %s=Erreur : aucun fichier trouvé à déplacer 
 Errors Only=Erreurs uniquement
 Failed to destroy ZFS dataset %s — attempting to remount=Échec de la destruction du dataset ZFS [%s] — tentative de remontage.
 Failed to remount dataset %s=Échec du remontage du dataset [%s]
+Failed to reset Mover Tuning Check the logs=Échec de la réinitialisation de Mover Tuning. Consultez les journaux.
 Failed to start Mover Tuning Check the logs=Échec du démarrage de Mover Tuning. Consultez les journaux.
 Failed to unmount ZFS dataset %s=Échec du démontage du dataset ZFS [%s]
 Fatal error %s does not exist, check this=Erreur fatale : %s n’existe pas, vérifiez cela.

@@ -43,6 +43,7 @@ Error No files found to move for %s=Ошибка: не найдено файло
 Errors Only=Только ошибки
 Failed to destroy ZFS dataset %s — attempting to remount=Не удалось уничтожить ZFS‑датасет [%s] — выполняется попытка перемонтирования.
 Failed to remount dataset %s=Не удалось перемонтировать датасет [%s]
+Failed to reset Mover Tuning Check the logs=Не удалось сбросить Mover Tuning. Проверьте журналы.
 Failed to start Mover Tuning Check the logs=Не удалось запустить Mover Tuning. Проверьте журналы.
 Failed to unmount ZFS dataset %s=Не удалось размонтировать ZFS‑датасет [%s]
 Fatal error %s does not exist, check this=Критическая ошибка: %s не существует, проверьте это.

@@ -21,12 +21,19 @@ $cfg_moverTuneCron = trim($cfg['moverTuneCron'] ?? '');
 // Get config value of the cache watchdog
 $cfg_watchdog = $cfg['watchdog'] ?? '';
 
-/** Writes a message to syslog under the "move" tag when plugin logging is enabled; errors are always written */
+// "Error:" lines logged so far; the CLI sync exits 1 when there are any
+$loggedErrors = 0;
+
+/** Writes a message to syslog under the "move" tag when plugin logging is enabled; errors are always written, and counted */
 function logger($string)
 {
-	global $cfg;
+	global $cfg, $loggedErrors;
 
-	if ($cfg['logging'] === 'yes' || strpos($string, 'Error:') === 0) {
+	$isError = strpos($string, 'Error:') === 0;
+	if ($isError === true) {
+		$loggedErrors++;
+	}
+	if ($cfg['logging'] === 'yes' || $isError === true) {
 		exec("logger -t move " . escapeshellarg($string));
 	}
 }
@@ -221,11 +228,11 @@ function sync_cron_files()
 	}
 }
 
-// From the CLI (plugin install, age_mover reset) the plugin's cron files are brought in line with the saved settings;
-// the caller runs update_cron afterwards
+// From the CLI (plugin install, age_mover reset) the plugin's cron files are brought in line with the saved settings,
+// exiting 1 when an error was logged; the caller runs update_cron afterwards
 if (PHP_SAPI === 'cli' && ($argv[1] ?? '') === 'sync') {
 	sync_cron_files();
-	exit;
+	exit($loggedErrors === 0 ? 0 : 1);
 }
 
 // Check if value was changed to prevent the logger of printing when cron was not changed and not make cron file when avalible already

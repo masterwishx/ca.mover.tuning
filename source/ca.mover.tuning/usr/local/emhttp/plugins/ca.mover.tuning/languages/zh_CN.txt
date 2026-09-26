@@ -42,6 +42,7 @@ Error No files found to move for %s=错误：未找到 %s 中需要移动的文�
 Errors Only=仅错误
 Failed to destroy ZFS dataset %s — attempting to remount=销毁 ZFS 数据集 [%s] 失败，正在尝试重新挂载。
 Failed to remount dataset %s=重新挂载数据集 [%s] 失败
+Failed to reset Mover Tuning Check the logs=重置 Mover Tuning 失败，请查看日志。
 Failed to start Mover Tuning Check the logs=启动 Mover Tuning 失败，请查看日志。
 Failed to unmount ZFS dataset %s=卸载 ZFS 数据集 [%s] 失败
 Fatal error %s does not exist, check this=严重错误：%s 不存在，请检查。

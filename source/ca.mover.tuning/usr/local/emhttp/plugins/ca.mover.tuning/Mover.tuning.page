@@ -202,7 +202,11 @@ function resetDefaults() {
     confirmButtonText:"_(Defaults)_",
     cancelButtonText:"_(Cancel)_"
   },function(confirmed){
-    if (confirmed) $.post("/plugins/ca.mover.tuning/reset.php").always(function(){location.reload();});
+    if (confirmed) {
+      $.post("/plugins/ca.mover.tuning/reset.php")
+        .fail(function(){alert("_(Failed to reset Mover Tuning. Check the logs.)_");})
+        .always(function(){location.reload();});
+    }
   });
 }
 
