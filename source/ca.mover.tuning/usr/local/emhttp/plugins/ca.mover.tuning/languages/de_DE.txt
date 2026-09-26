@@ -142,7 +142,7 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=T
 Thank you for using this plugin=Danke, dass du dieses Plugin verwendest.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Die gespeicherte Freigabegrenze beträgt %1 und liegt über der Verschiebegrenze %2. Die Datenverschiebung startet bei %2 und stoppt bei %1, daher wird nichts verschoben, solange der Pool zwischen diesen Werten liegt. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Die gespeicherte „Alles verschieben“-Grenze beträgt %1 und liegt auf oder unter der Verschiebegrenze %2. Alles auf cache:yes‑Freigaben wird verschoben, Skip‑Liste und Filter werden ignoriert, bevor die Verschiebegrenze erreicht wird. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
-The schedule is disabled, so only the watchdog starts runs Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs=Der Zeitplan ist deaktiviert, daher startet nur der Watchdog Läufe. Verschiebungen zurück in den Pool, Synchronisierung, Neuverteilung und altersbasierte Verschiebungen unterhalb der Auslöseschwelle finden nur bei geplanten Läufen statt.
+The schedule is disabled, so runs start only when the pool reaches the watchdog trigger level Below it, no run moves files back to the pool, syncs, rebalances or moves files by age=Der Zeitplan ist deaktiviert, daher starten Läufe nur, wenn der Pool die Auslöseschwelle des Watchdogs erreicht. Darunter verschiebt kein Lauf Dateien zurück in den Pool, synchronisiert, verteilt neu oder verschiebt Dateien nach Alter.
 Top Folder=Oberster Ordner
 Unraid mover=Unraid‑Mover
 Unraid Mover schedule is currently enabled=Unraid‑Mover‑Zeitplan ist derzeit **aktiviert**
@@ -191,7 +191,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 
 :mover_tune_watchdog_plug:
 <p>Prüft alle 5 Minuten, ob der Primärspeicher (<em>Cache</em>) einer cache:<strong>yes</strong>-Freigabe die <strong>Auslöseschwelle des Watchdogs</strong> erreicht hat. Ist das der Fall, startet er Mover Tuning mit allen Einstellungen und Filtern zwischen den geplanten Läufen.</p>
-<p>Er ist ein Sicherheitsnetz neben dem Zeitplan, kein Ersatz dafür: Verschiebungen zurück in den Pool (cache:<strong>prefer</strong>), Synchronisierung, Neuverteilung und altersbasierte Verschiebungen unterhalb der Auslöseschwelle finden nur bei geplanten Läufen statt.</p>
+<p>Er ist ein Sicherheitsnetz neben dem Zeitplan, kein Ersatz dafür. Ein von ihm gestarteter Lauf macht alles, was ein geplanter Lauf macht, aber erst, wenn der Pool die Auslöseschwelle erreicht. Darunter verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
 <p>Er startet höchstens einen Lauf pro Stunde, sendet dabei eine Benachrichtigung und beachtet die Einstellung zur Paritätsprüfung. Unterhalb der Auslöseschwelle dauert eine Prüfung wenige Millisekunden und tut sonst nichts.</p>
 :end
 

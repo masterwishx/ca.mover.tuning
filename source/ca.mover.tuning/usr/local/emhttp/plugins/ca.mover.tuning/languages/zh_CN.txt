@@ -141,7 +141,7 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=�
 Thank you for using this plugin=感谢使用本插件。
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=已保存的释放阈值为 %1，高于移动阈值 %2。Mover 在 %2 时开始、在 %1 时停止，因此存储池使用率介于两者之间时不会移动任何文件。此页面现在显示 %3，保存后将使用该值。
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=已保存的全部移动阈值为 %1，不高于移动阈值 %2。在达到移动阈值之前，cache:yes 共享上的所有文件都会被移动，并忽略跳过列表和过滤器。此页面现在显示 %3，保存后将使用该值。
-The schedule is disabled, so only the watchdog starts runs Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs=计划已禁用，因此只有看门狗会启动运行。移回存储池、同步、重新平衡以及低于触发阈值时按年龄的移动，只会在按计划运行时进行。
+The schedule is disabled, so runs start only when the pool reaches the watchdog trigger level Below it, no run moves files back to the pool, syncs, rebalances or moves files by age=计划已禁用，因此只有存储池达到看门狗触发阈值时才会启动运行。低于该阈值时，不会有任何运行将文件移回存储池、同步、重新平衡或按年龄移动文件。
 Top Folder=顶层文件夹
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Unraid Mover 计划当前为**启用**状态
@@ -190,7 +190,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_watchdog_plug:
 <p>每 5 分钟检查一次 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池是否达到<strong>看门狗触发阈值</strong>。如果达到，就在按计划运行之间启动 Mover Tuning，并应用其全部设置和过滤器。</p>
-<p>它是计划之外的安全保障，而不是计划的替代：移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡以及低于触发阈值时按年龄的移动，只会在按计划运行时进行。</p>
+<p>它是计划之外的安全保障，而不是计划的替代。它启动的运行会执行计划运行的全部操作，但只在存储池达到触发阈值时才启动。低于该阈值时，只有按计划运行才会将文件移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡或按年龄移动文件。</p>
 <p>它每小时最多启动一次运行，启动时发送一条通知，并遵循奇偶校验设置。低于触发阈值时，每次检查只需几毫秒，不做其他任何事。</p>
 :end
 

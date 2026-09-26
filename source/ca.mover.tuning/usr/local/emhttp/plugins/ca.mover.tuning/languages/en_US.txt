@@ -144,7 +144,7 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=T
 Thank you for using this plugin=Thank you for using this plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=The saved freeing threshold is %1, above the moving threshold of %2. The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them. This page now shows %3, and saving will store that.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=The saved Move All threshold is %1, at or below the moving threshold of %2. Everything on cache:yes shares moves, skip list and filters ignored, before the moving threshold is reached. This page now shows %3, and saving will store that.
-The schedule is disabled, so only the watchdog starts runs Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs=The schedule is disabled, so only the watchdog starts runs. Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs.
+The schedule is disabled, so runs start only when the pool reaches the watchdog trigger level Below it, no run moves files back to the pool, syncs, rebalances or moves files by age=The schedule is disabled, so runs start only when the pool reaches the watchdog trigger level. Below it, no run moves files back to the pool, syncs, rebalances or moves files by age.
 Top Folder=
 Unraid mover=
 Unraid Mover schedule is currently enabled=Unraid Mover schedule is currently **enabled**
@@ -193,7 +193,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 
 :mover_tune_watchdog_plug:
 <p>Checks every 5 minutes whether the Primary (<em>cache</em>) pool of a cache:<strong>yes</strong> share has reached the <strong>Watchdog trigger level</strong>. If it has, it starts Mover Tuning, with all its settings and filters, between scheduled runs.</p>
-<p>It is a safety net next to the schedule, not a replacement: moves back to the pool (cache:<strong>prefer</strong>), sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs.</p>
+<p>It is a safety net next to the schedule, not a replacement. A run it starts does everything a scheduled run does, but only once the pool reaches the trigger level. Below it, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
 <p>It starts at most one run per hour, sends one notification when it does, and follows the parity check setting. Below the trigger level a check takes a few milliseconds and does nothing else.</p>
 :end
 

@@ -295,7 +295,7 @@ function mtRebuildThresholds(moving) {
     mtFmt('_(Watchdog trigger level raised to %1 to stay above the moving threshold.)_', watchdog + '%') : '');
 }
 
-// With the schedule disabled the watchdog starts every run, and it never does what only scheduled runs do.
+// With the schedule disabled, nothing runs while the pool stays below the watchdog trigger level.
 function mtWatchdogWarning() {
   $('#watchdog_schedule_warning').toggle($('#watchdog').val() === 'yes' && $('#moverDisabled').val() === 'yes');
 }
@@ -507,12 +507,12 @@ _(Cache watchdog)_:
 <?=mk_option($cfg['watchdog'],"no",_('No'))?>
 <?=mk_option($cfg['watchdog'],"yes",_('Yes'))?>
 </select>
-<span id="watchdog_schedule_warning" class="orange-text" style="display:none; font-style:italic;"><i class="fa fa-warning"></i> _(The schedule is disabled, so only the watchdog starts runs. Moves back to the pool, sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs.)_</span>
+<span id="watchdog_schedule_warning" class="orange-text" style="display:none; font-style:italic;"><i class="fa fa-warning"></i> _(The schedule is disabled, so runs start only when the pool reaches the watchdog trigger level. Below it, no run moves files back to the pool, syncs, rebalances or moves files by age.)_</span>
 
 <blockquote class="inline_help">
 :mover_tune_watchdog_plug:
 <p>Checks every 5 minutes whether the Primary (<em>cache</em>) pool of a cache:<strong>yes</strong> share has reached the <strong>Watchdog trigger level</strong>. If it has, it starts Mover Tuning, with all its settings and filters, between scheduled runs.</p>
-<p>It is a safety net next to the schedule, not a replacement: moves back to the pool (cache:<strong>prefer</strong>), sync, rebalancing and age-based moves below the trigger level happen only on scheduled runs.</p>
+<p>It is a safety net next to the schedule, not a replacement. A run it starts does everything a scheduled run does, but only once the pool reaches the trigger level. Below it, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
 <p>It starts at most one run per hour, sends one notification when it does, and follows the parity check setting. Below the trigger level a check takes a few milliseconds and does nothing else.</p>
 :end
 </blockquote>
