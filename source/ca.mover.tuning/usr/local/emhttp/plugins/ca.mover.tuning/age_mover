@@ -2763,7 +2763,7 @@ processTheMoves() {
             # If config file exist
             if [[ -f "$config_file" ]]; then
                 # an override is read only while it is active, so an inactive one keeps its mark for when it is enabled again
-                if grep -qs 'synchronizeCache="yes"' "$config_file" && { [ "$config_file" = "$MOVERTUNINGCFGFILE" ] || grep -qs 'moverOverride="yes"' "$config_file"; }; then
+                if grep -qs '^synchronizeCache="yes"' "$config_file" && { [ "$config_file" = "$MOVERTUNINGCFGFILE" ] || grep -qs 'moverOverride="yes"' "$config_file"; }; then
                     if grep -q "lastCacheSync=" "$config_file"; then
                         sed -i "s/lastCacheSync=.*$/lastCacheSync=\"$EPOCH\"/" "$config_file"
                     else
