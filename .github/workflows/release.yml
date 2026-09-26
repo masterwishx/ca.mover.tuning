@@ -95,9 +95,10 @@ jobs:
           # Prints the PR number when due. set -e does not reach into $( ), so every failure returns 1 itself.
           due() {  # $1 channel, $2 branch, $3 the branch's commit
             local latest merged released tag
-            latest=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "release/$1" --base "$2" \
-              --limit 20 --json number,mergeCommit,mergedAt,isCrossRepository \
-              --jq '[.[] | select(.isCrossRepository | not)] | sort_by(.mergedAt) | last | "\(.number // "") \(.mergeCommit.oid // "")"') || return 1
+            # head=owner:branch leaves forks' PRs out on the server, so none can crowd this repo's out of a page
+            latest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=closed&base=$2&head=${GITHUB_REPOSITORY%%/*}:release/$1&per_page=100" \
+              --jq '.[] | select(.merged_at != null) | "\(.merged_at) \(.number) \(.merge_commit_sha)"' | sort | tail -n 1) || return 1
+            latest="${latest#* }"
             merged="${latest#* }"
             [ -n "$merged" ] && git merge-base --is-ancestor "$merged" "$3" 2>/dev/null || return 0
             released=$(git tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]*' --contains "$merged") || return 1

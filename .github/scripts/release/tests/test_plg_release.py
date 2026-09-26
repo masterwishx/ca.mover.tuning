@@ -307,7 +307,7 @@ def test_decide_takes_an_explicit_mode_as_given(tmp_path, decide_repo, mode):
 def test_decide_releases_a_merged_release_pr_until_a_release_tag_contains_it(tmp_path, decide_repo):
     """A cancelled run must not lose the release: the next run sees the merge still has no release tag."""
     repo, merged = decide_repo
-    gh = f"echo '7 {merged}'"
+    gh = f"echo '2026-09-25T00:00:00Z 7 {merged}'"
     r, out = _run_decide(tmp_path, repo, "auto", gh)
     assert r.returncode == 0, r.stderr
     assert (out["channel"], out["mode"], out["pr_number"]) == ("stable", "release", "7")
@@ -320,7 +320,7 @@ def test_decide_releases_a_merged_release_pr_until_a_release_tag_contains_it(tmp
 def test_decide_stops_on_a_release_tag_the_branch_does_not_have(tmp_path, decide_repo):
     """The cut moves the branch last: a tag the branch lacks is a cut that stopped part way, not a release."""
     repo, merged = decide_repo
-    gh = f"echo '7 {merged}'"
+    gh = f"echo '2026-09-25T00:00:00Z 7 {merged}'"
 
     def tag_off_the_branch(tag):
         _git(repo, "switch", "-q", "--detach", "master")
@@ -346,7 +346,7 @@ def test_decide_releases_when_only_the_other_channels_tag_contains_the_merge(tmp
     _git(repo, "commit", "-q", "--allow-empty", "-m", "chore(release): 2026.09.26 [skip ci]")
     _git(repo, "tag", "2026.09.26")
     _git(repo, "switch", "-q", "master")
-    r, out = _run_decide(tmp_path, repo, "auto", f"echo '7 {merged}'")
+    r, out = _run_decide(tmp_path, repo, "auto", f"echo '2026-09-25T00:00:00Z 7 {merged}'")
     assert r.returncode == 0, r.stderr
     assert (out["mode"], out["pr_number"]) == ("release", "7")
 
@@ -354,7 +354,7 @@ def test_decide_releases_when_only_the_other_channels_tag_contains_the_merge(tmp
 def test_decide_refreshes_the_pr_when_no_release_pr_is_due(tmp_path, decide_repo):
     repo, _ = decide_repo
     assert _run_decide(tmp_path, repo, "auto", "echo ' '")[1]["mode"] == "pr"
-    assert _run_decide(tmp_path, repo, "auto", "echo '7 " + "f" * 40 + "'")[1]["mode"] == "pr"
+    assert _run_decide(tmp_path, repo, "auto", "echo '2026-09-25T00:00:00Z 7 " + "f" * 40 + "'")[1]["mode"] == "pr"
 
 
 def test_decide_stops_when_the_pr_lookup_fails(tmp_path, decide_repo):
@@ -869,7 +869,7 @@ def test_decide_restarts_the_other_channels_waiting_release(tmp_path, decide_rep
     beta_merged = _git(repo, "rev-parse", "HEAD")
     _git(repo, "update-ref", "refs/remotes/origin/beta", beta_merged)
     _git(repo, "switch", "-q", "master")
-    gh = ('case "$*" in\n  *"release/stable"*) echo "7 ' + merged + '" ;;\n  *"release/beta"*) echo "9 ' + beta_merged + '" ;;\n'
+    gh = ('case "$*" in\n  *"release/stable"*) echo "2026-09-25T00:00:00Z 7 ' + merged + '" ;;\n  *"release/beta"*) echo "2026-09-25T00:00:00Z 9 ' + beta_merged + '" ;;\n'
           '  *"workflow run"*) echo "$GH_TOKEN $*" >> dispatched ;;\nesac')
     r, out = _run_decide(tmp_path, repo, "auto", gh, event="push")
     assert r.returncode == 0, r.stderr
@@ -1158,17 +1158,17 @@ def test_merge_stops_when_git_refuses_to_merge(tmp_path):
     assert r.returncode != 0 and "could not merge other" in r.stdout + r.stderr
 
 
-def test_decide_ignores_a_merged_pr_from_a_fork_with_the_release_branch_name(tmp_path, decide_repo):
-    """Only the managed release branch cuts a release; a fork's branch of the same name is somebody's PR."""
+def test_decide_takes_the_newest_merged_release_pr_of_this_repository_from_every_page(tmp_path, decide_repo):
+    """A fork's release/<channel> PR is somebody's PR; forks are filtered on the server, and every page is read."""
     repo, merged = decide_repo
-    listing = [{"number": 9, "isCrossRepository": True, "mergedAt": "2026-09-25T00:00:00Z", "mergeCommit": {"oid": merged}}]
-
-    def gh(prs):
-        return ('while [ $# -gt 0 ]; do [ "$1" = --jq ] && { f="$2"; break; }; shift; done\n'
-                f"jq -r \"$f\" <<'JSON'\n{json.dumps(prs)}\nJSON")
-
-    r, out = _run_decide(tmp_path, repo, "auto", gh(listing))
+    pages = [[{"number": 5, "merged_at": None, "merge_commit_sha": "0" * 40}],
+             [{"number": 7, "merged_at": "2026-09-25T00:00:00Z", "merge_commit_sha": merged},
+              {"number": 3, "merged_at": "2026-09-01T00:00:00Z", "merge_commit_sha": "1" * 40}]]
+    gh = ('echo "$*" >> gh-args\nall=""\n'
+          'while [ $# -gt 0 ]; do case "$1" in --jq) f="$2"; shift ;; --paginate) all=1 ;; esac; shift; done\n')
+    for n, page in enumerate(pages):
+        gh += ('[ -n "$all" ] || exit 0\n' if n else "") + f"jq -r \"$f\" <<'JSON'\n{json.dumps(page)}\nJSON\n"
+    r, out = _run_decide(tmp_path, repo, "auto", gh)
     assert r.returncode == 0, r.stderr
-    assert out["mode"] == "pr"
-    listing[0]["isCrossRepository"] = False
-    assert _run_decide(tmp_path, repo, "auto", gh(listing))[1]["mode"] == "release"
+    assert (out["mode"], out["pr_number"]) == ("release", "7")
+    assert "head=someone:release/stable" in (repo / "gh-args").read_text()
