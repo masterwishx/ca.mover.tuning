@@ -10,6 +10,7 @@
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s fichiers et %s dossiers ont été déplacés/synchronisés, mais rsync a signalé des erreurs les concernant. Consultez le journal de Mover Tuning.
 All community developers=Tous les développeurs de la communauté
 Allow force mover schedule to run during a parity checkrebuild=Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Tous les paramètres du plugin reviennent à leurs valeurs par défaut, y compris la planification Mover Tuning, l’horaire du déplacement forcé et la surveillance du cache, et les paramètres remplacés de chaque part sont supprimés.
 Array → Cache=Array → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Un total de %s fichiers et %s dossiers représentant %s ont été déplacés/synchronisés avec succès par le plugin Mover Tuning. Temps écoulé : %s
 Backing off %s still %s after last run Next try %s, or at %s=En attente : %s encore à %s après la dernière exécution. Prochain essai %s, ou à %s.
@@ -19,6 +20,7 @@ Cache disk not enabled=Disque cache non activé !
 Cache watchdog=Surveillance du cache
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Surveillance du cache : %s est rempli à %s, au niveau ou au-dessus du seuil de déclenchement de %s. Démarrage de Mover Tuning.
 Cache → Array=Cache → Array
+Cancel=Annuler
 Clean empty folders=Nettoyer les dossiers vides
 Clean empty ZFS datasets=Nettoyer les datasets ZFS vides
 CLI help commands=Commandes d’aide CLI
@@ -41,6 +43,7 @@ Error No files found to move for %s=Erreur : aucun fichier trouvé à déplacer 
 Errors Only=Erreurs uniquement
 Failed to destroy ZFS dataset %s — attempting to remount=Échec de la destruction du dataset ZFS [%s] — tentative de remontage.
 Failed to remount dataset %s=Échec du remontage du dataset [%s]
+Failed to reset Mover Tuning Check the logs=Échec de la réinitialisation de Mover Tuning. Consultez les journaux.
 Failed to start Mover Tuning Check the logs=Échec du démarrage de Mover Tuning. Consultez les journaux.
 Failed to unmount ZFS dataset %s=Échec du démontage du dataset ZFS [%s]
 Fatal error %s does not exist, check this=Erreur fatale : %s n’existe pas, vérifiez cela.
@@ -119,6 +122,7 @@ Plugin thread @ Unraid community=Fil du plugin sur la communauté Unraid
 Priority for disk IO=Priorité pour les E/S disque
 Priority for mover process=Priorité pour le processus du mover
 Rebalance shares=Rééquilibrer les parts
+Reset Mover Tuning to defaults=Réinitialiser Mover Tuning aux valeurs par défaut ?
 Resynchronize all Primary files to Secondary=Resynchroniser tous les fichiers du primaire vers le secondaire
 Rsync=Rsync
 Run Mover Tuning=Exécuter Mover Tuning…
@@ -178,6 +182,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
   <li>Appuyez sur le bouton <strong>« Déplacer maintenant »</strong> dans <strong>Mover Tuning – Options</strong>.</li>
   <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong>.</li>
 </ul>
+<p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -188,6 +193,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
   <li>Appuyez sur <strong>« Move »</strong> dans la page <strong>Main</strong>.</li>
   <li>Lancez <strong>« mover start »</strong> depuis la <strong>CLI</strong>.</li>
 </ul>
+<p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
 :end
 
 :mover_tune_watchdog_plug:

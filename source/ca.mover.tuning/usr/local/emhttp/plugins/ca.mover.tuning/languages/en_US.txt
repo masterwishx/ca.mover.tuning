@@ -12,6 +12,7 @@
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s files and %s folders were moved/synced, but rsync reported errors for them. Check the Mover Tuning log.
 All community developers=
 Allow force mover schedule to run during a parity checkrebuild=Allow force mover schedule to run during a parity check/rebuild
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted.
 Array → Cache=
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=A total of %s files and %s folders representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s
 Backing off %s still %s after last run Next try %s, or at %s=Backing off: %s still %s after last run. Next try %s, or at %s.
@@ -21,6 +22,7 @@ Cache disk not enabled=Cache disk not enabled!
 Cache watchdog=
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning.
 Cache → Array=
+Cancel=
 Clean empty folders=
 Clean empty ZFS datasets=
 CLI help commands=
@@ -43,6 +45,7 @@ Error No files found to move for %s=Error: No files found to move for %s
 Errors Only=
 Failed to destroy ZFS dataset %s — attempting to remount=Failed to destroy ZFS dataset [%s] — attempting to remount.
 Failed to remount dataset %s=Failed to remount dataset [%s]
+Failed to reset Mover Tuning Check the logs=Failed to reset Mover Tuning. Check the logs.
 Failed to start Mover Tuning Check the logs=Failed to start Mover Tuning. Check the logs.
 Failed to unmount ZFS dataset %s=Failed to unmount ZFS dataset [%s]
 Fatal error %s does not exist, check this=Fatal error: %s does not exist, check this.
@@ -121,6 +124,7 @@ Plugin thread @ Unraid community=
 Priority for disk IO=Priority for disk I/O
 Priority for mover process=
 Rebalance shares=
+Reset Mover Tuning to defaults=Reset Mover Tuning to defaults?
 Resynchronize all Primary files to Secondary=
 Rsync=
 Run Mover Tuning=Run Mover Tuning...
@@ -180,6 +184,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
   <li>Press the <strong>“Move now”</strong> button in <strong>Mover Tuning - Options</strong>.</li>
   <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong>.</li>
 </ul>
+<p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -190,6 +195,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
   <li>Press <strong>“Move”</strong> on the <strong>Main</strong> page.</li>
   <li>Run <strong>“mover start”</strong> from the <strong>CLI</strong>.</li>
 </ul>
+<p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
 
 :mover_tune_watchdog_plug:
