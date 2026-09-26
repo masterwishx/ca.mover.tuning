@@ -9,6 +9,7 @@
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s 个文件和 %s 个文件夹已移动/同步，但 rsync 报告了错误。请查看 Mover Tuning 日志。
 All community developers=所有社区开发者
 Allow force mover schedule to run during a parity checkrebuild=允许强制移动计划在奇偶校验/重建期间运行
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=所有插件设置都将恢复为默认值，包括 Mover Tuning 计划、强制移动计划和缓存看门狗，并且所有共享的覆盖设置都将被删除。
 Array → Cache=阵列 → 缓存
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件已成功移动/同步 %s 个文件和 %s 个文件夹，共 %s。耗时：%s
 Backing off %s still %s after last run Next try %s, or at %s=暂缓：上次运行后 %s 仍为 %s。下次尝试 %s，或达到 %s 时。
@@ -18,6 +19,7 @@ Cache disk not enabled=缓存磁盘未启用
 Cache watchdog=缓存看门狗
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=缓存看门狗：%s 已使用 %s，达到或超过触发阈值 %s。正在启动 Mover Tuning。
 Cache → Array=缓存 → 阵列
+Cancel=取消
 Clean empty folders=清理空文件夹
 Clean empty ZFS datasets=清理空的 ZFS 数据集
 CLI help commands=命令行帮助
@@ -40,6 +42,7 @@ Error No files found to move for %s=错误：未找到 %s 中需要移动的文�
 Errors Only=仅错误
 Failed to destroy ZFS dataset %s — attempting to remount=销毁 ZFS 数据集 [%s] 失败，正在尝试重新挂载。
 Failed to remount dataset %s=重新挂载数据集 [%s] 失败
+Failed to reset Mover Tuning Check the logs=重置 Mover Tuning 失败，请查看日志。
 Failed to start Mover Tuning Check the logs=启动 Mover Tuning 失败，请查看日志。
 Failed to unmount ZFS dataset %s=卸载 ZFS 数据集 [%s] 失败
 Fatal error %s does not exist, check this=严重错误：%s 不存在，请检查。
@@ -118,6 +121,7 @@ Plugin thread @ Unraid community=插件讨论 @ Unraid 社区
 Priority for disk IO=磁盘 I/O 优先级
 Priority for mover process=Mover 进程优先级
 Rebalance shares=重新平衡共享
+Reset Mover Tuning to defaults=将 Mover Tuning 重置为默认值？
 Resynchronize all Primary files to Secondary=重新同步所有主存储文件到次存储
 Rsync=Rsync
 Run Mover Tuning=运行 Mover Tuning…
@@ -177,6 +181,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
   <li>在 <strong>Mover Tuning - 选项</strong>中点击 <strong>“立即移动”</strong> 按钮。</li>
   <li>在<strong>命令行</strong>中运行 <strong>“age_mover start”</strong>。</li>
 </ul>
+<p><strong>强制移动</strong>仍会按其自己的计划运行：要一并停止，请将<strong>显示高级设置</strong>设为<strong>是</strong>，再将<strong>定时强制移动所有文件</strong>设为<strong>否</strong>。</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -187,6 +192,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
   <li>在<strong>主页面</strong>上点击 <strong>“移动”</strong>。</li>
   <li>在<strong>命令行</strong>中运行 <strong>“mover start”</strong>。</li>
 </ul>
+<p><strong>强制移动</strong>仍会按其自己的计划运行：要一并停止，请将<strong>显示高级设置</strong>设为<strong>是</strong>，再将<strong>定时强制移动所有文件</strong>设为<strong>否</strong>。</p>
 :end
 
 :mover_tune_watchdog_plug:

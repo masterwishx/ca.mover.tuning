@@ -10,6 +10,7 @@
 All community developers=Alle Entwickler der Community
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s Dateien und %s Ordner wurden verschoben/synchronisiert, aber rsync hat dabei Fehler gemeldet. Bitte das Mover‑Tuning‑Protokoll prüfen.
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Alle Plugin‑Einstellungen werden auf ihre Standardwerte zurückgesetzt, einschließlich des Mover‑Tuning‑Zeitplans, des Zeitplans für das erzwungene Verschieben und des Cache-Watchdogs, und die überschriebenen Einstellungen aller Freigaben werden gelöscht.
 Array → Cache=Speicherverbund → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien und %s Ordner mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
 Backing off %s still %s after last run Next try %s, or at %s=Wartet: %s nach dem letzten Lauf noch %s. Nächster Versuch %s, oder bei %s.
@@ -19,6 +20,7 @@ Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
 Cache watchdog=Cache-Watchdog
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Mover Tuning wird gestartet.
 Cache → Array=Cache → Speicherverbund
+Cancel=Abbrechen
 Clean empty folders=Leere Ordner bereinigen
 Clean empty ZFS datasets=Leere ZFS‑Datasets bereinigen
 CLI help commands=CLI‑Hilfebefehle
@@ -41,6 +43,7 @@ Error No files found to move for %s=Fehler: Keine Dateien zum Verschieben für %
 Errors Only=Nur Fehler
 Failed to destroy ZFS dataset %s — attempting to remount=ZFS‑Dataset %s konnte nicht gelöscht werden — erneutes Einhängen wird versucht.
 Failed to remount dataset %s=Dataset %s konnte nicht erneut eingehängt werden.
+Failed to reset Mover Tuning Check the logs=Zurücksetzen von Mover Tuning fehlgeschlagen. Bitte Protokolle prüfen.
 Failed to start Mover Tuning Check the logs=Start des Mover‑Tunings fehlgeschlagen. Bitte Protokolle prüfen.
 Failed to unmount ZFS dataset %s=ZFS‑Dataset %s konnte nicht ausgehängt werden.
 Fatal error %s does not exist, check this=Schwerer Fehler: %s existiert nicht. Bitte prüfen.
@@ -119,6 +122,7 @@ Plugin thread @ Unraid community=Plugin‑Thread in der Unraid‑Community
 Priority for disk IO=Priorität für Datenträger‑I/O
 Priority for mover process=Priorität für Datenverschiebungs‑Prozess
 Rebalance shares=Freigaben neu verteilen
+Reset Mover Tuning to defaults=Mover Tuning auf Standardwerte zurücksetzen?
 Resynchronize all Primary files to Secondary=Alle Dateien des Primärspeichers mit dem Sekundärspeicher neu synchronisieren
 Rsync=Rsync
 Run Mover Tuning=Mover‑Tuning ausführen…
@@ -178,6 +182,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf die Schaltfläche <strong>„Jetzt verschieben“</strong> in <strong>Mover Tuning – Optionen</strong>.</li>
   <li>Führe <strong>„age_mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -188,6 +193,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf <strong>„Verschieben“</strong> auf der <strong>Hauptseite</strong>.</li>
   <li>Führe <strong>„mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
 :end
 
 :mover_tune_watchdog_plug:

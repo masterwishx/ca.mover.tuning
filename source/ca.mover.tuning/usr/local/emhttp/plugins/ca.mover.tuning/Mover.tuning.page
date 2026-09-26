@@ -121,6 +121,11 @@ document.addEventListener("DOMContentLoaded", () => {
         wrench.style.color = "var(--blue-700)";
     }
 
+    // mover.php answers 1 or 0 on the line after its #!/usr/bin/php, which php-fpm sends as part of the reply
+    function replySaysRunning(reply) {
+        return String(reply).trim().split("\n").pop() === "1";
+    }
+
     function startPolling() {
         let failureCount = 0;
         const MAX_FAILURES = 5;
@@ -130,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
             $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                 .done((running) => {
                     failureCount = 0;
-                    const isRunning = String(running).trim() === "1";
+                    const isRunning = replySaysRunning(running);
                     if (!isRunning) { // mover finished
                         clearInterval(pollingInterval);
                         pollingInterval = null;
@@ -174,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Immediate check to avoid race if mover finishes quickly
                 $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                     .done((running) => {
-                        const isRunning = String(running).trim() === "1";
+                        const isRunning = replySaysRunning(running);
                         if (!isRunning) {
                             updateUIFinished();
                             location.reload();
@@ -192,17 +197,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-function resetDefaults() { 
-  $.post("/plugins/ca.mover.tuning/reset.php");
+function resetDefaults() {
+  swal({
+    title:"_(Reset Mover Tuning to defaults?)_",
+    text:"_(All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted.)_",
+    html:true,
+    type:'warning',
+    showCancelButton:true,
+    confirmButtonText:"_(Defaults)_",
+    cancelButtonText:"_(Cancel)_"
+  },function(confirmed){
+    if (confirmed) {
+      $.post("/plugins/ca.mover.tuning/reset.php")
+        .fail(function(){alert("_(Failed to reset Mover Tuning. Check the logs.)_");})
+        .always(function(){location.reload();});
+    }
+  });
 }
 
 function updateScreenMoverTuningSettings(option,slow) {
   switch (option) {
   case 'yes':
-    $('#moverTuningSettings').hide(slow);
+    $('.moverTuningSettings').hide(slow);
     break;
   case 'no':
-    $('#moverTuningSettings').show(slow);
+    $('.moverTuningSettings').show(slow);
     break;
   }
 }
@@ -210,10 +229,10 @@ function updateScreenMoverTuningSettings(option,slow) {
 function updateScreenMoverAdvancedSettings(option,slow) {
   switch (option) {
   case 'no':
-    $('#moverAdvancedSettings').hide(slow);
+    $('.moverAdvancedSettings').hide(slow);
     break;
   case 'yes':
-    $('#moverAdvancedSettings').show(slow);
+    $('.moverAdvancedSettings').show(slow);
     break;
   }
 }
@@ -499,6 +518,7 @@ _(Disable Mover running on a schedule)_:
   <li>Press the <strong>“Move now”</strong> button in <strong>Mover Tuning - Options</strong>.</li>
   <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong>.</li>
 </ul>
+<p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
 </blockquote>
 <?php else: ?>
@@ -511,6 +531,7 @@ _(Disable Mover running on a schedule)_:
   <li>Press <strong>“Move”</strong> on the <strong>Main</strong> page.</li>
   <li>Run <strong>“mover start”</strong> from the <strong>CLI</strong>.</li>
 </ul>
+<p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
 </blockquote>
 <?php endif; ?>
@@ -547,7 +568,7 @@ _(Watchdog trigger level)_:
 :end
 </blockquote>
 
-<div markdown="1" id="moverTuningSettings">
+<div markdown="1" class="moverTuningSettings">
 
 <?php if (version_compare($vars['version'], '7.2.1', '>=')): ?>
 
@@ -728,6 +749,8 @@ _(Delete Mover helper files over than this days old)_:
 
 :end
 
+</div>
+
 _(Show advanced settings)_:
 : <select name='advancedSettings' size='1' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
 <?=mk_option($cfg['advancedSettings'],"no",_('No'))?>
@@ -740,7 +763,8 @@ _(Show advanced settings)_:
 
 :end
 
-<div markdown="1" id="moverAdvancedSettings">
+<div markdown="1" class="moverAdvancedSettings">
+<div markdown="1" class="moverTuningSettings">
 _(Let scheduled mover run during a parity check / rebuild)_:
 : <select name='parity' size='1'>
   <?=mk_option($cfg['parity'],'yes',_('Yes'))?>
@@ -752,6 +776,8 @@ _(Let scheduled mover run during a parity check / rebuild)_:
 > If a parity check or disk rebuild is in progress, this will prevent mover from running.
 
 :end
+
+</div>
 
 _(Priority for mover process)_:
 : <select name='moverNice' size='1'>
@@ -811,6 +837,11 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 <p>The schedule must be a valid cron entry: an invalid one is not applied, and the error is written to the syslog.</p>
 :end
 </blockquote>
+
+</div>
+
+<div markdown="1" class="moverTuningSettings">
+<div markdown="1" class="moverAdvancedSettings">
 
 _(Script to run before mover (No checks, always runs))_:
 : <input type='text' name='beforeScript' size='1' class='mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
@@ -1152,6 +1183,8 @@ _(Move All from Primary->Secondary shares pool percentage)_:
 
 </div>
 
+</div>
+
 <div class="title"><span class="center"><i class="fa fa-files-o title"></i>_(Mover Tuning - Options)_</span></div>
 
 _(Force turbo write during mover)_:
@@ -1166,6 +1199,7 @@ _(Force turbo write during mover)_:
 
 :end
 
+<div markdown="1" class="moverTuningSettings">
 _(Move files tool)_:
 : <select name='movefilesTool' size='1'>
 <?=mk_option($cfg['movefilesTool'],"rsync",_('Rsync'))?>
@@ -1313,7 +1347,7 @@ _(Resynchronize all Primary files to Secondary)_:
 : <span class="buttons-spaced">
     <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
-    <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
+    <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults()">
 <?if ($showMoverButton):?>
     <button type="button" id="StartTuneMoverBtn" class="button" title="_(Run Mover Tuning...)_" aria-label="_(Start Mover Tuning)_" aria-disabled="<?=$moverRunning ? 'true' : 'false'?>" <?if($moverRunning) echo 'disabled';?>>
     <i id="MoverWrench" class="fa fa-wrench" style="color:<?=$moverRunning ? 'var(--gray-500)' : 'var(--blue-700)'?>;"></i> _(Move now)_

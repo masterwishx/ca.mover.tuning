@@ -10,6 +10,7 @@
 All community developers=Все разработчики сообщества
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s файлов и %s папок были перемещены/синхронизированы, но rsync сообщил об ошибках при их обработке. Проверьте журнал Mover Tuning.
 Allow force mover schedule to run during a parity checkrebuild=Разрешить запуск расписания принудительного перемещения во время проверки/восстановления четности
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Все настройки плагина возвращаются к значениям по умолчанию, включая расписание Mover Tuning, расписание принудительного перемещения и наблюдение за кэшем, а переопределённые настройки всех шар удаляются.
 Array → Cache=Массив → Кэш
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Всего %s файлов и %s папок общим объемом %s были успешно перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Backing off %s still %s after last run Next try %s, or at %s=Пауза: %s все еще %s после последнего запуска. Следующая попытка %s или при %s.
@@ -19,6 +20,7 @@ Cache disk not enabled=Кэш-диск не включён!
 Cache watchdog=Наблюдение за кэшем
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Наблюдение за кэшем: %s заполнен на %s, что не ниже порога срабатывания %s. Запуск Mover Tuning.
 Cache → Array=Кэш → Массив
+Cancel=Отмена
 Clean empty folders=Очистить пустые папки
 Clean empty ZFS datasets=Очистить пустые ZFS‑датасеты
 CLI help commands=Команды помощи CLI
@@ -41,6 +43,7 @@ Error No files found to move for %s=Ошибка: не найдено файло
 Errors Only=Только ошибки
 Failed to destroy ZFS dataset %s — attempting to remount=Не удалось уничтожить ZFS‑датасет [%s] — выполняется попытка перемонтирования.
 Failed to remount dataset %s=Не удалось перемонтировать датасет [%s]
+Failed to reset Mover Tuning Check the logs=Не удалось сбросить Mover Tuning. Проверьте журналы.
 Failed to start Mover Tuning Check the logs=Не удалось запустить Mover Tuning. Проверьте журналы.
 Failed to unmount ZFS dataset %s=Не удалось размонтировать ZFS‑датасет [%s]
 Fatal error %s does not exist, check this=Критическая ошибка: %s не существует, проверьте это.
@@ -119,6 +122,7 @@ Plugin thread @ Unraid community=Тема плагина в сообществе
 Priority for disk IO=Приоритет дискового I/O
 Priority for mover process=Приоритет процесса Mover
 Rebalance shares=Перебалансировать шары
+Reset Mover Tuning to defaults=Сбросить Mover Tuning к значениям по умолчанию?
 Resynchronize all Primary files to Secondary=Повторно синхронизировать все файлы из основного хранилища во вторичное
 Rsync=Rsync
 Run Mover Tuning=Запустить Mover Tuning...
@@ -177,6 +181,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
   <li>Нажмите кнопку <strong>«Переместить сейчас»</strong> в разделе <strong>Mover Tuning - Параметры</strong>.</li>
   <li>Выполните <strong>«age_mover start»</strong> из <strong>CLI</strong>.</li>
 </ul>
+<p><strong>Принудительное перемещение</strong> по-прежнему выполняется по своему расписанию: чтобы остановить и его, установите <strong>Показать расширенные настройки</strong> в <strong>Да</strong>, затем <strong>Принудительно перемещать все файлы по расписанию</strong> в <strong>Нет</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -187,6 +192,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
   <li>Нажмите <strong>«Переместить»</strong> на странице <strong>Главная</strong>.</li>
   <li>Выполните <strong>«mover start»</strong> из <strong>CLI</strong>.</li>
 </ul>
+<p><strong>Принудительное перемещение</strong> по-прежнему выполняется по своему расписанию: чтобы остановить и его, установите <strong>Показать расширенные настройки</strong> в <strong>Да</strong>, затем <strong>Принудительно перемещать все файлы по расписанию</strong> в <strong>Нет</strong>.</p>
 :end
 
 :mover_tune_watchdog_plug:
