@@ -77,11 +77,11 @@ Move All from Primary->Secondary shares pool percentage=Déplacer tout depuis Pr
 Move All threshold raised to %1 to stay above the moving threshold=Seuil « tout déplacer » augmenté à %1 pour rester au-dessus du seuil de déplacement.
 Moved Only=Déplacés uniquement
 Move empty folders=Déplacer les dossiers vides
+Move files based on age=Déplacer les fichiers selon leur âge
 Move files based on minimum size=Déplacer les fichiers selon une taille minimale
 Move files based on size=Déplacer les fichiers selon leur taille
 Move files based on sparseness=Déplacer les fichiers selon leur parcimonie
 Move files off Primary cache based on age=Déplacer les fichiers hors du cache primaire selon leur âge
-Move files off Primary cache based on sparseness=Déplacer les fichiers hors du cache primaire selon leur parcimonie
 Move files that are greater than this many days old=Déplacer les fichiers plus anciens que ce nombre de jours
 Move files that are greater than this sparseness=Déplacer les fichiers dont la parcimonie dépasse cette valeur
 Move files that are in use=Déplacer les fichiers en cours d’utilisation
@@ -101,6 +101,7 @@ Mover Tuning - Share Settings=Réglage du mover – Paramètres de la part
 Mover Tuning Debug Package zip=Package de débogage Mover Tuning (.zip)
 Mover Tuning Notification=Notification Mover Tuning
 Mover Tuning schedule=Planification Mover Tuning
+Mover Tuning settings are available for existing shares only=Les paramètres Mover Tuning ne sont disponibles que pour une part existante.
 Mover Tuning settings not available for this share=Paramètres Mover Tuning non disponibles pour cette part
 Mover Tuning thresholds=Seuils Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Aucun fichier n’a été déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
@@ -133,7 +134,7 @@ Start Mover Tuning=Démarrer Mover Tuning
 Sync files based on maximum size=Synchroniser les fichiers selon une taille maximale
 Sync files that are smaller than this size In MB=Synchroniser les fichiers plus petits que cette taille (en Mo)
 Synchronize Primary files to Secondary=Synchroniser les fichiers du primaire vers le secondaire
-Test Mode - no files will be movedsynced=Mode test — aucun fichier ne sera déplacé/synchronisé.
+Test Mode - no files will be movedsynced by Mover Tuning the original Mover can still run, see help=Mode test — aucun fichier ne sera déplacé/synchronisé par Mover Tuning (le mover original peut quand même s’exécuter, voir l’aide).
 TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=MODE TEST : un total de %s fichiers et %s dossiers représentant %s seraient déplacés/synchronisés par le plugin Mover Tuning. Temps écoulé : %s
 Test Mode dry run=Mode test (simulation)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=MODE TEST : aucun fichier ne serait déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
@@ -192,7 +193,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_testmode_plug:
 <p>Le mode test ne <strong>lance pas</strong> le mover mais affiche les résultats de la commande find personnalisée dans <em>/tmp/ca.mover.tuning/</em>.</p>
-<p>Attention — si « Le bouton Déplacer maintenant suit les filtres du plugin » est réglé sur <strong>Non</strong>, le mover original s’exécutera quand même.</p>
+<p>Attention — le mode test n’arrête pas le mover original : il s’exécute quand même selon l’horaire de l’option <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong>, et depuis le bouton « Déplacer maintenant » si l’option <strong>Le bouton « Déplacer maintenant » suit les filtres du plugin</strong> est réglée sur <strong>Non</strong>. À partir d’Unraid 7.2.1, la planification du mover et les boutons de déplacement d’Unraid lancent toujours le mover original.</p>
 :end
 
 :mover_tune_validate_plug:
@@ -316,7 +317,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_age_plug:
-> Déplacer les fichiers hors du cache primaire selon leur âge (en jours).
+> Déplacer les fichiers selon leur âge (en jours). S’applique aux parts cache:<strong>yes</strong> (hors du cache primaire) et cache:<strong>prefer</strong> (vers le cache primaire).
 :end
 
 :mover_tune_daysold_plug:
@@ -421,7 +422,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_cleandatasets_plug:
-> Démonte et détruit le dataset ZFS parent si aucun dataset enfant n’existe.
+> Démonte et détruit le dataset ZFS parent si aucun dataset enfant n’existe. Fonctionne uniquement si <strong>Nettoyer les dossiers vides</strong> est réglé sur <strong>Oui</strong> ou <strong>Dossier principal</strong>.
 :end
 
 :mover_tune_sharecalculation_plug:

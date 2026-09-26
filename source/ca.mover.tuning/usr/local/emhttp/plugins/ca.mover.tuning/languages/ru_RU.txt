@@ -77,11 +77,11 @@ Move All from Primary->Secondary shares pool percentage=Переместить �
 Move All threshold raised to %1 to stay above the moving threshold=Порог «Переместить всё» повышен до %1, чтобы оставаться выше порога перемещения.
 Moved Only=Только перемещённые
 Move empty folders=Перемещать пустые папки
+Move files based on age=Перемещать файлы на основе возраста
 Move files based on minimum size=Перемещать файлы на основе минимального размера
 Move files based on size=Перемещать файлы на основе размера
 Move files based on sparseness=Перемещать файлы на основе разреженности
 Move files off Primary cache based on age=Перемещать файлы с основного (<em>кэш-пула</em>) на основе возраста
-Move files off Primary cache based on sparseness=Перемещать файлы с основного (кэш-пула) на основе разреженности
 Move files that are greater than this many days old=Перемещать файлы старше указанного количества дней
 Move files that are greater than this sparseness=Перемещать файлы, разреженность которых превышает указанное значение
 Move files that are in use=Перемещать файлы, которые сейчас используются
@@ -101,6 +101,7 @@ Mover Tuning - Share Settings=Mover Tuning — Настройки шары
 Mover Tuning Debug Package zip=Отладочный пакет Mover Tuning (.zip)
 Mover Tuning Notification=Уведомление Mover Tuning
 Mover Tuning schedule=Расписание Mover Tuning
+Mover Tuning settings are available for existing shares only=Настройки Mover Tuning доступны только для существующих шар.
 Mover Tuning settings not available for this share=Настройки Mover Tuning недоступны для этой шары
 Mover Tuning thresholds=Пороги Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Файлы не были перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
@@ -133,7 +134,7 @@ Start Mover Tuning=Запустить Mover Tuning
 Sync files based on maximum size=Синхронизировать файлы на основе максимального размера
 Sync files that are smaller than this size In MB=Синхронизировать файлы меньше указанного размера (в МБ)
 Synchronize Primary files to Secondary=Синхронизировать файлы основного с вторичным
-Test Mode - no files will be movedsynced=Тестовый режим — файлы не будут перемещены/синхронизированы.
+Test Mode - no files will be movedsynced by Mover Tuning the original Mover can still run, see help=Тестовый режим — Mover Tuning не будет перемещать/синхронизировать файлы (оригинальный Mover всё равно может запуститься, см. справку).
 TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: всего %s файлов и %s папок общим объёмом %s были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Test Mode dry run=Тестовый режим (пробный запуск)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: файлы не были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
@@ -191,7 +192,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 
 :mover_tune_testmode_plug:
 <p> Тестовый режим <strong>не</strong> запустит mover, но выведет результаты пользовательской команды find в <em>/tmp/ca.mover.tuning/</em>.</p>
-<p> Внимание — если параметр «Кнопка "Переместить сейчас" учитывает фильтры плагина» установлен в <strong>Нет</strong>, будет запущен оригинальный Mover.</p>
+<p> Внимание — тестовый режим не останавливает оригинальный Mover: он всё равно запускается по расписанию параметра <strong>Принудительно перемещать все файлы по расписанию</strong>, а также кнопкой «Переместить сейчас», если параметр <strong>Кнопка «Переместить сейчас» учитывает фильтры плагина</strong> установлен в <strong>Нет</strong>. Начиная с Unraid 7.2.1, собственное расписание Mover и кнопки перемещения Unraid всегда запускают оригинальный Mover.</p>
 :end
 
 :mover_tune_validate_plug:
@@ -310,7 +311,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_age_plug:
-> Выберите, если хотите перемещать файлы с основного (кэш-пула) на основе их возраста — количества дней.
+> Выберите, если хотите перемещать файлы на основе их возраста — количества дней. Действует для шар cache:<strong>yes</strong> (перемещение с основного пула) и для шар cache:<strong>prefer</strong> (перемещение на основной пул).
 :end
 
 :mover_tune_daysold_plug:
@@ -412,7 +413,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_cleandatasets_plug:
-> Это <strong>размонтирует</strong> и <strong>уничтожит</strong> родительский ZFS-датасет на шаре перемещённых файлов, <strong>только если он не содержит</strong> дочерних датасетов.
+> Это <strong>размонтирует</strong> и <strong>уничтожит</strong> родительский ZFS-датасет на шаре перемещённых файлов, <strong>только если он не содержит</strong> дочерних датасетов. Работает, только если параметр <strong>Очистить пустые папки</strong> установлен в <strong>Да</strong> или <strong>Верхняя папка</strong>.
 :end
 
 :mover_tune_sharecalculation_plug:

@@ -77,11 +77,11 @@ Move All from Primary->Secondary shares pool percentage=Alles vom Primärspeiche
 Move All threshold raised to %1 to stay above the moving threshold=Grenze „Alles verschieben“ auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
 Moved Only=Nur verschobene Dateien
 Move empty folders=Leere Ordner verschieben
+Move files based on age=Dateien basierend auf ihrem Alter verschieben
 Move files based on minimum size=Dateien basierend auf Mindestgröße verschieben
 Move files based on size=Dateien basierend auf Größe verschieben
 Move files based on sparseness=Dateien basierend auf ihrer Ausdünnung verschieben
 Move files off Primary cache based on age=Dateien basierend auf Alter aus dem Primärspeicher (Cache) verschieben
-Move files off Primary cache based on sparseness=Dateien basierend auf Ausdünnung aus dem Primärspeicher (Cache) verschieben
 Move files that are greater than this many days old=Dateien verschieben, die älter sind als diese Anzahl Tage
 Move files that are greater than this sparseness=Dateien verschieben, deren Ausdünnung größer ist als dieser Wert
 Move files that are in use=Dateien verschieben, die gerade verwendet werden
@@ -101,6 +101,7 @@ Mover Tuning - Share Settings=Mover‑Tuning – Freigaben‑Einstellungen
 Mover Tuning Debug Package zip=Mover‑Tuning‑Debug‑Paket (.zip)
 Mover Tuning Notification=Mover‑Tuning‑Benachrichtigung
 Mover Tuning schedule=Mover‑Tuning‑Zeitplan
+Mover Tuning settings are available for existing shares only=Mover‑Tuning‑Einstellungen sind nur für bestehende Freigaben verfügbar.
 Mover Tuning settings not available for this share=Mover‑Tuning‑Einstellungen für diese Freigabe nicht verfügbar
 Mover Tuning thresholds=Mover‑Tuning‑Schwellwerte
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Keine Dateien wurden durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
@@ -133,7 +134,7 @@ Start Mover Tuning=Mover‑Tuning starten
 Sync files based on maximum size=Dateien basierend auf Maximalgröße synchronisieren
 Sync files that are smaller than this size In MB=Dateien synchronisieren, die kleiner sind als diese Größe (in MB)
 Synchronize Primary files to Secondary=Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren
-Test Mode - no files will be movedsynced=Testmodus – es werden keine Dateien verschoben/synchronisiert.
+Test Mode - no files will be movedsynced by Mover Tuning the original Mover can still run, see help=Testmodus – Mover‑Tuning verschiebt/synchronisiert keine Dateien (der originale Mover kann trotzdem laufen, siehe Hilfe).
 TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Insgesamt würden %s Dateien und %s Ordner mit einer Gesamtgröße von %s verschoben/synchronisiert werden. Verstrichene Zeit %s
 Test Mode dry run=Testmodus (Trockenlauf)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Es würden keine Dateien verschoben/synchronisiert werden. Verstrichene Zeit %s
@@ -192,7 +193,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 
 :mover_tune_testmode_plug:
 <p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben.</p>
-<p>Achtung – Wenn "Move Now button follows plug‑in filters" auf <strong>Nein</strong> steht, wird der originale Mover trotzdem ausgeführt.</p>
+<p>Achtung – Der Testmodus hält den originalen Mover nicht auf: Er läuft trotzdem nach dem Zeitplan der Option <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> und über die Schaltfläche „Jetzt verschieben“, wenn die Option <strong>„Jetzt verschieben“ folgt den Plugin‑Filtern</strong> auf <strong>Nein</strong> steht. Ab Unraid 7.2.1 starten der Mover‑Zeitplan und die Verschieben‑Schaltflächen von Unraid selbst immer den originalen Mover.</p>
 :end
 
 :mover_tune_validate_plug:
@@ -312,7 +313,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_age_plug:
-> Wähle diese Option, um Dateien basierend auf ihrem Alter (in Tagen) aus dem Primärspeicher zu verschieben.
+> Wähle diese Option, um Dateien basierend auf ihrem Alter (in Tagen) zu verschieben. Gilt für cache:<strong>yes</strong>‑Freigaben (aus dem Primärspeicher heraus) und für cache:<strong>prefer</strong>‑Freigaben (in den Primärspeicher hinein).
 :end
 
 :mover_tune_daysold_plug:
@@ -414,7 +415,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_cleandatasets_plug:
-> Hängt das übergeordnete ZFS‑Dataset aus und löscht es, sofern es <strong>keine Unter‑Datasets</strong> enthält.
+> Hängt das übergeordnete ZFS‑Dataset aus und löscht es, sofern es <strong>keine Unter‑Datasets</strong> enthält. Funktioniert nur, wenn <strong>Leere Ordner bereinigen</strong> auf <strong>Ja</strong> oder <strong>Oberster Ordner</strong> steht.
 :end
 
 :mover_tune_sharecalculation_plug:

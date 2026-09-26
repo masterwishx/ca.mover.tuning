@@ -76,11 +76,11 @@ Move All from Primary->Secondary shares pool percentage=主存储->次存储共�
 Move All threshold raised to %1 to stay above the moving threshold=全部移动阈值已升至 %1，以保持高于移动阈值。
 Moved Only=仅已移动
 Move empty folders=移动空文件夹
+Move files based on age=按文件年龄移动
 Move files based on minimum size=按最小文件大小移动文件
 Move files based on size=按文件大小移动
 Move files based on sparseness=按稀疏度移动
 Move files off Primary cache based on age=按文件年龄从主存储（<em>缓存</em>）移出文件
-Move files off Primary cache based on sparseness=按稀疏度从主存储（缓存）移出文件
 Move files that are greater than this many days old=文件年龄阈值
 Move files that are greater than this sparseness=稀疏度阈值
 Move files that are in use=移动正在使用的文件
@@ -100,6 +100,7 @@ Mover Tuning - Share Settings=Mover Tuning - 共享设置
 Mover Tuning Debug Package zip=Mover Tuning 调试包（.zip）
 Mover Tuning Notification=Mover Tuning 通知
 Mover Tuning schedule=Mover Tuning 计划
+Mover Tuning settings are available for existing shares only=Mover Tuning 设置仅适用于已存在的共享。
 Mover Tuning settings not available for this share=此共享不可使用 Mover Tuning 设置
 Mover Tuning thresholds=Mover Tuning 阈值
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件没有移动/同步任何文件。耗时：%s
@@ -132,7 +133,7 @@ Start Mover Tuning=启动 Mover Tuning
 Sync files based on maximum size=按最大大小同步文件
 Sync files that are smaller than this size In MB=同步小于此大小的文件（MB）
 Synchronize Primary files to Secondary=主存储文件同步到次存储
-Test Mode - no files will be movedsynced=测试模式 - 不会移动/同步任何文件。
+Test Mode - no files will be movedsynced by Mover Tuning the original Mover can still run, see help=测试模式 - Mover Tuning 不会移动/同步任何文件（原始 Mover 仍可能运行，请参阅帮助）。
 TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=测试模式：Mover Tuning 插件将移动/同步 %s 个文件和 %s 个文件夹，共 %s。耗时：%s
 Test Mode dry run=测试模式（演练）
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=测试模式：Mover Tuning 插件不会移动/同步任何文件。耗时：%s
@@ -191,7 +192,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_testmode_plug:
 <p> 测试模式<strong>不会</strong>运行 Mover，而是将自定义 find 命令的结果输出到 <em>/tmp/ca.mover.tuning/</em>。</p>
-<p> 注意 - 如果“立即移动按钮遵循过滤器”设为<strong>否</strong>，原始 Mover 仍会运行。</p>
+<p> 注意 - 测试模式不会阻止原始 Mover：它仍会按“定时强制移动所有文件”的计划运行；如果“立即移动按钮遵循过滤器”设为<strong>否</strong>，立即移动按钮也会运行原始 Mover。在 Unraid 7.2.1 及更高版本中，Unraid 自带的 Mover 计划和移动按钮始终运行原始 Mover。</p>
 :end
 
 :mover_tune_validate_plug:
@@ -310,7 +311,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_age_plug:
-> 选择是否按文件年龄（天数）从主存储（缓存）移出文件。
+> 选择是否按文件年龄（天数）移动文件。适用于 cache:<strong>yes</strong> 共享（移出主存储）和 cache:<strong>prefer</strong> 共享（移入主存储）。
 :end
 
 :mover_tune_daysold_plug:
@@ -412,7 +413,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_cleandatasets_plug:
-> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>空的父 ZFS 数据集，<strong>仅在不包含</strong>子数据集时执行。
+> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>空的父 ZFS 数据集，<strong>仅在不包含</strong>子数据集时执行。仅在<strong>清理空文件夹</strong>设为<strong>是</strong>或<strong>顶层文件夹</strong>时生效。
 :end
 
 :mover_tune_sharecalculation_plug:

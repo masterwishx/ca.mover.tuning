@@ -79,11 +79,11 @@ Move All from Primary->Secondary shares pool percentage=
 Move All threshold raised to %1 to stay above the moving threshold=Move All threshold raised to %1 to stay above the moving threshold.
 Moved Only=
 Move empty folders=
+Move files based on age=
 Move files based on minimum size=
 Move files based on size=
 Move files based on sparseness=
 Move files off Primary cache based on age=Move files off Primary (<em>cache</em>) based on age
-Move files off Primary cache based on sparseness=Move files off Primary (cache) based on sparseness
 Move files that are greater than this many days old=
 Move files that are greater than this sparseness=
 Move files that are in use=
@@ -103,6 +103,7 @@ Mover Tuning - Share Settings=
 Mover Tuning Debug Package zip=Mover Tuning Debug Package (.zip)
 Mover Tuning Notification=
 Mover Tuning schedule=
+Mover Tuning settings are available for existing shares only=Mover Tuning settings are available for existing shares only.
 Mover Tuning settings not available for this share=
 Mover Tuning thresholds=
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=No files were moved/synced by Mover Tuning plugin. Elapsed time: %s
@@ -135,7 +136,7 @@ Start Mover Tuning=
 Sync files based on maximum size=
 Sync files that are smaller than this size In MB=Sync files that are smaller than this size (In MB)
 Synchronize Primary files to Secondary=
-Test Mode - no files will be movedsynced=Test Mode - no files will be moved/synced.
+Test Mode - no files will be movedsynced by Mover Tuning the original Mover can still run, see help=Test Mode - no files will be moved/synced by Mover Tuning (the original Mover can still run, see help).
 TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=TEST MODE: A total of %s files and %s folders representing %s would be moved/synced by Mover Tuning plugin. Elapsed time: %s
 Test Mode dry run=Test Mode (dry run)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s
@@ -194,7 +195,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 
 :mover_tune_testmode_plug:
 <p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>.</p>
-<p> Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.</p>
+<p> Caution - Test Mode does not stop original Mover: it still runs on the "Force move of all files on a schedule" schedule, and from the Move Now button if "Move Now button follows plug-in filters" is set to <strong>No</strong>. On Unraid 7.2.1 and later, Unraid's own Mover schedule and Move buttons always run the original Mover.</p>
 :end
 
 :mover_tune_validate_plug:
@@ -313,7 +314,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_age_plug:
-> Select if you want to move files off of the Primary (cache) based on their age - days old.
+> Select if you want to move files based on their age - days old. Applies to cache:<strong>yes</strong> shares (moved off the Primary) and to cache:<strong>prefer</strong> shares (moved onto the Primary).
 :end
 
 :mover_tune_daysold_plug:
@@ -415,7 +416,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_cleandatasets_plug:
-> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
+> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within. Works only when <strong>Clean empty folders</strong> is set to <strong>Yes</strong> or <strong>Top Folder</strong>.
 :end
 
 :mover_tune_sharecalculation_plug:

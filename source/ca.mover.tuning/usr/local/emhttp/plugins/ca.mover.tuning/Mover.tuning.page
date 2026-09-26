@@ -79,6 +79,14 @@ function updateCron() {
 	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled});
 }
 
+// Unraid 6.10+ prefixes escapeQuotes(this) to this onsubmit once the page is ready; 6.9 never does
+function mtEscapeQuotes(form) {
+  if (/(^|;)escapeQuotes\(this\);/.test(form.getAttribute('onsubmit') || '')) return;
+  $(form).find('input[type=text]').each(function() {
+    $(this).val($(this).val().replace(/"/g, '\\"'));
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
     const btn = document.getElementById("StartTuneMoverBtn");
     const status = document.getElementById("MoverStatus");
@@ -454,7 +462,7 @@ if (localStorage.getItem(newYearSeasonKey) === 'yes') {
 </div>
 
 <div class='moverUpdate'></div>
-<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
+<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtEscapeQuotes(this);updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 
 _(Disable Mover running on a schedule)_:
@@ -494,7 +502,7 @@ _(Disable Mover running on a schedule)_:
 <?php if (version_compare($vars['version'], '7.2.1', '>=')): ?>
 
 _(Mover Tuning schedule)_:
-: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'])?>'>
+: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_movertunecron_plug:
 
@@ -513,7 +521,7 @@ _(Test Mode (dry run))_:
 </select>
 <span><i class="fa fa-info i"></i>&nbsp;&nbsp;<strong>_(No)_</strong> <em>- _(disables test mode)_</em></span>
 <span id="testmode_warning" class="orange-text" style="display:<?= ($cfg['testmode'] == 'yes') ? 'block' : 'none' ?>; font-style:italic;">
-  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced.') ?></span>
+  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced by Mover Tuning (the original Mover can still run, see help).') ?></span>
 
 <script>
 function toggleTestModeWarning(val) {
@@ -524,7 +532,7 @@ function toggleTestModeWarning(val) {
 <blockquote class="inline_help">
 :mover_tune_testmode_plug:
 <p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>.</p>
-<p> Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.</p>
+<p> Caution - Test Mode does not stop original Mover: it still runs on the "Force move of all files on a schedule" schedule, and from the Move Now button if "Move Now button follows plug-in filters" is set to <strong>No</strong>. On Unraid 7.2.1 and later, Unraid's own Mover schedule and Move buttons always run the original Mover.</p>
 :end
 </blockquote>
 
@@ -550,7 +558,7 @@ _(Validate input filenames to prevent attacks)_:
 
 <div markdown="1" id="moverInvalidCharsToBlock">
 _(Invalid characters to block)_:
-: <input type='text' name='invalidFileChars' size='1' class='myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
+: <input type='text' name='invalidFileChars' size='1' class='myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 <blockquote class="inline_help">
 :mover_tune_invalidfilechars_plug:
@@ -618,7 +626,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
+: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_loggingfolder_plug:
 
@@ -627,7 +635,7 @@ _(Logs parent folder for Mover Tuning plugin)_:
 :end
 
 _(Delete Mover Log files over than this days old)_:
-: <select name="logfilesDaysold" size="1" class='logfilesDaysold' value='<?=$cfg['logfilesDaysold']?>'>
+: <select name="logfilesDaysold" size="1" class='logfilesDaysold'>
 <?=mk_option($cfg['logfilesDaysold'], 1, "1")?>
 <?=mk_option($cfg['logfilesDaysold'], 2, "2")?>
 <?=mk_option($cfg['logfilesDaysold'], 3, "3")?>
@@ -649,7 +657,7 @@ _(Delete Mover Log files over than this days old)_:
 :end
 
 _(Delete Mover helper files over than this days old)_:
-: <select name="listfilesDaysold" size="1" class='listfilesDaysold' value='<?=$cfg['listfilesDaysold']?>'>
+: <select name="listfilesDaysold" size="1" class='listfilesDaysold'>
 <?=mk_option($cfg['listfilesDaysold'], 1, "1")?>
 <?=mk_option($cfg['listfilesDaysold'], 2, "2")?>
 <?=mk_option($cfg['listfilesDaysold'], 3, "3")?>
@@ -730,7 +738,7 @@ _(Force move of all files on a schedule)_:
 :end
 
 _(Cron Schedule to force move all of files)_:
-: <input type='text' id='cronSchedule' name='cron' size='1' class='mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
+: <input type='text' id='cronSchedule' name='cron' size='1' class='mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$cronDisabled?>>
 
 :mover_tune_cron_plug:
 
@@ -755,7 +763,7 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 </blockquote>
 
 _(Script to run before mover (No checks, always runs))_:
-: <input type='text' name='beforeScript' size='1' class='mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
+: <input type='text' name='beforeScript' size='1' class='mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_beforescript_plug:
 
@@ -764,7 +772,7 @@ _(Script to run before mover (No checks, always runs))_:
 :end
 
 _(Script to run after mover (No checks, always runs))_:
-: <input type='text' name='afterScript' size='1' class='myafter' placeholder='/mnt/user/Files/script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
+: <input type='text' name='afterScript' size='1' class='myafter' placeholder='/mnt/user/Files/script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_afterscript_plug:
 
@@ -834,7 +842,7 @@ _(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
 
 :end
 
-_(Move files off Primary (<em>cache</em>) based on age)_?
+_(Move files based on age)_?
 : <select name="age" size='1' onchange="toggleAge(this.value)">
   <?=mk_option($cfg['age'],'no',_('No'))?>
   <?=mk_option($cfg['age'],'yes',_('Yes'))?>
@@ -842,7 +850,7 @@ _(Move files off Primary (<em>cache</em>) based on age)_?
 
 :mover_tune_age_plug:
 
-> Select if you want to move files off of the Primary (cache) based on their age - days old.
+> Select if you want to move files based on their age - days old. Applies to cache:<strong>yes</strong> shares (moved off the Primary) and to cache:<strong>prefer</strong> shares (moved onto the Primary).
 
 :end
 
@@ -979,7 +987,7 @@ _(Sync files that are smaller than this size (In MB))_.
 
 :end
 
-_(Move files off Primary (cache) based on sparseness)_?
+_(Move files based on sparseness)_?
 : <select name="sparsnessf" size='1' onchange='$(".mysparsnessf").toggleAttr("disabled")'>
   <?=mk_option($cfg['sparsnessf'],'no',_('No'))?>
   <?=mk_option($cfg['sparsnessf'],'yes',_('Yes'))?>
@@ -1017,7 +1025,7 @@ _(Ignore files and folders listed inside of a text file)_:
 </select>
 
 _(File list path)_:
-: <input type='text' name='filelistv' size='1' class='myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
+: <input type='text' name='filelistv' size='1' class='myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
 :mover_tune_filelistv_plug:
@@ -1041,7 +1049,7 @@ _(Ignore file types)_:
 </select>
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' size='1' class='myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'])?>' <?=$filetypesfDisabled?>>
+: <input type='text' name='filetypesv' size='1' class='myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filetypesfDisabled?>>
 
 :mover_tune_filetypesv_plug:
 
@@ -1148,7 +1156,7 @@ _(Move empty folders)_:
 :end
 
 _(Clean empty folders)_:
-: <select name='cleanFolders' size='1'>
+: <select name='cleanFolders' size='1' onchange="toggleCleanDatasets(this.value)">
 <?=mk_option($cfg['cleanFolders'],"no",_('No'))?>
 <?=mk_option($cfg['cleanFolders'],"yes",_('Yes'))?>
 <?=mk_option($cfg['cleanFolders'],"topFolder",_('Top Folder'))?>
@@ -1169,9 +1177,19 @@ _(Clean empty ZFS datasets)_:
 
 :mover_tune_cleandatasets_plug:
 
-> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
+> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within. Works only when <strong>Clean empty folders</strong> is set to <strong>Yes</strong> or <strong>Top Folder</strong>.
 
 :end
+
+<script>
+// age_mover destroys a dataset only after the Clean empty folders pass
+function toggleCleanDatasets(cleanFolders) {
+  $('select[name="cleanDatasets"]').prop('disabled', cleanFolders === 'no');
+}
+$(function() {
+  toggleCleanDatasets($('select[name="cleanFolders"]').val());
+});
+</script>
 
 _(Share size calculation)_:
 : <select name='shareCalculation' size='1'>
