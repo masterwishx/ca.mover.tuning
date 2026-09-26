@@ -2924,7 +2924,7 @@ reset() {
     # Copy default config
     cp -a "$MOVERTUNING_DEFAULT_CFGFILE" "$MOVERTUNINGCFGFILE"
     # Remove the schedule files, then write back the ones default.cfg sets
-    rm -f "${MOVERTUNINGCFGFILE%/*}/mover.cron" "${MOVERTUNINGCFGFILE%/*}/mover.tuning.cron"
+    rm -f "${MOVERTUNINGCFGFILE%/*}/mover.cron" "${MOVERTUNINGCFGFILE%/*}/mover.tuning.cron" "${MOVERTUNINGCFGFILE%/*}/mover.watchdog.cron"
     /usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/updateCron.php sync
     /usr/local/sbin/update_cron
     exit

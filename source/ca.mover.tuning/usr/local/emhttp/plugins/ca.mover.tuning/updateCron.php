@@ -18,6 +18,8 @@ $cfg_cron = trim($cfg['cron'] ?? '');
 $cfg_moverDisabled = $cfg['moverDisabled'];
 // Get Mover Tuning cron time (normalized)
 $cfg_moverTuneCron = trim($cfg['moverTuneCron'] ?? '');
+// Get config value of the cache watchdog
+$cfg_watchdog = $cfg['watchdog'] ?? '';
 
 /** Writes a message to syslog under the "move" tag when plugin logging is enabled; errors are always written */
 function logger($string)
@@ -146,6 +148,17 @@ function make_cron($cron)
 	return true;
 }
 
+/** Writes mover.watchdog.cron, the cache watchdog every 5 minutes (a run it starts logs to syslog itself, so the line discards output); true when written */
+function make_watchdog_cron()
+{
+	$cronFile = "# Generated schedule for the Mover Tuning cache watchdog:\n*/5 * * * * /usr/local/emhttp/plugins/ca.mover.tuning/age_mover watchdog >/dev/null 2>&1\n\n";
+	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.watchdog.cron", $cronFile) === false) {
+		logger("Error: Failed to write mover.watchdog.cron file.");
+		return false;
+	}
+	return true;
+}
+
 /** Deletes a cron file, logging $why when given; false, with an error logged, when it exists and cannot be deleted */
 function remove_cron_file($file, $why = '')
 {
@@ -165,10 +178,10 @@ function remove_cron_file($file, $why = '')
 /** Makes the plugin's own cron files follow the saved settings: writes a missing one they call for, removes one they do not, never rewrites one */
 function sync_cron_files()
 {
-	global $vars, $cfg_cronEnabled, $cfg_cron, $cfg_moverDisabled, $cfg_moverTuneCron;
+	global $vars, $cfg_cronEnabled, $cfg_cron, $cfg_moverDisabled, $cfg_moverTuneCron, $cfg_watchdog;
 
 	// parse_plugin_cfg reads it with my_parse_ini_file from Unraid 6.12.14, parse_ini_file before; a file that does not
-	// parse leaves only default.cfg in $cfg from 7.2.0 (null on 6.9), which would remove both cron files
+	// parse leaves only default.cfg in $cfg from 7.2.0 (null on 6.9), which would remove every cron file
 	$cfgFile = "/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg";
 	if (file_exists($cfgFile) === true) {
 		$saved = function_exists('my_parse_ini_file') === true ? @my_parse_ini_file($cfgFile) : @parse_ini_file($cfgFile);
@@ -199,6 +212,13 @@ function sync_cron_files()
 	} elseif (file_exists($tuneFile) === false && make_tune_cron($cfg_moverTuneCron) === true) {
 		logger("Mover Tuning schedule written back from the saved settings.");
 	}
+
+	$watchdogFile = "/boot/config/plugins/ca.mover.tuning/mover.watchdog.cron";
+	if ($cfg_watchdog !== 'yes') {
+		remove_cron_file($watchdogFile, "the cache watchdog is off");
+	} elseif (file_exists($watchdogFile) === false && make_watchdog_cron() === true) {
+		logger("Cache watchdog schedule written back from the saved settings.");
+	}
 }
 
 // From the CLI (plugin install, age_mover reset) the plugin's cron files are brought in line with the saved settings;
@@ -206,15 +226,6 @@ function sync_cron_files()
 if (PHP_SAPI === 'cli' && ($argv[1] ?? '') === 'sync') {
 	sync_cron_files();
 	exit;
-}
-
-// Cache watchdog every 5 minutes; a run it starts logs to syslog itself, so the cron line discards output
-function make_watchdog_cron()
-{
-	$cronFile = "# Generated schedule for the Mover Tuning cache watchdog:\n*/5 * * * * /usr/local/emhttp/plugins/ca.mover.tuning/age_mover watchdog >/dev/null 2>&1\n\n";
-	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.watchdog.cron", $cronFile) === false) {
-		logger("Error: Failed to write mover.watchdog.cron file.");
-	}
 }
 
 // Check if value was changed to prevent the logger of printing when cron was not changed and not make cron file when avalible already
@@ -283,13 +294,13 @@ if (version_compare($vars['version'], '7.2.1', '>=') === true && ($_POST['ismove
 // may already have written; age_mover watchdog also checks the setting, so a leftover file does nothing
 $watchdogCron = "/boot/config/plugins/ca.mover.tuning/mover.watchdog.cron";
 if (post_string('watchdog') === 'yes') {
-	if (is_file($watchdogCron) === false) {
-		make_watchdog_cron();
+	if (is_file($watchdogCron) === false && make_watchdog_cron() === true) {
 		logger("Cache watchdog enabled.");
 	}
 } elseif (isset($_POST['watchdog']) === true && is_file($watchdogCron) === true) {
-	@unlink($watchdogCron);
-	logger("Cache watchdog disabled.");
+	if (remove_cron_file($watchdogCron) === true) {
+		logger("Cache watchdog disabled.");
+	}
 }
 
 exec("update_cron");
