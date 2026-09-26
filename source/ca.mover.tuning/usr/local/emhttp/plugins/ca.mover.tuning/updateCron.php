@@ -208,6 +208,15 @@ if (PHP_SAPI === 'cli' && ($argv[1] ?? '') === 'sync') {
 	exit;
 }
 
+// Cache watchdog every 5 minutes; a run it starts logs to syslog itself, so the cron line discards output
+function make_watchdog_cron()
+{
+	$cronFile = "# Generated schedule for the Mover Tuning cache watchdog:\n*/5 * * * * /usr/local/emhttp/plugins/ca.mover.tuning/age_mover watchdog >/dev/null 2>&1\n\n";
+	if (file_put_contents("/boot/config/plugins/ca.mover.tuning/mover.watchdog.cron", $cronFile) === false) {
+		logger("Error: Failed to write mover.watchdog.cron file.");
+	}
+}
+
 // Check if value was changed to prevent the logger of printing when cron was not changed and not make cron file when avalible already
 if ($cfg_cronEnabled != $_POST['cronEnabled']) {
 	if ($_POST['cronEnabled'] == "yes") {
@@ -268,6 +277,19 @@ if (version_compare($vars['version'], '7.2.1', '>=') === true && ($_POST['ismove
 			logger("Mover Tuning cron schedule updated successfully.");
 		}
 	}
+}
+
+// The watchdog cron file follows the posted setting rather than a comparison with the saved one, which update.php
+// may already have written; age_mover watchdog also checks the setting, so a leftover file does nothing
+$watchdogCron = "/boot/config/plugins/ca.mover.tuning/mover.watchdog.cron";
+if (post_string('watchdog') === 'yes') {
+	if (is_file($watchdogCron) === false) {
+		make_watchdog_cron();
+		logger("Cache watchdog enabled.");
+	}
+} elseif (isset($_POST['watchdog']) === true && is_file($watchdogCron) === true) {
+	@unlink($watchdogCron);
+	logger("Cache watchdog disabled.");
 }
 
 exec("update_cron");

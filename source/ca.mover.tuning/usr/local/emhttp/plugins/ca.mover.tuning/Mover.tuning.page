@@ -23,7 +23,21 @@ $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
+$watchdogDisabled = ($cfg['watchdog'] != "yes") ? "disabled" : "";
 $movingSaved = (int)($cfg['movingThreshold'] ?? 0);
+// per-pool state written by age_mover watchdog()
+$watchdogBackoff = [];
+$watchdogStates = glob("/var/run/mover.watchdog.*");
+if ($cfg['watchdog'] === "yes" && $watchdogStates !== false) {
+  foreach ($watchdogStates as $stateFile) {
+    $state = parse_ini_file($stateFile);
+    if ($state === false || ($state['backoff'] ?? "") !== "yes") {
+      continue;
+    }
+    $after = (int)($state['after'] ?? 0);
+    $watchdogBackoff[] = sprintf(_('Backing off: %s still %s after last run. Next try %s, or at %s.'), htmlspecialchars(substr($stateFile, strlen("/var/run/mover.watchdog."))), "$after%", my_time((int)($state['next'] ?? 0)), ($after + 5) . "%");
+  }
+}
 $om = $movingSaved + 5;
 $f = $movingSaved;
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
@@ -76,7 +90,8 @@ function updateCron() {
   var tune_cron = $("#tune_cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
   var ismoverDisabled = $("#moverDisabled").val();
-	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled});
+  var watchdog = $("#watchdog").val();
+	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled,watchdog:watchdog});
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -296,6 +311,16 @@ function mtRebuildThresholds(moving) {
   var omover = mtFillRange($om, moving + 5, 100, 5);
   mtNotice('#omoverthresh_notice', (omover && !$om.prop('disabled')) ?
     mtFmt('_(Move All threshold raised to %1 to stay above the moving threshold.)_', omover + '%') : '');
+
+  var $wd = $('select[name="watchdogThreshold"]');
+  var watchdog = mtFillRange($wd, moving + 5, 100, 5);
+  mtNotice('#watchdog_notice', (watchdog && !$wd.prop('disabled')) ?
+    mtFmt('_(Watchdog trigger level raised to %1 to stay above the moving threshold.)_', watchdog + '%') : '');
+}
+
+// With the schedule disabled, nothing runs while the pool stays below the watchdog trigger level.
+function mtWatchdogWarning() {
+  $('#watchdog_schedule_warning').toggle($('#watchdog').val() === 'yes' && $('#moverDisabled').val() === 'yes');
 }
 
 // A config saved before the ranges tracked each other can hold a combination this page cannot
@@ -324,6 +349,7 @@ $(function() {
   updateScreenMoverAdvancedFilters('<? echo $advancedFilters ?>');
   updateScreenMoverAdvancedOptions('<? echo $advancedOptions ?>');
   updateScreenMoverInvalidCharsToBlock('<? echo $validateFilenames ?>');
+  mtWatchdogWarning();
 
   toggleTime('ctime');
   toggleTime('atime');
@@ -468,7 +494,7 @@ if (localStorage.getItem(newYearSeasonKey) === 'yes') {
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 
 _(Disable Mover running on a schedule)_:
-: <select name='moverDisabled' size='1' id='moverDisabled' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
+: <select name='moverDisabled' size='1' id='moverDisabled' onchange="updateScreenMoverTuningSettings(this.value, 'slow'); mtWatchdogWarning()">
 <?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
 <?=mk_option($cfg['moverDisabled'],"yes",_('Yes'))?>
 </select>
@@ -500,6 +526,38 @@ _(Disable Mover running on a schedule)_:
 :end
 </blockquote>
 <?php endif; ?>
+
+_(Cache watchdog)_:
+: <select name='watchdog' size='1' id='watchdog' onchange='$(".mywatchdog").prop("disabled", this.value !== "yes"); mtWatchdogWarning()'>
+<?=mk_option($cfg['watchdog'],"no",_('No'))?>
+<?=mk_option($cfg['watchdog'],"yes",_('Yes'))?>
+</select>
+<span id="watchdog_schedule_warning" class="orange-text" style="display:none; font-style:italic;"><i class="fa fa-warning"></i> _(Schedule disabled: Mover Tuning only runs when the pool reaches the watchdog trigger level.)_</span>
+
+<blockquote class="inline_help">
+:mover_tune_watchdog_plug:
+<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It follows the parity check setting.</p>
+<p>It is a safety net, not a replacement for the schedule: below the trigger level, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
+<p>If a run can't bring the pool below the trigger level, the watchdog waits longer before its next run: 2 h, then 4 h, 8 h … up to 24 h. It resets once the pool drops below the trigger level.</p>
+:end
+</blockquote>
+
+_(Watchdog trigger level)_:
+: <select name="watchdogThreshold" size="1" class='mywatchdog' <?=$watchdogDisabled?> onchange='mtNotice("#watchdog_notice","")'>
+<?for ($w = $movingSaved + 5; $w <= 100; $w += 5):?>
+<?=mk_option($cfg['watchdogThreshold'], $w, "$w %")?>
+<?endfor;?>
+</select>
+<span id="watchdog_notice" class="orange-text" style="display:none; font-style:italic;"></span>
+<?foreach ($watchdogBackoff as $backoffLine):?>
+<br><span class="orange-text" style="font-style:italic;"><i class="fa fa-info-circle"></i> <?=$backoffLine?></span>
+<?endforeach;?>
+
+<blockquote class="inline_help">
+:mover_tune_watchdogthreshold_plug:
+<p>Used space on the Primary (<em>cache</em>) pool at which the watchdog starts a run. It stays above the moving threshold, because a run started below it would move nothing.</p>
+:end
+</blockquote>
 
 <div markdown="1" class="moverTuningSettings">
 

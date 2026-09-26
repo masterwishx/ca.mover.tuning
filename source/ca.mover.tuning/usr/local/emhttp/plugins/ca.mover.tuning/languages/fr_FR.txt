@@ -13,9 +13,12 @@ Allow force mover schedule to run during a parity checkrebuild=Autoriser l’ex�
 All plugin settings return to their defaults, including the Mover Tuning schedule and the forced move schedule, and the override settings of every share are deleted=Tous les paramètres du plugin reviennent à leurs valeurs par défaut, y compris la planification Mover Tuning et l’horaire du déplacement forcé, et les paramètres remplacés de chaque part sont supprimés.
 Array → Cache=Array → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Un total de %s fichiers et %s dossiers représentant %s ont été déplacés/synchronisés avec succès par le plugin Mover Tuning. Temps écoulé : %s
+Backing off %s still %s after last run Next try %s, or at %s=En attente : %s encore à %s après la dernière exécution. Prochain essai %s, ou à %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Avant de continuer, cliquez sur une option ou appuyez sur F1 pour lire les descriptions détaillées de tous les paramètres.
 by=par
 Cache disk not enabled=Disque cache non activé !
+Cache watchdog=Surveillance du cache
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Surveillance du cache : %s est rempli à %s, au niveau ou au-dessus du seuil de déclenchement de %s. Démarrage de Mover Tuning.
 Cache → Array=Cache → Array
 Cancel=Annuler
 Clean empty folders=Nettoyer les dossiers vides
@@ -123,6 +126,7 @@ Resynchronize all Primary files to Secondary=Resynchroniser tous les fichiers du
 Rsync=Rsync
 Run Mover Tuning=Exécuter Mover Tuning…
 Run once=Exécuter une fois
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Planification désactivée : Mover Tuning ne s’exécute que lorsque le pool atteint le seuil de déclenchement de la surveillance.
 Script to run after mover No checks, always runs=Script à exécuter après le mover (aucune vérification, toujours exécuté)
 Script to run before mover No checks, always runs=Script à exécuter avant le mover (aucune vérification, toujours exécuté)
 Share size calculation=Calcul de la taille de la part
@@ -153,6 +157,8 @@ User shares not enabled=Les parts utilisateur ne sont pas activées !
 Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
 Very Low=Très faible
 Want to support the developer and say Thank You=Vous souhaitez soutenir le développeur et dire **Merci** ?
+Watchdog trigger level=Seuil de déclenchement de la surveillance
+Watchdog trigger level raised to %1 to stay above the moving threshold=Seuil de déclenchement de la surveillance augmenté à %1 pour rester au-dessus du seuil de déplacement.
 We=Nous
 Wishing you a stable array, fast mover runs, and zero parity errors=Nous vous souhaitons un array stable, des déplacements rapides et zéro erreur de parité!
 Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisation !
@@ -187,6 +193,16 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
   <li>Lancez <strong>« mover start »</strong> depuis la <strong>CLI</strong>.</li>
 </ul>
 <p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle respecte le réglage du contrôle de parité.</p>
+<p>C’est un filet de sécurité, pas un remplacement de la planification : sous le seuil de déclenchement, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
+<p>Si une exécution ne peut pas ramener le pool sous le seuil de déclenchement, la surveillance attend plus longtemps avant la suivante : 2 h, puis 4 h, 8 h … jusqu’à 24 h. Cela se réinitialise dès que le pool repasse sous le seuil de déclenchement.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Espace utilisé du pool primaire (<em>cache</em>) à partir duquel la surveillance lance une exécution. Il reste au-dessus du seuil de déplacement, car une exécution lancée en dessous ne déplacerait rien.</p>
 :end
 
 :mover_tune_movertunecron_plug:

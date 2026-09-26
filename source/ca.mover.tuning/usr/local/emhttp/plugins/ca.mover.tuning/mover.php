@@ -4,11 +4,14 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini");
-$cron = $argv[1] == "crond";
-$bash = $argv[1] == "bash";
+// a web request (Move button, status check) may have no $argv[1]
+$mode = $argv[1] ?? "";
+$cron = $mode === "crond";
+$watchdog = $mode === "watchdog";
+$bash = $mode === "bash";
 $args = [];
 // the forced-move schedule (updateCron.php make_cron) calls: mover.php force start
-$force = ($argv[1] ?? "") === "force";
+$force = $mode === "force";
 
 // Read-only status check (no state change, no CSRF risk)
 if (!empty($_GET['check'])) {
@@ -129,11 +132,11 @@ function forceMove()
 //function startMover($options = "start")
 function startMover()
 {
-    global $vars, $cfg, $cron, $bash, $argv, $args;
+    global $vars, $cfg, $cron, $watchdog, $bash, $argv, $args;
 
     logger("Starting Mover Tuning ...");
 
-    if ($argv[2]) {
+    if (empty($argv[2]) === false) {
         $args[] = trim($argv[2]);
     }
 
@@ -145,6 +148,9 @@ function startMover()
         // If run via crond then log it as cron
         else if ($cron) {
             logger("Auto executed (crond)\n");
+        }
+        else if ($watchdog === true) {
+            logger("Auto executed (cache watchdog)\n");
         }
         // If run manually by button, $argv[1] is not set (""), then log it as move button
         else if (empty($argv[1])) {
@@ -227,7 +233,12 @@ function startMover()
         exit();
     }
 
-    if ($cron or $cfg['movenow'] == "yes") {
+    // names the run in its log; age_mover then logs to syslog itself, as the watchdog's cron line discards output
+    if ($watchdog === true) {
+        putenv("MOVER_RUN_METHOD=cache watchdog");
+    }
+
+    if ($cron === true || $watchdog === true || $cfg['movenow'] === "yes") {
         //exec("echo 'running from cron or move now question is yes' >> /var/log/syslog");
 
         if ($cfg['movingThreshold'] >= 0 or $cfg['fillupThreshold'] >= 0 or $cfg['age'] == "yes" or $cfg['sizef'] == "yes" or $cfg['sparsnessf'] == "yes" or $cfg['filelistf'] == "yes" or $cfg['filetypesf'] == "yes" or $cfg['beforeScript'] != '' or $cfg['afterScript'] != '' or $cfg['testmode'] == "yes") {
@@ -249,6 +260,7 @@ if ($force === true) {
     exit();
 }
 
+// the cache watchdog is a separate opt-in trigger: it runs with the schedule disabled (the settings page warns)
 if ($cron && $cfg['moverDisabled'] == 'yes') {
     logger("Mover Tuning schedule disabled");
     exit();

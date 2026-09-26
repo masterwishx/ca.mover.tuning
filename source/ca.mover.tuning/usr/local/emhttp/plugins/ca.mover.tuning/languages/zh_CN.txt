@@ -12,9 +12,12 @@ Allow force mover schedule to run during a parity checkrebuild=允许强制移�
 All plugin settings return to their defaults, including the Mover Tuning schedule and the forced move schedule, and the override settings of every share are deleted=所有插件设置都将恢复为默认值，包括 Mover Tuning 计划和强制移动计划，并且所有共享的覆盖设置都将被删除。
 Array → Cache=阵列 → 缓存
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件已成功移动/同步 %s 个文件和 %s 个文件夹，共 %s。耗时：%s
+Backing off %s still %s after last run Next try %s, or at %s=暂缓：上次运行后 %s 仍为 %s。下次尝试 %s，或达到 %s 时。
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=继续之前，请点击选项名称或按 F1 查看所有设置的详细说明。
 by=作者
 Cache disk not enabled=缓存磁盘未启用
+Cache watchdog=缓存看门狗
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=缓存看门狗：%s 已使用 %s，达到或超过触发阈值 %s。正在启动 Mover Tuning。
 Cache → Array=缓存 → 阵列
 Cancel=取消
 Clean empty folders=清理空文件夹
@@ -122,6 +125,7 @@ Resynchronize all Primary files to Secondary=重新同步所有主存储文件�
 Rsync=Rsync
 Run Mover Tuning=运行 Mover Tuning…
 Run once=运行一次
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=计划已禁用：只有存储池达到看门狗触发阈值时，Mover Tuning 才会运行。
 Script to run after mover No checks, always runs=Mover 后置脚本（总是执行）
 Script to run before mover No checks, always runs=Mover 前置脚本（总是执行）
 Share size calculation=共享大小计算
@@ -152,6 +156,8 @@ User shares not enabled=用户共享未启用
 Validate input filenames to prevent attacks=验证文件名防止攻击
 Very Low=很低
 Want to support the developer and say Thank You=想支持开发者并说声**谢谢**吗？
+Watchdog trigger level=看门狗触发阈值
+Watchdog trigger level raised to %1 to stay above the moving threshold=看门狗触发阈值已升至 %1，以保持高于移动阈值。
 We=我们
 Wishing you a stable array, fast mover runs, and zero parity errors=祝您阵列稳定、Mover 运行飞快、奇偶校验零错误！
 Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
@@ -186,6 +192,16 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
   <li>在<strong>命令行</strong>中运行 <strong>“mover start”</strong>。</li>
 </ul>
 <p><strong>强制移动</strong>仍会按其自己的计划运行：要一并停止，请将<strong>显示高级设置</strong>设为<strong>是</strong>，再将<strong>定时强制移动所有文件</strong>设为<strong>否</strong>。</p>
+:end
+
+:mover_tune_watchdog_plug:
+<p>每 5 分钟检查一次每个 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池。达到<strong>看门狗触发阈值</strong>时，启动一次正常的 Mover Tuning 运行，每个存储池每小时最多一次，并发送一条通知；遵循奇偶校验设置。</p>
+<p>它是安全保障，而不是计划的替代：低于触发阈值时，只有按计划运行才会将文件移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡或按年龄移动文件。</p>
+<p>如果一次运行无法让存储池降到触发阈值以下，看门狗会延长下次运行前的等待：2 小时，然后 4 小时、8 小时……最长 24 小时。存储池降到触发阈值以下后即重置。</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>看门狗启动运行时主存储（<em>缓存</em>）池的已用空间。它始终高于移动阈值，因为低于移动阈值启动的运行不会移动任何文件。</p>
 :end
 
 :mover_tune_movertunecron_plug:
