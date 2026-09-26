@@ -12,7 +12,7 @@
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s files and %s folders were moved/synced, but rsync reported errors for them. Check the Mover Tuning log.
 All community developers=
 Allow force mover schedule to run during a parity checkrebuild=Allow force mover schedule to run during a parity check/rebuild
-All plugin settings return to their defaults, including the Mover Tuning schedule and the forced move schedule, and the override settings of every share are deleted=All plugin settings return to their defaults, including the Mover Tuning schedule and the forced move schedule, and the override settings of every share are deleted.
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted.
 Array → Cache=
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=A total of %s files and %s folders representing %s were successfully moved/synced by Mover Tuning plugin. Elapsed time: %s
 Backing off %s still %s after last run Next try %s, or at %s=Backing off: %s still %s after last run. Next try %s, or at %s.

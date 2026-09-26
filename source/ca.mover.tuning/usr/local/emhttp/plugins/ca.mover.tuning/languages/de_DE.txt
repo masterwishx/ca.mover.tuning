@@ -10,7 +10,7 @@
 All community developers=Alle Entwickler der Community
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s Dateien und %s Ordner wurden verschoben/synchronisiert, aber rsync hat dabei Fehler gemeldet. Bitte das Mover‑Tuning‑Protokoll prüfen.
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
-All plugin settings return to their defaults, including the Mover Tuning schedule and the forced move schedule, and the override settings of every share are deleted=Alle Plugin‑Einstellungen werden auf ihre Standardwerte zurückgesetzt, einschließlich des Mover‑Tuning‑Zeitplans und des Zeitplans für das erzwungene Verschieben, und die überschriebenen Einstellungen aller Freigaben werden gelöscht.
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Alle Plugin‑Einstellungen werden auf ihre Standardwerte zurückgesetzt, einschließlich des Mover‑Tuning‑Zeitplans, des Zeitplans für das erzwungene Verschieben und des Cache-Watchdogs, und die überschriebenen Einstellungen aller Freigaben werden gelöscht.
 Array → Cache=Speicherverbund → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien und %s Ordner mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
 Backing off %s still %s after last run Next try %s, or at %s=Wartet: %s nach dem letzten Lauf noch %s. Nächster Versuch %s, oder bei %s.

@@ -200,7 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function resetDefaults() {
   swal({
     title:"_(Reset Mover Tuning to defaults?)_",
-    text:"_(All plugin settings return to their defaults, including the Mover Tuning schedule and the forced move schedule, and the override settings of every share are deleted.)_",
+    text:"_(All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted.)_",
     html:true,
     type:'warning',
     showCancelButton:true,
