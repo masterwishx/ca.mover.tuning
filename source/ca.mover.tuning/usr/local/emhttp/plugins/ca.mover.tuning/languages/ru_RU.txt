@@ -10,12 +10,17 @@
 All community developers=Все разработчики сообщества
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s файлов и %s папок были перемещены/синхронизированы, но rsync сообщил об ошибках при их обработке. Проверьте журнал Mover Tuning.
 Allow force mover schedule to run during a parity checkrebuild=Разрешить запуск расписания принудительного перемещения во время проверки/восстановления четности
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Все настройки плагина возвращаются к значениям по умолчанию, включая расписание Mover Tuning, расписание принудительного перемещения и наблюдение за кэшем, а переопределённые настройки всех шар удаляются.
 Array → Cache=Массив → Кэш
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Всего %s файлов и %s папок общим объемом %s были успешно перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+Backing off %s still %s after last run Next try %s, or at %s=Пауза: %s все еще %s после последнего запуска. Следующая попытка %s или при %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Перед продолжением нажмите на параметр или F1, чтобы прочитать подробные описания всех настроек.
 by=от
 Cache disk not enabled=Кэш-диск не включён!
+Cache watchdog=Наблюдение за кэшем
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Наблюдение за кэшем: %s заполнен на %s, что не ниже порога срабатывания %s. Запуск Mover Tuning.
 Cache → Array=Кэш → Массив
+Cancel=Отмена
 Clean empty folders=Очистить пустые папки
 Clean empty ZFS datasets=Очистить пустые ZFS‑датасеты
 CLI help commands=Команды помощи CLI
@@ -38,6 +43,7 @@ Error No files found to move for %s=Ошибка: не найдено файло
 Errors Only=Только ошибки
 Failed to destroy ZFS dataset %s — attempting to remount=Не удалось уничтожить ZFS‑датасет [%s] — выполняется попытка перемонтирования.
 Failed to remount dataset %s=Не удалось перемонтировать датасет [%s]
+Failed to reset Mover Tuning Check the logs=Не удалось сбросить Mover Tuning. Проверьте журналы.
 Failed to start Mover Tuning Check the logs=Не удалось запустить Mover Tuning. Проверьте журналы.
 Failed to unmount ZFS dataset %s=Не удалось размонтировать ZFS‑датасет [%s]
 Fatal error %s does not exist, check this=Критическая ошибка: %s не существует, проверьте это.
@@ -75,6 +81,7 @@ Move All from Primary->Secondary cacheyes shares pool percentage=Перемес�
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Переместить всё из Основного->Вторичного (cache:yes) шар, когда диск заполнен выше определённого процента
 Move All from Primary->Secondary shares pool percentage=Переместить всё из Основного->Вторичного — процент заполнения пула шар
 Move All threshold raised to %1 to stay above the moving threshold=Порог «Переместить всё» повышен до %1, чтобы оставаться выше порога перемещения.
+Move All threshold set to %1, as the global settings have none=Порог «Переместить всё» установлен на %1, так как в глобальных настройках его нет.
 Moved Only=Только перемещённые
 Move empty folders=Перемещать пустые папки
 Move files based on minimum size=Перемещать файлы на основе минимального размера
@@ -116,10 +123,12 @@ Plugin thread @ Unraid community=Тема плагина в сообществе
 Priority for disk IO=Приоритет дискового I/O
 Priority for mover process=Приоритет процесса Mover
 Rebalance shares=Перебалансировать шары
+Reset Mover Tuning to defaults=Сбросить Mover Tuning к значениям по умолчанию?
 Resynchronize all Primary files to Secondary=Повторно синхронизировать все файлы из основного хранилища во вторичное
 Rsync=Rsync
 Run Mover Tuning=Запустить Mover Tuning...
 Run once=Запустить один раз
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Расписание отключено: Mover Tuning запускается, только когда пул достигает порога срабатывания наблюдения.
 Script to run after mover No checks, always runs=Скрипт для запуска после mover (без проверок, выполняется всегда)
 Script to run before mover No checks, always runs=Скрипт для запуска перед mover (без проверок, выполняется всегда)
 Share size calculation=Расчёт размера шары
@@ -140,16 +149,20 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=�
 Thank you for using this plugin=Спасибо за использование этого плагина.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Сохранённый порог освобождения — %1, выше порога перемещения %2. Mover запускается при %2 и останавливается при %1, поэтому ничего не перемещается, пока пул находится между ними. Эта страница показывает %3, и сохранение установит это значение.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Сохранённый порог перемещения всех — %1, на уровне или ниже порога перемещения %2. Всё на cache:yes перемещается, список пропусков и фильтры игнорируются до достижения порога. Эта страница показывает %3, и сохранение установит это значение.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Глобальный порог «Переместить всё» %1 не выше порога перемещения этой шары (%2), поэтому всё на этой шаре перемещается начиная с %1.
 Top Folder=Верхняя папка
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Расписание Unraid Mover сейчас **включено**
 Use ATIME=Использовать ATIME
 Use CTIME change time=Использовать CTIME (время изменения статуса)
+Use global=Глобальная настройка
 Used IDE=Используемый IDE
 User shares not enabled=Пользовательские шары не включены!
 Validate input filenames to prevent attacks=Проверять имена файлов для предотвращения атак
 Very Low=Очень низкий
 Want to support the developer and say Thank You=Хотите поддержать разработчика и сказать **Спасибо**?
+Watchdog trigger level=Порог срабатывания наблюдения
+Watchdog trigger level raised to %1 to stay above the moving threshold=Порог срабатывания наблюдения повышен до %1, чтобы оставаться выше порога перемещения.
 We=Мы
 Wishing you a stable array, fast mover runs, and zero parity errors=Желаем вам стабильного массива, быстрой работы mover и отсутствия ошибок четности!
 Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, что пользуетесь!
@@ -171,6 +184,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
   <li>Нажмите кнопку <strong>«Переместить сейчас»</strong> в разделе <strong>Mover Tuning - Параметры</strong>.</li>
   <li>Выполните <strong>«age_mover start»</strong> из <strong>CLI</strong>.</li>
 </ul>
+<p><strong>Принудительное перемещение</strong> по-прежнему выполняется по своему расписанию: чтобы остановить и его, установите <strong>Показать расширенные настройки</strong> в <strong>Да</strong>, затем <strong>Принудительно перемещать все файлы по расписанию</strong> в <strong>Нет</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -181,6 +195,17 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
   <li>Нажмите <strong>«Переместить»</strong> на странице <strong>Главная</strong>.</li>
   <li>Выполните <strong>«mover start»</strong> из <strong>CLI</strong>.</li>
 </ul>
+<p><strong>Принудительное перемещение</strong> по-прежнему выполняется по своему расписанию: чтобы остановить и его, установите <strong>Показать расширенные настройки</strong> в <strong>Да</strong>, затем <strong>Принудительно перемещать все файлы по расписанию</strong> в <strong>Нет</strong>.</p>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Каждые 5 минут проверяет основной пул (<em>кэш</em>) каждой шары cache:<strong>yes</strong>. При достижении <strong>порога срабатывания наблюдения</strong> начинает обычный запуск Mover Tuning, не чаще раза в час для каждого пула, с одним уведомлением. Учитывает настройку проверки четности.</p>
+<p>Это страховка, а не замена расписания: ниже порога срабатывания только запуски по расписанию перемещают файлы обратно в пул (cache:<strong>prefer</strong>), синхронизируют, перебалансируют или перемещают файлы по возрасту.</p>
+<p>Если запуск не может опустить пул ниже порога срабатывания, наблюдение ждет дольше перед следующим запуском: 2 ч, затем 4 ч, 8 ч … до 24 ч. Ожидание сбрасывается, как только пул опускается ниже порога срабатывания.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Занятое пространство основного пула (<em>кэш</em>), при котором наблюдение запускает перемещение. Порог остается выше порога перемещения, потому что запуск ниже него ничего бы не переместил.</p>
 :end
 
 :mover_tune_movertunecron_plug:
@@ -354,7 +379,8 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_filelistv_plug:
-<p> Полный путь к файлу, содержащему список файлов и папок, которые вы хотите исключить из перемещения с основного (кэш) пула.</p>
+<p> Полный путь к файлу со списком файлов и папок, которые mover оставляет на месте: на основном (кэш) пуле для шар cache:<strong>yes</strong> и на вторичном (массив) хранилище для шар cache:<strong>prefer</strong>.</p>
+<p> Указывайте каждую запись с путём основного пула шары (<strong><em>/mnt/cache_ssd/Files/...</em></strong>, как в примерах ниже) или с её пользовательским путём (<strong><em>/mnt/user/Files/...</em></strong>). Пути на вторичном хранилище, например <strong><em>/mnt/disk1/Files/...</em></strong>, не поддерживаются.</p>
 <p> Пример <strong>списка файлов</strong>: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , содержимое этого файла должно быть по одной записи на строку.</p>
 <p> Пример <strong>папки</strong>: <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> , <strong>НЕ</strong> ставьте (<strong><em> * </em></strong>) или (<strong><em> / </em></strong>) в конце строки.</p>
 <p> Пример <strong>файла</strong>: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
@@ -449,7 +475,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_moveroverride_plug:
-> Выберите **Да**, чтобы переопределить основные настройки Mover Tuning для этой шары.
+> Выберите **Да**, чтобы задать ниже собственные настройки Mover Tuning для этой шары. **Глобальная настройка** означает, что параметр следует глобальному, в том числе при его последующих изменениях; любой другой выбор, включая **Нет**, действует для этой шары вместо глобальной настройки.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -473,7 +499,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_filelistf_plug:
-> Выберите **Да**, чтобы пропускать файлы, перечисленные в указанном текстовом файле.
+> **Да** — пропускать файлы и папки из текстового файла ниже вместо глобального списка. **Нет** — для этой шары не пропускаются файлы из списков. **Глобальная настройка** — следовать глобальной настройке списка.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -481,7 +507,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :end
 
 :mover_tune_filetypesf_plug:
-> Выберите **Да**, чтобы пропускать определённые типы файлов в дополнение к выбранным глобально.
+> **Да** — пропускать типы файлов ниже в дополнение к глобальным. **Нет** — для этой шары не пропускаются никакие типы файлов, даже глобальные. **Глобальная настройка** — следовать глобальной настройке.
 :end
 
 :mover_tune_share_filetypesv_plug:
