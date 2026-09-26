@@ -1021,7 +1021,8 @@ _(File list path)_:
 
 <blockquote class="inline_help">
 :mover_tune_filelistv_plug:
-<p> Full path to a file that contains a list of files and folders you want ignored from being moved off the Primary (cache) pool.</p>
+<p> Full path to a file that lists files and folders the mover leaves where they are: on the Primary (cache) pool for cache:<strong>yes</strong> shares, and on the Secondary (array) for cache:<strong>prefer</strong> shares.</p>
+<p> Write each entry with the share's Primary pool path (<strong><em>/mnt/cache_ssd/Files/...</em></strong>, as in the examples below) or with its user share path (<strong><em>/mnt/user/Files/...</em></strong>). Secondary storage paths such as <strong><em>/mnt/disk1/Files/...</em></strong> are not supported.</p>
 <p> <strong>File List</strong> example: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
 <p> <strong>Folder</strong> example: <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> , Do <strong>NOT</strong> put (<strong><em> * </em></strong>) or (<strong><em> / </em></strong>) at the end of the line.</p>
 <p> <strong>File</strong> example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>

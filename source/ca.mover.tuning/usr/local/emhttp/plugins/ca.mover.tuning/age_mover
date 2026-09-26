@@ -275,15 +275,25 @@ du_total_bytes() {
     tail -n1 <<<"$out" | cut -f1
 }
 
-# Skip-list lines for this share. Literal match, not regex: share names may hold
-# regex metacharacters, and an unanchored substring also matches sibling shares.
+# Skip-list lines of $3 for share $2, written as /mnt/$1/$2/... or /mnt/user/$2/..., printed under each root in $4...
+# Literal match, not regex: share names may hold regex metacharacters, and an unanchored substring also matches sibling shares.
 skiplist_share_lines() {
-    # prefix via ENVIRON, not -v: awk expands escape sequences in a -v value
-    SKIPLIST_PFX="/mnt/$1/$2" awk '
-        BEGIN { pfx = ENVIRON["SKIPLIST_PFX"] }
+    local pool="$1" share="$2" list="$3"
+    shift 3
+    # prefixes via ENVIRON, not -v: awk expands escape sequences in a -v value
+    SKIPLIST_PFX="/mnt/$pool/$share" SKIPLIST_USER_PFX="/mnt/user/$share" SKIPLIST_ROOT_LINES="$(printf '%s\n' "$@")" awk '
+        BEGIN { pfx[1] = ENVIRON["SKIPLIST_PFX"]; pfx[2] = ENVIRON["SKIPLIST_USER_PFX"]; n = split(ENVIRON["SKIPLIST_ROOT_LINES"], roots, "\n") }
         { sub(/\r$/, "") }   # the gate calls this before the CRLF fix below
-        index($0, pfx) == 1 && (length($0) == length(pfx) || substr($0, length(pfx) + 1, 1) == "/")
-    ' "$3"
+        {
+            for (p = 1; p <= 2; p++) {
+                l = length(pfx[p])
+                if (index($0, pfx[p]) == 1 && (length($0) == l || substr($0, l + 1, 1) == "/")) {
+                    for (r = 1; r <= n; r++) print roots[r] substr($0, l + 1)
+                    next
+                }
+            }
+        }
+    ' "$list"
 }
 
 # Sanitize input filename to prevent attacks
@@ -459,20 +469,40 @@ mvDebuglogger() {
 getMoverSettings() {
     #Use the config file instead of input variables (ease execution from command line)
     local config_file="$1"
+    # the share's cache mode when config_file is its override
+    local share_mode="$2"
+    # cfg KEY [FILE]: FILE defaults to config_file
     cfg() {
         local param="$1"
         local value
+        # a key the share page cannot show for this cache mode (left from another mode) reads as unset: Use global
+        if [ -z "$2" ] && [ -n "$share_mode" ]; then
+            case "$param" in
+            movingThreshold | freeingThreshold | synchronizeCache | omovercfg | omoverthresh | sizefSync | sizeinMSync) [ "$share_mode" != "yes" ] && return ;;
+            fillupThreshold) [ "$share_mode" != "prefer" ] && return ;;
+            esac
+        fi
         while IFS='=' read -r key val; do
             [ "$key" == "$param" ] && {
                 value="$val"
                 break
             }
-        done <"$config_file"
+        done <"${2:-$config_file}"
         #echo "${value//\"/}" # Print value or empty string if not found, without quotes
 
         # Strip only *outer* quotes, keep inner ones
         value="${value%\"}" # remove trailing "
         value="${value#\"}" # remove leading "
+        echo "$value"
+    }
+    # the value of a filter a share turns on; left on Use global (empty) it is the global one, as the global page shows it
+    cfg_dep() {
+        local value
+        value=$(cfg "$1")
+        if [ -z "$value" ] && [[ "$config_file" =~ shareOverrideConfig ]]; then
+            value=$(cfg "$1" "$MOVERTUNINGCFGFILE")
+            [ -z "$value" ] && value=$(cfg "$1" "$MOVERTUNING_DEFAULT_CFGFILE")
+        fi
         echo "$value"
     }
 
@@ -530,10 +560,11 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg omovercfg) = "yes" ]; then
-            OMOVERTHRESH=$(cfg omoverthresh)
+            OMOVERTHRESH=$(cfg_dep omoverthresh)
             [ -n "$OMOVERTHRESH" ] && mvlogger "Primary threshold to Move all Primary->Secondary shares to secondary: $OMOVERTHRESH %"
+            [ -z "$OMOVERTHRESH" ] && mvlogger "Warning: Move All from Primary->Secondary shares is on without a percentage, so it never moves all files"
         else
-            [[ ! "$config_file" =~ shareOverrideConfig ]] && OMOVERTHRESH=""
+            OMOVERTHRESH=""
         fi
     fi
 
@@ -546,7 +577,7 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg age) = "yes" ]; then
-            AGE=$(cfg daysold)
+            AGE=$(cfg_dep daysold)
             if [ $AGE -eq -1 ]; then
                 mvlogger "Age: Automatic (smart caching)"
             else
@@ -621,6 +652,14 @@ getMoverSettings() {
         ATIME=$(cfg atime)
         [ $ATIME = "yes" ] && mvlogger "ATIME: $ATIME"
     fi
+    # the share page saves at most one of the two as Yes: a share's own Yes turns the other off for that share
+    if [[ "$config_file" =~ shareOverrideConfig ]]; then
+        if [ "$(cfg ctime)" = "yes" ]; then
+            ATIME="no"
+        elif [ "$(cfg atime)" = "yes" ]; then
+            CTIME="no"
+        fi
+    fi
 
     if [ -z $(cfg enableTurbo) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -648,7 +687,7 @@ getMoverSettings() {
             fi
             mvlogger "Skip file list: $SKIPFILESLIST"
         else
-            [[ ! "$config_file" =~ shareOverrideConfig ]] && SKIPFILESLIST=""
+            SKIPFILESLIST=""
         fi
     fi
 
@@ -663,11 +702,14 @@ getMoverSettings() {
             ###echo "Skipfiletypes supplied"
             SKIPFILETYPES=$(cfg filetypesv)
             SKIPFILETYPES=$(echo "$SKIPFILETYPES" | awk -F, '{for(i=1;i<=NF;i++) {gsub(/\.| /, "", $i); printf "%s%s", $i, (i<NF?" ":"")}}')
+            # a share's Yes adds its types to the global ones, each once; its No skips none
+            [[ "$config_file" =~ shareOverrideConfig ]] && SKIPFILETYPES=$(tr ' ' '\n' <<<"$SKIPFILETYPES $globalSkipFileTypes" | awk 'NF && !seen[$0]++' | tr '\n' ' ')
             mvlogger "Skip filetypes: $SKIPFILETYPES"
         else
-            [[ ! "$config_file" =~ shareOverrideConfig ]] && SKIPFILETYPES=""
+            SKIPFILETYPES=""
         fi
     fi
+    [[ ! "$config_file" =~ shareOverrideConfig ]] && globalSkipFileTypes=$SKIPFILETYPES
 
     if [ -z $(cfg ignoreHidden) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
@@ -700,10 +742,10 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg sizef) = "yes" ]; then
-            SIZE=$(cfg sizeinM)
+            SIZE=$(cfg_dep sizeinM)
             [ $SIZE -gt 0 ] && mvlogger "Move Size supplied: $SIZE"
         else
-            [[ ! "$config_file" =~ shareOverrideConfig ]] && SIZE=0
+            SIZE=0
         fi
     fi
 
@@ -715,10 +757,10 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg sparsnessf) = "yes" ]; then
-            SPARSENESS=$(cfg sparsnessv)
+            SPARSENESS=$(cfg_dep sparsnessv)
             [ $SPARSENESS -gt 0 ] && mvlogger "Sparness supplied: $SPARSENESS"
         else
-            [[ ! "$config_file" =~ shareOverrideConfig ]] && SPARSENESS=0
+            SPARSENESS=0
         fi
     fi
 
@@ -729,18 +771,19 @@ getMoverSettings() {
             echo 'synchronizeCache="no"' >>$config_file
             SYNCHRONIZECACHE="no"
         fi
+        LASTCACHESYNC=$(cfg lastCacheSync)
 
     elif [ -n "$(cfg synchronizeCache)" ]; then
         SYNCHRONIZECACHE=$(cfg synchronizeCache)
+        # the mark goes with the setting: a share without its own keeps the global mark
+        LASTCACHESYNC=$(cfg lastCacheSync)
     fi
 
     if [ "$SYNCHRONIZECACHE" = "yes" ]; then
-        LASTCACHESYNC=$(cfg lastCacheSync)
+        [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
             mvlogger "Synchronize global Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
         else
-            [ -z "$LASTCACHESYNC" ] && LASTCACHESYNC=0
             mvlogger "Synchronize share Primary to Secondary: $SYNCHRONIZECACHE - Last sync date: $(TZ=$timezone date +%FT%H%M%S -d "@$LASTCACHESYNC")"
         fi
     fi
@@ -767,10 +810,10 @@ getMoverSettings() {
         fi
     else
         if [ $(cfg sizefSync) = "yes" ]; then
-            SYNC_SIZE=$(cfg sizeinMSync)
+            SYNC_SIZE=$(cfg_dep sizeinMSync)
             [ $SYNCHRONIZECACHE == "yes" ] || [ $RESYNCHRONIZECACHE == "yes" ] && [ $SYNC_SIZE -gt 0 ] && mvlogger "Sync Size supplied: $SYNC_SIZE"
         else
-            [[ ! "$config_file" =~ shareOverrideConfig ]] && SYNC_SIZE=0
+            SYNC_SIZE=0
         fi
     fi
 
@@ -1025,6 +1068,7 @@ createFilteredFilelist() {
 
     # create a file containing the list off all shareUseCache yes or prefer whith this format:
     echo "PRIMARYSTORAGENAME|SECONDARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|PRIMARYSIZETHRESH|POOLUSED|FILESIZE|SPARSENESS|NBLINKS|INODE|FILETYPE|FILEPATH" >"$FILTERED_FILELIST"
+    SHARE_SYNC_SETTINGS=""
 
     for SHARECFG in "$CFGPATH"/*.cfg; do
         if [ -e $SOFTSTOPFILE ]; then
@@ -1032,13 +1076,14 @@ createFilteredFilelist() {
             return
         fi
 
-        globalSkipFileTypes=$SKIPFILETYPES
-
         #Gathering information
         #Sharename
         SHARENAME="$(basename "$SHARECFG" .cfg)"
         # Share title line
         mvlogger "$(titleLine "Processing [$SHARENAME] share" '-')"
+
+        # Determine Cache mode
+        SHAREUSECACHE=$(grep shareUseCache "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
 
         #Check to see if this share has a mover settings override, if yes set overrideFlag and change settings
         SHARETUNINGFILE="${MOVERTUNING_OVERRIDE_CFGFOLDER}/${SHARENAME}.cfg"
@@ -1048,7 +1093,7 @@ createFilteredFilelist() {
             overrideFlag=1
             mvlogger "Settings override:"
             mvlogger "------------------"
-            getMoverSettings "$SHARETUNINGFILE"
+            getMoverSettings "$SHARETUNINGFILE" "$SHAREUSECACHE"
             mvlogger "------------------------------------------------------------------------"
         elif [ $overrideFlag = 1 ]; then
             #else if overrideFLag set from previous loop then restore global settings
@@ -1059,9 +1104,8 @@ createFilteredFilelist() {
             getMoverSettings "$MOVERTUNINGCFGFILE"
             mvlogger "------------------------------------------------------------------------"
         fi
-
-        # Determine Cache mode
-        SHAREUSECACHE=$(grep shareUseCache "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+        # decideMoveActions takes each share's Synchronize setting and mark from here
+        SHARE_SYNC_SETTINGS+="$SYNCHRONIZECACHE|$LASTCACHESYNC|$SHARENAME"$'\n'
 
         # Determine primary storage
         PRIMARYSTORAGENAME=$(grep "shareCachePool=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
@@ -1156,6 +1200,7 @@ createFilteredFilelist() {
         fi
 
         # Alterate SHAREPATH when RebalanceShare=true
+        UNATTENDED_ROOTS=()
         if [[ "$REBALANCESHARES" == "yes" && -n "$UNATTENDEDSTORAGE" ]]; then
             UNATTENDEDSTORAGE_SHAREPATH=""
             # Iterate over each unattended storage pool
@@ -1163,14 +1208,20 @@ createFilteredFilelist() {
                 # Skip if the share folder doesn't exist in this dir
                 if [[ -d "/mnt/$dir/$SHARENAME" ]]; then
                     UNATTENDEDSTORAGE_SHAREPATH+=" \"/mnt/$dir/$SHARENAME\""
+                    UNATTENDED_ROOTS+=("/mnt/$dir/$SHARENAME")
                 fi
             done
         fi
+
+        # skip-list entries are excluded under these roots: the pool, or the secondary paths a cache:prefer share walks,
+        # then the unattended storage a rebalance walks
+        SKIPLIST_ROOTS=("$SHAREPATH")
 
         # Alterate SHAREPATH on Cache=prefer
         if [[ "$SHAREUSECACHE" == "prefer" ]]; then
             COUNT_SECONDARY_FILES=0
             PREFER_SHAREPATH=""
+            SKIPLIST_ROOTS=()
             PRIMARY_SHAREPATH="$SHAREPATH"
 
             if [[ -n "$SECONDARYSTORAGENAME" ]]; then
@@ -1182,6 +1233,7 @@ createFilteredFilelist() {
                     SECONDARY_SHAREPATH="/mnt/$SECONDARYSTORAGENAME/$SHARENAME"
                     if [[ -d "$SECONDARY_SHAREPATH" ]]; then
                         PREFER_SHAREPATH+=" \"$SECONDARY_SHAREPATH\""
+                        SKIPLIST_ROOTS+=("$SECONDARY_SHAREPATH")
                         # Count the number of files in the secondary storage directory
                         tmp=$(find "$SECONDARY_SHAREPATH" -type f | wc -l)
                         COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
@@ -1198,6 +1250,7 @@ createFilteredFilelist() {
                         if [[ -d "$SECONDARY_SHAREPATH" ]]; then
                             # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
                             PREFER_SHAREPATH+=" \"$SECONDARY_SHAREPATH\""
+                            SKIPLIST_ROOTS+=("$SECONDARY_SHAREPATH")
                             # Count the number of files in the secondary storage directory
                             tmp=$(find "$SECONDARY_SHAREPATH" -type f | wc -l)
                             COUNT_SECONDARY_FILES=$((COUNT_SECONDARY_FILES + tmp))
@@ -1214,11 +1267,17 @@ createFilteredFilelist() {
             fi
         fi
 
+        SKIPLIST_ROOTS+=("${UNATTENDED_ROOTS[@]}")
+
         if [[ "$SHAREUSECACHE" == "prefer" ]]; then
             mvlogger "Share Information: Name: $SHARENAME - Path: $PRIMARY_SHAREPATH"
         else
             mvlogger "Share Information: Name: $SHARENAME - Path: $SHAREPATH"
         fi
+
+        # Move All (cache:yes shares only) above its threshold moves everything: none of the filters below applies
+        MOVE_ALL="no"
+        [ "$SHAREUSECACHE" = "yes" ] && [ -n "$OMOVERTHRESH" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ] && MOVE_ALL="yes"
 
         # Give information according to cache mode and thresholds
         if [ "$SHAREUSECACHE" = "prefer" ]; then
@@ -1236,7 +1295,7 @@ createFilteredFilelist() {
             if [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Rebalance shares option is selected"
                 mvlogger "=> Files detected in $UNATTENDEDSTORAGE instead of $PRIMARYSTORAGENAME or $SECONDARYSTORAGENAME. They will be rebalanced to $SECONDARYSTORAGENAME."
-            elif [ "$OMOVERTHRESH" != "" ] && [ "$POOLPCTUSED" -gt "$OMOVERTHRESH" ]; then
+            elif [ "$MOVE_ALL" = "yes" ]; then
                 mvlogger "Mover action: $PRIMARYSTORAGENAME->$SECONDARYSTORAGENAME (cache:yes). Move All from Primary->Secondary shares option is selected and pool is above move all threshold percentage:  $POOLPCTUSED% > $OMOVERTHRESH%."
                 mvlogger "=> Moving all files from $PRIMARYSTORAGENAME to $SECONDARYSTORAGENAME"
             elif [ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]; then
@@ -1333,9 +1392,8 @@ createFilteredFilelist() {
             FINDSTR+=" -type f"
         fi
 
-        #Addition of filters are conditionned by [ -z "$OMOVERTHRESH" ] || [ $POOLPCTUSED -le $OMOVERTHRESH ] to prevent filtering move all Primary->Secondary share
         # Add Age variables to find string
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$AGE" -ge 1 ]; then
+        if [ "$MOVE_ALL" = "no" ] && [ "$AGE" -ge 1 ]; then
             mvlogger "Adding Age"
             RAGE=$((AGE - 1))
             # Use Creation time or modification time according to settings
@@ -1352,7 +1410,7 @@ createFilteredFilelist() {
         fi
 
         # Add Size to find string
-        if [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; then
+        if [ "$MOVE_ALL" = "no" ]; then
             if [[ "$SYNCHRONIZECACHE" = "yes" ]] || [[ "$RESYNCHRONIZECACHE" = "yes" ]] && [[ "$POOLPCTUSED" -lt "$MOVINGPCTTHRESHOLD" ]] && [ "$SYNC_SIZE" -gt 0 ]; then
                 mvlogger "Adding Sync Size: ${SYNC_SIZE}"
                 FINDSTR="$FINDSTR -size -${SYNC_SIZE}M"
@@ -1363,7 +1421,7 @@ createFilteredFilelist() {
         fi
 
         # Add Ignore Hidden Files to find string
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
             mvlogger "Skipping Hidden Files. File size are taken into account in the calculation of the threshold"
             FINDSTR="$FINDSTR -not -path '*/\.*'"
             # pipefail: a part-way find still hands du a valid list
@@ -1381,7 +1439,7 @@ createFilteredFilelist() {
         FINDSTR="$FINDSTR -not -name '.fuse_hidden*'"
 
         # Add files from ignore list
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")" ]; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -f "$SKIPFILESLIST" ] && [ -n "$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST" "${SKIPLIST_ROOTS[@]}")" ]; then
             mvlogger "Skipping Files from List. File size are taken into account in the calculation of the threshold"
             mvlogger "List Path: ${SKIPFILESLIST}:"
 
@@ -1444,7 +1502,7 @@ createFilteredFilelist() {
                 # Exclusion-only row. The size for the whole list is carried by the
                 # aggregate row below, so these rows cannot double-count in pool_sums.
                 echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|0|0|0|0|$filetype|${skipped_path}" >>"$FILTERED_FILELIST"
-            done <<<"$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST")"
+            done <<<"$(skiplist_share_lines "$PRIMARYSTORAGENAME" "$SHARENAME" "$SKIPFILESLIST" "${SKIPLIST_ROOTS[@]}")"
 
             if [ ${#SKIPPED_MEASURE_PATHS[@]} -gt 0 ]; then
                 # du exits nonzero on a partial read while still printing a total
@@ -1454,23 +1512,25 @@ createFilteredFilelist() {
                     mvlogger "Error calculating size for ${SKIPFILESLIST}"
                     TOTAL_SKIPPED_PATH_RESERVED_SPACE=0
                 fi
-                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$TOTAL_SKIPPED_PATH_RESERVED_SPACE|0|0|0|f|${SHAREPATH}/ ignored files" >>"$FILTERED_FILELIST"
+                echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$TOTAL_SKIPPED_PATH_RESERVED_SPACE|0|0|0|f|${SKIPLIST_ROOTS[0]}/ ignored files" >>"$FILTERED_FILELIST"
             fi
             mvlogger "    Ignored files are using $(bytes_to_human "$TOTAL_SKIPPED_PATH_RESERVED_SPACE")"
         fi
 
         #Add Skipfilelist to find string
         TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=0
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && { [ -n "$SKIPFILETYPES" ] || [ -n "$globalSkipFileTypes" ]; }; then
+        if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ -n "$SKIPFILETYPES" ]; then
             mvlogger "Skipping Filetypes from List. File sizes are taken into account for the calculation of the threshold"
-            for ext in $([ $overrideFlag = 1 ] && echo -n "$SKIPFILETYPES") $(echo -n "$globalSkipFileTypes"); do
+            # split without pathname expansion: start() turns on nullglob, and a type may hold * ? or [
+            read -ra SKIP_EXTS <<<"$SKIPFILETYPES"
+            for ext in "${SKIP_EXTS[@]}"; do
                 FINDSTR="$FINDSTR -not -name '*.${ext//\'/\'\\\'\'}'"
                 if SKIPPED_FILETYPES_DU="$(set -o pipefail; find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f -name "*.$ext" -print0 | du -c --block-size=1 --files0-from=- 2>/dev/null)" &&
                     SKIPPED_FILETYPES_RESERVED_SPACE=$(tail -n1 <<<"$SKIPPED_FILETYPES_DU" | cut -f1) && [ -n "$SKIPPED_FILETYPES_RESERVED_SPACE" ]; then
                     echo "$PRIMARYSTORAGENAME|$SECONDARYSTORAGENAME|$SHARENAME|skipped|9999999999|$PRIMARYSIZETHRESH|$POOLBYTEUSED|$SKIPPED_FILETYPES_RESERVED_SPACE|0|0|0|f|$SHAREPATH/**/*.$ext" >>"$FILTERED_FILELIST"
                     TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE=$((TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE + SKIPPED_FILETYPES_RESERVED_SPACE))
                 else
-                    mvlogger "Error calculating size for ${globalSkipFileTypes}"
+                    mvlogger "Error calculating size for ${ext}"
                 fi
             done
             mvlogger "    Ignored filetypes are using $(bytes_to_human $TOTAL_SKIPPED_FILETYPES_RESERVED_SPACE)"
@@ -1487,7 +1547,7 @@ createFilteredFilelist() {
         -v PRIMARYSIZETHRESH='$PRIMARYSIZETHRESH' \
         -v POOLBYTEUSED='$POOLBYTEUSED'"
 
-        if { [ -z "$OMOVERTHRESH" ] || [ "$POOLPCTUSED" -le "$OMOVERTHRESH" ]; } && [ "$SPARSENESS" -gt 0 ]; then
+        if [ "$MOVE_ALL" = "no" ] && [ "$SPARSENESS" -gt 0 ]; then
             mvlogger "Adding Sparseness size ${SPARSENESS}"
             FINDSTR="$FINDSTR ' \$6 == \"d\" || \$3 > (SPARSENESS / 10) {"
         else
@@ -1692,7 +1752,7 @@ decideMoveActions() {
     # Fields: $1:PRIMARYSTORAGENAME $2:SECONDARYSTORAGENAME $3:SHARENAME $4:SHAREUSECACHE $5:MODIFYTIME
     # $6:PRIMARYSIZETHRESH $7:POOLUSED $8:FILESIZE $9:SPARSENESS $10:NBLINKS $11:INODE $12:FILETYPE $13:FILEPATH
 
-    awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v MOVERTUNING_OVERRIDE_CFGFOLDER="$MOVERTUNING_OVERRIDE_CFGFOLDER" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
+    SHARE_SYNC_SETTINGS="$SHARE_SYNC_SETTINGS" awk -F"|" -v AGE="$AGE" -v STATS_FILE="$STATS_FILE" -v LASTCACHESYNC="$LASTCACHESYNC" -v SOFTSTOPFILE="$SOFTSTOPFILE" -v SYNCHRONIZECACHE="$SYNCHRONIZECACHE" -v REBALANCESHARES="$REBALANCESHARES" -v RESYNCHRONIZECACHE="$RESYNCHRONIZECACHE" -v HELD_FILELIST="$HELD_FILELIST" '
         # the path is the last field and may itself contain the separator
         function full_path(   p, i) { p = $13; for (i = 14; i <= NF; i++) p = p "|" $i; return p }
         BEGIN {
@@ -1704,12 +1764,16 @@ decideMoveActions() {
             # Initialize previous inode and dictionary for pool sums
             previous_inode = 0
 
-            # Init variables for track last share for Sync overrides
-            prev_share = ""
+            # the Synchronize setting and mark of each share as getMoverSettings resolved them, "sync|mark|share" rows
             global_sync = SYNCHRONIZECACHE
-
-            # Check if MOVERTUNING_OVERRIDE_CFGFOLDER exists
-            shareOverrideCfgDir_exist = (system("test -d \"" MOVERTUNING_OVERRIDE_CFGFOLDER "\"") == 0)
+            global_mark = LASTCACHESYNC + 0
+            n = split(ENVIRON["SHARE_SYNC_SETTINGS"], share_rows, "\n")
+            for (i = 1; i <= n; i++) {
+                if (split(share_rows[i], f, "|") < 3) continue
+                share = substr(share_rows[i], length(f[1]) + length(f[2]) + 3)
+                share_sync[share] = f[1]
+                share_mark[share] = f[2] + 0
+            }
 
             # files holdOpenFiles found open: never moved, but kept and synced like any other file
             while ((getline held_line < HELD_FILELIST) > 0) held_paths[held_line] = 1
@@ -1769,44 +1833,9 @@ decideMoveActions() {
                 }
             }
 
-            ### Check if share has Sync override ###
-            # Set current sharename
-            sharename = $3
-            
-            # Check at the start using previous state
-            if (shareOverrideCfgDir_exist && global_sync == "no" && sharename != prev_share) {
-
-            # Initialize for this share
-            cfgfile = MOVERTUNING_OVERRIDE_CFGFOLDER "/" sharename ".cfg"
-            SYNCHRONIZECACHE = "no"
-            LASTCACHESYNC = ""
-            moverOverride = 0
-            synchronizeCache = 0
-
-            # Check file exists
-            if ((getline test < cfgfile) > 0) {
-                close(cfgfile)
-
-                # parse the file
-                while ((getline line < cfgfile) > 0) {
-                    if (line ~ /moverOverride="yes"/)
-                        moverOverride = 1
-                    if (line ~ /synchronizeCache="yes"/)
-                        synchronizeCache = 1
-                    if (match(line, /lastCacheSync="([^"]+)"/, m))
-                        LASTCACHESYNC = m[1]
-                }
-                close(cfgfile)
-
-                if (moverOverride && synchronizeCache) {
-                    SYNCHRONIZECACHE = "yes"
-                }
-            }
-
-            # remember current state for next record
-            prev_share = sharename
-            }
-            ### ###
+            # a share override decides Synchronize for its share, both ways
+            SYNCHRONIZECACHE = ($3 in share_sync) ? share_sync[$3] : global_sync
+            LASTCACHESYNC = ($3 in share_mark) ? share_mark[$3] : global_mark
 
             # Take decision
             held = (full_path() in held_paths)
@@ -2650,9 +2679,9 @@ processTheMoves() {
             if [[ -f "$config_file" ]]; then
                 if grep -qs 'synchronizeCache="yes"' "$config_file"; then
                     if grep -q "lastCacheSync=" "$config_file"; then
-                        sed -i "s/lastCacheSync=.*$/lastCacheSync=$EPOCH/" "$config_file"
+                        sed -i "s/lastCacheSync=.*$/lastCacheSync=\"$EPOCH\"/" "$config_file"
                     else
-                        echo "lastCacheSync=$EPOCH" >>"$config_file"
+                        echo "lastCacheSync=\"$EPOCH\"" >>"$config_file"
                     fi
                     mvDebuglogger "Sync Cache: $SYNCHRONIZECACHE, Previos CacheSync: $LASTCACHESYNC, New CacheSync: $EPOCH, Config File: $config_file" "Set Last Sync Date to Config"
                 fi

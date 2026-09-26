@@ -75,6 +75,7 @@ Move All from Primary->Secondary cacheyes shares pool percentage=Déplacer tout 
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Déplacer tout depuis Primaire→Secondaire (cache:yes) lorsque le disque dépasse un certain pourcentage
 Move All from Primary->Secondary shares pool percentage=Déplacer tout depuis Primaire→Secondaire selon le pourcentage du pool
 Move All threshold raised to %1 to stay above the moving threshold=Seuil « tout déplacer » augmenté à %1 pour rester au-dessus du seuil de déplacement.
+Move All threshold set to %1, as the global settings have none=Seuil « tout déplacer » réglé à %1, car les réglages globaux n’en ont pas.
 Moved Only=Déplacés uniquement
 Move empty folders=Déplacer les dossiers vides
 Move files based on minimum size=Déplacer les fichiers selon une taille minimale
@@ -140,11 +141,13 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=M
 Thank you for using this plugin=Merci d’utiliser ce plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Le seuil de libération enregistré est %1, au-dessus du seuil de déplacement %2. Le mover démarre à %2 et s’arrête à %1, donc rien n’est déplacé tant que le pool reste entre ces valeurs. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Le seuil « tout déplacer » enregistré est %1, au niveau ou en dessous du seuil de déplacement %2. Tout sur les parts cache:yes est déplacé, la liste d’exclusion et les filtres sont ignorés avant d’atteindre le seuil de déplacement. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Le seuil global « tout déplacer » de %1 est au niveau ou en dessous du seuil de déplacement de cette part (%2) : tout ce qui est sur cette part est déplacé dès %1.
 Top Folder=Dossier principal
 Unraid mover=Mover Unraid
 Unraid Mover schedule is currently enabled=La planification du mover Unraid est actuellement **activée**
 Use ATIME=Utiliser ATIME
 Use CTIME=Utiliser CTIME
+Use global=Réglage global
 Used IDE=IDE utilisé
 User shares not enabled=Les parts utilisateur ne sont pas activées !
 Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
@@ -363,7 +366,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_filelistv_plug:
-<p> Chemin complet vers un fichier contenant une liste de fichiers et de dossiers que vous souhaitez ignorer lors du déplacement hors du pool Primaire (cache).</p>
+<p> Chemin complet vers un fichier listant les fichiers et dossiers que le mover laisse en place : sur le pool Primaire (cache) pour les parts cache:<strong>yes</strong>, et sur le Secondaire (array) pour les parts cache:<strong>prefer</strong>.</p>
+<p> Écrivez chaque entrée avec le chemin du pool Primaire de la part (<strong><em>/mnt/cache_ssd/Files/...</em></strong>, comme dans les exemples ci‑dessous) ou avec son chemin utilisateur (<strong><em>/mnt/user/Files/...</em></strong>). Les chemins du stockage Secondaire, comme <strong><em>/mnt/disk1/Files/...</em></strong>, ne sont pas pris en charge.</p>
 <p> Exemple de <strong>File List</strong> : <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> — le contenu de ce fichier doit comporter une entrée par ligne.</p>
 <p> Exemple de <strong>Dossier</strong> : <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> — ne mettez <strong>PAS</strong> (<strong><em>*</em></strong>) ni (<strong><em>/</em></strong>) à la fin de la ligne.</p>
 <p> Exemple de <strong>Fichier</strong> : <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong>.</p>
@@ -456,7 +460,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_moveroverride_plug:
-> Remplace les paramètres Mover Tuning pour cette part.
+> Sélectionnez **Oui** pour définir ci‑dessous les réglages Mover Tuning propres à cette part. **Réglage global** fait suivre à un réglage le réglage global, même s’il change plus tard ; tout autre choix, **Non** compris, s’applique à cette part à la place du réglage global.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -480,7 +484,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_filelistf_plug:
-> Ignorer les fichiers listés dans un fichier texte.
+> **Oui** ignore les fichiers et dossiers listés dans le fichier texte ci‑dessous, à la place de la liste globale. **Non** n’ignore aucun fichier listé pour cette part. **Réglage global** suit le réglage global de la liste.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -488,7 +492,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_filetypesf_plug:
-> Ignorer des types de fichiers spécifiques.
+> **Oui** ignore les types de fichiers ci‑dessous en plus des types globaux. **Non** n’ignore aucun type de fichier pour cette part, pas même les types globaux. **Réglage global** suit le réglage global.
 :end
 
 :mover_tune_share_filetypesv_plug:
