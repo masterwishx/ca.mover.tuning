@@ -6,6 +6,8 @@ set -euo pipefail
 : "${BASE:?}" "${BETA_BRANCH:?}" "${PLG:?}" "${CHANGELOG:?}" "${SCRIPTS:?}" "${GIT_USER:?}" "${GIT_EMAIL:?}" "${VERSION:?}"
 DRY_RUN="${DRY_RUN:-false}"
 PLGR="python3 $SCRIPTS/plg_release.py"
+SCRATCH=$(mktemp -d)
+trap 'rm -rf "$SCRATCH"' EXIT
 
 . "$SCRIPTS/plg_release_git.sh"
 . "$SCRIPTS/plg_release_merge.sh"
