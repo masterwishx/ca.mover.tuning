@@ -191,10 +191,9 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_watchdog_plug:
-<p>Prüft alle 5 Minuten, ob der Primärspeicher (<em>Cache</em>) einer cache:<strong>yes</strong>-Freigabe die <strong>Auslöseschwelle des Watchdogs</strong> erreicht hat. Ist das der Fall, startet er Mover Tuning mit allen Einstellungen und Filtern zwischen den geplanten Läufen.</p>
-<p>Er ist ein Sicherheitsnetz neben dem Zeitplan, kein Ersatz dafür. Ein von ihm gestarteter Lauf macht alles, was ein geplanter Lauf macht, aber erst, wenn der Pool die Auslöseschwelle erreicht. Darunter verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
-<p>Er startet höchstens einen Lauf pro Stunde und Pool, sendet dabei eine Benachrichtigung und beachtet die Einstellung zur Paritätsprüfung. Unterhalb der Auslöseschwelle dauert eine Prüfung wenige Millisekunden und tut sonst nichts.</p>
-<p>Liegt der Pool nach einem Lauf noch auf oder über der Auslöseschwelle, lässt sich der Rest derzeit nicht verschieben: Daten von cache:<strong>only</strong>- oder cache:<strong>prefer</strong>-Freigaben oder Dateien, die die Filter zurückhalten. Der Watchdog wartet dann vor jedem neuen Versuch doppelt so lange, höchstens einen Tag, ohne Benachrichtigung, und versucht es früher, sobald der Pool um 5 Punkte wächst. Die Einstellung <strong>Auslöseschwelle des Watchdogs</strong> zeigt, wann er es erneut versucht.</p>
+<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er beachtet die Einstellung zur Paritätsprüfung.</p>
+<p>Er ist ein Sicherheitsnetz, kein Ersatz für den Zeitplan: Unterhalb der Auslöseschwelle verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
+<p>Bringt ein Lauf den Pool nicht unter die Auslöseschwelle, wartet der Watchdog vor jedem neuen Versuch länger, höchstens einen Tag, und zeigt unter <strong>Auslöseschwelle des Watchdogs</strong>, wann.</p>
 :end
 
 :mover_tune_watchdogthreshold_plug:

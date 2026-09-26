@@ -190,10 +190,9 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_watchdog_plug:
-<p>每 5 分钟检查一次 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池是否达到<strong>看门狗触发阈值</strong>。如果达到，就在按计划运行之间启动 Mover Tuning，并应用其全部设置和过滤器。</p>
-<p>它是计划之外的安全保障，而不是计划的替代。它启动的运行会执行计划运行的全部操作，但只在存储池达到触发阈值时才启动。低于该阈值时，只有按计划运行才会将文件移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡或按年龄移动文件。</p>
-<p>它每个存储池每小时最多启动一次运行，启动时发送一条通知，并遵循奇偶校验设置。低于触发阈值时，每次检查只需几毫秒，不做其他任何事。</p>
-<p>如果运行后存储池仍达到或高于触发阈值，说明剩余内容目前无法移动：cache:<strong>only</strong> 或 cache:<strong>prefer</strong> 共享的数据，或被过滤器保留的文件。看门狗随后每次重试前等待的时间加倍，最长一天，不发送通知；存储池增长 5 个百分点后会提前重试。<strong>看门狗触发阈值</strong>设置处会显示下次重试的时间。</p>
+<p>每 5 分钟检查一次每个 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池。达到<strong>看门狗触发阈值</strong>时，启动一次正常的 Mover Tuning 运行，每个存储池每小时最多一次，并发送一条通知；遵循奇偶校验设置。</p>
+<p>它是安全保障，而不是计划的替代：低于触发阈值时，只有按计划运行才会将文件移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡或按年龄移动文件。</p>
+<p>如果一次运行无法让存储池降到触发阈值以下，看门狗每次重试前会等待更久，最长一天，并在<strong>看门狗触发阈值</strong>下方显示下次时间。</p>
 :end
 
 :mover_tune_watchdogthreshold_plug:

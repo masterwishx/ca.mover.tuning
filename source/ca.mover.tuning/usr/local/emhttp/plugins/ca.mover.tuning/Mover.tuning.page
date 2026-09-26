@@ -524,10 +524,9 @@ _(Cache watchdog)_:
 
 <blockquote class="inline_help">
 :mover_tune_watchdog_plug:
-<p>Checks every 5 minutes whether the Primary (<em>cache</em>) pool of a cache:<strong>yes</strong> share has reached the <strong>Watchdog trigger level</strong>. If it has, it starts Mover Tuning, with all its settings and filters, between scheduled runs.</p>
-<p>It is a safety net next to the schedule, not a replacement. A run it starts does everything a scheduled run does, but only once the pool reaches the trigger level. Below it, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
-<p>It starts at most one run per hour for each pool, sends one notification when it does, and follows the parity check setting. Below the trigger level a check takes a few milliseconds and does nothing else.</p>
-<p>If a run leaves the pool at or above the trigger level, what is left cannot be moved now: cache:<strong>only</strong> or cache:<strong>prefer</strong> data, or files the filters hold back. The watchdog then waits twice as long before each new try, up to a day, without a notification, and tries sooner once the pool grows by 5 points. The <strong>Watchdog trigger level</strong> setting shows when it will try again.</p>
+<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It follows the parity check setting.</p>
+<p>It is a safety net, not a replacement for the schedule: below the trigger level, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
+<p>If a run cannot bring the pool below the trigger level, the watchdog waits longer before each retry, up to a day, and shows when under <strong>Watchdog trigger level</strong>.</p>
 :end
 </blockquote>
 

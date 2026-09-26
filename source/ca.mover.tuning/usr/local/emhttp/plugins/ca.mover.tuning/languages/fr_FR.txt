@@ -191,10 +191,9 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_watchdog_plug:
-<p>Vérifie toutes les 5 minutes si le pool primaire (<em>cache</em>) d’un partage cache:<strong>yes</strong> a atteint le <strong>seuil de déclenchement de la surveillance</strong>. Si c’est le cas, elle lance Mover Tuning, avec tous ses réglages et filtres, entre les exécutions planifiées.</p>
-<p>C’est un filet de sécurité à côté de la planification, pas un remplacement. Une exécution qu’elle lance fait tout ce que fait une exécution planifiée, mais seulement une fois le seuil de déclenchement atteint. En dessous, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
-<p>Elle lance au plus une exécution par heure et par pool, envoie alors une notification et respecte le réglage du contrôle de parité. Sous le seuil de déclenchement, une vérification prend quelques millisecondes et ne fait rien d’autre.</p>
-<p>Si une exécution laisse le pool au niveau du seuil de déclenchement ou au-dessus, ce qui reste ne peut pas être déplacé pour l’instant : données de partages cache:<strong>only</strong> ou cache:<strong>prefer</strong>, ou fichiers retenus par les filtres. La surveillance attend alors deux fois plus longtemps avant chaque nouvel essai, un jour au plus, sans notification, et réessaie plus tôt dès que le pool gagne 5 points. Le réglage <strong>Seuil de déclenchement de la surveillance</strong> indique quand elle réessaiera.</p>
+<p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle respecte le réglage du contrôle de parité.</p>
+<p>C’est un filet de sécurité, pas un remplacement de la planification : sous le seuil de déclenchement, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
+<p>Si une exécution ne ramène pas le pool sous le seuil de déclenchement, la surveillance attend plus longtemps avant chaque nouvel essai, un jour au plus, et indique quand sous <strong>Seuil de déclenchement de la surveillance</strong>.</p>
 :end
 
 :mover_tune_watchdogthreshold_plug:
