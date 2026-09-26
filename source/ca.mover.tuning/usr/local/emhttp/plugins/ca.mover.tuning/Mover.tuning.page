@@ -25,6 +25,19 @@ $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
 $watchdogDisabled = ($cfg['watchdog'] != "yes") ? "disabled" : "";
 $movingSaved = (int)($cfg['movingThreshold'] ?? 0);
+// per-pool state written by age_mover watchdog()
+$watchdogBackoff = [];
+$watchdogStates = glob("/var/run/mover.watchdog.*");
+if ($cfg['watchdog'] === "yes" && $watchdogStates !== false) {
+  foreach ($watchdogStates as $stateFile) {
+    $state = parse_ini_file($stateFile);
+    if ($state === false || ($state['backoff'] ?? "") !== "yes") {
+      continue;
+    }
+    $after = (int)($state['after'] ?? 0);
+    $watchdogBackoff[] = sprintf(_('%s is still at %s after the last watchdog run, so what is left cannot be moved now. Next try at %s, or sooner if it reaches %s.'), htmlspecialchars(substr($stateFile, strlen("/var/run/mover.watchdog."))), "$after%", my_time((int)($state['next'] ?? 0)), ($after + 5) . "%");
+  }
+}
 $om = $movingSaved + 5;
 $f = $movingSaved;
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
@@ -513,7 +526,8 @@ _(Cache watchdog)_:
 :mover_tune_watchdog_plug:
 <p>Checks every 5 minutes whether the Primary (<em>cache</em>) pool of a cache:<strong>yes</strong> share has reached the <strong>Watchdog trigger level</strong>. If it has, it starts Mover Tuning, with all its settings and filters, between scheduled runs.</p>
 <p>It is a safety net next to the schedule, not a replacement. A run it starts does everything a scheduled run does, but only once the pool reaches the trigger level. Below it, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
-<p>It starts at most one run per hour, sends one notification when it does, and follows the parity check setting. Below the trigger level a check takes a few milliseconds and does nothing else.</p>
+<p>It starts at most one run per hour for each pool, sends one notification when it does, and follows the parity check setting. Below the trigger level a check takes a few milliseconds and does nothing else.</p>
+<p>If a run leaves the pool at or above the trigger level, what is left cannot be moved now: cache:<strong>only</strong> or cache:<strong>prefer</strong> data, or files the filters hold back. The watchdog then waits twice as long before each new try, up to a day, without a notification, and tries sooner once the pool grows by 5 points. The <strong>Watchdog trigger level</strong> setting shows when it will try again.</p>
 :end
 </blockquote>
 
@@ -524,6 +538,9 @@ _(Watchdog trigger level)_:
 <?endfor;?>
 </select>
 <span id="watchdog_notice" class="orange-text" style="display:none; font-style:italic;"></span>
+<?foreach ($watchdogBackoff as $backoffLine):?>
+<br><span class="orange-text" style="font-style:italic;"><i class="fa fa-info-circle"></i> <?=$backoffLine?></span>
+<?endforeach;?>
 
 <blockquote class="inline_help">
 :mover_tune_watchdogthreshold_plug:

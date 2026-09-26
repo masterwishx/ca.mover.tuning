@@ -9,6 +9,7 @@
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s Dateien und %s Ordner mit einer Größe von %s konnten vom Mover Tuning Plugin nicht verschoben/synchronisiert werden.
 All community developers=Alle Entwickler der Community
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s Dateien und %s Ordner wurden verschoben/synchronisiert, aber rsync hat dabei Fehler gemeldet. Bitte das Mover‑Tuning‑Protokoll prüfen.
+%s is still at %s after the last watchdog run, so what is left cannot be moved now Next try at %s, or sooner if it reaches %s=%s ist nach dem letzten Watchdog-Lauf noch zu %s belegt, der Rest lässt sich derzeit nicht verschieben. Nächster Versuch um %s, oder früher, wenn %s erreicht werden.
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
 Array → Cache=Speicherverbund → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien und %s Ordner mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
@@ -192,7 +193,8 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :mover_tune_watchdog_plug:
 <p>Prüft alle 5 Minuten, ob der Primärspeicher (<em>Cache</em>) einer cache:<strong>yes</strong>-Freigabe die <strong>Auslöseschwelle des Watchdogs</strong> erreicht hat. Ist das der Fall, startet er Mover Tuning mit allen Einstellungen und Filtern zwischen den geplanten Läufen.</p>
 <p>Er ist ein Sicherheitsnetz neben dem Zeitplan, kein Ersatz dafür. Ein von ihm gestarteter Lauf macht alles, was ein geplanter Lauf macht, aber erst, wenn der Pool die Auslöseschwelle erreicht. Darunter verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
-<p>Er startet höchstens einen Lauf pro Stunde, sendet dabei eine Benachrichtigung und beachtet die Einstellung zur Paritätsprüfung. Unterhalb der Auslöseschwelle dauert eine Prüfung wenige Millisekunden und tut sonst nichts.</p>
+<p>Er startet höchstens einen Lauf pro Stunde und Pool, sendet dabei eine Benachrichtigung und beachtet die Einstellung zur Paritätsprüfung. Unterhalb der Auslöseschwelle dauert eine Prüfung wenige Millisekunden und tut sonst nichts.</p>
+<p>Liegt der Pool nach einem Lauf noch auf oder über der Auslöseschwelle, lässt sich der Rest derzeit nicht verschieben: Daten von cache:<strong>only</strong>- oder cache:<strong>prefer</strong>-Freigaben oder Dateien, die die Filter zurückhalten. Der Watchdog wartet dann vor jedem neuen Versuch doppelt so lange, höchstens einen Tag, ohne Benachrichtigung, und versucht es früher, sobald der Pool um 5 Punkte wächst. Die Einstellung <strong>Auslöseschwelle des Watchdogs</strong> zeigt, wann er es erneut versucht.</p>
 :end
 
 :mover_tune_watchdogthreshold_plug:

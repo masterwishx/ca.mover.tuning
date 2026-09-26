@@ -8,6 +8,7 @@
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s fichiers et %s dossiers représentant %s n’ont pas pu être déplacés/synchronisés par le plugin Mover Tuning.
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s fichiers et %s dossiers ont été déplacés/synchronisés, mais rsync a signalé des erreurs les concernant. Consultez le journal de Mover Tuning.
+%s is still at %s after the last watchdog run, so what is left cannot be moved now Next try at %s, or sooner if it reaches %s=%s est encore rempli à %s après la dernière exécution de la surveillance : ce qui reste ne peut pas être déplacé pour l’instant. Prochain essai à %s, ou plus tôt s’il atteint %s.
 All community developers=Tous les développeurs de la communauté
 Allow force mover schedule to run during a parity checkrebuild=Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité
 Array → Cache=Array → Cache
@@ -192,7 +193,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_watchdog_plug:
 <p>Vérifie toutes les 5 minutes si le pool primaire (<em>cache</em>) d’un partage cache:<strong>yes</strong> a atteint le <strong>seuil de déclenchement de la surveillance</strong>. Si c’est le cas, elle lance Mover Tuning, avec tous ses réglages et filtres, entre les exécutions planifiées.</p>
 <p>C’est un filet de sécurité à côté de la planification, pas un remplacement. Une exécution qu’elle lance fait tout ce que fait une exécution planifiée, mais seulement une fois le seuil de déclenchement atteint. En dessous, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
-<p>Elle lance au plus une exécution par heure, envoie alors une notification et respecte le réglage du contrôle de parité. Sous le seuil de déclenchement, une vérification prend quelques millisecondes et ne fait rien d’autre.</p>
+<p>Elle lance au plus une exécution par heure et par pool, envoie alors une notification et respecte le réglage du contrôle de parité. Sous le seuil de déclenchement, une vérification prend quelques millisecondes et ne fait rien d’autre.</p>
+<p>Si une exécution laisse le pool au niveau du seuil de déclenchement ou au-dessus, ce qui reste ne peut pas être déplacé pour l’instant : données de partages cache:<strong>only</strong> ou cache:<strong>prefer</strong>, ou fichiers retenus par les filtres. La surveillance attend alors deux fois plus longtemps avant chaque nouvel essai, un jour au plus, sans notification, et réessaie plus tôt dès que le pool gagne 5 points. Le réglage <strong>Seuil de déclenchement de la surveillance</strong> indique quand elle réessaiera.</p>
 :end
 
 :mover_tune_watchdogthreshold_plug:

@@ -7,6 +7,7 @@
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=Mover Tuning 插件未能移动/同步 %s 个文件和 %s 个文件夹，共 %s。
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s 个文件和 %s 个文件夹已移动/同步，但 rsync 报告了错误。请查看 Mover Tuning 日志。
+%s is still at %s after the last watchdog run, so what is left cannot be moved now Next try at %s, or sooner if it reaches %s=上次看门狗运行后，%s 仍已使用 %s，剩余内容目前无法移动。下次尝试时间为 %s；如果达到 %s，会提前尝试。
 All community developers=所有社区开发者
 Allow force mover schedule to run during a parity checkrebuild=允许强制移动计划在奇偶校验/重建期间运行
 Array → Cache=阵列 → 缓存
@@ -191,7 +192,8 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :mover_tune_watchdog_plug:
 <p>每 5 分钟检查一次 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池是否达到<strong>看门狗触发阈值</strong>。如果达到，就在按计划运行之间启动 Mover Tuning，并应用其全部设置和过滤器。</p>
 <p>它是计划之外的安全保障，而不是计划的替代。它启动的运行会执行计划运行的全部操作，但只在存储池达到触发阈值时才启动。低于该阈值时，只有按计划运行才会将文件移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡或按年龄移动文件。</p>
-<p>它每小时最多启动一次运行，启动时发送一条通知，并遵循奇偶校验设置。低于触发阈值时，每次检查只需几毫秒，不做其他任何事。</p>
+<p>它每个存储池每小时最多启动一次运行，启动时发送一条通知，并遵循奇偶校验设置。低于触发阈值时，每次检查只需几毫秒，不做其他任何事。</p>
+<p>如果运行后存储池仍达到或高于触发阈值，说明剩余内容目前无法移动：cache:<strong>only</strong> 或 cache:<strong>prefer</strong> 共享的数据，或被过滤器保留的文件。看门狗随后每次重试前等待的时间加倍，最长一天，不发送通知；存储池增长 5 个百分点后会提前重试。<strong>看门狗触发阈值</strong>设置处会显示下次重试的时间。</p>
 :end
 
 :mover_tune_watchdogthreshold_plug:
