@@ -35,7 +35,7 @@ if ($cfg['watchdog'] === "yes" && $watchdogStates !== false) {
       continue;
     }
     $after = (int)($state['after'] ?? 0);
-    $watchdogBackoff[] = sprintf(_('%s is still at %s after the last watchdog run, so what is left cannot be moved now. Next try at %s, or sooner if it reaches %s.'), htmlspecialchars(substr($stateFile, strlen("/var/run/mover.watchdog."))), "$after%", my_time((int)($state['next'] ?? 0)), ($after + 5) . "%");
+    $watchdogBackoff[] = sprintf(_('Backing off: %s still %s after last run. Next try %s, or at %s.'), htmlspecialchars(substr($stateFile, strlen("/var/run/mover.watchdog."))), "$after%", my_time((int)($state['next'] ?? 0)), ($after + 5) . "%");
   }
 }
 $om = $movingSaved + 5;
@@ -520,13 +520,13 @@ _(Cache watchdog)_:
 <?=mk_option($cfg['watchdog'],"no",_('No'))?>
 <?=mk_option($cfg['watchdog'],"yes",_('Yes'))?>
 </select>
-<span id="watchdog_schedule_warning" class="orange-text" style="display:none; font-style:italic;"><i class="fa fa-warning"></i> _(The schedule is disabled, so runs start only when the pool reaches the watchdog trigger level. Below it, no run moves files back to the pool, syncs, rebalances or moves files by age.)_</span>
+<span id="watchdog_schedule_warning" class="orange-text" style="display:none; font-style:italic;"><i class="fa fa-warning"></i> _(Schedule disabled: Mover Tuning only runs when the pool reaches the watchdog trigger level.)_</span>
 
 <blockquote class="inline_help">
 :mover_tune_watchdog_plug:
 <p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It follows the parity check setting.</p>
 <p>It is a safety net, not a replacement for the schedule: below the trigger level, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
-<p>If a run cannot bring the pool below the trigger level, the watchdog waits longer before each retry, up to a day, and shows when under <strong>Watchdog trigger level</strong>.</p>
+<p>If a run can't bring the pool below the trigger level, the watchdog waits longer before its next run: 2 h, then 4 h, 8 h … up to 24 h. It resets once the pool drops below the trigger level.</p>
 :end
 </blockquote>
 

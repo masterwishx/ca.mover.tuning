@@ -7,11 +7,11 @@
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=Mover Tuning 插件未能移动/同步 %s 个文件和 %s 个文件夹，共 %s。
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s 个文件和 %s 个文件夹已移动/同步，但 rsync 报告了错误。请查看 Mover Tuning 日志。
-%s is still at %s after the last watchdog run, so what is left cannot be moved now Next try at %s, or sooner if it reaches %s=上次看门狗运行后，%s 仍已使用 %s，剩余内容目前无法移动。下次尝试时间为 %s；如果达到 %s，会提前尝试。
 All community developers=所有社区开发者
 Allow force mover schedule to run during a parity checkrebuild=允许强制移动计划在奇偶校验/重建期间运行
 Array → Cache=阵列 → 缓存
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件已成功移动/同步 %s 个文件和 %s 个文件夹，共 %s。耗时：%s
+Backing off %s still %s after last run Next try %s, or at %s=暂缓：上次运行后 %s 仍为 %s。下次尝试 %s，或达到 %s 时。
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=继续之前，请点击选项名称或按 F1 查看所有设置的详细说明。
 by=作者
 Cache disk not enabled=缓存磁盘未启用
@@ -122,6 +122,7 @@ Resynchronize all Primary files to Secondary=重新同步所有主存储文件�
 Rsync=Rsync
 Run Mover Tuning=运行 Mover Tuning…
 Run once=运行一次
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=计划已禁用：只有存储池达到看门狗触发阈值时，Mover Tuning 才会运行。
 Script to run after mover No checks, always runs=Mover 后置脚本（总是执行）
 Script to run before mover No checks, always runs=Mover 前置脚本（总是执行）
 Share size calculation=共享大小计算
@@ -142,7 +143,6 @@ TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=�
 Thank you for using this plugin=感谢使用本插件。
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=已保存的释放阈值为 %1，高于移动阈值 %2。Mover 在 %2 时开始、在 %1 时停止，因此存储池使用率介于两者之间时不会移动任何文件。此页面现在显示 %3，保存后将使用该值。
 The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=已保存的全部移动阈值为 %1，不高于移动阈值 %2。在达到移动阈值之前，cache:yes 共享上的所有文件都会被移动，并忽略跳过列表和过滤器。此页面现在显示 %3，保存后将使用该值。
-The schedule is disabled, so runs start only when the pool reaches the watchdog trigger level Below it, no run moves files back to the pool, syncs, rebalances or moves files by age=计划已禁用，因此只有存储池达到看门狗触发阈值时才会启动运行。低于该阈值时，不会有任何运行将文件移回存储池、同步、重新平衡或按年龄移动文件。
 Top Folder=顶层文件夹
 Unraid mover=Unraid Mover
 Unraid Mover schedule is currently enabled=Unraid Mover 计划当前为**启用**状态
@@ -192,7 +192,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :mover_tune_watchdog_plug:
 <p>每 5 分钟检查一次每个 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池。达到<strong>看门狗触发阈值</strong>时，启动一次正常的 Mover Tuning 运行，每个存储池每小时最多一次，并发送一条通知；遵循奇偶校验设置。</p>
 <p>它是安全保障，而不是计划的替代：低于触发阈值时，只有按计划运行才会将文件移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡或按年龄移动文件。</p>
-<p>如果一次运行无法让存储池降到触发阈值以下，看门狗每次重试前会等待更久，最长一天，并在<strong>看门狗触发阈值</strong>下方显示下次时间。</p>
+<p>如果一次运行无法让存储池降到触发阈值以下，看门狗会延长下次运行前的等待：2 小时，然后 4 小时、8 小时……最长 24 小时。存储池降到触发阈值以下后即重置。</p>
 :end
 
 :mover_tune_watchdogthreshold_plug:
