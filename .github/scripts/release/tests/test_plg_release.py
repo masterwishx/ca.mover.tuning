@@ -291,10 +291,24 @@ def test_decide_stops_on_a_release_tag_the_branch_does_not_have(tmp_path, decide
     tag_off_the_branch("2026.09.26")
     r, out = _run_decide(tmp_path, repo, "auto", gh)
     assert r.returncode != 0 and "mode" not in out
-    assert "master does not have 2026.09.26" in r.stderr and "stopped part way" in r.stderr
+    assert "gh release delete 2026.09.26 --cleanup-tag --yes" in r.stderr and "stopped part way" in r.stderr
     _git(repo, "merge", "-q", "--ff-only", "2026.09.26")
     tag_off_the_branch("2026.09.27")
     assert _run_decide(tmp_path, repo, "auto", gh)[1]["mode"] == "pr", "one release tag on the branch is enough"
+
+
+def test_decide_releases_when_only_the_other_channels_tag_contains_the_merge(tmp_path, decide_repo):
+    """master merged into beta before the stable cut ran: the beta release's tag contains the stable merge."""
+    repo, merged = decide_repo
+    _git(repo, "switch", "-q", "-c", "beta", "HEAD~2")
+    _git(repo, "merge", "-q", "--no-ff", "-m", "Merge branch 'master' into beta", "master")
+    _git(repo, "commit", "-q", "--allow-empty", "-m", "Merge pull request #9 from someone/release/beta")
+    _git(repo, "commit", "-q", "--allow-empty", "-m", "chore(release): 2026.09.26 [skip ci]")
+    _git(repo, "tag", "2026.09.26")
+    _git(repo, "switch", "-q", "master")
+    r, out = _run_decide(tmp_path, repo, "auto", f"echo '7 {merged}'")
+    assert r.returncode == 0, r.stderr
+    assert (out["mode"], out["pr_number"]) == ("release", "7")
 
 
 def test_decide_refreshes_the_pr_when_no_release_pr_is_due(tmp_path, decide_repo):

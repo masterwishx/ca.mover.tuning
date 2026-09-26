@@ -96,11 +96,15 @@ jobs:
             merged="${latest#* }"
             [ -n "$merged" ] && git merge-base --is-ancestor "$merged" "$3" 2>/dev/null || return 0
             released=$(git tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]*' --contains "$merged") || return 1
-            [ -n "$released" ] || { echo "${latest%% *}"; return 0; }
-            # The cut moves the branch last, so only a tag the branch has marks a finished release.
-            for tag in $released; do git merge-base --is-ancestor "$tag" "$3" && return 0; done
-            echo "::error::$2 does not have ${released//$'\n'/ }, which contains the merge of #${latest%% *}: a release run stopped part way. Delete what it published (gh release delete <tag> --cleanup-tag --yes, or git push --delete origin refs/tags/<tag> if it made no release), then run Release again." >&2
-            return 1
+            # The cut commits on the branch and moves it last: a tag the branch has is a finished release, one whose
+            # parent alone it has is this channel's cut that stopped part way, and any other is the other channel's.
+            for tag in $released; do git merge-base --is-ancestor "refs/tags/$tag" "$3" && return 0; done
+            for tag in $released; do
+              git merge-base --is-ancestor "refs/tags/$tag^" "$3" 2>/dev/null || continue
+              echo "::error::$tag contains the merge of #${latest%% *} but $2 does not have it: a release run stopped part way. Undo it with gh release delete $tag --cleanup-tag --yes (or git push --delete origin refs/tags/$tag if it made no release), then run Release again." >&2
+              return 1
+            done
+            echo "${latest%% *}"
           }
           mode="$MODE_IN"
           pr=""
