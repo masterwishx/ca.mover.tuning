@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- new: Files that are in use are now left where they are, with a new setting to move them anyway (off by default). (masterwishx - Thanks to chodeus for the PRs)
+- new: Added beta builds for early testing. Every release now shows how to roll back.
+- new: Added Simplified Chinese (thanks to RedCatJump for the translation), and updated German, French and Russian.
+- fix: Hardlinked files are now moved together.
+- fix: Folder moves no longer pick up files added after planning.
+- fix: Notifications now only show real failures.
+- fix: Forced moves follow the parity, priority and turbo write settings again.
+- fix: The mover scripts are executable again after install.
+- new: Add an opt-in cache watchdog that monitors cache and starts a run when the pool fills
+
 ## 2026.09.19
 
 - new: Added full localization across the plugin, including mover-tuning settings, scheduling, share options, notifications, accessibility text, and command-line guidance. (masterwishx - Thanks to chodeus for the PRs)
