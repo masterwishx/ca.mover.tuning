@@ -12,6 +12,8 @@ $bash = $mode === "bash";
 $args = [];
 // the forced-move schedule (updateCron.php make_cron) calls: mover.php force start
 $force = $mode === "force";
+// the per-share Move (moveShareNow.php) calls: mover.php share, with the share name in MOVER_SHARE
+$share = $mode === "share";
 
 // Read-only status check (no state change, no CSRF risk)
 if (!empty($_GET['check'])) {
@@ -93,8 +95,17 @@ function setWriteMethod($method)
     }
 }
 
+// with_scripts reads the before and after scripts from the environment, so the command line stays constant
+function scriptEnv()
+{
+    global $cfg;
+
+    putenv("MT_BEFORE_SCRIPT=" . ($cfg['beforeScript'] ?? ""));
+    putenv("MT_AFTER_SCRIPT=" . ($cfg['afterScript'] ?? ""));
+}
+
 // The forced move runs Unraid's own mover on its own schedule, without the plugin's filters or the Mover Tuning
-// schedule and parity settings. Its own parity option, the two priorities and turbo write apply to it.
+// schedule and parity settings. Its own parity option, the two priorities, turbo write and the scripts apply to it.
 function forceMove()
 {
     global $vars, $cfg;
@@ -121,12 +132,30 @@ function forceMove()
         setWriteMethod("1");
     }
     logger("Starting forced move (Unraid mover)");
+    scriptEnv();
     // cron runs this under the CLI, where runMover blocks until the move ends; the restore below relies on that
-    runMover("ionice $ioLevel nice -n $niceLevel $mover start");
+    runMover("ionice $ioLevel nice -n $niceLevel /usr/local/emhttp/plugins/ca.mover.tuning/with_scripts $mover start");
     if ($turbo === true) {
         logger("Restoring original turbo write mode");
         setWriteMethod($writeMethod);
     }
+}
+
+// The per-share Move runs share_mover with the two priorities and the scripts. Started by hand, it never waits for a
+// parity check. The name comes from the environment and reaches the shell only as "$MOVER_SHARE", never parsed.
+function moveShare()
+{
+    $shareName = getenv("MOVER_SHARE");
+    $cfgs = glob("/boot/config/shares/*.cfg");
+    $shares = $cfgs === false ? [] : array_map(fn($cfg) => basename($cfg, ".cfg"), $cfgs);
+    if (is_string($shareName) === false || in_array($shareName, $shares, true) === false) {
+        logger("Refusing the per-share move: no such share");
+        return;
+    }
+    [$niceLevel, $ioLevel] = moverPriority();
+    scriptEnv();
+    logger("Starting the per-share move of $shareName");
+    runMover("ionice $ioLevel nice -n $niceLevel /usr/local/emhttp/plugins/ca.mover.tuning/with_scripts /usr/local/emhttp/plugins/ca.mover.tuning/share_mover \"\$MOVER_SHARE\"");
 }
 
 //function startMover($options = "start")
@@ -250,13 +279,24 @@ function startMover()
     } else {
         //exec("echo 'Running from button' >> /var/log/syslog");
         //Default "move now" button has been hit.
-        logger("ionice $ioLevel nice -n $niceLevel $mover_str $options");
-        runMover("ionice $ioLevel nice -n $niceLevel $mover_str $options");
+        // a start of the original mover gets the before and after scripts too, as a Mover Tuning run does
+        $scripts = "";
+        if ($options === "start") {
+            scriptEnv();
+            $scripts = "/usr/local/emhttp/plugins/ca.mover.tuning/with_scripts ";
+        }
+        logger("ionice $ioLevel nice -n $niceLevel $scripts$mover_str $options");
+        runMover("ionice $ioLevel nice -n $niceLevel $scripts$mover_str $options");
     }
 }
 
 if ($force === true) {
     forceMove();
+    exit();
+}
+
+if ($share === true) {
+    moveShare();
     exit();
 }
 
@@ -266,8 +306,9 @@ if ($cron && $cfg['moverDisabled'] == 'yes') {
     exit();
 }
 
-if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
-    logger("Parity Check / rebuild in progress.  Not running mover");
+// only a scheduled run waits for a parity check or rebuild: Move now, the cache watchdog and the CLI always run
+if ($cron === true && $cfg['parity'] === 'no' && empty($vars['mdResyncPos']) === false) {
+    logger("Parity Check / rebuild in progress.  Not running scheduled mover");
     exit();
 }
 

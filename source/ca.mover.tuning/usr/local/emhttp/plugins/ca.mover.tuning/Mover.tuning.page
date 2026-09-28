@@ -558,7 +558,7 @@ _(Disable Mover running on a schedule)_:
 <p>You will only be able to run mover by <strong>manually</strong> invoking it:</p>
 <ul>
   <li>Press the <strong>“Move now”</strong> button in <strong>Mover Tuning - Options</strong>.</li>
-  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong>.</li>
+  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong> (without the priorities for the mover process and disk I/O).</li>
 </ul>
 <p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
@@ -587,7 +587,7 @@ _(Cache watchdog)_:
 
 <blockquote class="inline_help">
 :mover_tune_watchdog_plug:
-<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It follows the parity check setting.</p>
+<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It also runs during a parity check or disk rebuild.</p>
 <p>It is a safety net, not a replacement for the schedule: below the trigger level, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
 <p>If a run can't bring the pool below the trigger level, the watchdog waits longer before its next run: 2 h, then 4 h, 8 h … up to 24 h. It resets once the pool drops below the trigger level.</p>
 :end
@@ -815,7 +815,7 @@ _(Let scheduled mover run during a parity check / rebuild)_:
 
 :mover_tune_parity_plug:
 
-> If a parity check or disk rebuild is in progress, this will prevent mover from running.
+> With <strong>No</strong>, a scheduled run that falls during a parity check or disk rebuild is skipped until its next scheduled time. Runs started by hand (<strong>Move now</strong>, the per-share <strong>Move</strong>, the CLI) and the cache watchdog still run.
 
 :end
 

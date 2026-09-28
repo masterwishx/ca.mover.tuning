@@ -75,8 +75,8 @@ Logs parent folder for Mover Tuning plugin=Dossier parent des journaux du plugin
 Low=Faible
 Maintainers=Mainteneurs
 make those plugins with ❤️ and a lot of ☕=créent ces plugins avec ❤️ et beaucoup de ☕
-Move ALL files from current pool wont use mover settings=Déplacer **TOUS** les fichiers du pool actuel (sans utiliser les paramètres du mover)
-Move ALL files to current pool wont use mover settings=Déplacer **TOUS** les fichiers vers le pool actuel (sans utiliser les paramètres du mover)
+Move ALL files from current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers du pool actuel (en ignorant les filtres et les seuils)
+Move ALL files to current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers vers le pool actuel (en ignorant les filtres et les seuils)
 Move All from Primary->Secondary cacheyes shares pool percentage=Déplacer tout depuis Primaire→Secondaire (cache:yes) selon le pourcentage du pool
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Déplacer tout depuis Primaire→Secondaire (cache:yes) lorsque le disque dépasse un certain pourcentage
 Move All from Primary->Secondary shares pool percentage=Déplacer tout depuis Primaire→Secondaire selon le pourcentage du pool
@@ -184,7 +184,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p>Vous ne pourrez exécuter le mover que de manière <strong>manuelle</strong> :</p>
 <ul>
   <li>Appuyez sur le bouton <strong>« Déplacer maintenant »</strong> dans <strong>Mover Tuning – Options</strong>.</li>
-  <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong>.</li>
+  <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong> (sans les priorités du processus du mover et des E/S disque).</li>
 </ul>
 <p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
 :end
@@ -201,7 +201,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_watchdog_plug:
-<p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle respecte le réglage du contrôle de parité.</p>
+<p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle s’exécute aussi pendant une vérification de parité ou une reconstruction de disque.</p>
 <p>C’est un filet de sécurité, pas un remplacement de la planification : sous le seuil de déclenchement, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
 <p>Si une exécution ne peut pas ramener le pool sous le seuil de déclenchement, la surveillance attend plus longtemps avant la suivante : 2 h, puis 4 h, 8 h … jusqu’à 24 h. Cela se réinitialise dès que le pool repasse sous le seuil de déclenchement.</p>
 :end
@@ -284,7 +284,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_parity_plug:
-> Si une vérification de parité ou une reconstruction de disque est en cours, cela empêchera le mover de s’exécuter.
+> Avec <strong>Non</strong>, une exécution programmée qui tombe pendant une vérification de parité ou une reconstruction de disque est ignorée jusqu’à sa prochaine heure programmée. Les exécutions lancées à la main (<strong>Déplacer maintenant</strong>, le déplacement d’un partage, la CLI) et la surveillance du cache s’exécutent quand même.
 :end
 
 :mover_tune_moverio_plug:
@@ -529,7 +529,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant les filtres et les seuils. Les priorités du processus du mover et des E/S disque ainsi que les scripts avant et après le mover s’appliquent quand même.
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -545,5 +545,5 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant les filtres et les seuils. Les priorités du processus du mover et des E/S disque ainsi que les scripts avant et après le mover s’appliquent quand même.
 :end

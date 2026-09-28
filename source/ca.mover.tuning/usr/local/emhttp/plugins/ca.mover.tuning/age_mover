@@ -1454,7 +1454,7 @@ createFilteredFilelist() {
                 FINDSTR="$FINDSTR -size +${SIZE}M"
             fi
         fi
-        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY|$((SYNC_SIZE * 1048576))|$AGE_WINDOW|$((MOVE_MIN * 1048576))"$'\n'
+        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY|$((SYNC_SIZE * 1048576))|$AGE_WINDOW|$((MOVE_MIN * 1048576))|$([ "$MOVE_ALL" = "yes" ] && echo 1 || echo 0)"$'\n'
 
         # Add Ignore Hidden Files to find string
         if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
@@ -1831,12 +1831,12 @@ decideMoveActions() {
             # a cache:yes share below its moving threshold keeps its primary files; a size limit keeps larger files unsynced, never unmoved; an age
             # filter held younger files back, so the share syncs from that many days before lastCacheSync; a planner move size keeps smaller files
             n = split(ENVIRON["SHARE_PLAN_RULES"], rules, "\n")
-            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)\|([0-9]+)\|([0-9]+)$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0; sync_window[r[1]] = r[4] * 86400; move_min[r[1]] = r[5] + 0 }
+            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)\|([0-9]+)\|([0-9]+)\|([01])$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0; sync_window[r[1]] = r[4] * 86400; move_min[r[1]] = r[5] + 0; move_all[r[1]] = r[6] + 0 }
 
             # the first pass can change a plan only when shares keep, sync, limit or date their syncs differently; otherwise the list is read once
             for (share in keep_primary) {
                 share_sync(share)
-                sig = keep_primary[share] "|" sync_max[share] "|" sync_window[share] "|" sync_on[share] "|" sync_mark[share] "|" move_min[share]
+                sig = keep_primary[share] "|" sync_max[share] "|" sync_window[share] "|" sync_on[share] "|" sync_mark[share] "|" move_min[share] "|" move_all[share]
                 if (first_sig != "" && sig != first_sig) groups = 1
                 first_sig = sig
             }
@@ -1938,7 +1938,7 @@ decideMoveActions() {
                 if ($10 > 1 && (key in group_moves)) {
                     action = (group_moves[key] && !held) ? "move from primary" : "keep on primary"
                 } else {
-                    action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && !keep && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
+                    action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && !keep && ((move_all[$3] || remaining_bytes_used[$1] >= $6) && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
                     if ($10 > 1) group_moves[key] = (action == "move from primary")
                 }
 
@@ -3171,14 +3171,11 @@ watchdog_set() {
 # Cache watchdog, run by cron every 5 minutes (updateCron.php): starts a run between scheduled runs when the
 # primary pool of a cache:yes share reaches watchdogThreshold. Must stay silent and cheap when there is nothing to do.
 watchdog() {
-    local threshold global moving override share pool level parity state now next after cooldown first=""
+    local threshold global moving override share pool level state now next after cooldown first=""
     local -A pools=() used=() due=() backoff=()
     [ "$(grep '^watchdog=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = "yes" ] || exit 0
     grep -qs '^mdState="STARTED"' /var/local/emhttp/var.ini || exit 0
     [ -f "$PIDFILE" ] && exit 0
-    # mirrors mover.php's parity rule so a parity check does not bring a refused launch every 5 minutes
-    parity=$(grep '^parity=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
-    [ "${parity:-no}" = no ] && grep -qs '^mdResyncPos="[1-9]' /var/local/emhttp/var.ini && exit 0
     threshold=$(grep '^watchdogThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
     [[ "$threshold" =~ ^[0-9]+$ ]] || threshold=90
     global=$(grep '^movingThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -3228,7 +3225,7 @@ watchdog() {
         fi
     done
     [ -n "$first" ] || exit 0
-    # mover.php decides whether the run may start (parity check, a run already active), so announce and start the
+    # mover.php decides whether the run may start (a run already active; a parity check stops only scheduled runs), so announce and start the
     # cooldown only once this launch's run holds the pid file, as mover.php's own runMover waits for it
     /usr/local/emhttp/plugins/ca.mover.tuning/mover.php watchdog start &
     local run=$! i started=no

@@ -74,8 +74,8 @@ Logs parent folder for Mover Tuning plugin=日志文件保存路径
 Low=低
 Maintainers=维护者
 make those plugins with ❤️ and a lot of ☕=用 ❤️（和很多 ☕）制作了这些插件。
-Move ALL files from current pool wont use mover settings=从当前存储池移出**所有**文件（不使用 Mover 设置）
-Move ALL files to current pool wont use mover settings=将**所有**文件移入当前存储池（不使用 Mover 设置）
+Move ALL files from current pool ignores filters and thresholds=从当前存储池移出**所有**文件（无视过滤条件和阈值）
+Move ALL files to current pool ignores filters and thresholds=将**所有**文件移入当前存储池（无视过滤条件和阈值）
 Move All from Primary->Secondary cacheyes shares pool percentage=主存储->次存储（cache:yes）共享全部移动的存储池百分比
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=当磁盘使用率超过一定百分比时，将主存储->次存储（cache:yes）共享全部移动
 Move All from Primary->Secondary shares pool percentage=主存储->次存储共享全部移动的存储池百分比
@@ -183,7 +183,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 <p>此时只能<strong>手动</strong>运行 Mover：</p>
 <ul>
   <li>在 <strong>Mover Tuning - 选项</strong>中点击 <strong>“立即移动”</strong> 按钮。</li>
-  <li>在<strong>命令行</strong>中运行 <strong>“age_mover start”</strong>。</li>
+  <li>在<strong>命令行</strong>中运行 <strong>“age_mover start”</strong>（不应用 Mover 进程优先级和磁盘 I/O 优先级）。</li>
 </ul>
 <p><strong>强制移动</strong>仍会按其自己的计划运行：要一并停止，请将<strong>显示高级设置</strong>设为<strong>是</strong>，再将<strong>定时强制移动所有文件</strong>设为<strong>否</strong>。</p>
 :end
@@ -200,7 +200,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_watchdog_plug:
-<p>每 5 分钟检查一次每个 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池。达到<strong>看门狗触发阈值</strong>时，启动一次正常的 Mover Tuning 运行，每个存储池每小时最多一次，并发送一条通知；遵循奇偶校验设置。</p>
+<p>每 5 分钟检查一次每个 cache:<strong>yes</strong> 共享的主存储（<em>缓存</em>）池。达到<strong>看门狗触发阈值</strong>时，启动一次正常的 Mover Tuning 运行，每个存储池每小时最多一次，并发送一条通知；奇偶校验或磁盘重建期间也会运行。</p>
 <p>它是安全保障，而不是计划的替代：低于触发阈值时，只有按计划运行才会将文件移回存储池（cache:<strong>prefer</strong>）、同步、重新平衡或按年龄移动文件。</p>
 <p>如果一次运行无法让存储池降到触发阈值以下，看门狗会延长下次运行前的等待：2 小时，然后 4 小时、8 小时……最长 24 小时。存储池降到触发阈值以下后即重置。</p>
 :end
@@ -282,7 +282,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_parity_plug:
-> 如果正在进行奇偶校验检查或磁盘重建，是否允许 Mover 运行。
+> 设为<strong>否</strong>时，遇到奇偶校验或磁盘重建的计划运行会被跳过，直到下一次计划时间。手动启动的运行（<strong>立即移动</strong>、单个共享的移动、命令行）和缓存看门狗照常运行。
 :end
 
 :mover_tune_moverio_plug:
@@ -520,7 +520,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> 点击 **立即移动** 按钮将专门为此共享调用 **Unraid Mover**。它会把整个共享从 **_次存储->主存储_** 移动，无视现有的 Mover 设置。
+> 点击 **立即移动** 按钮将专门为此共享调用 **Unraid Mover**。它会把整个共享从 **_次存储->主存储_** 移动，无视过滤条件和阈值。Mover 进程优先级、磁盘 I/O 优先级以及前置和后置脚本仍然生效。
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -536,5 +536,5 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> 点击 **立即移动** 按钮将专门为此共享调用 **Unraid Mover**。它会把整个共享从 **_主存储->次存储_** 移动，无视现有的 Mover 设置。
+> 点击 **立即移动** 按钮将专门为此共享调用 **Unraid Mover**。它会把整个共享从 **_主存储->次存储_** 移动，无视过滤条件和阈值。Mover 进程优先级、磁盘 I/O 优先级以及前置和后置脚本仍然生效。
 :end

@@ -75,8 +75,8 @@ Logs parent folder for Mover Tuning plugin=Übergeordneter Ordner für Protokoll
 Low=Niedrig
 Maintainers=Betreuer
 make those plugins with ❤️ and a lot of ☕=machen diese Plugins mit ❤️ und viel ☕
-Move ALL files from current pool wont use mover settings=ALLE Dateien aus dem aktuellen Pool verschieben (Einstellungen der Datenverschiebung werden nicht verwendet)
-Move ALL files to current pool wont use mover settings=ALLE Dateien in den aktuellen Pool verschieben (Einstellungen der Datenverschiebung werden nicht verwendet)
+Move ALL files from current pool ignores filters and thresholds=ALLE Dateien aus dem aktuellen Pool verschieben (ohne Filter und Schwellenwerte)
+Move ALL files to current pool ignores filters and thresholds=ALLE Dateien in den aktuellen Pool verschieben (ohne Filter und Schwellenwerte)
 Move All from Primary->Secondary cacheyes shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben (cache:yes) – Pool‑Prozent
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben (cache:yes), wenn der Füllstand über einem bestimmten Wert liegt
 Move All from Primary->Secondary shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben – Pool‑Prozent
@@ -184,7 +184,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p>Du kannst die Datenverschiebung dann nur noch <strong>manuell</strong> starten:</p>
 <ul>
   <li>Klicke auf die Schaltfläche <strong>„Jetzt verschieben“</strong> in <strong>Mover Tuning – Optionen</strong>.</li>
-  <li>Führe <strong>„age_mover start“</strong> in der <strong>CLI</strong> aus.</li>
+  <li>Führe <strong>„age_mover start“</strong> in der <strong>CLI</strong> aus (ohne die Prioritäten für den Datenverschiebungs‑Prozess und Datenträger‑I/O).</li>
 </ul>
 <p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
 :end
@@ -201,7 +201,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_watchdog_plug:
-<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er beachtet die Einstellung zur Paritätsprüfung.</p>
+<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er läuft auch während einer Paritätsprüfung oder Wiederherstellung.</p>
 <p>Er ist ein Sicherheitsnetz, kein Ersatz für den Zeitplan: Unterhalb der Auslöseschwelle verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
 <p>Kann ein Lauf den Pool nicht unter die Auslöseschwelle bringen, wartet der Watchdog vor dem nächsten Lauf länger: 2 h, dann 4 h, 8 h … bis 24 h. Das setzt sich zurück, sobald der Pool unter die Auslöseschwelle fällt.</p>
 :end
@@ -283,7 +283,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_parity_plug:
-> Wenn eine Paritätsprüfung oder ein Wiederherstellungsvorgang läuft, wird die Datenverschiebung verhindert.
+> Bei <strong>Nein</strong> wird ein geplanter Lauf, der in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen. Von Hand gestartete Läufe (<strong>Jetzt verschieben</strong>, das Verschieben einer einzelnen Freigabe, die CLI) und der Cache-Watchdog laufen trotzdem.
 :end
 
 :mover_tune_moverio_plug:
@@ -522,7 +522,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Secondary→Primary_**, unabhängig von bestehenden Mover‑Einstellungen.
+> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Secondary→Primary_**, unabhängig von Filtern und Schwellenwerten. Die Prioritäten für den Datenverschiebungs‑Prozess und Datenträger‑I/O sowie die Skripte vor und nach der Datenverschiebung gelten trotzdem.
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -538,5 +538,5 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Primary→Secondary_**, unabhängig von bestehenden Mover‑Einstellungen.
+> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Primary→Secondary_**, unabhängig von Filtern und Schwellenwerten. Die Prioritäten für den Datenverschiebungs‑Prozess und Datenträger‑I/O sowie die Skripte vor und nach der Datenverschiebung gelten trotzdem.
 :end

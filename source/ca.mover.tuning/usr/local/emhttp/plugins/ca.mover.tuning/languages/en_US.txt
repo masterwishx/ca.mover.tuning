@@ -77,8 +77,8 @@ Logs parent folder for Mover Tuning plugin=
 Low=
 Maintainers=
 make those plugins with ❤️ and a lot of ☕=make those plugins with ❤️ (and a lot of ☕).
-Move ALL files from current pool wont use mover settings=Move **ALL** files from current pool (won't use mover settings)
-Move ALL files to current pool wont use mover settings=Move **ALL** files to current pool (won't use mover settings)
+Move ALL files from current pool ignores filters and thresholds=Move **ALL** files from current pool (ignores filters and thresholds)
+Move ALL files to current pool ignores filters and thresholds=Move **ALL** files to current pool (ignores filters and thresholds)
 Move All from Primary->Secondary cacheyes shares pool percentage=Move All from Primary->Secondary (cache:yes) shares pool percentage
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Move All from Primary->Secondary (cache:yes) shares when disk is above a certain percentage
 Move All from Primary->Secondary shares pool percentage=
@@ -186,7 +186,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 <p>You will only be able to run mover by <strong>manually</strong> invoking it:</p>
 <ul>
   <li>Press the <strong>“Move now”</strong> button in <strong>Mover Tuning - Options</strong>.</li>
-  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong>.</li>
+  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong> (without the priorities for the mover process and disk I/O).</li>
 </ul>
 <p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
@@ -203,7 +203,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_watchdog_plug:
-<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It follows the parity check setting.</p>
+<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It also runs during a parity check or disk rebuild.</p>
 <p>It is a safety net, not a replacement for the schedule: below the trigger level, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
 <p>If a run can't bring the pool below the trigger level, the watchdog waits longer before its next run: 2 h, then 4 h, 8 h … up to 24 h. It resets once the pool drops below the trigger level.</p>
 :end
@@ -285,7 +285,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_parity_plug:
-> If a parity check or disk rebuild is in progress, this will prevent mover from running.
+> With <strong>No</strong>, a scheduled run that falls during a parity check or disk rebuild is skipped until its next scheduled time. Runs started by hand (<strong>Move now</strong>, the per-share <strong>Move</strong>, the CLI) and the cache watchdog still run.
 :end
 
 :mover_tune_moverio_plug:
@@ -523,7 +523,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Secondary->Primary_** storage space, disregarding any existing mover settings.
+> Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Secondary->Primary_** storage space, disregarding the filters and thresholds. The priorities for the mover process and disk I/O and the before and after scripts still apply.
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -539,5 +539,5 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Primary->Secondary_** storage space, disregarding any existing mover settings.
+> Clicking the **Move Now** button will invoke the **unraid mover** specifically for this share. It will move the entire share **_Primary->Secondary_** storage space, disregarding the filters and thresholds. The priorities for the mover process and disk I/O and the before and after scripts still apply.
 :end
