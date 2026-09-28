@@ -347,7 +347,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_daysold_plug:
-> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto sets no minimum age: files move until the threshold is met.
 :end
 
 :mover_tune_moveorder_plug:
@@ -495,7 +495,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_share_daysold_plug:
-> Select the number of days old a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+> Select the number of days old a file has to be in order to move (Up To 1 year). Auto sets no minimum age: files move until the threshold is met.
 :end
 
 :mover_tune_share_sizef_plug:
