@@ -1267,6 +1267,7 @@ _(Clean empty ZFS datasets)_:
 <?=mk_option($cfg['cleanDatasets'],"no",_('No'))?>
 <?=mk_option($cfg['cleanDatasets'],"yes",_('Yes'))?>
 </select>
+<input type='hidden' name='cleanDatasets' value='no' disabled>
 
 :mover_tune_cleandatasets_plug:
 
@@ -1278,6 +1279,8 @@ _(Clean empty ZFS datasets)_:
 // age_mover destroys a dataset only after the Clean empty folders pass
 function toggleCleanDatasets(cleanFolders) {
   $('select[name="cleanDatasets"]').prop('disabled', cleanFolders === 'no');
+  // update.php keeps a key the form does not post, and a disabled select is not posted: post No instead
+  $('input[name="cleanDatasets"]').prop('disabled', cleanFolders !== 'no');
 }
 $(function() {
   toggleCleanDatasets($('select[name="cleanFolders"]').val());
