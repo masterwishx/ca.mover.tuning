@@ -112,7 +112,10 @@ function toggleAge(val) {
 var mtSyncOwnYes = <?=$syncOwnYes === true ? 'true' : 'false'?>;
 var mtSyncFollowsGlobal = <?=$syncFollowsGlobal === true ? 'true' : 'false'?>;
 function toggleResync() {
-  $('select[name="resynchronizeCache"]').prop('disabled', mtSyncOwnYes === false && ($('select[name="synchronizeCache"]').val() !== 'yes' || mtSyncFollowsGlobal === false));
+  var off = mtSyncOwnYes === false && ($('select[name="synchronizeCache"]').val() !== 'yes' || mtSyncFollowsGlobal === false);
+  $('select[name="resynchronizeCache"]').prop('disabled', off);
+  // update.php keeps a key the form does not post, and a disabled select is not posted: post No instead
+  $('input[name="resynchronizeCache"]').prop('disabled', !off);
 }
 
 function updateCron() {
@@ -1363,6 +1366,7 @@ _(Resynchronize all Primary files to Secondary)_:
 <?=mk_option($cfg['resynchronizeCache'],"run-once",_('Run once'))?>
 <?=mk_option($cfg['resynchronizeCache'],"yes",_('Yes'))?>
 </select>
+<input type='hidden' name='resynchronizeCache' value='no' disabled>
 
 <blockquote class="inline_help">
 :mover_tune_resynchronizecache_plug:
