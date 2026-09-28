@@ -454,7 +454,7 @@ _(Ignore All hidden files and directories)_:
   </span>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
-_(Move **ALL** files to current pool (won't use mover settings))_:
+_(Move **ALL** files to current pool (ignores filters and thresholds))_:
 : <span><input type="button" id="MoveShare" value="_(Move Now)_" onclick="moveShareNow()"></span>
 
 :mover_tune_share_moveshare_prefer_plug:
@@ -798,7 +798,7 @@ _(Synchronize Primary files to Secondary)_:
   </span>
 
 <div markdown="1" class="shade-<?=$display['theme']?>">
-_(Move **ALL** files from current pool (won't use mover settings))_:
+_(Move **ALL** files from current pool (ignores filters and thresholds))_:
 : <span><input type="button" id="MoveShare" value="_(Move Now)_" onclick="moveShareNow()"></span>
 
 :mover_tune_share_moveshare_yes_plug:
