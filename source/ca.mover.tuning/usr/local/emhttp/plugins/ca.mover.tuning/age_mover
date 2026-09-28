@@ -1885,8 +1885,8 @@ decideMoveActions() {
 
             # the sync size must judge every name of a hardlink group by its real size: the block below zeroes later names
             file_size = $8
-            # a hardlink group gets one keep-primary and one sync decision whatever share each name is in (first pass);
-            # the projection below still judges the names of each share apart
+            # a hardlink group gets one keep-primary and one sync decision whatever share each name is in (first pass),
+            # and its later names take the move decision of its first name (below)
             grouped = 0
             if (groups && $10 > 1) {
                 group = storage_pool "|" $10 "|" $11 "|" $5
@@ -1896,8 +1896,9 @@ decideMoveActions() {
 
             # Handle hardlinks
             if ($10 > 1) {
-                # inode numbers repeat across filesystems, so the disk or pool the file is on is part of its identity
-                key = $1 "|" $2 "|" $3 "|" storage_pool "|" $11
+                # inode numbers repeat across filesystems (on ZFS each share is one), so the identity is that of processTheMoves:
+                # storage, links, inode and time; the share is not part of it, as a group can have names in several shares
+                key = $1 "|" $2 "|" storage_pool "|" $10 "|" $11 "|" $5
                 if (key in group_view) {
                     $8 = 0
                 }
@@ -1932,8 +1933,14 @@ decideMoveActions() {
             # Take decision
             held = (full_path() in held_paths)
             if (storage_pool == $1) {
-                # Make decision to move or keep:
-                action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && !keep && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
+                # Make decision to move or keep; a group moves whole or not at all, so later names take the decision of its first name
+                # (the threshold of their share can differ), and processTheMoves refuses a split group
+                if ($10 > 1 && (key in group_moves)) {
+                    action = (group_moves[key] && !held) ? "move from primary" : "keep on primary"
+                } else {
+                    action = (($4 != "only" && $4 != "skipped" && $4 != "prefer") && ($4 == "yes" && !held && !keep && (remaining_bytes_used[$1] >= $6 && (AGE == -1 || AGE >= 0)))) ? "move from primary" : "keep on primary"
+                    if ($10 > 1) group_moves[key] = (action == "move from primary")
+                }
 
                 if (action == "keep on primary") {
                     source = storage_path
