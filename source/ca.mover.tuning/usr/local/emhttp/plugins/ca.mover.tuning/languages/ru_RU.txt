@@ -69,6 +69,7 @@ Ignore All hidden files and directories=Игнорировать все скры
 Ignore files and folders listed inside of a text file=Игнорировать файлы и каталоги, перечисленные в текстовом файле
 Ignore file types=Игнорировать типы файлов
 Invalid characters to block=Недопустимые символы для блокировки
+Largest first=Сначала самые большие
 Let scheduled mover run during a parity check rebuild=Разрешить запуск Mover по расписанию во время проверки/восстановления паритета
 Log Mover Tuning plugin actions=Журналировать действия плагина Mover Tuning
 Logs parent folder for Mover Tuning plugin=Родительская папка журналов для плагина Mover Tuning
@@ -82,6 +83,7 @@ Move All from Primary->Secondary cacheyes shares when disk is above a certain pe
 Move All from Primary->Secondary shares pool percentage=Переместить всё из Основного->Вторичного — процент заполнения пула шар
 Move All threshold raised to %1 to stay above the moving threshold=Порог «Переместить всё» повышен до %1, чтобы оставаться выше порога перемещения.
 Move All threshold set to %1, as the global settings have none=Порог «Переместить всё» установлен на %1, так как в глобальных настройках его нет.
+Move order=Порядок перемещения
 Moved Only=Только перемещённые
 Move empty folders=Перемещать пустые папки
 Move files based on age=Перемещать файлы на основе возраста
@@ -114,6 +116,7 @@ Mover Tuning thresholds=Пороги Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Файлы не были перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Not Applicable Share Does Not Exist Yet=Не применимо (шара ещё не существует)
 Notify Mover Tuning plugin actions=Уведомлять о действиях плагина Mover Tuning
+Oldest first=Сначала самые старые
 Only move files larger than this in MB=Перемещать только файлы больше указанного размера (в МБ)
 Only move files that are older than this in days=Перемещать только файлы старше указанного количества дней
 Only move if above this threshold of used Primary cache space=Перемещать только если превышен этот порог используемого пространства основного (<em>кэш-пула</em>)
@@ -138,6 +141,7 @@ Show advanced options=Показать расширенные опции
 Show advanced settings=Показать расширенные настройки
 Skip files listed in text file=Пропускать файлы из текстового списка
 Skip file types=Пропускать типы файлов
+Smallest first=Сначала самые маленькие
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Начиная с Unraid 7.2.1 поведение плагина Mover Tuning изменилось
 Start Mover Tuning=Запустить Mover Tuning
 Sync files based on maximum size=Синхронизировать файлы на основе максимального размера
@@ -341,6 +345,10 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 
 :mover_tune_daysold_plug:
 > Укажите **количество дней**, которое должно пройти для перемещения файла (до 1 года). Режим «Авто» будет перемещать от самых старых к самым новым, пока не будет достигнут порог.
+:end
+
+:mover_tune_moveorder_plug:
+> Какие файлы шар cache:<strong>yes</strong> покидают основной пул первыми. С **Перемещать файлы на основе возраста** перемещаются только файлы старше заданного числа дней, в этом порядке.
 :end
 
 :mover_tune_advancedfilters_plug:

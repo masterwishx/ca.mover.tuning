@@ -665,6 +665,12 @@ getMoverSettings() {
         ATIME=$(cfg atime)
         [ $ATIME = "yes" ] && mvlogger "ATIME: $ATIME"
     fi
+    # the order cache:yes files leave the Primary in; global only, as the shares of a pool are walked together
+    if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
+        MOVE_ORDER=$(cfg moveOrder)
+        [[ "$MOVE_ORDER" =~ ^(largest|smallest)$ ]] && mvlogger "Move order: $MOVE_ORDER first"
+    fi
+
     # the share page saves at most one of the two as Yes: a share's own Yes turns the other off for that share
     if [[ "$config_file" =~ shareOverrideConfig ]]; then
         if [ "$(cfg ctime)" = "yes" ]; then
@@ -1693,11 +1699,15 @@ createFilteredFilelist() {
         rm "$tempfile1" "$tempfile2"
     fi
 
-    # cache:yes is walked oldest-first so projected pool usage sheds the oldest files;
-    # every other mode keeps newest-first (cache:prefer primes the newest)
+    # cache:yes is walked in the Move order (oldest first by default) so projected pool usage sheds those files first;
+    # every other mode keeps newest-first (cache:prefer primes the newest). Equal sizes stay in time and inode order,
+    # which keeps the names of a hardlink group together.
+    local order=(-k5,5n)
+    [ "$MOVE_ORDER" = "largest" ] && order=(-k8,8nr -k5,5n)
+    [ "$MOVE_ORDER" = "smallest" ] && order=(-k8,8n -k5,5n)
     reorderfile=$(mktemp)
     awk -F'|' 'NR==1 || $4!="yes"' "$FILTERED_FILELIST" >"$reorderfile"
-    awk -F'|' 'NR>1 && $4=="yes"' "$FILTERED_FILELIST" | sort -t '|' -k1,1 -k5,5n -k11,11 >>"$reorderfile"
+    awk -F'|' 'NR>1 && $4=="yes"' "$FILTERED_FILELIST" | sort -t '|' -k1,1 "${order[@]}" -k11,11 >>"$reorderfile"
     mv -f "$reorderfile" "$FILTERED_FILELIST"
 }
 

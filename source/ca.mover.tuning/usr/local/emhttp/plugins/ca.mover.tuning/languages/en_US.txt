@@ -71,6 +71,7 @@ Ignore All hidden files and directories=
 Ignore files and folders listed inside of a text file=
 Ignore file types=
 Invalid characters to block=
+Largest first=
 Let scheduled mover run during a parity check rebuild=Let scheduled mover run during a parity check / rebuild
 Log Mover Tuning plugin actions=
 Logs parent folder for Mover Tuning plugin=
@@ -84,6 +85,7 @@ Move All from Primary->Secondary cacheyes shares when disk is above a certain pe
 Move All from Primary->Secondary shares pool percentage=
 Move All threshold raised to %1 to stay above the moving threshold=Move All threshold raised to %1 to stay above the moving threshold.
 Move All threshold set to %1, as the global settings have none=Move All threshold set to %1, as the global settings have none.
+Move order=
 Moved Only=
 Move empty folders=
 Move files based on age=
@@ -116,6 +118,7 @@ Mover Tuning thresholds=
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=No files were moved/synced by Mover Tuning plugin. Elapsed time: %s
 Not Applicable Share Does Not Exist Yet=Not Applicable (Share Does Not Exist Yet)
 Notify Mover Tuning plugin actions=
+Oldest first=
 Only move files larger than this in MB=Only move files larger than this (in MB)
 Only move files that are older than this in days=Only move files that are older than this (in days)
 Only move if above this threshold of used Primary cache space=Only move if above this threshold of used Primary (<em>cache</em>) space
@@ -140,6 +143,7 @@ Show advanced options=
 Show advanced settings=
 Skip files listed in text file=
 Skip file types=
+Smallest first=
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Starting with Unraid 7.2.1, Mover Tuning plugin behavior has changed
 Start Mover Tuning=
 Sync files based on maximum size=
@@ -344,6 +348,10 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 
 :mover_tune_daysold_plug:
 > Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+:end
+
+:mover_tune_moveorder_plug:
+> Which files of cache:<strong>yes</strong> shares leave the Primary first. With **Move files based on age**, only files older than that many days move, in this order.
 :end
 
 :mover_tune_advancedfilters_plug:

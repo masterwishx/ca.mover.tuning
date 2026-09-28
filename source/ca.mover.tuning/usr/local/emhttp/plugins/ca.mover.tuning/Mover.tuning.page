@@ -1001,6 +1001,19 @@ _(Move files that are greater than this many days old)_:
 
 :end
 
+_(Move order)_:
+: <select name="moveOrder" size="1">
+  <?=mk_option($cfg['moveOrder'],'oldest',_('Oldest first'))?>
+  <?=mk_option($cfg['moveOrder'],'largest',_('Largest first'))?>
+  <?=mk_option($cfg['moveOrder'],'smallest',_('Smallest first'))?>
+</select>
+
+:mover_tune_moveorder_plug:
+
+> Which files of cache:<strong>yes</strong> shares leave the Primary first. With **Move files based on age**, only files older than that many days move, in this order.
+
+:end
+
 _(Show advanced filters)_:
 : <select name='advancedFilters' size='1' onchange="updateScreenMoverAdvancedFilters(this.value, 'slow')">
 <?=mk_option($cfg['advancedFilters'],"no",_('No'))?>

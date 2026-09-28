@@ -69,6 +69,7 @@ Ignore All hidden files and directories=Ignorer tous les fichiers et dossiers ca
 Ignore files and folders listed inside of a text file=Ignorer les fichiers et dossiers listés dans un fichier texte
 Ignore file types=Ignorer les types de fichiers
 Invalid characters to block=Caractères invalides à bloquer
+Largest first=Les plus gros d’abord
 Let scheduled mover run during a parity check rebuild=Autoriser le mover programmé pendant une vérification/réparation de parité
 Log Mover Tuning plugin actions=Journaliser les actions du plugin Mover Tuning
 Logs parent folder for Mover Tuning plugin=Dossier parent des journaux du plugin Mover Tuning
@@ -82,6 +83,7 @@ Move All from Primary->Secondary cacheyes shares when disk is above a certain pe
 Move All from Primary->Secondary shares pool percentage=Déplacer tout depuis Primaire→Secondaire selon le pourcentage du pool
 Move All threshold raised to %1 to stay above the moving threshold=Seuil « tout déplacer » augmenté à %1 pour rester au-dessus du seuil de déplacement.
 Move All threshold set to %1, as the global settings have none=Seuil « tout déplacer » réglé à %1, car les réglages globaux n’en ont pas.
+Move order=Ordre de déplacement
 Moved Only=Déplacés uniquement
 Move empty folders=Déplacer les dossiers vides
 Move files based on age=Déplacer les fichiers selon leur âge
@@ -114,6 +116,7 @@ Mover Tuning thresholds=Seuils Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Aucun fichier n’a été déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
 Not Applicable Share Does Not Exist Yet=Non applicable (la part n’existe pas encore)
 Notify Mover Tuning plugin actions=Notifier les actions du plugin Mover Tuning
+Oldest first=Les plus anciens d’abord
 Only move files larger than this in MB=Déplacer uniquement les fichiers plus grands que cette taille (en Mo)
 Only move files that are older than this in days=Déplacer uniquement les fichiers plus anciens que ce nombre de jours
 Only move if above this threshold of used Primary cache space=Déplacer uniquement si ce seuil d’utilisation du cache primaire est dépassé
@@ -138,6 +141,7 @@ Show advanced options=Afficher les options avancées
 Show advanced settings=Afficher les paramètres avancés
 Skip files listed in text file=Ignorer les fichiers listés dans un fichier texte
 Skip file types=Ignorer les types de fichiers
+Smallest first=Les plus petits d’abord
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=À partir d’Unraid 7.2.1, le comportement du plugin Mover Tuning a changé
 Start Mover Tuning=Démarrer Mover Tuning
 Sync files based on maximum size=Synchroniser les fichiers selon une taille maximale
@@ -348,6 +352,10 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_daysold_plug:
 > Sélectionner le nombre de jours pour déplacer les fichiers (jusqu’à 1 an).  
 > Auto déplace du plus ancien au plus récent jusqu’au seuil.
+:end
+
+:mover_tune_moveorder_plug:
+> Quels fichiers des parts cache:<strong>yes</strong> quittent le cache primaire en premier. Avec **Déplacer les fichiers selon leur âge**, seuls les fichiers plus anciens que ce nombre de jours sont déplacés, dans cet ordre.
 :end
 
 :mover_tune_advancedfilters_plug:
