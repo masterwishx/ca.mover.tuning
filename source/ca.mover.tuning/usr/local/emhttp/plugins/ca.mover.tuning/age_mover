@@ -122,6 +122,14 @@ version_ge() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
+# From 7.4 the status file follows Unraid's Mover progress setting, read as Unraid's own mover reads it (sbin/mover start)
+moverProgressSetting() {
+    MOVER_PROGRESS=yes
+    if version_ge "$UNRAID_VERSION" 7.4 && [ "$(grep '^shareMoverProgress=' "$UNRAIDCFGFILE" 2>/dev/null | cut -d'"' -f2)" != enabled ]; then
+        MOVER_PROGRESS=no
+    fi
+}
+
 # Variables from unraid mover.old empty() function
 DEBUGGING=""
 CFGPATH="/boot/config/shares"
@@ -1053,6 +1061,7 @@ unraid_empty_disks() {
 # Same keys and format as Unraid 7.4's mover (sbin/mover writestatus), which 7.4 shows under the Move button on Main.
 # Its line 3 is a per-share bar; Selectlines leaves it out, as each pass here runs across the shares.
 moverStatusWrite() {
+    [ "$MOVER_PROGRESS" = no ] && return 0
     local total remain moved elapsed rate=0 eta=0 file action tmp="${MOVER_STATUS}.$$"
     total=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
     remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE))
@@ -2918,6 +2927,7 @@ start() {
     fi
 
     # the progress rows show the run from here on, as planning a large share takes a while
+    moverProgressSetting
     moverStatusWrite
 
     # Proceed with filter and create filtered filelist and action filelist
@@ -3281,6 +3291,11 @@ if [ "$#" -ne 1 ]; then
     usage
     exit 1
 fi
+
+# Unraid 7.4 knows a running mover by a "mover" word in its command line (sbin/mover is_mover_pid, nchan/parity_list):
+# run as "mover <this script> <command>", which keeps this path in the command line for pgrep -f age_mover
+read -r -d '' mt_argv0 </proc/$$/cmdline
+[ "$mt_argv0" = mover ] || exec -a mover /bin/bash "$0" "$@"
 
 case $1 in
 start)
