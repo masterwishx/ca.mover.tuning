@@ -670,42 +670,33 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
 
     # Only perform migration if mover.tuning.cron does NOT exist
     # AND old dynamix/mover.cron exists
-    if [[ ! -f "$TUNING_CRON_FILE" &amp;&amp; -f "$DYNAMIX_CRON_FILE" ]]; then
-        echo "Detected old Unraid mover schedule — migrating into Mover Tuning."
+    # AND the cfg has no moverTuneCron yet: the migration and every Apply of the settings page write it
+    if [[ ! -f "$TUNING_CRON_FILE" &amp;&amp; -f "$DYNAMIX_CRON_FILE" ]] &amp;&amp; ! grep -q '^moverTuneCron=' "$config_file"; then
+        # Read value from var.ini (missing while plugins install at boot, before emhttp starts)
+        SHARE_MOV_SCHED=$(grep '^shareMoverSchedule=' /var/local/emhttp/var.ini 2>/dev/null | cut -d'"' -f2)
 
-        # Read value from var.ini
-        SHARE_MOV_SCHED=$(grep '^shareMoverSchedule=' /var/local/emhttp/var.ini | cut -d'"' -f2)
-
-        if [[ -n "$SHARE_MOV_SCHED" ]]; then
+        if [[ ! -f /var/local/emhttp/var.ini ]]; then
+            echo "var.ini is not there yet (emhttp starts after plugins install) — the migration waits for an install or update with the array started."
+        elif [[ -n "$SHARE_MOV_SCHED" ]]; then
+            echo "Detected old Unraid mover schedule — migrating into Mover Tuning."
             echo "Found shareMoverSchedule: [$SHARE_MOV_SCHED]"
+            echo "Setting moverTuneCron to: [$SHARE_MOV_SCHED]"
+            echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
 
-            # Add moverTuneCron only if missing
-            if [[ -f "$config_file" ]] &amp;&amp; grep -q '^moverTuneCron=' "$config_file"; then
-                echo "moverTuneCron already exists — skipping update."
+            # Create cron file for Mover Tuning, unless its schedule was disabled before 7.2.1
+            if grep -q '^moverDisabled="yes"' "$config_file"; then
+                echo "Mover Tuning schedule is disabled — no Mover Tuning cron file created."
             else
-                # Only append if file exists
-                echo "Setting moverTuneCron to: [$SHARE_MOV_SCHED]"
-                if [[ -f "$config_file" ]]; then
-                    echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
-                else
-                    echo "Config file not found."
-                fi
+                echo "Creating Mover Tuning cron file: $TUNING_CRON_FILE"
+                printf '# Generated schedule for Mover Tuning move:\n%s /usr/local/emhttp/plugins/&name;/mover start |&amp; logger -t move\n' "$SHARE_MOV_SCHED" > "$TUNING_CRON_FILE"
             fi
 
-            # Create cron file for Mover Tuning
-            echo "Creating Mover Tuning cron file: $TUNING_CRON_FILE"
-            {
-                echo "# Generated schedule for Mover Tuning move:"
-                echo "$SHARE_MOV_SCHED /usr/local/emhttp/plugins/&name;/mover start |&amp; logger -t move"
-            } > "$TUNING_CRON_FILE"
-
+            # Rename old dynamix cron file
+            echo "Renaming old schedule: mover.cron → mover.cron.old"
+            mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
         else
             echo "shareMoverSchedule is empty — nothing to migrate."
         fi
-
-        # Rename old dynamix cron file
-        echo "Renaming old schedule: mover.cron → mover.cron.old"
-        mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
     fi
 
     # Fix old cron entries using age_mover -> mover
@@ -759,6 +750,7 @@ chmod +x /usr/local/emhttp/plugins/&name;/age_mover
 chmod +x /usr/local/emhttp/plugins/&name;/mover
 chmod +x /usr/local/emhttp/plugins/&name;/share_mover
 chmod +x /usr/local/emhttp/plugins/&name;/debug_mover
+chmod +x /usr/local/emhttp/plugins/&name;/with_scripts
 
 # Install symlink: /usr/local/sbin/age_mover → plugin age_mover
 if [[ -x /usr/local/emhttp/plugins/&name;/age_mover ]]; then
@@ -770,6 +762,23 @@ fi
 if [[ -f /boot/config/plugins/&name;/mover.cron ]]; then
   sed -i -E 's#/usr/local/sbin/mover(\.old)? (start|force)#/usr/local/emhttp/plugins/&name;/mover.php force start#' /boot/config/plugins/&name;/mover.cron
 fi
+
+# Once per install history: a share override saved before Use global existed followed the global setting where it said No
+# for these keys. The marker is also in default.cfg, so a No saved after Defaults is never rewritten.
+if [[ -f "$config_file" ]] &amp;&amp; ! grep -q '^migratedOverrideNo=' "$config_file"; then
+  keys='filelistf|filetypesf|sizef|sparsnessf|sizefSync|omovercfg|synchronizeCache'
+  for f in /boot/config/plugins/&name;/shareOverrideConfig/*.cfg; do
+    [[ -f "$f" ]] || continue
+    changed=$(grep -oE "^($keys)=(\"no\"|no)"$'\r'"?\$" "$f" | cut -d= -f1 | tr '\n' ' ')
+    [[ -n "$changed" ]] || continue
+    sed -i -E "s/^($keys)=\"no\"(\r?)\$/\1=\"\"\2/; s/^($keys)=no(\r?)\$/\1=\2/" "$f" &amp;&amp; echo "- Share override $(basename "$f" .cfg): ${changed% } now Use global (was No, which followed the global setting)"
+  done
+  [[ -n "$(tail -c1 "$config_file")" ]] &amp;&amp; echo >> "$config_file"
+  echo 'migratedOverrideNo="yes"' >> "$config_file"
+fi
+
+# The plugin's own cron files follow the saved settings: missing ones are written back (reinstall), stale ones removed
+/usr/bin/php -q /usr/local/emhttp/plugins/&name;/updateCron.php sync
 
 # Refresh cron
 /usr/local/sbin/update_cron
@@ -849,6 +858,10 @@ fi
 
 if [[ -e /boot/config/plugins/&name;/mover.cron ]]; then
   rm -f /boot/config/plugins/&name;/mover.cron
+fi
+
+if [[ -e /boot/config/plugins/&name;/mover.watchdog.cron ]]; then
+  rm -f /boot/config/plugins/&name;/mover.watchdog.cron
 fi
 
 # Remove config folder only if empty
