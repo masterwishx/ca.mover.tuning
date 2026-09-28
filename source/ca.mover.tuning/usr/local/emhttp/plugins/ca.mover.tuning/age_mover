@@ -2459,7 +2459,7 @@ processTheMoves() {
             fi
 
             # Clean parent ZFS dataset if empty
-            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ]; then
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
                 # Check counter if equal to 0 then check datasets
                 if [ "$LAST_COUNT" -eq 0 ]; then
                     # Count files in share
