@@ -354,7 +354,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_daysold_plug:
-> Anzahl der **Tage**, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; **Reihenfolge der Verschiebung** bestimmt, welche zuerst gehen.
+> Anzahl der **Tage**, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; bei cache:<strong>yes</strong>‑Freigaben bestimmt **Reihenfolge der Verschiebung**, welche zuerst gehen.
 :end
 
 :mover_tune_moveorder_plug:
@@ -502,7 +502,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_share_daysold_plug:
-> Wähle die Anzahl der Tage, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; **Reihenfolge der Verschiebung** bestimmt, welche zuerst gehen.
+> Wähle die Anzahl der Tage, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; bei cache:<strong>yes</strong>‑Freigaben bestimmt **Reihenfolge der Verschiebung**, welche zuerst gehen.
 :end
 
 :mover_tune_share_sizef_plug:

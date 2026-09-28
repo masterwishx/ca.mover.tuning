@@ -359,7 +359,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_daysold_plug:
 > Sélectionner le nombre de jours pour déplacer les fichiers (jusqu’à 1 an).  
-> Auto déplace les fichiers jusqu’au seuil, sans âge minimum ; **Ordre de déplacement** décide lesquels partent en premier.
+> Auto déplace les fichiers jusqu’au seuil, sans âge minimum ; pour les parts cache:<strong>yes</strong>, **Ordre de déplacement** décide lesquels partent en premier.
 :end
 
 :mover_tune_moveorder_plug:

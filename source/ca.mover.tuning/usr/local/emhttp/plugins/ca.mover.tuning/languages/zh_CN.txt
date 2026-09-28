@@ -352,7 +352,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_daysold_plug:
-> 选择文件需要达到的**天数**才会被移动（最多 1 年）。自动模式会一直移动文件直到达到阈值，不设最小天数；**移动顺序** 决定哪些文件先移走。
+> 选择文件需要达到的**天数**才会被移动（最多 1 年）。自动模式会一直移动文件直到达到阈值，不设最小天数；对于 cache:<strong>yes</strong> 共享，**移动顺序** 决定哪些文件先移走。
 :end
 
 :mover_tune_moveorder_plug:
@@ -500,7 +500,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_share_daysold_plug:
-> 选择文件需要达到多少天才会被移动（最多 1 年）。“自动”会一直移动文件直到达到阈值，不设最小天数；**移动顺序** 决定哪些文件先移走。
+> 选择文件需要达到多少天才会被移动（最多 1 年）。“自动”会一直移动文件直到达到阈值，不设最小天数；对于 cache:<strong>yes</strong> 共享，**移动顺序** 决定哪些文件先移走。
 :end
 
 :mover_tune_share_sizef_plug:

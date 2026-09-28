@@ -286,7 +286,7 @@ _(Only move files that are older than this (in days))_:
 
 :mover_tune_share_daysold_plug:
 
-> Select the number of days old a file has to be in order to move (Up To 1 year). Auto moves files until the threshold is met, with no minimum age; **Move order** decides which go first.
+> Select the number of days old a file has to be in order to move (Up To 1 year). Auto moves files until the threshold is met, with no minimum age; for cache:<strong>yes</strong> shares, **Move order** decides which go first.
 
 :end
 
@@ -542,7 +542,7 @@ _(Only move files that are older than this (in days))_:
 
 :mover_tune_share_daysold_plug:
 
-> Select the number of days old a file has to be in order to move (Up To 1 year). Auto moves files until the threshold is met, with no minimum age; **Move order** decides which go first.
+> Select the number of days old a file has to be in order to move (Up To 1 year). Auto moves files until the threshold is met, with no minimum age; for cache:<strong>yes</strong> shares, **Move order** decides which go first.
 
 :end
 
