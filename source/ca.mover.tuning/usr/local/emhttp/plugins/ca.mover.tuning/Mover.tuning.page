@@ -558,7 +558,7 @@ _(Disable Mover running on a schedule)_:
 <p>You will only be able to run mover by <strong>manually</strong> invoking it:</p>
 <ul>
   <li>Press the <strong>“Move now”</strong> button in <strong>Mover Tuning - Options</strong>.</li>
-  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong>.</li>
+  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong> (without the priorities for the mover process and disk I/O).</li>
 </ul>
 <p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end

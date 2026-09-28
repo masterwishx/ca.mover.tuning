@@ -184,7 +184,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p>Vous ne pourrez exécuter le mover que de manière <strong>manuelle</strong> :</p>
 <ul>
   <li>Appuyez sur le bouton <strong>« Déplacer maintenant »</strong> dans <strong>Mover Tuning – Options</strong>.</li>
-  <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong>.</li>
+  <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong> (sans les priorités du processus du mover et des E/S disque).</li>
 </ul>
 <p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
 :end
@@ -529,7 +529,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant les filtres et les seuils. Les priorités du processus du mover et des E/S disque ainsi que les scripts avant et après le mover s’appliquent quand même.
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -545,5 +545,5 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant les filtres et les seuils. Les priorités du processus du mover et des E/S disque ainsi que les scripts avant et après le mover s’appliquent quand même.
 :end
