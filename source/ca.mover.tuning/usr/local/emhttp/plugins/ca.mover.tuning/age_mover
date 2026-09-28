@@ -1421,7 +1421,6 @@ createFilteredFilelist() {
             AGE_WINDOW=$AGE
             [ "$SHAREUSECACHE" = "yes" ] && [ "$SYNCHRONIZECACHE" = "yes" ] && mvlogger "Synchronize: files dated up to ${AGE} days before the last sync date are synced too, as the age filter holds files back"
         fi
-        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY|$((SYNC_SIZE * 1048576))|$AGE_WINDOW"$'\n'
 
         # Add Age variables to find string
         if [ "$MOVE_ALL" = "no" ] && [ "$AGE" -ge 1 ]; then
@@ -1441,15 +1440,21 @@ createFilteredFilelist() {
         fi
 
         # Add Size to find string
+        MOVE_MIN=0
         if [ "$MOVE_ALL" = "no" ]; then
             if [ "$SIZE" -gt 0 ] && [ "$KEEP_PRIMARY" = 1 ]; then
                 mvlogger "Move Size not applied: no file is moved from $PRIMARYSTORAGENAME$([ "$SYNCHRONIZECACHE" = "yes" ] && echo ", so every file is a candidate for syncing")"
                 [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ] && mvlogger "=> Nor does it limit rebalancing: files on $UNATTENDEDSTORAGE are rebalanced whatever their size"
+            elif [ "$SIZE" -gt 0 ] && [ "$SHAREUSECACHE" = "yes" ] && [ "$SYNCHRONIZECACHE" = "yes" ]; then
+                # find would hide the smaller files from syncing too, and lastCacheSync would pass them: the planner keeps them instead
+                MOVE_MIN=$SIZE
+                mvlogger "Move Size applied when planning: files of ${SIZE} MB or less stay on $PRIMARYSTORAGENAME and are synced when due"
             elif [ "$SIZE" -gt 0 ]; then
                 mvlogger "Adding Move Size: ${SIZE}"
                 FINDSTR="$FINDSTR -size +${SIZE}M"
             fi
         fi
+        [ "$SHAREUSECACHE" = "yes" ] && SHARE_PLAN_RULES+="$SHARENAME|$KEEP_PRIMARY|$((SYNC_SIZE * 1048576))|$AGE_WINDOW|$((MOVE_MIN * 1048576))"$'\n'
 
         # Add Ignore Hidden Files to find string
         if [ "$MOVE_ALL" = "no" ] && { [ "$SHAREUSECACHE" = "prefer" ] || [ "$SHAREUSECACHE" = "yes" ]; } && [ "$IGNOREHIDDENFILES" == "yes" ]; then
@@ -1797,6 +1802,8 @@ decideMoveActions() {
             share_sync(share)
             return sync_on[share] == "yes" && (t >= sync_mark[share] - sync_window[share] || RESYNCHRONIZECACHE == "yes") && (!sync_max[share] || size < sync_max[share])
         }
+        # whether the move size left to the planner keeps a file of that size where it is (find -size +NM listed only larger files)
+        function small(share, size) { return move_min[share] && size <= move_min[share] }
         BEGIN {
             FS = OFS = "|"
 
@@ -1821,15 +1828,15 @@ decideMoveActions() {
             while ((getline held_line < HELD_FILELIST) > 0) held_paths[held_line] = 1
             close(HELD_FILELIST)
 
-            # a cache:yes share below its moving threshold keeps its primary files; a size limit keeps larger files unsynced, never unmoved;
-            # an age filter held younger files back, so the share syncs from that many days before lastCacheSync
+            # a cache:yes share below its moving threshold keeps its primary files; a size limit keeps larger files unsynced, never unmoved; an age
+            # filter held younger files back, so the share syncs from that many days before lastCacheSync; a planner move size keeps smaller files
             n = split(ENVIRON["SHARE_PLAN_RULES"], rules, "\n")
-            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)\|([0-9]+)$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0; sync_window[r[1]] = r[4] * 86400 }
+            for (i = 1; i <= n; i++) if (match(rules[i], /^(.*)\|([01])\|([0-9]+)\|([0-9]+)\|([0-9]+)$/, r)) { keep_primary[r[1]] = r[2] + 0; sync_max[r[1]] = r[3] + 0; sync_window[r[1]] = r[4] * 86400; move_min[r[1]] = r[5] + 0 }
 
             # the first pass can change a plan only when shares keep, sync, limit or date their syncs differently; otherwise the list is read once
             for (share in keep_primary) {
                 share_sync(share)
-                sig = keep_primary[share] "|" sync_max[share] "|" sync_window[share] "|" sync_on[share] "|" sync_mark[share]
+                sig = keep_primary[share] "|" sync_max[share] "|" sync_window[share] "|" sync_on[share] "|" sync_mark[share] "|" move_min[share]
                 if (first_sig != "" && sig != first_sig) groups = 1
                 first_sig = sig
             }
@@ -1852,7 +1859,7 @@ decideMoveActions() {
                 split(full_path(), parts, "/")
                 group = parts[3] "|" $10 "|" $11 "|" $5
                 group_seen[group] = 1
-                if (keep_primary[$3]) group_keep[group] = 1
+                if (keep_primary[$3] || small($3, $8)) group_keep[group] = 1
                 if (share_syncs($3, $5, $8)) group_sync[group] = 1
             }
             next
@@ -1885,7 +1892,7 @@ decideMoveActions() {
                 group = storage_pool "|" $10 "|" $11 "|" $5
                 grouped = (group in group_seen)
             }
-            keep = grouped ? (group in group_keep) : keep_primary[$3]
+            keep = grouped ? (group in group_keep) : (keep_primary[$3] || small($3, file_size))
 
             # Handle hardlinks
             if ($10 > 1) {
@@ -1982,7 +1989,8 @@ decideMoveActions() {
                         pool_stats[$1]["total_size_from_secondary"] += $8
                     }
                 } else {
-                    if (REBALANCESHARES == "yes" && $4 != "skipped" && !held) {
+                    # a move size left to the planner keeps smaller misplaced files where they are, as find left them out before
+                    if (REBALANCESHARES == "yes" && $4 != "skipped" && !held && !small($3, file_size)) {
                         action = ($4 == "only" || ($4 == "prefer" && remaining_bytes_used[$1] <= $6)) ? "move unattended to primary" : "move unattended to secondary"
                         if (action == "move unattended to primary" && SYNCHRONIZECACHE == "yes" && $4 != "only" ) {
                             source = storage_path
