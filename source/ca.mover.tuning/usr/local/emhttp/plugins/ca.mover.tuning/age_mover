@@ -1442,8 +1442,8 @@ createFilteredFilelist() {
 
         # Add Size to find string
         if [ "$MOVE_ALL" = "no" ]; then
-            if [ "$SIZE" -gt 0 ] && [ "$KEEP_PRIMARY" = 1 ] && [ "$SYNCHRONIZECACHE" = "yes" ]; then
-                mvlogger "Move Size not applied: no file is moved from $PRIMARYSTORAGENAME, so every file is a candidate for syncing"
+            if [ "$SIZE" -gt 0 ] && [ "$KEEP_PRIMARY" = 1 ]; then
+                mvlogger "Move Size not applied: no file is moved from $PRIMARYSTORAGENAME$([ "$SYNCHRONIZECACHE" = "yes" ] && echo ", so every file is a candidate for syncing")"
                 [ "$REBALANCESHARES" = "yes" ] && [ -n "$UNATTENDEDSTORAGE" ] && mvlogger "=> Nor does it limit rebalancing: files on $UNATTENDEDSTORAGE are rebalanced whatever their size"
             elif [ "$SIZE" -gt 0 ]; then
                 mvlogger "Adding Move Size: ${SIZE}"
