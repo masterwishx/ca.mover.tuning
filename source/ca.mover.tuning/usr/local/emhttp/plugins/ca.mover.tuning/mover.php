@@ -266,8 +266,9 @@ if ($cron && $cfg['moverDisabled'] == 'yes') {
     exit();
 }
 
-if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
-    logger("Parity Check / rebuild in progress.  Not running mover");
+// only a scheduled run waits for a parity check or rebuild: Move now, the cache watchdog and the CLI always run
+if ($cron === true && $cfg['parity'] === 'no' && empty($vars['mdResyncPos']) === false) {
+    logger("Parity Check / rebuild in progress.  Not running scheduled mover");
     exit();
 }
 

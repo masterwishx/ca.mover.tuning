@@ -201,7 +201,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_watchdog_plug:
-<p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle respecte le réglage du contrôle de parité.</p>
+<p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle s’exécute aussi pendant une vérification de parité ou une reconstruction de disque.</p>
 <p>C’est un filet de sécurité, pas un remplacement de la planification : sous le seuil de déclenchement, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
 <p>Si une exécution ne peut pas ramener le pool sous le seuil de déclenchement, la surveillance attend plus longtemps avant la suivante : 2 h, puis 4 h, 8 h … jusqu’à 24 h. Cela se réinitialise dès que le pool repasse sous le seuil de déclenchement.</p>
 :end
@@ -284,7 +284,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_parity_plug:
-> Si une vérification de parité ou une reconstruction de disque est en cours, cela empêchera le mover de s’exécuter.
+> Avec <strong>Non</strong>, une exécution programmée qui tombe pendant une vérification de parité ou une reconstruction de disque est ignorée jusqu’à sa prochaine heure programmée. Les exécutions lancées à la main (<strong>Déplacer maintenant</strong>, le déplacement d’un partage, la CLI) et la surveillance du cache s’exécutent quand même.
 :end
 
 :mover_tune_moverio_plug:

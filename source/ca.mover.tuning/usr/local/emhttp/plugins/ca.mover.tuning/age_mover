@@ -3171,14 +3171,11 @@ watchdog_set() {
 # Cache watchdog, run by cron every 5 minutes (updateCron.php): starts a run between scheduled runs when the
 # primary pool of a cache:yes share reaches watchdogThreshold. Must stay silent and cheap when there is nothing to do.
 watchdog() {
-    local threshold global moving override share pool level parity state now next after cooldown first=""
+    local threshold global moving override share pool level state now next after cooldown first=""
     local -A pools=() used=() due=() backoff=()
     [ "$(grep '^watchdog=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = "yes" ] || exit 0
     grep -qs '^mdState="STARTED"' /var/local/emhttp/var.ini || exit 0
     [ -f "$PIDFILE" ] && exit 0
-    # mirrors mover.php's parity rule so a parity check does not bring a refused launch every 5 minutes
-    parity=$(grep '^parity=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
-    [ "${parity:-no}" = no ] && grep -qs '^mdResyncPos="[1-9]' /var/local/emhttp/var.ini && exit 0
     threshold=$(grep '^watchdogThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
     [[ "$threshold" =~ ^[0-9]+$ ]] || threshold=90
     global=$(grep '^movingThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -3228,7 +3225,7 @@ watchdog() {
         fi
     done
     [ -n "$first" ] || exit 0
-    # mover.php decides whether the run may start (parity check, a run already active), so announce and start the
+    # mover.php decides whether the run may start (a run already active; a parity check stops only scheduled runs), so announce and start the
     # cooldown only once this launch's run holds the pid file, as mover.php's own runMover waits for it
     /usr/local/emhttp/plugins/ca.mover.tuning/mover.php watchdog start &
     local run=$! i started=no

@@ -201,7 +201,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_watchdog_plug:
-<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er beachtet die Einstellung zur Paritätsprüfung.</p>
+<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er läuft auch während einer Paritätsprüfung oder Wiederherstellung.</p>
 <p>Er ist ein Sicherheitsnetz, kein Ersatz für den Zeitplan: Unterhalb der Auslöseschwelle verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
 <p>Kann ein Lauf den Pool nicht unter die Auslöseschwelle bringen, wartet der Watchdog vor dem nächsten Lauf länger: 2 h, dann 4 h, 8 h … bis 24 h. Das setzt sich zurück, sobald der Pool unter die Auslöseschwelle fällt.</p>
 :end
@@ -283,7 +283,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_parity_plug:
-> Wenn eine Paritätsprüfung oder ein Wiederherstellungsvorgang läuft, wird die Datenverschiebung verhindert.
+> Bei <strong>Nein</strong> wird ein geplanter Lauf, der in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen. Von Hand gestartete Läufe (<strong>Jetzt verschieben</strong>, das Verschieben einer einzelnen Freigabe, die CLI) und der Cache-Watchdog laufen trotzdem.
 :end
 
 :mover_tune_moverio_plug:
