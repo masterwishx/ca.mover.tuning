@@ -1050,40 +1050,37 @@ unraid_empty_disks() {
     fi
 }
 
+# Same keys and format as Unraid 7.4's mover (sbin/mover writestatus), which 7.4 shows under the Move button on Main.
+# Its line 3 is a per-share bar; Selectlines leaves it out, as each pass here runs across the shares.
 moverStatusWrite() {
-    #echo "test write"
-    #Writes to file /usr/local/emhttp/state/mover.ini GUI update variables
-    echo "TotalToSecondary=${TOTALPRIMARYSIZE}" >$MOVER_STATUS
+    local total remain moved elapsed rate=0 eta=0 file action tmp="${MOVER_STATUS}.$$"
+    total=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
+    remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE))
+    [ "$remain" -lt 0 ] && remain=0
+    moved=$((total > remain ? total - remain : 0))
+    elapsed=$((START_TIME > 0 ? EPOCHSECONDS - START_TIME : 0))
+    [ "$elapsed" -gt 0 ] && rate=$((moved / elapsed))
+    [ "$rate" -gt 0 ] && eta=$((remain / rate))
+    # escaped for parse_ini_file as 7.4's inivalue does, and $ too, which would expand a ${...} in a name
+    file=${GUI_CURRENT_FILE//\\/\\\\} file=${file//\"/\\\"} file=${file//\$/\\\$}
+    action=${GUI_ACTION//\\/\\\\} action=${action//\"/\\\"} action=${action//\$/\\\$}
     {
-        echo "RemainToSecondary=${REMAINING_CACHE_SIZE}"
-
-        echo "TotalFromSecondary=${TOTALSECONDARYSIZE}"
-        echo "RemainFromSecondary=${REMAINING_ARRAY_SIZE}"
-
-        echo "TotalFromUnattended=${TOTALUNATTENDEDSIZE}"
-        echo "RemainFromUnattended=${REMAINING_UNATTENDED_SIZE}"
-
-        echo "TotalFilesToSecondary=${TOTALPRIMARYFILES}"
-        echo "RemainFilesToSecondary=${REMAINING_CACHE_FILES}"
-
-        echo "TotalFoldersToSecondary=${TOTALPRIMARYFOLDERS}"
-        echo "RemainFoldersToSecondary=${REMAINING_CACHE_FOLDERS}"
-
-        echo "TotalFilesFromSecondary=${TOTALSECONDARYFILES}"
-        echo "RemainFilesFromSecondary=${REMAINING_ARRAY_FILES}"
-
-        echo "TotalFoldersFromSecondary=${TOTALSECONDARYFOLDERS}"
-        echo "RemainFoldersFromSecondary=${REMAINING_ARRAY_FOLDERS}"
-
-        echo "TotalFilesFromUnattended=${TOTALUNATTENDEDFILES}"
-        echo "RemainFilesFromUnattended=${REMAINING_UNATTENDED_FILES}"
-
-        echo "TotalFoldersFromUnattended=${TOTALUNATTENDEDFOLDERS}"
-        echo "RemainFoldersFromUnattended=${REMAINING_UNATTENDED_FOLDERS}"
-
-        echo "File=${GUI_CURRENT_FILE}"
-        echo "Action=${GUI_ACTION}"
-    } >>$MOVER_STATUS
+        echo "TotalSize=$total"
+        echo "RemainSize=$remain"
+        echo "Throughput=$rate"
+        echo "ETA=$eta"
+        echo "MoverPid=$$"
+        echo "File=\"$file\""
+        echo "Action=\"$action\""
+        echo "Filepercent=0"
+        echo "Showlines=5"
+        echo "Selectlines=1,2,4,5"
+        echo "movertitle1=File being processed:"
+        echo "movertitle2=Action:"
+        echo "movertitle3=Share Progress:"
+        echo "movertitle4=Overall Progress:"
+        echo "movertitle5=Estimated Completion:"
+    } >"$tmp" && mv -f "$tmp" "$MOVER_STATUS" || rm -f "$tmp"
 }
 
 createFilteredFilelist() {
@@ -2311,7 +2308,7 @@ processTheMoves() {
             SYNCED_FILES=""
             SYNCED_FILES=""
             for f in "${SYNCED_FILES_ARR[@]}"; do SYNCED_FILES+="$(qp "$f") "; done
-            GUI_CURRENT_FILE=$SYNCED_FILES
+            GUI_CURRENT_FILE="$SOURCE/$FILEPATH"
 
             # Check File by validate function and skip if error; rsync gets every hardlink name, so check them all
             if [ "$VALIDATE_FILENAMES" = "yes" ]; then
@@ -2920,6 +2917,9 @@ start() {
         fi
     fi
 
+    # the progress rows show the run from here on, as planning a large share takes a while
+    moverStatusWrite
+
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
     [ ! -e $SOFTSTOPFILE ] && [ "$MOVE_IN_USE" != "yes" ] && holdOpenFiles
@@ -2975,7 +2975,7 @@ start() {
     mvDebuglogger "Reset run-once settings completed" "run-once settings END"
 
     mvlogger "Cleaning lock and stop files"
-    for file in $PIDFILE $SOFTSTOPFILE; do
+    for file in $PIDFILE $SOFTSTOPFILE $MOVER_STATUS; do
         [[ -e "$file" ]] && rm -f "$file"
     done
 
@@ -3097,7 +3097,7 @@ stop() {
     fi
     killtree $(cat $PIDFILE)
     sleep 2
-    rm -f $PIDFILE
+    rm -f $PIDFILE $MOVER_STATUS
     echo "mover: stopped"
     exit
 }

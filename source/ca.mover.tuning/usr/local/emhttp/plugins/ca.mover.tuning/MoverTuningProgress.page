@@ -1,0 +1,87 @@
+Menu="Buttons"
+Link="nav-user"
+---
+<?php
+// Progress rows under the Move button on Main, and under Move now on the Mover Tuning tab (7.2.1 and later).
+// From Unraid 7.4 Main has its own rows, which age_mover's status file feeds, so Main gets these only before 7.4.
+$moverTuningProgressPage = $myPage['name'] ?? '';
+$moverTuningProgressOn = $moverTuningProgressPage === 'Scheduler' || ($moverTuningProgressPage === 'Main' && version_compare(preg_replace('/-.*/', '', $var['version'] ?? ''), '7.4', '<') === true);
+if ($moverTuningProgressOn === true) {
+  // only this plugin's strings, so Main keeps Unraid's own translations
+  $moverTuningUnraidLanguage = $language;
+  $moverTuningPack = "$docroot/plugins/ca.mover.tuning/languages/$locale.txt";
+  $language = preg_match('/^[a-z]{2}_[A-Z]{2}$/', $locale ?? '') === 1 && file_exists($moverTuningPack) === true ? parse_lang_file($moverTuningPack) : [];
+  $moverTuningProgressText = [
+    'titles' => [_('File being processed'), _('Action'), _('Overall Progress'), _('Estimated Completion')],
+    'eta' => _('ETA'),
+    'speed' => _('Speed'),
+    'unknown' => _('Unknown'),
+    'complete' => _('Transfer complete'),
+  ];
+  $language = $moverTuningUnraidLanguage;
+}
+?>
+<?if ($moverTuningProgressOn === true):?>
+<script>
+$(function() {
+  const text = <?=json_encode($moverTuningProgressText)?>;
+  const onMain = <?=json_encode($moverTuningProgressPage === 'Main')?>;
+  // Main: the table row of the Move button (the same on 6.9 to 7.3); the tab: the list that holds Move now
+  const anchor = onMain ? $('input[name="cmdStartMover"]').first().closest('tr') : $('#StartTuneMoverBtn').closest('dl');
+  if (anchor.length === 0) return;
+  const rows = text.titles.map(title => {
+    const row = $(onMain ? '<tr hidden><td></td><td></td><td></td></tr>' : '<dl hidden><dt></dt><dd></dd></dl>');
+    row.children().eq(onMain ? 1 : 0).html(title + ':');
+    return row;
+  });
+  anchor.after(rows.map(row => row[0]));
+  const value = i => rows[i].children().last();
+  // Main: half the cell, as on 7.4; the tab: as wide as its dropdowns, which each release sizes differently
+  const barWidth = () => onMain ? '50%' : ($('#StartTuneMoverBtn').closest('form').find('select:visible').first().outerWidth() || 300) + 'px';
+
+  // as Unraid 7.4's parity_list shows them: h:mm:ss, and one decimal in units of 1000
+  function duration(seconds) {
+    if (seconds <= 0) return text.unknown;
+    const h = Math.floor(seconds / 3600), m = Math.floor(seconds % 3600 / 60), s = seconds % 60;
+    return (h > 0 ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(s).padStart(2, '0');
+  }
+  function speed(bytes) {
+    if (bytes <= 0) return text.unknown;
+    const units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const base = Math.min(Math.floor(Math.log(bytes) / Math.log(1000)), units.length - 1);
+    return (bytes / Math.pow(1000, base)).toFixed(1) + ' ' + units[base] + '/sec';
+  }
+
+  // null when no run with progress is going on
+  function show(progress) {
+    rows.forEach(row => row.prop('hidden', progress === null));
+    if (progress === null) return;
+    value(0).text(progress.file);
+    value(1).text(progress.action);
+    // while the run is planned there is nothing to measure yet
+    rows[2].prop('hidden', progress.total <= 0);
+    rows[3].prop('hidden', progress.total <= 0);
+    if (progress.remain > 0) {
+      const percent = Math.min(100, Math.max(0, Math.round((progress.total - progress.remain) / progress.total * 10000) / 100));
+      // centred here: Unraid's label offset (top:-0.4rem from 7.x) only lines up inside Main's table cells
+      value(2).html("<div class='usage-disk' style='width:" + barWidth() + ";display:flex;align-items:center'><span style='width:" + percent + "%' class='greenbar'></span><span style='top:0'>" + percent + "%</span></div>");
+    } else {
+      value(2).html(text.complete);
+    }
+    value(3).text(text.eta + ': ' + duration(progress.eta) + ' • ' + text.speed + ': ' + speed(progress.speed));
+  }
+
+  function poll() {
+    if (document.hidden === true) {
+      setTimeout(poll, 5000);
+      return;
+    }
+    $.getJSON('/plugins/ca.mover.tuning/moverProgress.php', {_: Date.now()})
+      .done(show)
+      .fail(() => show(null))
+      .always(() => setTimeout(poll, rows[0].prop('hidden') === true ? 5000 : 2000));
+  }
+  poll();
+});
+</script>
+<?endif;?>
