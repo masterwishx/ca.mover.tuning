@@ -851,7 +851,7 @@ UNRAID_VERSION=$(grep '^version=' /etc/unraid-version | cut -d'"' -f2)
 version_ge() {
   [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
-if ! version_ge "$UNRAID_VERSION" "7.2.1"; then
+if [[ -n "$UNRAID_VERSION" ]] &amp;&amp; ! version_ge "$UNRAID_VERSION" "7.2.1"; then
   if [[ -e /usr/local/sbin/mover.old ]]; then
     mv -f /usr/local/sbin/mover.old /usr/local/sbin/mover
   fi
