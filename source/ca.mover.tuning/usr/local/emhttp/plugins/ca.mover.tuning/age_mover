@@ -122,12 +122,14 @@ version_ge() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
-# From 7.4 the status file follows Unraid's Mover progress setting, read as Unraid's own mover reads it (sbin/mover start)
+# From 7.4 the status file follows Mover Progress as Mover Settings shows it: var.ini, shown as Disabled when unset.
+# Unraid's own mover reads share.cfg instead, where 7.4.0-beta.3 leaves the line out while the page says Enabled.
 moverProgressSetting() {
     MOVER_PROGRESS=yes
-    if version_ge "$UNRAID_VERSION" 7.4 && [ "$(grep '^shareMoverProgress=' "$UNRAIDCFGFILE" 2>/dev/null | cut -d'"' -f2)" != enabled ]; then
-        MOVER_PROGRESS=no
-    fi
+    version_ge "$UNRAID_VERSION" 7.4 || return 0
+    case "$(grep -m1 '^shareMoverProgress=' /var/local/emhttp/var.ini 2>/dev/null | cut -d'"' -f2)" in
+    "" | disabled | no) MOVER_PROGRESS=no ;;
+    esac
 }
 
 # Variables from unraid mover.old empty() function
