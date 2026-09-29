@@ -2163,7 +2163,7 @@ decideMoveActions() {
 array_disk_space() {
     local d
     for d in /mnt/disk[0-9] /mnt/disk[1-9][0-9]; do
-        [ -d "$d" ] || continue
+        mountpoint -q "$d" || continue
         df --output=size,avail --block-size=1 "$d" 2>/dev/null | awk -v d="${d#/mnt/}" 'NR == 2 && $1 ~ /^[0-9]+$/ && $2 ~ /^[0-9]+$/ { print d, $1, $2 }'
     done
 }
