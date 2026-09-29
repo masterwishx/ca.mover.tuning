@@ -97,15 +97,8 @@ function toggleTime(source) {
 }
 
 function toggleAge(val) {
-  var enable = (val === 'yes');
-  // enable or disable both CTIME and ATIME based on AGE
-  $('.myage').prop('disabled', !enable);
-
-  // re-apply mutual exclusivity if AGE is yes
-  if (enable) {
-    toggleTime('ctime');
-    toggleTime('atime');
-  }
+  // the days select only: CTIME and ATIME set the file time for the order and sync too, so they stay open
+  $('.myage').prop('disabled', val !== 'yes');
 }
 
 // Resynchronize does nothing unless a cache:yes share synchronizes: by its own override, or by following this setting
@@ -997,7 +990,20 @@ _(Move files that are greater than this many days old)_:
 
 :mover_tune_daysold_plug:
 
-> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto moves files until the threshold is met, with no minimum age; for cache:<strong>yes</strong> shares, **Move order** decides which go first.
+
+:end
+
+_(Move order)_:
+: <select name="moveOrder" size="1">
+  <?=mk_option($cfg['moveOrder'],'oldest',_('Oldest first'))?>
+  <?=mk_option($cfg['moveOrder'],'largest',_('Largest first'))?>
+  <?=mk_option($cfg['moveOrder'],'smallest',_('Smallest first'))?>
+</select>
+
+:mover_tune_moveorder_plug:
+
+> Which files of cache:<strong>yes</strong> shares leave the Primary first. It only sets the order: the age filter, **Auto** and **Move All** still decide which files move.
 
 :end
 
@@ -1015,26 +1021,26 @@ _(Show advanced filters)_:
 
 <div markdown="1" id="moverAdvancedFilters">
 _(Use CTIME (change time))_:
-: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> onchange="toggleTime('ctime')">
+: <select name="ctime" size='1' class='ctime' onchange="toggleTime('ctime')">
   <?=mk_option($cfg['ctime'],'no',_('No'))?>
   <?=mk_option($cfg['ctime'],'yes',_('Yes'))?>
 </select>
 
 :mover_tune_ctime_plug:
 
-> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 
 :end
 
 _(Use ATIME)_:
-: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> onchange="toggleTime('atime')">
+: <select name="atime" size='1' class='atime' onchange="toggleTime('atime')">
   <?=mk_option($cfg['atime'],'no',_('No'))?>
   <?=mk_option($cfg['atime'],'yes',_('Yes'))?>
 </select>
 
 :mover_tune_atime_plug:
 
-> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off.
 
 :end
 
@@ -1434,6 +1440,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <dd><span><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank" rel="noopener noreferrer">_(Open)_</a> - _(Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.)_</span></dd>
     <dt>_(Maintainers)_</dt>
     <dd><span><span class="plugin-year" data-start="2025"></span> - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
+        2026 - <a href="https://forums.unraid.net/profile/283711-chodeus/" target="_blank" rel="noopener noreferrer">chodeus</a> | 
         2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank" rel="noopener noreferrer">R3yn4ld</a> | 
         2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank" rel="noopener noreferrer">hugenbd</a> | 
         2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank" rel="noopener noreferrer">Andrew Zawadzki</a></span></dd>
