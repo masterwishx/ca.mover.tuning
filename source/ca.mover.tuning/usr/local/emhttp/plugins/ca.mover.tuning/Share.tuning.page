@@ -60,8 +60,9 @@ function mtDepends(sel, value) {
 function mtAgeFields() {
   var age = $('select[name="age"]').val() === 'yes';
   $('select[name="daysold"]').prop('disabled', !age);
-  $('select[name="ctime"]').prop('disabled', !age || $('select[name="atime"]').val() === 'yes');
-  $('select[name="atime"]').prop('disabled', !age || $('select[name="ctime"]').val() === 'yes');
+  // CTIME and ATIME set the file time for the order and sync too: only each other locks them
+  $('select[name="ctime"]').prop('disabled', $('select[name="atime"]').val() === 'yes');
+  $('select[name="atime"]').prop('disabled', $('select[name="ctime"]').val() === 'yes');
 }
 
 function mtMoveAllChanged(value) {
@@ -291,7 +292,7 @@ _(Only move files that are older than this (in days))_:
 :end
 
 _(Use CTIME (change time))_:
-: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $lockCtime ?> onchange='mtAgeFields()'>
+: <select name="ctime" class='ctime' <?= $lockCtime ?> onchange='mtAgeFields()'>
   <?=mk_option($cfg['ctime'],'',_('Use global'))?>
   <?=mk_option($cfg['ctime'],'no',_('No'))?>
   <?=mk_option($cfg['ctime'],'yes',_('Yes'))?>
@@ -299,12 +300,12 @@ _(Use CTIME (change time))_:
 
 :mover_tune_ctime_plug:
 
-> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 
 :end
 
 _(Use ATIME)_:
-: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $lockAtime ?> onchange='mtAgeFields()'>
+: <select name="atime" class='atime' <?= $lockAtime ?> onchange='mtAgeFields()'>
   <?=mk_option($cfg['atime'],'',_('Use global'))?>
   <?=mk_option($cfg['atime'],'no',_('No'))?>
   <?=mk_option($cfg['atime'],'yes',_('Yes'))?>
@@ -312,7 +313,7 @@ _(Use ATIME)_:
 
 :mover_tune_atime_plug:
 
-> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off.
 
 :end
 
@@ -547,7 +548,7 @@ _(Only move files that are older than this (in days))_:
 :end
 
 _(Use CTIME (change time))_:
-: <select name="ctime" class='myage ctime' <?= $ageDisabled ?> <?= $lockCtime ?> onchange='mtAgeFields()'>
+: <select name="ctime" class='ctime' <?= $lockCtime ?> onchange='mtAgeFields()'>
   <?=mk_option($cfg['ctime'],'',_('Use global'))?>
   <?=mk_option($cfg['ctime'],'no',_('No'))?>
   <?=mk_option($cfg['ctime'],'yes',_('Yes'))?>
@@ -555,12 +556,12 @@ _(Use CTIME (change time))_:
 
 :mover_tune_ctime_plug:
 
-> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 
 :end
 
 _(Use ATIME)_:
-: <select name="atime" class='myage atime' <?= $ageDisabled ?> <?= $lockAtime ?> onchange='mtAgeFields()'>
+: <select name="atime" class='atime' <?= $lockAtime ?> onchange='mtAgeFields()'>
   <?=mk_option($cfg['atime'],'',_('Use global'))?>
   <?=mk_option($cfg['atime'],'no',_('No'))?>
   <?=mk_option($cfg['atime'],'yes',_('Yes'))?>
@@ -568,7 +569,7 @@ _(Use ATIME)_:
 
 :mover_tune_atime_plug:
 
-> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off.
 
 :end
 

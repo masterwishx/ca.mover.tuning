@@ -364,11 +364,11 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_ctime_plug:
-> 使用 <strong>CTIME</strong><em>（状态更改时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄以及文件自上次同步后是否有变化。文件内容或属性（名称、所有者、权限）发生任何变化时，状态更改时间都会更新；它不是创建时间。
+> 使用 <strong>CTIME</strong><em>（状态更改时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>作为文件时间，用于年龄过滤、移动顺序和自上次同步后的变化判断；即使 **按文件年龄移动** 关闭也生效。文件内容或属性（名称、所有者、权限）发生任何变化时，状态更改时间都会更新；它不是创建时间。
 :end
 
 :mover_tune_atime_plug:
-> 在 find 命令中使用 <strong>ATIME</strong><em>（访问时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>来判断文件年龄。
+> 使用 <strong>ATIME</strong><em>（访问时间）</em>而不是 <strong>MTIME</strong><em>（修改时间）</em>作为文件时间，用于年龄过滤、移动顺序和自上次同步后的变化判断；即使 **按文件年龄移动** 关闭也生效。
 :end
 
 :mover_tune_sizef_plug:

@@ -372,11 +372,11 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_ctime_plug:
-> Utiliser <strong>CTIME</strong> (date de changement d’état) au lieu de <strong>MTIME</strong> (modification) pour juger l’âge d’un fichier et s’il a changé depuis la dernière synchronisation. La date de changement d’état est mise à jour dès que le contenu ou les attributs (nom, propriétaire, permissions) d’un fichier changent ; ce n’est pas la date de création.
+> Utiliser <strong>CTIME</strong> (date de changement d’état) au lieu de <strong>MTIME</strong> (modification) comme date du fichier pour le filtre d’âge, l’ordre de déplacement et le contrôle depuis la dernière synchronisation, même quand **Déplacer les fichiers selon leur âge** est désactivé. La date de changement d’état est mise à jour dès que le contenu ou les attributs (nom, propriétaire, permissions) d’un fichier changent ; ce n’est pas la date de création.
 :end
 
 :mover_tune_atime_plug:
-> Utiliser <strong>ATIME</strong> (date d’accès) au lieu de MTIME.
+> Utiliser <strong>ATIME</strong> (date d’accès) au lieu de <strong>MTIME</strong> (modification) comme date du fichier pour le filtre d’âge, l’ordre de déplacement et le contrôle depuis la dernière synchronisation, même quand **Déplacer les fichiers selon leur âge** est désactivé.
 :end
 
 :mover_tune_sizef_plug:

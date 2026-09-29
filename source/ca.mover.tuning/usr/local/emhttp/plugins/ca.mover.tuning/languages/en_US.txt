@@ -367,11 +367,11 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_ctime_plug:
-> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> to judge the age of a file and whether it changed since the last sync. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 :end
 
 :mover_tune_atime_plug:
-> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off.
 :end
 
 :mover_tune_sizef_plug:
