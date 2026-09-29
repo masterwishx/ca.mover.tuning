@@ -2194,6 +2194,31 @@ remaining_done() {
     fi
 }
 
+# Unraid move's line for name $1 ("move: <name> No space left on device", "skip: <name> -> <dest>") without the name;
+# a destination is cut to its disk ($2 = the share path), so no unquoted path follows the quoted one in the log
+move_tool_said() {
+    local line said rest disk
+    while IFS= read -r line; do
+        case "$line" in
+        debug:*) continue ;;
+        *": $1" | *": $1 "*) ;;
+        *) continue ;;
+        esac
+        said=${line%%": $1"*}
+        rest=${line#*": $1"}
+        rest=${rest# }
+        if [[ "$rest" == "-> /mnt/"* ]]; then
+            rest=${rest#"-> /mnt/"}
+            disk=${rest%%/*}
+            rest=${rest#"$disk/$2"}
+            [[ -z "$rest" || "$rest" == " "* ]] || rest=""
+            rest="-> $disk$rest"
+        fi
+        printf '%s' "$said${rest:+: $rest}"
+        return
+    done <<<"$MOVE_OUT"
+}
+
 # Internal move engine
 processTheMoves() {
     if [ -e $SOFTSTOPFILE ]; then
@@ -2419,6 +2444,7 @@ processTheMoves() {
             done
 
             rc=0
+            MOVE_OUT=""
             # Check if action and move files tool is unraid move
             if [[ "$ACTION" =~ "move" && "$MOVE_FILES_TOOL" = "move" ]]; then
                 if [ "$TESTMODE" = "yes" ]; then
@@ -2429,7 +2455,8 @@ processTheMoves() {
                     # a folder row sends only the folder, which move leaves on the source while anything is in it
                     MOVE_DEBUG_ARGS=()
                     read -r -a MOVE_DEBUG_ARGS <<<"$DEBUGGING"
-                    printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" >>"$MOVER_DEBUG_LOG" 2>&1
+                    MOVE_OUT=$(printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" 2>&1)
+                    [ -n "$MOVE_OUT" ] && printf '%s\n' "$MOVE_OUT" >>"$MOVER_DEBUG_LOG"
                 fi
             else
                 # If action is sync/move and move files tool is rsync
@@ -2480,12 +2507,15 @@ processTheMoves() {
                         reason="Still on the source after the move"
                     fi
                     if [ -n "$reason" ]; then
+                        said=""
                         # a name already gone from the source was not the mover's to move: counted, never notified
                         if [ -n "${GONE_BEFORE[$f]}" ] || [ ! -e "$SOURCE/$rel" ]; then
                             reason="Gone from the source before its turn"
                             vanished=$((vanished + 1))
+                        else
+                            said=$(move_tool_said "$SOURCE/$rel" "$rel")
                         fi
-                        mvlogger "$reason: $(qp "$SOURCE/$rel")"
+                        mvlogger "$reason: $(qp "$SOURCE/$rel")${said:+ ($said)}"
                         continue
                     fi
                     arrived=$((arrived + 1))
