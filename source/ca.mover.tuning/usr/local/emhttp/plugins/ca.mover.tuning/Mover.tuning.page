@@ -1440,6 +1440,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <dd><span><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank" rel="noopener noreferrer">_(Open)_</a> - _(Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.)_</span></dd>
     <dt>_(Maintainers)_</dt>
     <dd><span><span class="plugin-year" data-start="2025"></span> - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
+        2026 - <a href="https://forums.unraid.net/profile/283711-chodeus/" target="_blank" rel="noopener noreferrer">chodeus</a> | 
         2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank" rel="noopener noreferrer">R3yn4ld</a> | 
         2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank" rel="noopener noreferrer">hugenbd</a> | 
         2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank" rel="noopener noreferrer">Andrew Zawadzki</a></span></dd>
