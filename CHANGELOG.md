@@ -6,6 +6,9 @@
 - new: Added beta builds for early testing. Every release now shows how to roll back.
 - new: Added Simplified Chinese (thanks to RedCatJump for the translation), and updated German, French and Russian.
 - new: Add an opt-in cache watchdog that monitors cache and starts a run when the pool fills
+- new: Show the progress of a Mover Tuning run under the Move button
+- new: Add a Move order setting: oldest, largest or smallest first
+- new: Share overrides get a "Use global" choice for every setting, this becomes default, and a share's own Yes or No now always applies. No change to existing overrides.
 - fix: Hardlinked files are now moved together.
 - fix: Folder moves no longer pick up files added after planning.
 - fix: Notifications now only show real failures.
@@ -13,7 +16,6 @@
 - fix: The mover scripts are executable again after install.
 - fix: Schedules now follow their settings, so updates no longer bring back a disabled or cleared schedule, and a reinstall restores them.
 - fix: Defaults asks first and resets the schedules too, and Move now shows the mover as running until it finishes.
-- new: Share overrides get a "Use global" choice for every setting, this becomes default, and a share's own Yes or No now always applies. No change to existing overrides.
 - fix: Share overrides now stay with their share.
 - fix: The skip list also works for cache:prefer shares and /mnt/user paths, and Move All drops the filters of cache:yes shares only.
 - fix: Fresh installs show the moving threshold (85%) and debug logging (No) the mover already uses.
@@ -23,11 +25,9 @@
 - fix: Improved the before and after scripts path validation.
 - fix: Settings keep quotes in text fields when saved, also on Unraid 6.9, and the share settings page accepts only existing share names.
 - fix: "Clean empty ZFS datasets" is greyed out, and saved as No, unless "Clean empty folders" is on.
-- doc: The test mode, age and sparseness texts now say when the original mover still runs and which way files move.
 - fix: Corrected settings behaviours where the behaviour did not align with its setting or tooltip.
-- new: Show the progress of a Mover Tuning run under the Move button
-- new: Add a Move order setting: oldest, largest or smallest first
-- Remove moveNow.php, unused since 2024 (d830b26)
+- doc: The test mode, age and sparseness texts now say when the original mover still runs and which way files move.
+- doc: Removed moveNow.php, unused since 2024
 
 ## 2026.09.19
 
