@@ -72,6 +72,7 @@ Ignore All hidden files and directories=忽略隐藏文件和目录
 Ignore files and folders listed inside of a text file=忽略列表中的文件和文件夹
 Ignore file types=忽略指定文件类型
 Invalid characters to block=要阻止的无效字符
+Largest first=最大的优先
 Let scheduled mover run during a parity check rebuild=允许计划的 Mover 在奇偶校验/重建期间运行
 Log Mover Tuning plugin actions=记录 Mover Tuning 插件日志
 Logs parent folder for Mover Tuning plugin=日志文件保存路径
@@ -85,6 +86,7 @@ Move All from Primary->Secondary cacheyes shares when disk is above a certain pe
 Move All from Primary->Secondary shares pool percentage=主存储->次存储共享全部移动的存储池百分比
 Move All threshold raised to %1 to stay above the moving threshold=全部移动阈值已升至 %1，以保持高于移动阈值。
 Move All threshold set to %1, as the global settings have none=全部移动阈值已设为 %1，因为全局设置中没有该值。
+Move order=移动顺序
 Moved Only=仅已移动
 Move empty folders=移动空文件夹
 Move files based on age=按文件年龄移动
@@ -117,6 +119,7 @@ Mover Tuning thresholds=Mover Tuning 阈值
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件没有移动/同步任何文件。耗时：%s
 Not Applicable Share Does Not Exist Yet=不适用（共享尚不存在）
 Notify Mover Tuning plugin actions=通知设置
+Oldest first=最旧的优先
 Only move files larger than this in MB=仅移动大于此大小的文件（MB）
 Only move files that are older than this in days=仅移动早于此天数的文件（天）
 Only move if above this threshold of used Primary cache space=仅当主存储（<em>缓存</em>）使用率超过此阈值时移动
@@ -142,6 +145,7 @@ Show advanced options=显示高级选项
 Show advanced settings=显示高级设置
 Skip files listed in text file=跳过文本文件中列出的文件
 Skip file types=跳过文件类型
+Smallest first=最小的优先
 Speed=速度
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=从 Unraid 7.2.1 开始，Mover Tuning 插件的行为已改变
 Start Mover Tuning=启动 Mover Tuning
@@ -348,7 +352,11 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_daysold_plug:
-> 选择文件需要达到的**天数**才会被移动（最多 1 年）。自动模式会从最旧的文件移动到最新的文件，直到达到阈值。
+> 选择文件需要达到的**天数**才会被移动（最多 1 年）。自动模式会一直移动文件直到达到阈值，不设最小天数；对于 cache:<strong>yes</strong> 共享，**移动顺序** 决定哪些文件先移走。
+:end
+
+:mover_tune_moveorder_plug:
+> cache:<strong>yes</strong> 共享中哪些文件先离开主存储。它只决定顺序：年龄过滤、**自动** 和 **全部移动** 仍决定哪些文件会被移动。
 :end
 
 :mover_tune_advancedfilters_plug:
@@ -492,7 +500,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_share_daysold_plug:
-> 选择文件需要达到多少天才会被移动（最多 1 年）。“自动”会从最旧到最新移动，直到达到阈值。
+> 选择文件需要达到多少天才会被移动（最多 1 年）。“自动”会一直移动文件直到达到阈值，不设最小天数；对于 cache:<strong>yes</strong> 共享，**移动顺序** 决定哪些文件先移走。
 :end
 
 :mover_tune_share_sizef_plug:

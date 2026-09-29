@@ -73,6 +73,7 @@ Ignore All hidden files and directories=Alle versteckten Dateien und Ordner igno
 Ignore files and folders listed inside of a text file=Dateien und Ordner ignorieren, die in einer Textdatei aufgelistet sind
 Ignore file types=Dateitypen ignorieren
 Invalid characters to block=Ungültige Zeichen zum Blockieren
+Largest first=Größte zuerst
 Let scheduled mover run during a parity check rebuild=Zeitplan für Datenverschiebung während Paritätsprüfung/Wiederherstellung erlauben
 Log Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins protokollieren
 Logs parent folder for Mover Tuning plugin=Übergeordneter Ordner für Protokolle des Mover‑Tuning‑Plugins
@@ -86,6 +87,7 @@ Move All from Primary->Secondary cacheyes shares when disk is above a certain pe
 Move All from Primary->Secondary shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben – Pool‑Prozent
 Move All threshold raised to %1 to stay above the moving threshold=Grenze „Alles verschieben“ auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
 Move All threshold set to %1, as the global settings have none=Grenze „Alles verschieben“ auf %1 gesetzt, da die globalen Einstellungen keine haben.
+Move order=Reihenfolge der Verschiebung
 Moved Only=Nur verschobene Dateien
 Move empty folders=Leere Ordner verschieben
 Move files based on age=Dateien basierend auf ihrem Alter verschieben
@@ -118,6 +120,7 @@ Mover Tuning thresholds=Mover‑Tuning‑Schwellwerte
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Keine Dateien wurden durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
 Not Applicable Share Does Not Exist Yet=Nicht anwendbar (Freigabe existiert noch nicht)
 Notify Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins melden
+Oldest first=Älteste zuerst
 Only move files larger than this in MB=Nur Dateien verschieben, die größer sind als dieser Wert (in MB)
 Only move files that are older than this in days=Nur Dateien verschieben, die älter sind als dieser Wert (in Tagen)
 Only move if above this threshold of used Primary cache space=Nur verschieben, wenn dieser Füllstand des Primärspeichers (Cache) überschritten ist
@@ -143,6 +146,7 @@ Show advanced options=Erweiterte Optionen anzeigen
 Show advanced settings=Erweiterte Einstellungen anzeigen
 Skip files listed in text file=Dateien überspringen, die in einer Textdatei aufgelistet sind
 Skip file types=Dateitypen überspringen
+Smallest first=Kleinste zuerst
 Speed=Geschwindigkeit
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Ab Unraid 7.2.1 hat sich das Verhalten des Mover‑Tuning‑Plugins geändert
 Start Mover Tuning=Mover‑Tuning starten
@@ -350,7 +354,11 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_daysold_plug:
-> Anzahl der **Tage**, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt von alt nach neu, bis der Schwellenwert erreicht ist.
+> Anzahl der **Tage**, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; bei cache:<strong>yes</strong>‑Freigaben bestimmt **Reihenfolge der Verschiebung**, welche zuerst gehen.
+:end
+
+:mover_tune_moveorder_plug:
+> Welche Dateien von cache:<strong>yes</strong>‑Freigaben den Primärspeicher zuerst verlassen. Sie legt nur die Reihenfolge fest: Altersfilter, **Auto** und **Alles verschieben** entscheiden weiterhin, welche Dateien verschoben werden.
 :end
 
 :mover_tune_advancedfilters_plug:
@@ -494,7 +502,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_share_daysold_plug:
-> Wähle die Anzahl der Tage, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt von den ältesten zu den neuesten Dateien, bis der Schwellenwert erreicht ist.
+> Wähle die Anzahl der Tage, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; bei cache:<strong>yes</strong>‑Freigaben bestimmt **Reihenfolge der Verschiebung**, welche zuerst gehen.
 :end
 
 :mover_tune_share_sizef_plug:
