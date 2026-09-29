@@ -366,11 +366,11 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_ctime_plug:
-> <strong>CTIME</strong> (Statusänderungszeit) statt <strong>MTIME</strong> (Änderungszeit) verwenden, um das Alter einer Datei zu bestimmen und ob sie sich seit der letzten Synchronisation geändert hat. Die Statusänderungszeit wird aktualisiert, sobald sich der Inhalt oder die Attribute (Name, Besitzer, Berechtigungen) einer Datei ändern; sie ist nicht die Erstellungszeit.
+> <strong>CTIME</strong> (Statusänderungszeit) statt <strong>MTIME</strong> (Änderungszeit) als Dateizeit verwenden: für den Altersfilter, die Reihenfolge, in der Dateien verschoben werden, und den Abgleich seit der letzten Synchronisation, auch wenn **Dateien basierend auf ihrem Alter verschieben** aus ist. Die Statusänderungszeit wird aktualisiert, sobald sich der Inhalt oder die Attribute (Name, Besitzer, Berechtigungen) einer Datei ändern; sie ist nicht die Erstellungszeit.
 :end
 
 :mover_tune_atime_plug:
-> <strong>ATIME</strong> (Zugriffszeit) statt <strong>MTIME</strong> (Änderungszeit) im <em>find</em>‑Befehl verwenden.
+> <strong>ATIME</strong> (Zugriffszeit) statt <strong>MTIME</strong> (Änderungszeit) als Dateizeit verwenden: für den Altersfilter, die Reihenfolge, in der Dateien verschoben werden, und den Abgleich seit der letzten Synchronisation, auch wenn **Dateien basierend auf ihrem Alter verschieben** aus ist.
 :end
 
 :mover_tune_sizef_plug:
