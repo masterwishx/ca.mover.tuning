@@ -356,7 +356,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_moveorder_plug:
-> cache:<strong>yes</strong> 共享中哪些文件先离开主存储。启用 **按文件年龄移动** 时，只移动超过设定天数的文件，并按此顺序移动。
+> cache:<strong>yes</strong> 共享中哪些文件先离开主存储。它只决定顺序：年龄过滤、**自动** 和 **全部移动** 仍决定哪些文件会被移动。
 :end
 
 :mover_tune_advancedfilters_plug:

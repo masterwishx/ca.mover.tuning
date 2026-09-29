@@ -359,7 +359,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_moveorder_plug:
-> Which files of cache:<strong>yes</strong> shares leave the Primary first. With **Move files based on age**, only files older than that many days move, in this order.
+> Which files of cache:<strong>yes</strong> shares leave the Primary first. It only sets the order: the age filter, **Auto** and **Move All** still decide which files move.
 :end
 
 :mover_tune_advancedfilters_plug:

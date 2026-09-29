@@ -363,7 +363,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_moveorder_plug:
-> Quels fichiers des parts cache:<strong>yes</strong> quittent le cache primaire en premier. Avec **Déplacer les fichiers selon leur âge**, seuls les fichiers plus anciens que ce nombre de jours sont déplacés, dans cet ordre.
+> Quels fichiers des parts cache:<strong>yes</strong> quittent le cache primaire en premier. Il ne fixe que l’ordre : le filtre d’âge, **Auto** et **Tout déplacer** décident toujours quels fichiers sont déplacés.
 :end
 
 :mover_tune_advancedfilters_plug:

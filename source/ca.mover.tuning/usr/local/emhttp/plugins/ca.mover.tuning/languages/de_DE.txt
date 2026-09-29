@@ -358,7 +358,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_moveorder_plug:
-> Welche Dateien von cache:<strong>yes</strong>‑Freigaben den Primärspeicher zuerst verlassen. Mit **Dateien basierend auf ihrem Alter verschieben** werden nur Dateien verschoben, die älter als die eingestellten Tage sind, in dieser Reihenfolge.
+> Welche Dateien von cache:<strong>yes</strong>‑Freigaben den Primärspeicher zuerst verlassen. Sie legt nur die Reihenfolge fest: Altersfilter, **Auto** und **Alles verschieben** entscheiden weiterhin, welche Dateien verschoben werden.
 :end
 
 :mover_tune_advancedfilters_plug:
