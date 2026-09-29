@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.09.29a (beta)
 
 - new: Files that are in use are now left where they are, with a new setting to move them anyway (off by default). (masterwishx - Thanks to chodeus for the PRs)
 - new: Added beta builds for early testing. Every release now shows how to roll back.
