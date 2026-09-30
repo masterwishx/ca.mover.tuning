@@ -158,7 +158,7 @@ Test Mode dry run=测试模式（演练）
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=测试模式：Mover Tuning 插件不会移动/同步任何文件。耗时：%s
 Thank you for using this plugin=感谢使用本插件。
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=已保存的释放阈值为 %1，高于移动阈值 %2。Mover 在 %2 时开始、在 %1 时停止，因此存储池使用率介于两者之间时不会移动任何文件。此页面现在显示 %3，保存后将使用该值。
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=已保存的全部移动阈值为 %1，不高于移动阈值 %2。在达到移动阈值之前，cache:yes 共享上的所有文件都会被移动，并忽略跳过列表和过滤器。此页面现在显示 %3，保存后将使用该值。
+The saved Move All threshold is %1, at or below the moving threshold of %2 Once the pool is above %1, everything on cacheyes shares moves, skip list and filters ignored This page now shows %3, and saving will store that=已保存的全部移动阈值为 %1，不高于移动阈值 %2。一旦池使用率超过 %1，cache:yes 共享上的所有文件都会被移动，并忽略跳过列表和过滤器。此页面现在显示 %3，保存后将使用该值。
 The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=全局全部移动阈值 %1 不高于此共享的移动阈值 %2，因此此共享上的所有文件从 %1 起都会被移动。
 Top Folder=顶层文件夹
 Transfer complete=传输完成
@@ -423,7 +423,6 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :mover_tune_omoverthresh_plug:
 <p>设置主存储池的磁盘使用量，达到后启动<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）共享中所有文件的移动。</p>
 <p>对于未达到此阈值的其余存储池，之后仍会运行过滤器。</p>
-<p>此阈值应至少比上方的<strong><em>仅当主存储（缓存）使用率超过此阈值时移动</em></strong>设置<strong>高出 5%</strong>。</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -465,7 +464,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 <p><u>注意：</u></p>
 <ul>
   <li><strong>仅同步</strong>自上次同步以来<strong>修改过的文件</strong>。</li>
-  <li><strong>仅</strong>缓存池中<strong>低于</strong>移动和释放阈值的<strong>文件</strong>可以被<strong>同步</strong>。</li>
+  <li><strong>仅</strong>运行后仍留在缓存池中的<strong>文件</strong>会被<strong>同步</strong>。</li>
 </ul>
 :end
 

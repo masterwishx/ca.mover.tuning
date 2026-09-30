@@ -159,7 +159,7 @@ Test Mode dry run=Тестовый режим (пробный запуск)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=ТЕСТОВЫЙ РЕЖИМ: файлы не были бы перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 Thank you for using this plugin=Спасибо за использование этого плагина.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Сохранённый порог освобождения — %1, выше порога перемещения %2. Mover запускается при %2 и останавливается при %1, поэтому ничего не перемещается, пока пул находится между ними. Эта страница показывает %3, и сохранение установит это значение.
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Сохранённый порог перемещения всех — %1, на уровне или ниже порога перемещения %2. Всё на cache:yes перемещается, список пропусков и фильтры игнорируются до достижения порога. Эта страница показывает %3, и сохранение установит это значение.
+The saved Move All threshold is %1, at or below the moving threshold of %2 Once the pool is above %1, everything on cacheyes shares moves, skip list and filters ignored This page now shows %3, and saving will store that=Сохранённый порог перемещения всех — %1, на уровне или ниже порога перемещения %2. Как только пул превышает %1, всё на cache:yes перемещается, список пропусков и фильтры игнорируются. Эта страница показывает %3, и сохранение установит это значение.
 The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Глобальный порог «Переместить всё» %1 не выше порога перемещения этой шары (%2), поэтому всё на этой шаре перемещается начиная с %1.
 Top Folder=Верхняя папка
 Transfer complete=Перенос завершён
@@ -423,7 +423,6 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :mover_tune_omoverthresh_plug:
 <p>Установите количество используемого дискового пространства на основном пуле для запуска перемещения всех файлов в шаре <strong><em>Основной->Вторичный</em></strong> (cache:<strong>yes</strong>).</p>
 <p>После этого фильтры всё равно будут применяться для оставшихся пулов, не достигших этого порога.</p>
-<p>Этот порог должен быть как минимум на <strong>5%</strong> больше, чем указанный выше параметр <strong><em>«Перемещать только при достижении этого порога используемого пространства основного (кэш-пула)»</em></strong>.</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -465,7 +464,7 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 <p><u>Примечание:</u></p>
 <ul>
   <li><strong>Синхронизируются ТОЛЬКО изменённые файлы</strong> с момента последней синхронизации.</li>
-  <li><strong>Синхронизироваться могут ТОЛЬКО файлы</strong> на кэш-пуле <strong>ниже</strong> порогов перемещения и освобождения.</li>
+  <li><strong>Синхронизируются ТОЛЬКО файлы</strong>, которые остаются на кэш-пуле после запуска.</li>
 </ul>
 :end
 

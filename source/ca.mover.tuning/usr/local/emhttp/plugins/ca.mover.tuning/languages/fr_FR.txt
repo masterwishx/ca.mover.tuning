@@ -159,7 +159,7 @@ Test Mode dry run=Mode test (simulation)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=MODE TEST : aucun fichier ne serait déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
 Thank you for using this plugin=Merci d’utiliser ce plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Le seuil de libération enregistré est %1, au-dessus du seuil de déplacement %2. Le mover démarre à %2 et s’arrête à %1, donc rien n’est déplacé tant que le pool reste entre ces valeurs. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Le seuil « tout déplacer » enregistré est %1, au niveau ou en dessous du seuil de déplacement %2. Tout sur les parts cache:yes est déplacé, la liste d’exclusion et les filtres sont ignorés avant d’atteindre le seuil de déplacement. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
+The saved Move All threshold is %1, at or below the moving threshold of %2 Once the pool is above %1, everything on cacheyes shares moves, skip list and filters ignored This page now shows %3, and saving will store that=Le seuil « tout déplacer » enregistré est %1, au niveau ou en dessous du seuil de déplacement %2. Dès que le pool dépasse %1, tout sur les parts cache:yes est déplacé, la liste d’exclusion et les filtres sont ignorés. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
 The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Le seuil global « tout déplacer » de %1 est au niveau ou en dessous du seuil de déplacement de cette part (%2) : tout ce qui est sur cette part est déplacé dès %1.
 Top Folder=Dossier principal
 Transfer complete=Transfert terminé
@@ -432,7 +432,6 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_omoverthresh_plug:
 <p>Définit le seuil d’utilisation du pool primaire pour déplacer tous les fichiers.</p>
 <p>Les filtres s’appliquent ensuite pour les pools restants.</p>
-<p>Ce seuil doit être au moins <strong>5%</strong> supérieur à « Only move at this threshold… ».</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -474,7 +473,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p><u>Note:</u></p>
 <ul>
   <li><strong>SEULS les fichiers modifiés</strong> depuis la dernière synchronisation sont <strong>synchronisés</strong>.</li>
-  <li><strong>SEULS les fichiers</strong> présents sur le pool de cache <strong>en dessous</strong> des seuils de déplacement et de libération peuvent être <strong>synchronisés</strong>.</li>
+  <li><strong>SEULS les fichiers</strong> qui restent sur le pool de cache après l’exécution sont <strong>synchronisés</strong>.</li>
 </ul>
 :end
 
