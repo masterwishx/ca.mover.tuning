@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- new: Unraid 7.4 beta support (masterwishx - Thanks to chodeus for the PRs)
+- new: The log now warns when a share's Minimum free space is smaller than the largest file to move and the disk Unraid picks could run out of room.
+- new: When a file does not move, the log now gives Unraid's reason, for example "No space left on device".
+- new: The debug zip records the Mover Progress setting.
+- fix: Unraid 7.4's new mover is no longer replaced by the old one at boot or when the plugin is removed.
+
 ## 2026.09.29a (beta)
 
 - new: Files that are in use are now left where they are, with a new setting to move them anyway (off by default). (masterwishx - Thanks to chodeus for the PRs)
