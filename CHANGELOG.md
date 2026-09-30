@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Record Mover Progress in the debug zip's mover state (f5abe6b)
+- Follow Mover Progress as Unraid now defines it: on only for yes (683c801)
+- Show progress while Mover Progress is only unset on 7.4 (f2dec88)
+- Leave mover.old alone on removal when the Unraid version is unknown (4633480)
+- Follow Mover Progress as the Mover Settings page shows it (d0f56f1)
+- Measure only mounted array disks for the Minimum free space warning (bdf3045)
+- Warn when a share's Minimum free space lets a move run out of room (32014d5)
+- Say why Unraid move left a file behind (111ddeb)
+- Show Mover Tuning runs in Unraid 7.4's own mover progress (4a6ae97)
+- Stop restoring mover.old on Unraid 7.2.1 and newer (43f1b47)
+
 ## 2026.09.29a (beta)
 
 - new: Files that are in use are now left where they are, with a new setting to move them anyway (off by default). (masterwishx - Thanks to chodeus for the PRs)
