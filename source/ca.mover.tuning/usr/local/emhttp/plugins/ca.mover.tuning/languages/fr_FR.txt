@@ -339,14 +339,10 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_movingthreshold_plug:
 <p>Définit le seuil d’utilisation du cache <strong>Primaire→Secondaire</strong> (cache:yes) pour lancer le mover.</p>
-<p><u>Note :</u> si le mover ne déplace pas les données alors qu’il devrait, augmentez le seuil pour élargir l’écart entre les seuils de déplacement et de libération.</p>
-<p>Le mover additionne la taille utilisée du cache et la taille des fichiers jusqu’à dépasser le seuil de libération. Les gros fichiers peuvent empêcher d’atteindre ce seuil correctement.</p>
 :end
 
 :mover_tune_freeingthreshold_plug:
 <p>Définit le seuil d’utilisation du cache après la fin du mover. Mettre <strong><em>0%</em></strong> signifie déplacer toutes les données hors du cache.</p>
-<p><u>Note :</u> si le mover ne déplace pas les données alors qu’il devrait, réduisez ce seuil.</p>
-<p>Les gros fichiers peuvent empêcher d’atteindre correctement le seuil de libération.</p>
 :end
 
 :mover_tune_fillupthreshold_plug:

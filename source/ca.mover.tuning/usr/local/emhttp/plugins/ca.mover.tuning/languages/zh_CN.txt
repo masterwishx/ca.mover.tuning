@@ -333,14 +333,10 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_movingthreshold_plug:
 <p> 设置<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）驱动器上触发 Mover 运行的磁盘使用量。达到此阈值时，Mover 开始运行，将数据移出缓存池。</p>
-<p> <u>提示：</u>如果发现<strong>Mover 未能及时移动数据</strong>，可以尝试<strong>提高移动阈值</strong>，增大移动阈值和释放阈值之间的差距。</p>
-<p> Mover 会累计缓存池已用空间与文件大小之和，直到超过释放阈值。如果文件很大，可能无法恰好落在为释放阈值分配的空间内。</p>
 :end
 
 :mover_tune_freeingthreshold_plug:
 <p> 设置 Mover 运行完成后<strong><em>主存储->次存储</em></strong>（cache:<strong>yes</strong>）驱动器上的磁盘使用量。设置为 (<strong><em>0%</em></strong>) 表示 Mover 会一直运行，直到所有数据都移出缓存池。</p>
-<p> <u>提示：</u>如果发现<strong>Mover 未能及时移动数据</strong>，可以尝试<strong>降低释放阈值</strong>，增大移动阈值和释放阈值之间的差距。</p>
-<p> Mover 会累计缓存池已用空间与文件大小之和，直到超过释放阈值。如果文件很大，可能无法恰好落在为释放阈值分配的空间内。</p>
 :end
 
 :mover_tune_fillupthreshold_plug:
