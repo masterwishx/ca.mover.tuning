@@ -229,7 +229,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_testmode_plug:
-<p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben.</p>
+<p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben. Die Skripte vor und nach dem Lauf werden trotzdem ausgeführt.</p>
 <p>Achtung – Der Testmodus hält den originalen Mover nicht auf: Er läuft trotzdem nach dem Zeitplan der Option <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> und über die Schaltfläche „Jetzt verschieben“, wenn die Option <strong>„Jetzt verschieben“ folgt den Plugin‑Filtern</strong> auf <strong>Nein</strong> steht. Ab Unraid 7.2.1 starten der Mover‑Zeitplan und die Verschieben‑Schaltflächen von Unraid selbst immer den originalen Mover.</p>
 :end
 

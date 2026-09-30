@@ -228,7 +228,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_testmode_plug:
-<p> 测试模式<strong>不会</strong>运行 Mover，而是将自定义 find 命令的结果输出到 <em>/tmp/ca.mover.tuning/</em>。</p>
+<p> 测试模式<strong>不会</strong>运行 Mover，而是将自定义 find 命令的结果输出到 <em>/tmp/ca.mover.tuning/</em>。运行前和运行后的脚本仍会执行。</p>
 <p> 注意 - 测试模式不会阻止原始 Mover：它仍会按“定时强制移动所有文件”的计划运行；如果“立即移动按钮遵循过滤器”设为<strong>否</strong>，立即移动按钮也会运行原始 Mover。在 Unraid 7.2.1 及更高版本中，Unraid 自带的 Mover 计划和移动按钮始终运行原始 Mover。</p>
 :end
 

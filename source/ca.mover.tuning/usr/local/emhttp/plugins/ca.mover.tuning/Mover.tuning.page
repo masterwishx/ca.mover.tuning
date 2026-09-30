@@ -637,7 +637,7 @@ function toggleTestModeWarning(val) {
 
 <blockquote class="inline_help">
 :mover_tune_testmode_plug:
-<p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>.</p>
+<p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. The before and after scripts still run.</p>
 <p> Caution - Test Mode does not stop original Mover: it still runs on the "Force move of all files on a schedule" schedule, and from the Move Now button if "Move Now button follows plug-in filters" is set to <strong>No</strong>. On Unraid 7.2.1 and later, Unraid's own Mover schedule and Move buttons always run the original Mover.</p>
 :end
 </blockquote>

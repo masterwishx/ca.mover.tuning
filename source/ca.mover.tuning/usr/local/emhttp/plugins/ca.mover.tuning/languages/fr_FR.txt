@@ -229,7 +229,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_testmode_plug:
-<p>Le mode test ne <strong>lance pas</strong> le mover mais affiche les résultats de la commande find personnalisée dans <em>/tmp/ca.mover.tuning/</em>.</p>
+<p>Le mode test ne <strong>lance pas</strong> le mover mais affiche les résultats de la commande find personnalisée dans <em>/tmp/ca.mover.tuning/</em>. Les scripts avant et après s’exécutent quand même.</p>
 <p>Attention — le mode test n’arrête pas le mover original : il s’exécute quand même selon l’horaire de l’option <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong>, et depuis le bouton « Déplacer maintenant » si l’option <strong>Le bouton « Déplacer maintenant » suit les filtres du plugin</strong> est réglée sur <strong>Non</strong>. À partir d’Unraid 7.2.1, la planification du mover et les boutons de déplacement d’Unraid lancent toujours le mover original.</p>
 :end
 
