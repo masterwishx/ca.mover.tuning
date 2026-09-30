@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Unraid 7.4 knows a running mover by a "mover" word in its command line (sbin/mover is_mover_pid, nchan/parity_list):
+# run as "mover <this script> <share>", which keeps this path in the command line
+read -r -d '' mt_argv0 </proc/$$/cmdline
+[ "$mt_argv0" = mover ] || exec -a mover /bin/bash "$0" "$@"
+
 PIDFILE="/var/run/mover.pid"
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
