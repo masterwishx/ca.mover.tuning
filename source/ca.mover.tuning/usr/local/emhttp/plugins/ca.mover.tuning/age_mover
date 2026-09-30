@@ -2329,7 +2329,7 @@ processTheMoves() {
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
-        mvlogger "Warning: Test Mode: yes, nothing is moved or synced, the actions are only logged"
+        mvlogger "Warning: Test Mode: yes, the mover only logs its moves and syncs; the before and after scripts still run"
     fi
 
     # Loop through each line in the action list (except those where action is keep), starting by cache and then array
