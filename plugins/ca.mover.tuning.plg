@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.09.29a">
-<!ENTITY md5       "663168ef5bee960b02e71bc7901af7c2">
+<!ENTITY version   "2026.09.30a">
+<!ENTITY md5       "6041ba20dd2915302d67fb2ce0293259">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -14,6 +14,13 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.09.30a
+- new: Unraid 7.4 beta support (masterwishx - Thanks to chodeus for the PRs)
+- new: The log now warns when a share's Minimum free space is smaller than the largest file to move and the disk Unraid picks could run out of room.
+- new: When a file does not move, the log now gives Unraid's reason, for example "No space left on device".
+- new: The debug zip records the Mover Progress setting.
+- fix: Unraid 7.4's new mover is no longer replaced by the old one at boot or when the plugin is removed.
+
 ###2026.09.29a
 - new: Files that are in use are now left where they are, with a new setting to move them anyway (off by default). (masterwishx - Thanks to chodeus for the PRs)
 - new: Added beta builds for early testing. Every release now shows how to roll back.
