@@ -122,13 +122,14 @@ version_ge() {
     [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" = "$2" ]
 }
 
-# From 7.4 the status file follows Mover Progress as Mover Settings shows it: off only for "disabled" or no line.
-# 7.4.0-beta.3 holds "no" while share.cfg has no line (one save does not write it); the page shows that as Enabled.
+# From 7.4 the status file follows Mover Progress in var.ini, as Main's own rows do (webgui #2741): on only for "yes",
+# or "enabled" as 7.4.0-beta.2 and beta.3 saved it; "no", the default, and anything else is off.
 moverProgressSetting() {
     MOVER_PROGRESS=yes
     version_ge "$UNRAID_VERSION" 7.4 || return 0
     case "$(grep -m1 '^shareMoverProgress=' /var/local/emhttp/var.ini 2>/dev/null | cut -d'"' -f2)" in
-    "" | disabled) MOVER_PROGRESS=no ;;
+    yes | enabled) ;;
+    *) MOVER_PROGRESS=no ;;
     esac
 }
 
