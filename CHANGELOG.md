@@ -2,13 +2,7 @@
 
 ## Unreleased
 
-- Say after Mover finishes in the Russian sync and test mode help (0acbd62)
-- Say in the test mode help that the before and after scripts still run (87d52a5)
-- Say the before and after scripts still run in test mode (b892983)
-- Correct the sync note, the saved Move All warning and the Move All help (4d712bd)
-- Remove the threshold help notes about summing file sizes (f78e6c6)
-- Say test mode only logs its actions (c7b7080)
-- Stop warning that equal or 5% apart thresholds move nothing (a497e99)
+- doc: warnings updated
 
 ## 2026.09.30a (beta)
 
