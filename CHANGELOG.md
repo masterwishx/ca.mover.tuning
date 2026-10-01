@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- doc: warnings updated
+
 ## 2026.09.30a (beta)
 
 - new: Unraid 7.4 beta support (masterwishx - Thanks to chodeus for the PRs)
