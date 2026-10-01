@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.10.01a (beta)
 
 - doc: warnings updated
 
