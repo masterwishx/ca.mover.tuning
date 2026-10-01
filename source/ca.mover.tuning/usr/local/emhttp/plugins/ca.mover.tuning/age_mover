@@ -2329,7 +2329,7 @@ processTheMoves() {
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
-        mvlogger "Warning: Test Mode: yes, running $MOVE_FILES_TOOL in dry-mode for moving $([ "$MOVE_FILES_TOOL" = "rsync" ] && echo 'and syncing')"
+        mvlogger "Warning: Test Mode: yes, the mover only logs its moves and syncs; the before and after scripts still run"
     fi
 
     # Loop through each line in the action list (except those where action is keep), starting by cache and then array
@@ -2986,16 +2986,6 @@ start() {
     # If $TESTMODE is set to "yes", log a warning message indicating that the test mode is enabled and should be disabled to run the mover.
     if [ "$TESTMODE" = "yes" ]; then
         mvlogger "Warning: Test Mode (dry run) is currently enabled. Please disable it to perform the actual file move."
-    fi
-
-    # If $MOVINGPCTTHRESHOLD is equal to $FREEINGPCTLIMIT, log a warning message indicating that the mover will not move due to the thresholds no gap beetween.
-    if [ "$MOVINGPCTTHRESHOLD" = "$FREEINGPCTLIMIT" ] && [ "$FREEINGPCTLIMIT" != 0 ]; then
-        mvlogger "Warning: Moving thresholds are equal. No action will be taken because the thresholds do not provide a gap."
-    fi
-
-    # If the gap is exactly 5, the smallest the settings page can offer, warn that it may not be enough.
-    if [ "$MOVINGPCTTHRESHOLD" -eq "$((FREEINGPCTLIMIT + 5))" ]; then
-        mvlogger "Warning: The mover will possibly not proceed due to the low gap between thresholds."
     fi
 
     warn_freeing_above_moving

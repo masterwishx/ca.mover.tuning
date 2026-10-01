@@ -162,7 +162,7 @@ function mtWarnSavedThresholds() {
       freeing + '%', moving + '%', $fr.val() + '%'));
   }
   if (mtSaved.omoverOn === true && omover !== null && omover <= moving && changed($om, mtSaved.omover)) {
-    msgs.push(mtFmt('_(The saved Move All threshold is %1, at or below the moving threshold of %2. Everything on cache:yes shares moves, skip list and filters ignored, before the moving threshold is reached. This page now shows %3, and saving will store that.)_',
+    msgs.push(mtFmt('_(The saved Move All threshold is %1, at or below the moving threshold of %2. Once the pool is above %1, everything on cache:yes shares moves, skip list and filters ignored. This page now shows %3, and saving will store that.)_',
       omover + '%', moving + '%', $om.val() + '%'));
   }
   if (!msgs.length) return;
@@ -766,7 +766,6 @@ _(Move All from Primary->Secondary (cache:yes) shares pool percentage)_:
 :mover_tune_omoverthresh_plug:
 <p>Set to the amount of disk space used on the Primary pool to initiate a move of all files in a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share.</p>
 <p>Filters will still run after, for any remaining pool's that do not meet this threshold.</p>
-<p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
 :end
 </blockquote>
 
@@ -784,7 +783,7 @@ _(Synchronize Primary files to Secondary)_:
 <p><u>Note:</u></p>
 <ul>
   <li><strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</li>
-  <li><strong>ONLY files</strong> on the cache pool <strong>below</strong> moving and freeing thresholds can be <strong>synchronized</strong>.</li>
+  <li><strong>ONLY files</strong> that stay on the cache pool after the run are <strong>synchronized</strong>.</li>
 </ul>
 :end
 </blockquote>

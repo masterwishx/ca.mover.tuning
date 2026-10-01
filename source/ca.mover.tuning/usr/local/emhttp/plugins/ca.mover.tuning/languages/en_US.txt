@@ -161,7 +161,7 @@ Test Mode dry run=Test Mode (dry run)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=TEST MODE: No files would be moved/synced by Mover Tuning plugin. Elapsed time: %s
 Thank you for using this plugin=Thank you for using this plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=The saved freeing threshold is %1, above the moving threshold of %2. The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them. This page now shows %3, and saving will store that.
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=The saved Move All threshold is %1, at or below the moving threshold of %2. Everything on cache:yes shares moves, skip list and filters ignored, before the moving threshold is reached. This page now shows %3, and saving will store that.
+The saved Move All threshold is %1, at or below the moving threshold of %2 Once the pool is above %1, everything on cacheyes shares moves, skip list and filters ignored This page now shows %3, and saving will store that=The saved Move All threshold is %1, at or below the moving threshold of %2. Once the pool is above %1, everything on cache:yes shares moves, skip list and filters ignored. This page now shows %3, and saving will store that.
 The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1.
 Top Folder=
 Transfer complete=
@@ -231,7 +231,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_testmode_plug:
-<p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>.</p>
+<p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. The before and after scripts still run.</p>
 <p> Caution - Test Mode does not stop original Mover: it still runs on the "Force move of all files on a schedule" schedule, and from the Move Now button if "Move Now button follows plug-in filters" is set to <strong>No</strong>. On Unraid 7.2.1 and later, Unraid's own Mover schedule and Move buttons always run the original Mover.</p>
 :end
 
@@ -336,14 +336,10 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 
 :mover_tune_movingthreshold_plug:
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.</p>
-<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>higher moving threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
-<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
 :end
 
 :mover_tune_freeingthreshold_plug:
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.</p>
-<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>lower freeing threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
-<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
 :end
 
 :mover_tune_fillupthreshold_plug:
@@ -430,7 +426,6 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :mover_tune_omoverthresh_plug:
 <p>Set to the amount of disk space used on the Primary pool to initiate a move of all files in a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share.</p>
 <p>Filters will still run after, for any remaining pool's that do not meet this threshold.</p>
-<p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -472,7 +467,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 <p><u>Note:</u></p>
 <ul>
   <li><strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</li>
-  <li><strong>ONLY files</strong> on the cache pool <strong>below</strong> moving and freeing thresholds can be <strong>synchronized</strong>.</li>
+  <li><strong>ONLY files</strong> that stay on the cache pool after the run are <strong>synchronized</strong>.</li>
 </ul>
 :end
 

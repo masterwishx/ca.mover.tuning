@@ -159,7 +159,7 @@ Test Mode dry run=Testmodus (Trockenlauf)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Es würden keine Dateien verschoben/synchronisiert werden. Verstrichene Zeit %s
 Thank you for using this plugin=Danke, dass du dieses Plugin verwendest.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Die gespeicherte Freigabegrenze beträgt %1 und liegt über der Verschiebegrenze %2. Die Datenverschiebung startet bei %2 und stoppt bei %1, daher wird nichts verschoben, solange der Pool zwischen diesen Werten liegt. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Die gespeicherte „Alles verschieben“-Grenze beträgt %1 und liegt auf oder unter der Verschiebegrenze %2. Alles auf cache:yes‑Freigaben wird verschoben, Skip‑Liste und Filter werden ignoriert, bevor die Verschiebegrenze erreicht wird. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
+The saved Move All threshold is %1, at or below the moving threshold of %2 Once the pool is above %1, everything on cacheyes shares moves, skip list and filters ignored This page now shows %3, and saving will store that=Die gespeicherte „Alles verschieben“-Grenze beträgt %1 und liegt auf oder unter der Verschiebegrenze %2. Sobald der Pool über %1 liegt, wird alles auf cache:yes‑Freigaben verschoben, Skip‑Liste und Filter werden ignoriert. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
 The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Die globale „Alles verschieben“-Grenze von %1 liegt auf oder unter der Verschiebegrenze dieser Freigabe (%2), daher wird ab %1 alles auf dieser Freigabe verschoben.
 Top Folder=Oberster Ordner
 Transfer complete=Übertragung abgeschlossen
@@ -229,7 +229,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_testmode_plug:
-<p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben.</p>
+<p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben. Die Skripte vor und nach dem Lauf werden trotzdem ausgeführt.</p>
 <p>Achtung – Der Testmodus hält den originalen Mover nicht auf: Er läuft trotzdem nach dem Zeitplan der Option <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> und über die Schaltfläche „Jetzt verschieben“, wenn die Option <strong>„Jetzt verschieben“ folgt den Plugin‑Filtern</strong> auf <strong>Nein</strong> steht. Ab Unraid 7.2.1 starten der Mover‑Zeitplan und die Verschieben‑Schaltflächen von Unraid selbst immer den originalen Mover.</p>
 :end
 
@@ -334,15 +334,11 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 
 :mover_tune_movingthreshold_plug:
 <p>Legt den Füllstand des <strong>Primärspeichers → Sekundärspeicher</strong> (cache:<strong>yes</strong>) fest, ab dem die Datenverschiebung startet.</p>
-<p><u>Hinweis:</u> Wenn die Datenverschiebung nicht startet, obwohl sie sollte, erhöhe die <strong>Verschiebegrenze</strong>, um die Lücke zwischen Verschiebe‑ und Freigabegrenze zu vergrößern.</p>
-<p>Der Mover berechnet die Summe aus belegtem Cache‑Pool und Dateigröße. Große Dateien können dazu führen, dass die Freigabegrenze nicht erreicht wird.</p>
 :end
 
 :mover_tune_freeingthreshold_plug:
 <p>Legt den Füllstand des <strong>Primärspeichers → Sekundärspeicher</strong> (cache:<strong>yes</strong>) fest, bis zu dem Dateien verschoben werden.</p>
 <p><strong>0 %</strong> bedeutet: alles wird verschoben.</p>
-<p><u>Hinweis:</u> Wenn die Datenverschiebung nicht startet, obwohl sie sollte, senke die <strong>Freigabegrenze</strong>, um die Lücke zwischen den Schwellenwerten zu vergrößern.</p>
-<p>Große Dateien können dazu führen, dass die Freigabegrenze nicht erreicht wird.</p>
 :end
 
 :mover_tune_fillupthreshold_plug:
@@ -429,7 +425,6 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :mover_tune_omoverthresh_plug:
 <p>Legt den Füllstand des Primärspeichers fest, ab dem alle Dateien einer <strong>Primär→Sekundär</strong>‑Freigabe (cache:<strong>yes</strong>) verschoben werden.</p>
 <p>Filter werden weiterhin angewendet, wenn andere Pools den Schwellenwert nicht erreichen.</p>
-<p>Dieser Wert sollte mindestens <strong>5 %</strong> höher sein als die Einstellung „Nur verschieben, wenn dieser Füllstand des Primärspeichers erreicht ist“.</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -471,7 +466,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p><u>Hinweis:</u></p>
 <ul>
   <li><strong>NUR geänderte Dateien</strong> seit der letzten Synchronisation werden <strong>synchronisiert</strong>.</li>
-  <li><strong>NUR Dateien</strong> im Cache‑Pool <strong>unterhalb</strong> der Verschiebe‑ und Freigabeschwellen können <strong>synchronisiert</strong> werden.</li>
+  <li><strong>NUR Dateien</strong>, die nach dem Lauf im Cache‑Pool bleiben, werden <strong>synchronisiert</strong>.</li>
 </ul>
 :end
 
