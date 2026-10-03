@@ -185,8 +185,6 @@ function remove_cron_file($file, $why = '')
 /** Makes the plugin's own cron files follow the saved settings: writes a missing one they call for, removes one they do not, never rewrites one */
 function sync_cron_files()
 {
-	global $vars, $cfg_cronEnabled, $cfg_cron, $cfg_moverDisabled, $cfg_moverTuneCron, $cfg_watchdog;
-
 	// parse_plugin_cfg reads it with my_parse_ini_file from Unraid 6.12.14, parse_ini_file before; a file that does not
 	// parse leaves only default.cfg in $cfg from 7.2.0 (null on 6.9), which would remove every cron file
 	$cfgFile = "/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg";
@@ -197,6 +195,15 @@ function sync_cron_files()
 			return;
 		}
 	}
+	sync_forced_cron();
+	sync_tune_cron();
+	sync_watchdog_cron();
+}
+
+/** sync_cron_files() for the forced move's mover.cron */
+function sync_forced_cron()
+{
+	global $cfg_cronEnabled, $cfg_cron;
 
 	$forcedFile = "/boot/config/plugins/ca.mover.tuning/mover.cron";
 	if ($cfg_cronEnabled !== 'yes') {
@@ -206,6 +213,12 @@ function sync_cron_files()
 	} elseif (file_exists($forcedFile) === false && make_cron($cfg_cron) === true) {
 		logger("Forced move schedule written back from the saved settings.");
 	}
+}
+
+/** sync_cron_files() for mover.tuning.cron, the Mover Tuning schedule from Unraid 7.2.1 */
+function sync_tune_cron()
+{
+	global $vars, $cfg_moverDisabled, $cfg_moverTuneCron;
 
 	$tuneFile = "/boot/config/plugins/ca.mover.tuning/mover.tuning.cron";
 	if ($vars['version'] === '') {
@@ -219,6 +232,12 @@ function sync_cron_files()
 	} elseif (file_exists($tuneFile) === false && make_tune_cron($cfg_moverTuneCron) === true) {
 		logger("Mover Tuning schedule written back from the saved settings.");
 	}
+}
+
+/** sync_cron_files() for mover.watchdog.cron, the cache watchdog */
+function sync_watchdog_cron()
+{
+	global $cfg_watchdog;
 
 	$watchdogFile = "/boot/config/plugins/ca.mover.tuning/mover.watchdog.cron";
 	if ($cfg_watchdog !== 'yes') {
