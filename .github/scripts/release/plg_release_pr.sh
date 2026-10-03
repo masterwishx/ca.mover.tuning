@@ -104,7 +104,7 @@ body="$SCRATCH/pr-body.md"
 {
   echo "Merge this PR to cut the next **$CHANNEL** release. Edit the Unreleased section of \`$CHANGELOG\` on this branch first; the release job stamps the version, renders it into the plugin manifest, and attaches the package."
   echo
-  echo "Bullets are copied from commit subjects, and a stable release refuses any bullet that is still word for word the copy (those ending in a commit hash, for example): reword or delete each one."
+  echo "Bullets are copied from commit subjects: reword or delete each one that is still word for word the copy (those ending in a commit hash, for example). On a stable release PR the **Release notes** check fails until none is left; the release itself only warns."
   echo
   # generated PR: the release check enforces the changelog rules, so keep CodeRabbit off it
   echo "@coderabbitai ignore"

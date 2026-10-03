@@ -41,6 +41,28 @@ jobs:
           bash source/ca.mover.tuning/pkg_build.sh --version 0000.00.00 --out "$RUNNER_TEMP/dist"
           test -s "$RUNNER_TEMP/dist/ca.mover.tuning-0000.00.00-x86_64-1.txz"
 
+  # The stable release only warns about bullets still copied from commit subjects, so its PR is where they fail.
+  release-notes:
+    name: Release notes
+    if: github.head_ref == 'release/stable'
+    runs-on: ubuntu-latest
+    env:
+      PLG: plugins/ca.mover.tuning.plg
+      CHANGELOG: CHANGELOG.md
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the check compares the bullets with every commit since the last stable release tag
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: No bullet is still a copied commit subject
+        run: |
+          since=$(python3 .github/scripts/release/plg_release.py since-ref --changelog "$CHANGELOG" --channel stable)
+          python3 .github/scripts/release/plg_release.py check --changelog "$CHANGELOG" --plg "$PLG" \
+            --channel stable --branch "$GITHUB_BASE_REF" --require-edited --since "$since"
+
   release-scripts:
     name: Release script tests
     runs-on: ubuntu-latest

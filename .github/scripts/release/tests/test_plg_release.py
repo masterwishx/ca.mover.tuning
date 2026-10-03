@@ -621,6 +621,37 @@ def test_cut_retires_the_release_branch_only_after_the_base_push():
     assert push < disarm < gone, "the branch goes only once the release is fully published"
 
 
+def _cut_notes_checks(tmp_path, channel, empty=False):
+    """Run the cut's notes checks against a stub release helper that finds copied bullets."""
+    body = (SCRIPTS / "plg_release_cut.sh").read_text()
+    block = re.search(r"^since=\$\(\$PLGR since-ref.*?(?=^beta_flag=)", body, re.M | re.S).group(0)
+    plgr = tmp_path / "plgr"
+    plgr.write_text('#!/bin/bash\ncase "$*" in\n'
+                    '  since-ref*) echo 2026.09.19 ;;\n'
+                    '  *--require-edited*) echo "ERROR: Unreleased still has bullets copied from commit subjects"; exit 1 ;;\n'
+                    '  *--require-nonempty*) [ -z "$EMPTY" ] || { echo "ERROR: Unreleased has no bullets"; exit 1; } ;;\n'
+                    'esac\n')
+    plgr.chmod(0o755)
+    env = {**os.environ, "PLGR": str(plgr), "CHANNEL": channel, "BASE": "master", "CHANGELOG": "CHANGELOG.md",
+           "PLG": "plugins/plugin.plg", "EMPTY": "1" if empty else ""}
+    return subprocess.run(["bash", "-c", f"set -euo pipefail\n{block}\necho checks-done"], cwd=tmp_path, env=env,
+                          capture_output=True, text=True)
+
+
+@pytest.mark.parametrize("channel", ["stable", "beta"])
+def test_copied_bullets_only_warn_once_the_release_pr_is_merged(tmp_path, channel):
+    """Failing here would strand a merged release; the stable release PR's notes check shows them before the merge."""
+    r = _cut_notes_checks(tmp_path, channel)
+    assert r.returncode == 0 and "checks-done" in r.stdout, r.stdout + r.stderr
+    assert f"::warning::{channel} notes still contain bullets copied from commit subjects" in r.stdout
+
+
+@pytest.mark.parametrize("channel", ["stable", "beta"])
+def test_a_release_with_no_notes_still_stops(tmp_path, channel):
+    r = _cut_notes_checks(tmp_path, channel, empty=True)
+    assert r.returncode != 0 and "checks-done" not in r.stdout
+
+
 def test_merge_changelog_inserts_missing_sections_and_keeps_our_order(tmp_path):
     ours = tmp_path / "ours.md"
     theirs = tmp_path / "theirs.md"
@@ -1045,6 +1076,35 @@ def test_stable_pr_lists_master_commits_already_in_the_beta_only_once(channels):
     channels.release("beta", "2026.09.21a", "- The fix, described for users", "beta")
     channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
     assert channels.unreleased("release/stable") == ["- The fix, described for users"]
+
+
+def test_the_stable_release_pr_fails_its_notes_check_while_a_bullet_is_a_copied_subject(channels):
+    """The release only warns about copied subjects, so this PR check is what shows them before the merge."""
+    import yaml
+
+    job = yaml.safe_load((REPO / ".github/workflows/ci.yml").read_text())["jobs"]["release-notes"]
+    assert job["if"] == "github.head_ref == 'release/stable'"
+    checkout, check = job["steps"]
+    assert checkout["with"]["fetch-depth"] == 0, "it compares the bullets with every commit since the last stable tag"
+    script = check["run"].replace(".github/scripts/release/plg_release.py", str(SCRIPTS / "plg_release.py"))
+    env = {**channels.env, **job["env"], "PLG": Channels.PLG, "GITHUB_BASE_REF": "master"}
+
+    def notes_check():
+        """The job on the PR's merge ref: the release PR merged into master."""
+        channels.sh(channels.work, "fetch", "-q", "origin", "--tags")
+        channels.sh(channels.work, "checkout", "-q", "--detach", "origin/master")
+        channels.sh(channels.work, "merge", "-q", "--no-ff", "-m", "Merge the release PR", "origin/release/stable")
+        return subprocess.run(["bash", "-eo", "pipefail", "-c", script], cwd=channels.work, env=env,
+                              capture_output=True, text=True)
+
+    channels.commit("master", "fix: urgent data-loss fix")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    r = notes_check()
+    assert r.returncode == 1 and "- fix: urgent data-loss fix" in r.stdout, r.stdout + r.stderr
+    channels.commit("release/stable", "Update CHANGELOG.md", "CHANGELOG.md",
+                    lambda t: t.replace("- fix: urgent data-loss fix\n", "- A data-loss bug is fixed\n"))
+    r = notes_check()
+    assert r.returncode == 0, r.stdout + r.stderr
 
 
 def test_stable_pr_edits_survive_the_next_beta_release(channels):
