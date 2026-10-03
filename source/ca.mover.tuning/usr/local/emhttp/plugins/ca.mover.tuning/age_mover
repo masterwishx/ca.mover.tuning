@@ -1803,7 +1803,7 @@ decideMoveActions() {
     ## Loop Filtered Filelist and for each file decide to move to/from the array
     # rows with the 9999999999 mtime only reserve space (cache:only shares, skipped files): not counted as files
     local files
-    files=$(awk -F'|' 'FNR > 1 && $5 != 9999999999 { n++ } END { print n + 0 }' "$FILTERED_FILELIST")
+    files=$(awk -F'|' 'FNR > 1 && $12 == "f" && $5 != 9999999999 { n++ } END { print n + 0 }' "$FILTERED_FILELIST")
     mvlogger "Deciding the action (move/sync/keep) for each file. There $([ "$files" = 1 ] && echo "is 1 file" || echo "are $files files"), it can take a while..."
 
     ## Proceed with files
