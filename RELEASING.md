@@ -21,7 +21,7 @@ The **Release** workflow (`.github/workflows/release.yml`) does all of this; nob
    - builds the package, publishes the GitHub release with the package attached, and checks the download matches the `.plg` md5;
    - puts the install URL and the rollback command for the previous release on the release page.
 4. After a **beta** release it opens or updates the stable release PR, which brings that beta release into `master` (the release as tagged, not work pushed to `beta` since) with its notes, next to any fixes pushed straight to `master`. Merge that one with a merge commit, not a squash.
-5. After a **stable** release it merges `master` back into `beta` and refreshes the beta release PR.
+5. After a **stable** release it merges `master` back into `beta` and refreshes the beta release PR, which leaves out the commits that stable release already shipped.
 
 Each branch keeps its own `version`, `md5` and `pluginURL` in the `.plg` (`pluginURL` points at its own branch, so servers on the beta stay on the beta); the rest of the `.plg`, such as the install and remove scripts, merges between the branches like any other file.
 

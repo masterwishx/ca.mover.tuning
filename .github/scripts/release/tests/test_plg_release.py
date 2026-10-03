@@ -1198,6 +1198,22 @@ def test_a_notes_only_edit_is_not_a_bullet_after_the_back_merge(channels):
     assert channels.unreleased("release/beta") == ["- fix: beta work"]
 
 
+@pytest.mark.parametrize("stable", ["2026.09.21", "2026.09.22"])
+def test_beta_pr_leaves_out_master_commits_the_stable_release_shipped(channels, stable):
+    """The back-merge brings master's own fixes into beta; a same-day stable sorts below the beta, so its tag must say so."""
+    channels.commit("beta", "fix: beta fix")
+    channels.release("beta", "2026.09.21a", "- Beta fix, described for users", "beta")
+    channels.commit("master", "fix: urgent fix straight on master")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    channels.merge_pr("release/stable", "master")
+    channels.cut("master", stable, "stable")
+    channels.run("plg_release_backmerge.sh", BASE="master", VERSION=stable)
+    assert "nothing to release" in channels.run("plg_release_pr.sh", CHANNEL="beta", BASE="beta")
+    channels.commit("beta", "feat: new beta work")
+    channels.run("plg_release_pr.sh", CHANNEL="beta", BASE="beta")
+    assert channels.unreleased("release/beta") == ["- feat: new beta work"]
+
+
 def test_refresh_stops_rather_than_drop_a_code_change_on_the_release_pr(channels):
     """The rebuild carries over only the notes; anything else pushed to the release PR must not vanish silently."""
     channels.commit("beta", "fix: A thing")

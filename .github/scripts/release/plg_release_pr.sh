@@ -69,6 +69,11 @@ fi
 seed_args=(--since "$since" --until "origin/$BASE")
 # the promoted beta's notes already describe its commits, so they are not listed again from master
 [ -z "$promote" ] || seed_args+=(--beta-sections --beta-after "$OLD_SYNC_BETA" --exclude "refs/tags/$promote")
+# likewise master's own commits, which reach beta with the merge after the stable release that listed them
+if [ "$CHANNEL" = beta ]; then
+  last_stable=$($PLGR since-ref --changelog "$CHANGELOG" --channel stable)
+  [ -z "$last_stable" ] || seed_args+=(--exclude "refs/tags/$last_stable")
+fi
 carry=()
 [ -z "$OLD_CL" ] || carry=(--carry-from "$OLD_CL")
 $PLGR seed --changelog "$CHANGELOG" --channel "$CHANNEL" "${carry[@]}" "${seed_args[@]}"
