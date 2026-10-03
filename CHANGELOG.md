@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.10.03a (beta)
 
 - fix: The "Deciding the action" log line now counts only real files.
 
