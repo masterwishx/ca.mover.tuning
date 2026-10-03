@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Remove deprecated moveNow.php script (3739519)
+- fix: improve condition check readability in moveNow.php
+- fix: improve readability of condition checks in debug.php
+- fix: remove trailing comma in extensions.json
+
 ## 2026.10.03a (beta)
 
 - fix: The "Deciding the action" log line now counts only real files.
