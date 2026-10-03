@@ -1,4 +1,5 @@
 import hashlib
+import json
 import os
 import re
 import subprocess
@@ -214,6 +215,46 @@ def _git(repo, *args):
     return subprocess.run(["git", *args], cwd=repo, check=True, capture_output=True, text=True).stdout.strip()
 
 
+def _named_steps():
+    import yaml
+
+    wf = yaml.safe_load((REPO / ".github/workflows/release.yml").read_text())
+    return {s.get("name"): s for s in wf["jobs"]["release"]["steps"]}
+
+
+def test_the_release_job_works_from_the_branch_tip():
+    """A queued or re-run job's event commit can be behind its branch, and a cut from it cannot push."""
+    assert _named_steps()["Checkout"]["with"]["ref"] == "${{ github.ref }}"
+
+
+def test_release_scripts_are_staged_from_the_commit_the_run_started_from(tmp_path):
+    """GitHub read this workflow at the event commit; the tip's scripts may belong to a newer one."""
+    repo = tmp_path / "repo"
+    scripts = repo / ".github/scripts/release"
+    scripts.mkdir(parents=True)
+    _git(repo, "init", "-q", "-b", "master")
+    shas = []
+    for text in ("started", "tip"):
+        (scripts / "plg_release_cut.sh").write_text(text)
+        _git(repo, "add", "-A")
+        _git(repo, "-c", "user.email=t@example.com", "-c", "user.name=t", "commit", "-qm", text)
+        shas.append(_git(repo, "rev-parse", "HEAD"))
+    runner_temp, env_file = tmp_path / "runner", tmp_path / "env"
+    runner_temp.mkdir()
+    env = {**os.environ, "GITHUB_SHA": shas[0], "RUNNER_TEMP": str(runner_temp), "GITHUB_ENV": str(env_file)}
+    subprocess.run(["bash", "-c", _named_steps()["Stage the release scripts"]["run"]], cwd=repo, env=env,
+                   check=True, capture_output=True)
+    assert (runner_temp / "release/plg_release_cut.sh").read_text() == "started"
+    assert env_file.read_text() == f"SCRIPTS={runner_temp}/release\n"
+
+
+def test_cross_channel_refreshes_wait_for_the_other_channels_merged_release():
+    """A refresh while that channel's merged release awaits its cut would reopen the released notes as a new PR."""
+    steps = _named_steps()
+    for name in ("Refresh stable release PR after a beta", "Refresh beta release PR after a stable"):
+        assert "steps.decide.outputs.other_pr == ''" in steps[name]["if"], name
+
+
 @pytest.fixture
 def decide_repo(tmp_path):
     """master: base commit, a merged release PR's merge commit, then one more push."""
@@ -258,7 +299,7 @@ def test_decide_rejects_an_unsupported_mode(tmp_path, decide_repo, mode):
 
 @pytest.mark.parametrize("mode", ["pr", "release"])
 def test_decide_takes_an_explicit_mode_as_given(tmp_path, decide_repo, mode):
-    r, out = _run_decide(tmp_path, decide_repo[0], mode, "exit 1")
+    r, out = _run_decide(tmp_path, decide_repo[0], mode, "echo ' '")
     assert r.returncode == 0, r.stderr
     assert out["mode"] == mode
 
@@ -266,7 +307,7 @@ def test_decide_takes_an_explicit_mode_as_given(tmp_path, decide_repo, mode):
 def test_decide_releases_a_merged_release_pr_until_a_release_tag_contains_it(tmp_path, decide_repo):
     """A cancelled run must not lose the release: the next run sees the merge still has no release tag."""
     repo, merged = decide_repo
-    gh = f"echo '7 {merged}'"
+    gh = f"echo '2026-09-25T00:00:00Z 7 {merged}'"
     r, out = _run_decide(tmp_path, repo, "auto", gh)
     assert r.returncode == 0, r.stderr
     assert (out["channel"], out["mode"], out["pr_number"]) == ("stable", "release", "7")
@@ -276,10 +317,44 @@ def test_decide_releases_a_merged_release_pr_until_a_release_tag_contains_it(tmp
     assert _run_decide(tmp_path, repo, "auto", gh)[1]["mode"] == "pr"
 
 
+def test_decide_stops_on_a_release_tag_the_branch_does_not_have(tmp_path, decide_repo):
+    """The cut moves the branch last: a tag the branch lacks is a cut that stopped part way, not a release."""
+    repo, merged = decide_repo
+    gh = f"echo '2026-09-25T00:00:00Z 7 {merged}'"
+
+    def tag_off_the_branch(tag):
+        _git(repo, "switch", "-q", "--detach", "master")
+        _git(repo, "commit", "-q", "--allow-empty", "-m", f"chore(release): {tag}")
+        _git(repo, "tag", tag)
+        _git(repo, "switch", "-q", "master")
+
+    tag_off_the_branch("2026.09.26")
+    r, out = _run_decide(tmp_path, repo, "auto", gh)
+    assert r.returncode != 0 and "mode" not in out
+    assert "gh release delete 2026.09.26 --cleanup-tag --yes" in r.stderr and "stopped part way" in r.stderr
+    _git(repo, "merge", "-q", "--ff-only", "2026.09.26")
+    tag_off_the_branch("2026.09.27")
+    assert _run_decide(tmp_path, repo, "auto", gh)[1]["mode"] == "pr", "one release tag on the branch is enough"
+
+
+def test_decide_releases_when_only_the_other_channels_tag_contains_the_merge(tmp_path, decide_repo):
+    """master merged into beta before the stable cut ran: the beta release's tag contains the stable merge."""
+    repo, merged = decide_repo
+    _git(repo, "switch", "-q", "-c", "beta", "HEAD~2")
+    _git(repo, "merge", "-q", "--no-ff", "-m", "Merge branch 'master' into beta", "master")
+    _git(repo, "commit", "-q", "--allow-empty", "-m", "Merge pull request #9 from someone/release/beta")
+    _git(repo, "commit", "-q", "--allow-empty", "-m", "chore(release): 2026.09.26 [skip ci]")
+    _git(repo, "tag", "2026.09.26")
+    _git(repo, "switch", "-q", "master")
+    r, out = _run_decide(tmp_path, repo, "auto", f"echo '2026-09-25T00:00:00Z 7 {merged}'")
+    assert r.returncode == 0, r.stderr
+    assert (out["mode"], out["pr_number"]) == ("release", "7")
+
+
 def test_decide_refreshes_the_pr_when_no_release_pr_is_due(tmp_path, decide_repo):
     repo, _ = decide_repo
     assert _run_decide(tmp_path, repo, "auto", "echo ' '")[1]["mode"] == "pr"
-    assert _run_decide(tmp_path, repo, "auto", "echo '7 " + "f" * 40 + "'")[1]["mode"] == "pr"
+    assert _run_decide(tmp_path, repo, "auto", "echo '2026-09-25T00:00:00Z 7 " + "f" * 40 + "'")[1]["mode"] == "pr"
 
 
 def test_decide_stops_when_the_pr_lookup_fails(tmp_path, decide_repo):
@@ -577,11 +652,12 @@ def test_last_version_and_entity(plg):
     assert run("entity", "--plg", p, "--name", "nope") == 2
 
 
-RELEASES = ('[{"tagName":"pr-12-2026.09.20.0260920101010","isPrerelease":true},'
-            '{"tagName":"2026.09.20b","isPrerelease":true},'
-            '{"tagName":"2026.09.19","isPrerelease":false},'
-            '{"tagName":"2026.09.18a","isPrerelease":true},'
-            '{"tagName":"2026.09.07","isPrerelease":false}]')
+RELEASES = ('[{"tag_name":"2026.09.21","prerelease":false,"draft":true},'
+            '{"tag_name":"pr-12-2026.09.20.0260920101010","prerelease":true,"draft":false},'
+            '{"tag_name":"2026.09.20b","prerelease":true,"draft":false},'
+            '{"tag_name":"2026.09.19","prerelease":false,"draft":false},'
+            '{"tag_name":"2026.09.18a","prerelease":true,"draft":false},'
+            '{"tag_name":"2026.09.07","prerelease":false,"draft":false}]')
 
 
 def _rollback_footer(tmp_path, gh_body, channel="stable", plgr_body="echo upgrade=minor", call="rollback_footer"):
@@ -600,10 +676,12 @@ def _rollback_footer(tmp_path, gh_body, channel="stable", plgr_body="echo upgrad
                           capture_output=True, text=True)
 
 
-def _gh_listing(releases=RELEASES):
-    """A gh stub that applies the script's own --jq filter to a canned release listing."""
-    return ('while [ $# -gt 0 ]; do [ "$1" = --jq ] && { f="$2"; break; }; shift; done\n'
-            f"jq -r \"$f\" <<'JSON'\n{releases}\nJSON")
+def _gh_listing(*pages):
+    """A gh stub that applies the script's own --jq filter to each page of a canned release listing."""
+    body = 'all=""\nwhile [ $# -gt 0 ]; do case "$1" in --jq) f="$2"; shift ;; --paginate) all=1 ;; esac; shift; done\n'
+    for n, page in enumerate(pages or (RELEASES,)):
+        body += ('[ -n "$all" ] || exit 0\n' if n else "") + f"jq -r \"$f\" <<'JSON'\n{page}\nJSON\n"
+    return body
 
 
 def test_stable_rollback_pins_the_previous_stable_release(tmp_path):
@@ -626,9 +704,19 @@ def test_beta_rollback_pins_the_previous_beta_and_offers_the_way_back_to_stable(
 
 
 def test_first_beta_offers_only_the_way_back_to_stable(tmp_path):
-    r = _rollback_footer(tmp_path, _gh_listing('[{"tagName":"2026.09.19","isPrerelease":false}]'), channel="beta")
+    r = _rollback_footer(tmp_path, _gh_listing('[{"tag_name":"2026.09.19","prerelease":false,"draft":false}]'),
+                         channel="beta")
     assert r.returncode == 0, r.stderr
     assert "Roll back" not in r.stdout and "go back to the stable release" in r.stdout
+
+
+def test_rollback_note_finds_the_previous_release_past_the_first_page(tmp_path):
+    """A run of betas can push the last stable release off the first page of the listing."""
+    betas = json.dumps([{"tag_name": f"2026.09.{n // 26 + 20}{chr(97 + n % 26)}", "prerelease": True, "draft": False}
+                        for n in range(99, -1, -1)])
+    r = _rollback_footer(tmp_path, _gh_listing(betas, RELEASES))
+    assert r.returncode == 0, r.stderr
+    assert "plugin install https://raw.githubusercontent.com/someone/plugin/2026.09.19/plugins/plugin.plg forced" in r.stdout.splitlines()
 
 
 def test_no_rollback_note_before_the_first_stable_release(tmp_path):
@@ -649,12 +737,14 @@ def test_an_unexpected_tag_never_reaches_the_pasted_command(tmp_path):
     assert not (tmp_path / "INJECTED").exists()
 
 
-@pytest.mark.parametrize("gh_body,plgr_body", [
-    ("echo 'HTTP 502' >&2; exit 1", "echo upgrade=minor"),  # the release lookup failed
-    (_gh_listing(), "echo 'HTTP Error 404' >&2; exit 2"),  # the rollback target no longer installs
+@pytest.mark.parametrize("channel,gh_body,plgr_body", [
+    ("stable", "echo 'HTTP 502' >&2; exit 1", "echo upgrade=minor"),  # the release lookup failed
+    ("stable", _gh_listing(), "echo 'HTTP Error 404' >&2; exit 2"),  # the rollback target no longer installs
+    ("beta", _gh_listing(), 'case "$*" in *"/master/"*) echo "HTTP Error 404" >&2; exit 2 ;; esac; echo upgrade=minor'),
 ])
-def test_a_rollback_note_that_cannot_be_made_right_stops_the_release(tmp_path, gh_body, plgr_body):
-    r = _rollback_footer(tmp_path, gh_body, plgr_body=plgr_body, call='rollback=$(rollback_footer); echo reached')
+def test_a_rollback_note_that_cannot_be_made_right_stops_the_release(tmp_path, channel, gh_body, plgr_body):
+    r = _rollback_footer(tmp_path, gh_body, channel=channel, plgr_body=plgr_body,
+                         call='rollback=$(rollback_footer); echo reached')
     assert r.returncode != 0 and "reached" not in r.stdout
 
 
@@ -779,15 +869,16 @@ def test_decide_restarts_the_other_channels_waiting_release(tmp_path, decide_rep
     beta_merged = _git(repo, "rev-parse", "HEAD")
     _git(repo, "update-ref", "refs/remotes/origin/beta", beta_merged)
     _git(repo, "switch", "-q", "master")
-    gh = ('case "$*" in\n  *"release/stable"*) echo "7 ' + merged + '" ;;\n  *"release/beta"*) echo "9 ' + beta_merged + '" ;;\n'
+    gh = ('case "$*" in\n  *"release/stable"*) echo "2026-09-25T00:00:00Z 7 ' + merged + '" ;;\n  *"release/beta"*) echo "2026-09-25T00:00:00Z 9 ' + beta_merged + '" ;;\n'
           '  *"workflow run"*) echo "$GH_TOKEN $*" >> dispatched ;;\nesac')
     r, out = _run_decide(tmp_path, repo, "auto", gh, event="push")
     assert r.returncode == 0, r.stderr
-    assert out["mode"] == "pr"
+    assert (out["mode"], out["other_pr"]) == ("pr", "9")
     dispatched = (repo / "dispatched").read_text()
     assert dispatched.startswith("dispatch-token workflow run release.yml") and "--ref beta" in dispatched
     (repo / "dispatched").unlink()
-    _run_decide(tmp_path, repo, "auto", gh, event="workflow_dispatch")
+    out = _run_decide(tmp_path, repo, "release", gh, event="workflow_dispatch")[1]
+    assert out["other_pr"] == "9", "a release run still learns the other channel is waiting"
     assert not (repo / "dispatched").exists(), "a started run never starts another"
 
 
@@ -945,6 +1036,17 @@ def test_stable_pr_promotes_the_beta_release_not_unreleased_beta_work(channels):
     assert "fix: beta fix one" in brought and "feat: unreleased, untested beta work" not in brought
 
 
+def test_stable_pr_lists_master_commits_already_in_the_beta_only_once(channels):
+    """master merged into beta mid-cycle: the beta's notes describe those commits, so they are not listed again."""
+    channels.commit("master", "fix: fixed on master first")
+    channels.on("beta")
+    channels.sh(channels.user, "merge", "-q", "--no-ff", "-m", "Merge master into beta", "origin/master")
+    channels.sh(channels.user, "push", "-q", "origin", "beta")
+    channels.release("beta", "2026.09.21a", "- The fix, described for users", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    assert channels.unreleased("release/stable") == ["- The fix, described for users"]
+
+
 def test_stable_pr_edits_survive_the_next_beta_release(channels):
     channels.commit("beta", "fix: beta code change")
     channels.release("beta", "2026.09.21a", "- One\n- Two\n- Three", "beta")
@@ -972,6 +1074,47 @@ def test_installer_changes_cross_between_the_channels(channels):
     assert "echo installed ok" in beta and "chmod 755 /usr/local/sbin/x" in beta
     assert pr.plg_entities(beta)["version"] == "2026.09.21a" and "/beta/plugins/" in pr.plg_entities(beta)["pluginURL"]
     assert channels.check("beta", "beta", "beta") == 0
+
+
+def test_refresh_guard_leaves_out_beta_work_a_stable_pr_has_no_record_of(channels):
+    """A stable PR can hold beta work with no Release-Synced-Beta trailer to say so, for example beta merged in whole."""
+    channels.commit("beta", "feat: beta work")
+    channels.on("master")
+    channels.sh(channels.user, "switch", "-q", "-c", "release/stable")
+    channels.sh(channels.user, "merge", "-q", "--no-ff", "-m", "Merge beta into release/stable", "origin/beta")
+    channels.sh(channels.user, "push", "-q", "origin", "release/stable")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    channels.commit("release/stable", "fix: pushed to the release PR")
+    r = channels.run("plg_release_pr.sh", ok=False, CHANNEL="stable", BASE="master")
+    assert r.returncode == 1 and "src/fix-pushed-to-the-release-PR" in r.stdout, "a real edit still stops it"
+
+
+def test_refresh_guard_leaves_out_the_promoted_beta_after_beta_is_rewritten(channels):
+    """The promoted tag still marks its commits as beta work once beta itself no longer has them."""
+    channels.release("beta", "2026.09.21a", "- Beta notes", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+    channels.sh(channels.user, "push", "-q", "--force", "origin", "origin/beta~1:refs/heads/beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master")
+
+
+def test_release_scripts_leave_no_temporary_files(channels):
+    """Each script keeps its files in one scratch directory and removes it when it exits."""
+    scratch = channels.tmp / "scratch"
+    scratch.mkdir()
+    channels.release("beta", "2026.09.21a", "- Beta notes", "beta")
+    channels.run("plg_release_pr.sh", CHANNEL="stable", BASE="master", TMPDIR=str(scratch))
+    channels.sh(channels.user, "fetch", "-q", "origin")
+    assert "merge 2026.09.21a into master" in channels.sh(channels.user, "log", "--format=%s", "origin/master..origin/release/stable")
+    channels.release("master", "2026.09.22", "- Stable notes", "stable")
+    channels.run("plg_release_backmerge.sh", BASE="master", VERSION="2026.09.22", TMPDIR=str(scratch))
+    assert list(scratch.iterdir()) == []
+
+
+@pytest.mark.parametrize("script", ["plg_release_pr.sh", "plg_release_cut.sh", "plg_release_backmerge.sh"])
+def test_every_release_script_removes_its_scratch_directory(script):
+    body = (SCRIPTS / script).read_text()
+    assert "SCRATCH=$(mktemp -d)\ntrap 'rm -rf \"$SCRATCH\"' EXIT\n" in body
+    assert body.count("mktemp") == 1, "temporary files go in $SCRATCH"
 
 
 def test_beta_pr_edits_survive_a_refresh(channels):
@@ -1004,3 +1147,49 @@ def test_refresh_stops_rather_than_drop_a_code_change_on_the_release_pr(channels
     r = channels.run("plg_release_pr.sh", ok=False, CHANNEL="beta", BASE="beta")
     assert r.returncode != 0 and Channels.PLG in r.stdout + r.stderr
     assert "echo installed fine" in channels.show("release/beta", Channels.PLG), "the edit is still on the PR"
+
+
+def test_merge_manifest_reports_a_failed_merge_file_as_a_failure():
+    """merge-file exits 255 when it cannot run (binary input); that is not a clash between the branches."""
+    ours = _manifest(install="chmod 644 /usr/local/sbin/x\0")
+    with pytest.raises(pr.ChangelogError, match="git merge-file failed: .*binary"):
+        pr.merge_manifest(_manifest(), ours, _manifest(branch="beta"))
+
+
+def test_merge_stops_when_git_refuses_to_merge(tmp_path):
+    """An untracked file in the way makes git refuse without a conflict; nothing may be committed as if merged."""
+    repo = tmp_path / "r"
+    repo.mkdir()
+    _git(repo, "init", "-q", "-b", "master")
+    _git(repo, "config", "user.email", "t@example.com")
+    _git(repo, "config", "user.name", "t")
+    (repo / "p.plg").write_text(_manifest())
+    (repo / "CHANGELOG.md").write_text("# Changelog\n\n## 2026.09.19\n\n- Notes for 2026.09.19\n")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "base")
+    _git(repo, "switch", "-q", "-c", "other")
+    (repo / "x").write_text("from other")
+    _git(repo, "add", "x")
+    _git(repo, "commit", "-qm", "add x")
+    _git(repo, "switch", "-q", "master")
+    (repo / "x").write_text("untracked, in the way")
+    script = (f'set -euo pipefail\nPLG=p.plg CHANGELOG=CHANGELOG.md PLGR="python3 {SCRIPTS}/plg_release.py" SCRATCH="{tmp_path}"\n'
+              f'. "{SCRIPTS}/plg_release_merge.sh"\nplg_merge other stable\n')
+    r = subprocess.run(["bash", "-c", script], cwd=repo, capture_output=True, text=True)
+    assert r.returncode != 0 and "could not merge other" in r.stdout + r.stderr
+
+
+def test_decide_takes_the_newest_merged_release_pr_of_this_repository_from_every_page(tmp_path, decide_repo):
+    """A fork's release/<channel> PR is somebody's PR; forks are filtered on the server, and every page is read."""
+    repo, merged = decide_repo
+    pages = [[{"number": 5, "merged_at": None, "merge_commit_sha": "0" * 40}],
+             [{"number": 7, "merged_at": "2026-09-25T00:00:00Z", "merge_commit_sha": merged},
+              {"number": 3, "merged_at": "2026-09-01T00:00:00Z", "merge_commit_sha": "1" * 40}]]
+    gh = ('echo "$*" >> gh-args\nall=""\n'
+          'while [ $# -gt 0 ]; do case "$1" in --jq) f="$2"; shift ;; --paginate) all=1 ;; esac; shift; done\n')
+    for n, page in enumerate(pages):
+        gh += ('[ -n "$all" ] || exit 0\n' if n else "") + f"jq -r \"$f\" <<'JSON'\n{json.dumps(page)}\nJSON\n"
+    r, out = _run_decide(tmp_path, repo, "auto", gh)
+    assert r.returncode == 0, r.stderr
+    assert (out["mode"], out["pr_number"]) == ("release", "7")
+    assert "head=someone:release/stable" in (repo / "gh-args").read_text()

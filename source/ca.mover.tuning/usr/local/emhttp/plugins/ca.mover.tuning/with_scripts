@@ -1,0 +1,23 @@
+#!/bin/bash
+# with_scripts COMMAND [ARG...]: the before script, COMMAND, then the after script, as age_mover runs them around its own runs.
+# mover.php passes the scripts in MT_BEFORE_SCRIPT and MT_AFTER_SCRIPT; the after script runs also when COMMAND fails or is stopped.
+[ "$#" -gt 0 ] || exit 2
+
+run_script() {
+    local name=$1 script=$2 rc
+    [ -n "$script" ] || return 0
+    if [ -f "$script" ] && [ -x "$script" ]; then
+        logger -t move "Launching ${name,} script: $script"
+        "$script"
+        rc=$?
+        logger -t move "$name script finished with result: $([ "$rc" = 0 ] && echo "OK" || echo "$rc")"
+    else
+        logger -t move "$name script file $script does not exist or is not executable. Skipping"
+    fi
+}
+
+run_script Before "${MT_BEFORE_SCRIPT:-}"
+"$@"
+rc=$?
+run_script After "${MT_AFTER_SCRIPT:-}"
+exit "$rc"

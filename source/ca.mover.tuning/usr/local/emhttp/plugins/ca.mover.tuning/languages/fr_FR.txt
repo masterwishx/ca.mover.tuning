@@ -8,14 +8,20 @@
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s fichiers et %s dossiers représentant %s n’ont pas pu être déplacés/synchronisés par le plugin Mover Tuning.
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s fichiers et %s dossiers ont été déplacés/synchronisés, mais rsync a signalé des erreurs les concernant. Consultez le journal de Mover Tuning.
+Action=Action
 All community developers=Tous les développeurs de la communauté
 Allow force mover schedule to run during a parity checkrebuild=Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Tous les paramètres du plugin reviennent à leurs valeurs par défaut, y compris la planification Mover Tuning, l’horaire du déplacement forcé et la surveillance du cache, et les paramètres remplacés de chaque part sont supprimés.
 Array → Cache=Array → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Un total de %s fichiers et %s dossiers représentant %s ont été déplacés/synchronisés avec succès par le plugin Mover Tuning. Temps écoulé : %s
+Backing off %s still %s after last run Next try %s, or at %s=En attente : %s encore à %s après la dernière exécution. Prochain essai %s, ou à %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Avant de continuer, cliquez sur une option ou appuyez sur F1 pour lire les descriptions détaillées de tous les paramètres.
 by=par
 Cache disk not enabled=Disque cache non activé !
+Cache watchdog=Surveillance du cache
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Surveillance du cache : %s est rempli à %s, au niveau ou au-dessus du seuil de déclenchement de %s. Démarrage de Mover Tuning.
 Cache → Array=Cache → Array
+Cancel=Annuler
 Clean empty folders=Nettoyer les dossiers vides
 Clean empty ZFS datasets=Nettoyer les datasets ZFS vides
 CLI help commands=Commandes d’aide CLI
@@ -36,14 +42,18 @@ Error Failed to convert CRLF line endings in %s Check file permissions=Erreur : 
 Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Erreur : chemin de fichier invalide %s. Corrigez le nom ou désactivez l’option de validation des noms de fichiers.
 Error No files found to move for %s=Erreur : aucun fichier trouvé à déplacer pour %s
 Errors Only=Erreurs uniquement
+Estimated Completion=Fin estimée
+ETA=Temps restant
 Failed to destroy ZFS dataset %s — attempting to remount=Échec de la destruction du dataset ZFS [%s] — tentative de remontage.
 Failed to remount dataset %s=Échec du remontage du dataset [%s]
+Failed to reset Mover Tuning Check the logs=Échec de la réinitialisation de Mover Tuning. Consultez les journaux.
 Failed to start Mover Tuning Check the logs=Échec du démarrage de Mover Tuning. Consultez les journaux.
 Failed to unmount ZFS dataset %s=Échec du démontage du dataset ZFS [%s]
 Fatal error %s does not exist, check this=Erreur fatale : %s n’existe pas, vérifiez cela.
 Fatal error cache not enabled and less than 2 pools set up=Erreur fatale : cache non activé et moins de deux pools configurés.
 Fatal error cache not present, or only cache present, and less than 2 pools set up=Erreur fatale : cache absent, ou uniquement cache présent, et moins de deux pools configurés.
 File and Syslog=Fichier et Syslog
+File being processed=Fichier en cours de traitement
 File list path=Chemin de la liste de fichiers
 File Only=Fichier uniquement
 Fill upprime up to this level of used Primary cache space=Remplir/précharger jusqu’à ce niveau d’utilisation du cache primaire
@@ -63,25 +73,28 @@ Ignore All hidden files and directories=Ignorer tous les fichiers et dossiers ca
 Ignore files and folders listed inside of a text file=Ignorer les fichiers et dossiers listés dans un fichier texte
 Ignore file types=Ignorer les types de fichiers
 Invalid characters to block=Caractères invalides à bloquer
+Largest first=Les plus gros d’abord
 Let scheduled mover run during a parity check rebuild=Autoriser le mover programmé pendant une vérification/réparation de parité
 Log Mover Tuning plugin actions=Journaliser les actions du plugin Mover Tuning
 Logs parent folder for Mover Tuning plugin=Dossier parent des journaux du plugin Mover Tuning
 Low=Faible
 Maintainers=Mainteneurs
 make those plugins with ❤️ and a lot of ☕=créent ces plugins avec ❤️ et beaucoup de ☕
-Move ALL files from current pool wont use mover settings=Déplacer **TOUS** les fichiers du pool actuel (sans utiliser les paramètres du mover)
-Move ALL files to current pool wont use mover settings=Déplacer **TOUS** les fichiers vers le pool actuel (sans utiliser les paramètres du mover)
+Move ALL files from current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers du pool actuel (en ignorant les filtres et les seuils)
+Move ALL files to current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers vers le pool actuel (en ignorant les filtres et les seuils)
 Move All from Primary->Secondary cacheyes shares pool percentage=Déplacer tout depuis Primaire→Secondaire (cache:yes) selon le pourcentage du pool
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Déplacer tout depuis Primaire→Secondaire (cache:yes) lorsque le disque dépasse un certain pourcentage
 Move All from Primary->Secondary shares pool percentage=Déplacer tout depuis Primaire→Secondaire selon le pourcentage du pool
 Move All threshold raised to %1 to stay above the moving threshold=Seuil « tout déplacer » augmenté à %1 pour rester au-dessus du seuil de déplacement.
+Move All threshold set to %1, as the global settings have none=Seuil « tout déplacer » réglé à %1, car les réglages globaux n’en ont pas.
+Move order=Ordre de déplacement
 Moved Only=Déplacés uniquement
 Move empty folders=Déplacer les dossiers vides
+Move files based on age=Déplacer les fichiers selon leur âge
 Move files based on minimum size=Déplacer les fichiers selon une taille minimale
 Move files based on size=Déplacer les fichiers selon leur taille
 Move files based on sparseness=Déplacer les fichiers selon leur parcimonie
 Move files off Primary cache based on age=Déplacer les fichiers hors du cache primaire selon leur âge
-Move files off Primary cache based on sparseness=Déplacer les fichiers hors du cache primaire selon leur parcimonie
 Move files that are greater than this many days old=Déplacer les fichiers plus anciens que ce nombre de jours
 Move files that are greater than this sparseness=Déplacer les fichiers dont la parcimonie dépasse cette valeur
 Move files that are in use=Déplacer les fichiers en cours d’utilisation
@@ -101,25 +114,30 @@ Mover Tuning - Share Settings=Réglage du mover – Paramètres de la part
 Mover Tuning Debug Package zip=Package de débogage Mover Tuning (.zip)
 Mover Tuning Notification=Notification Mover Tuning
 Mover Tuning schedule=Planification Mover Tuning
+Mover Tuning settings are available for existing shares only=Les paramètres Mover Tuning ne sont disponibles que pour une part existante.
 Mover Tuning settings not available for this share=Paramètres Mover Tuning non disponibles pour cette part
 Mover Tuning thresholds=Seuils Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Aucun fichier n’a été déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
 Not Applicable Share Does Not Exist Yet=Non applicable (la part n’existe pas encore)
 Notify Mover Tuning plugin actions=Notifier les actions du plugin Mover Tuning
+Oldest first=Les plus anciens d’abord
 Only move files larger than this in MB=Déplacer uniquement les fichiers plus grands que cette taille (en Mo)
 Only move files that are older than this in days=Déplacer uniquement les fichiers plus anciens que ce nombre de jours
 Only move if above this threshold of used Primary cache space=Déplacer uniquement si ce seuil d’utilisation du cache primaire est dépassé
 Open=Ouvrir
+Overall Progress=Progression globale
 Override Mover Tuning settings for this share=Remplacer les paramètres Mover Tuning pour cette part
 Plugin mover=Mover du plugin
 Plugin thread @ Unraid community=Fil du plugin sur la communauté Unraid
 Priority for disk IO=Priorité pour les E/S disque
 Priority for mover process=Priorité pour le processus du mover
 Rebalance shares=Rééquilibrer les parts
+Reset Mover Tuning to defaults=Réinitialiser Mover Tuning aux valeurs par défaut ?
 Resynchronize all Primary files to Secondary=Resynchroniser tous les fichiers du primaire vers le secondaire
 Rsync=Rsync
 Run Mover Tuning=Exécuter Mover Tuning…
 Run once=Exécuter une fois
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Planification désactivée : Mover Tuning ne s’exécute que lorsque le pool atteint le seuil de déclenchement de la surveillance.
 Script to run after mover No checks, always runs=Script à exécuter après le mover (aucune vérification, toujours exécuté)
 Script to run before mover No checks, always runs=Script à exécuter avant le mover (aucune vérification, toujours exécuté)
 Share size calculation=Calcul de la taille de la part
@@ -128,28 +146,36 @@ Show advanced options=Afficher les options avancées
 Show advanced settings=Afficher les paramètres avancés
 Skip files listed in text file=Ignorer les fichiers listés dans un fichier texte
 Skip file types=Ignorer les types de fichiers
+Smallest first=Les plus petits d’abord
+Speed=Vitesse
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=À partir d’Unraid 7.2.1, le comportement du plugin Mover Tuning a changé
 Start Mover Tuning=Démarrer Mover Tuning
 Sync files based on maximum size=Synchroniser les fichiers selon une taille maximale
 Sync files that are smaller than this size In MB=Synchroniser les fichiers plus petits que cette taille (en Mo)
 Synchronize Primary files to Secondary=Synchroniser les fichiers du primaire vers le secondaire
-Test Mode - no files will be movedsynced=Mode test — aucun fichier ne sera déplacé/synchronisé.
+Test Mode - no files will be movedsynced by Mover Tuning the original Mover can still run, see help=Mode test — aucun fichier ne sera déplacé/synchronisé par Mover Tuning (le mover original peut quand même s’exécuter, voir l’aide).
 TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=MODE TEST : un total de %s fichiers et %s dossiers représentant %s seraient déplacés/synchronisés par le plugin Mover Tuning. Temps écoulé : %s
 Test Mode dry run=Mode test (simulation)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=MODE TEST : aucun fichier ne serait déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
 Thank you for using this plugin=Merci d’utiliser ce plugin.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Le seuil de libération enregistré est %1, au-dessus du seuil de déplacement %2. Le mover démarre à %2 et s’arrête à %1, donc rien n’est déplacé tant que le pool reste entre ces valeurs. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Le seuil « tout déplacer » enregistré est %1, au niveau ou en dessous du seuil de déplacement %2. Tout sur les parts cache:yes est déplacé, la liste d’exclusion et les filtres sont ignorés avant d’atteindre le seuil de déplacement. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
+The saved Move All threshold is %1, at or below the moving threshold of %2 Once the pool is above %1, everything on cacheyes shares moves, skip list and filters ignored This page now shows %3, and saving will store that=Le seuil « tout déplacer » enregistré est %1, au niveau ou en dessous du seuil de déplacement %2. Dès que le pool dépasse %1, tout sur les parts cache:yes est déplacé, la liste d’exclusion et les filtres sont ignorés. Cette page affiche maintenant %3, et l’enregistrement conservera cette valeur.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Le seuil global « tout déplacer » de %1 est au niveau ou en dessous du seuil de déplacement de cette part (%2) : tout ce qui est sur cette part est déplacé dès %1.
 Top Folder=Dossier principal
+Transfer complete=Transfert terminé
+Unknown=Inconnu
 Unraid mover=Mover Unraid
 Unraid Mover schedule is currently enabled=La planification du mover Unraid est actuellement **activée**
 Use ATIME=Utiliser ATIME
-Use CTIME=Utiliser CTIME
+Use CTIME change time=Utiliser CTIME (date de changement d’état)
+Use global=Réglage global
 Used IDE=IDE utilisé
 User shares not enabled=Les parts utilisateur ne sont pas activées !
 Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
 Very Low=Très faible
 Want to support the developer and say Thank You=Vous souhaitez soutenir le développeur et dire **Merci** ?
+Watchdog trigger level=Seuil de déclenchement de la surveillance
+Watchdog trigger level raised to %1 to stay above the moving threshold=Seuil de déclenchement de la surveillance augmenté à %1 pour rester au-dessus du seuil de déplacement.
 We=Nous
 Wishing you a stable array, fast mover runs, and zero parity errors=Nous vous souhaitons un array stable, des déplacements rapides et zéro erreur de parité!
 Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisation !
@@ -170,8 +196,9 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p>Vous ne pourrez exécuter le mover que de manière <strong>manuelle</strong> :</p>
 <ul>
   <li>Appuyez sur le bouton <strong>« Déplacer maintenant »</strong> dans <strong>Mover Tuning – Options</strong>.</li>
-  <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong>.</li>
+  <li>Lancez <strong>« age_mover start »</strong> depuis la <strong>CLI</strong> (sans les priorités du processus du mover et des E/S disque).</li>
 </ul>
+<p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -182,6 +209,17 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
   <li>Appuyez sur <strong>« Move »</strong> dans la page <strong>Main</strong>.</li>
   <li>Lancez <strong>« mover start »</strong> depuis la <strong>CLI</strong>.</li>
 </ul>
+<p>Un <strong>déplacement forcé</strong> s’exécute toujours selon son propre horaire : pour l’arrêter aussi, réglez <strong>Afficher les paramètres avancés</strong> sur <strong>Oui</strong>, puis <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong> sur <strong>Non</strong>.</p>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle s’exécute aussi pendant une vérification de parité ou une reconstruction de disque.</p>
+<p>C’est un filet de sécurité, pas un remplacement de la planification : sous le seuil de déclenchement, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
+<p>Si une exécution ne peut pas ramener le pool sous le seuil de déclenchement, la surveillance attend plus longtemps avant la suivante : 2 h, puis 4 h, 8 h … jusqu’à 24 h. Cela se réinitialise dès que le pool repasse sous le seuil de déclenchement.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Espace utilisé du pool primaire (<em>cache</em>) à partir duquel la surveillance lance une exécution. Il reste au-dessus du seuil de déplacement, car une exécution lancée en dessous ne déplacerait rien.</p>
 :end
 
 :mover_tune_movertunecron_plug:
@@ -191,8 +229,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_testmode_plug:
-<p>Le mode test ne <strong>lance pas</strong> le mover mais affiche les résultats de la commande find personnalisée dans <em>/tmp/ca.mover.tuning/</em>.</p>
-<p>Attention — si « Le bouton Déplacer maintenant suit les filtres du plugin » est réglé sur <strong>Non</strong>, le mover original s’exécutera quand même.</p>
+<p>Le mode test ne <strong>lance pas</strong> le mover mais affiche les résultats de la commande find personnalisée dans <em>/tmp/ca.mover.tuning/</em>. Les scripts avant et après s’exécutent quand même.</p>
+<p>Attention — le mode test n’arrête pas le mover original : il s’exécute quand même selon l’horaire de l’option <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong>, et depuis le bouton « Déplacer maintenant » si l’option <strong>Le bouton « Déplacer maintenant » suit les filtres du plugin</strong> est réglée sur <strong>Non</strong>. À partir d’Unraid 7.2.1, la planification du mover et les boutons de déplacement d’Unraid lancent toujours le mover original.</p>
 :end
 
 :mover_tune_validate_plug:
@@ -258,7 +296,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_parity_plug:
-> Si une vérification de parité ou une reconstruction de disque est en cours, cela empêchera le mover de s’exécuter.
+> Avec <strong>Non</strong>, une exécution programmée qui tombe pendant une vérification de parité ou une reconstruction de disque est ignorée jusqu’à sa prochaine heure programmée. Les exécutions lancées à la main (<strong>Déplacer maintenant</strong>, le déplacement d’un partage, la CLI) et la surveillance du cache s’exécutent quand même.
 :end
 
 :mover_tune_moverio_plug:
@@ -301,14 +339,10 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_movingthreshold_plug:
 <p>Définit le seuil d’utilisation du cache <strong>Primaire→Secondaire</strong> (cache:yes) pour lancer le mover.</p>
-<p><u>Note :</u> si le mover ne déplace pas les données alors qu’il devrait, augmentez le seuil pour élargir l’écart entre les seuils de déplacement et de libération.</p>
-<p>Le mover additionne la taille utilisée du cache et la taille des fichiers jusqu’à dépasser le seuil de libération. Les gros fichiers peuvent empêcher d’atteindre ce seuil correctement.</p>
 :end
 
 :mover_tune_freeingthreshold_plug:
 <p>Définit le seuil d’utilisation du cache après la fin du mover. Mettre <strong><em>0%</em></strong> signifie déplacer toutes les données hors du cache.</p>
-<p><u>Note :</u> si le mover ne déplace pas les données alors qu’il devrait, réduisez ce seuil.</p>
-<p>Les gros fichiers peuvent empêcher d’atteindre correctement le seuil de libération.</p>
 :end
 
 :mover_tune_fillupthreshold_plug:
@@ -316,12 +350,16 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_age_plug:
-> Déplacer les fichiers hors du cache primaire selon leur âge (en jours).
+> Déplacer les fichiers selon leur âge (en jours). S’applique aux parts cache:<strong>yes</strong> (hors du cache primaire) et cache:<strong>prefer</strong> (vers le cache primaire).
 :end
 
 :mover_tune_daysold_plug:
 > Sélectionner le nombre de jours pour déplacer les fichiers (jusqu’à 1 an).  
-> Auto déplace du plus ancien au plus récent jusqu’au seuil.
+> Auto déplace les fichiers jusqu’au seuil, sans âge minimum ; pour les parts cache:<strong>yes</strong>, **Ordre de déplacement** décide lesquels partent en premier.
+:end
+
+:mover_tune_moveorder_plug:
+> Quels fichiers des parts cache:<strong>yes</strong> quittent le cache primaire en premier. Il ne fixe que l’ordre : le filtre d’âge, **Auto** et **Tout déplacer** décident toujours quels fichiers sont déplacés.
 :end
 
 :mover_tune_advancedfilters_plug:
@@ -330,11 +368,11 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_ctime_plug:
-> Utiliser <strong>CTIME</strong> (date de création) au lieu de <strong>MTIME</strong> (modification).
+> Utiliser <strong>CTIME</strong> (date de changement d’état) au lieu de <strong>MTIME</strong> (modification) comme date du fichier pour le filtre d’âge, l’ordre de déplacement et le contrôle depuis la dernière synchronisation, même quand **Déplacer les fichiers selon leur âge** est désactivé. La date de changement d’état est mise à jour dès que le contenu ou les attributs (nom, propriétaire, permissions) d’un fichier changent ; ce n’est pas la date de création.
 :end
 
 :mover_tune_atime_plug:
-> Utiliser <strong>ATIME</strong> (date d’accès) au lieu de MTIME.
+> Utiliser <strong>ATIME</strong> (date d’accès) au lieu de <strong>MTIME</strong> (modification) comme date du fichier pour le filtre d’âge, l’ordre de déplacement et le contrôle depuis la dernière synchronisation, même quand **Déplacer les fichiers selon leur âge** est désactivé.
 :end
 
 :mover_tune_sizef_plug:
@@ -346,8 +384,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_sizefsync_plug:
-> Synchroniser les fichiers selon leur taille (en Mo).  
-> Fonctionne uniquement avec Synchronize / Resynchronize.
+> Synchroniser uniquement les fichiers plus petits que la taille ci-dessous (en Mo), parmi les fichiers conservés sur le primaire des parts cache:yes.  
+> S’applique tant que <strong>Synchroniser les fichiers du primaire vers le secondaire</strong> est sur <strong>Oui</strong>, resynchronisations comprises. Les fichiers ramenés sur les parts cache:prefer et les fichiers rééquilibrés ne sont pas limités.
 :end
 
 :mover_tune_sizeinmsync_plug:
@@ -363,7 +401,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_filelistv_plug:
-<p> Chemin complet vers un fichier contenant une liste de fichiers et de dossiers que vous souhaitez ignorer lors du déplacement hors du pool Primaire (cache).</p>
+<p> Chemin complet vers un fichier listant les fichiers et dossiers que le mover laisse en place : sur le pool Primaire (cache) pour les parts cache:<strong>yes</strong>, et sur le Secondaire (array) pour les parts cache:<strong>prefer</strong>.</p>
+<p> Écrivez chaque entrée avec le chemin du pool Primaire de la part (<strong><em>/mnt/cache_ssd/Files/...</em></strong>, comme dans les exemples ci‑dessous) ou avec son chemin utilisateur (<strong><em>/mnt/user/Files/...</em></strong>). Les chemins du stockage Secondaire, comme <strong><em>/mnt/disk1/Files/...</em></strong>, ne sont pas pris en charge.</p>
 <p> Exemple de <strong>File List</strong> : <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> — le contenu de ce fichier doit comporter une entrée par ligne.</p>
 <p> Exemple de <strong>Dossier</strong> : <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> — ne mettez <strong>PAS</strong> (<strong><em>*</em></strong>) ni (<strong><em>/</em></strong>) à la fin de la ligne.</p>
 <p> Exemple de <strong>Fichier</strong> : <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong>.</p>
@@ -393,7 +432,6 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_omoverthresh_plug:
 <p>Définit le seuil d’utilisation du pool primaire pour déplacer tous les fichiers.</p>
 <p>Les filtres s’appliquent ensuite pour les pools restants.</p>
-<p>Ce seuil doit être au moins <strong>5%</strong> supérieur à « Only move at this threshold… ».</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -421,7 +459,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_cleandatasets_plug:
-> Démonte et détruit le dataset ZFS parent si aucun dataset enfant n’existe.
+> Démonte et détruit le dataset ZFS parent si aucun dataset enfant n’existe. Fonctionne uniquement si <strong>Nettoyer les dossiers vides</strong> est réglé sur <strong>Oui</strong> ou <strong>Dossier principal</strong>.
 :end
 
 :mover_tune_sharecalculation_plug:
@@ -435,7 +473,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p><u>Note:</u></p>
 <ul>
   <li><strong>SEULS les fichiers modifiés</strong> depuis la dernière synchronisation sont <strong>synchronisés</strong>.</li>
-  <li><strong>SEULS les fichiers</strong> présents sur le pool de cache <strong>en dessous</strong> des seuils de déplacement et de libération peuvent être <strong>synchronisés</strong>.</li>
+  <li><strong>SEULS les fichiers</strong> qui restent sur le pool de cache après l’exécution sont <strong>synchronisés</strong>.</li>
 </ul>
 :end
 
@@ -446,17 +484,19 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_rebalanceshares_plug:
 <p>Déplace les fichiers vers leur stockage primaire/secondaire si dispersés sur des disques non assignés.</p>
 <p>Peut déplacer des fichiers anciens pour libérer de l’espace.</p>
-<p>Run-once revient à Non après exécution.</p>
+<p>Run-once revient à Non après exécution. Une exécution en mode test le laisse inchangé.</p>
 :end
 
 :mover_tune_resynchronizecache_plug:
 <p>Cela resynchronisera les fichiers du stockage Primaire (cache) sur le Primaire et le Secondaire (array) afin qu’ils soient sauvegardés et protégés par la parité.</p>
 <p>Tous les fichiers seront resynchronisés à nouveau, indépendamment de leur date de modification.</p>
-<p>Cela peut être une opération longue. Le réglage « Run once » reviendra automatiquement à <strong>No</strong> après la prochaine exécution.</p>
+<p>S’applique aux parts qui se synchronisent, via <strong>Synchroniser les fichiers du primaire vers le secondaire</strong> ici ou dans les paramètres Mover Tuning propres à une part ; grisé tant qu’aucune part ne se synchronise.</p>
+<p>Après avoir réduit le nombre de jours du filtre d’âge, ou l’avoir réglé sur Non ou Auto, choisissez ici <strong>Exécuter une fois</strong>, sinon les fichiers retenus par ce filtre ne sont pas synchronisés.</p>
+<p>Cela peut être une opération longue. Le réglage « Run once » reviendra automatiquement à <strong>No</strong> après la prochaine exécution. Une exécution en mode test le laisse inchangé.</p>
 :end
 
 :mover_tune_moveroverride_plug:
-> Remplace les paramètres Mover Tuning pour cette part.
+> Sélectionnez **Oui** pour définir ci‑dessous les réglages Mover Tuning propres à cette part. **Réglage global** fait suivre à un réglage le réglage global, même s’il change plus tard ; tout autre choix, **Non** compris, s’applique à cette part à la place du réglage global.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -464,7 +504,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_daysold_plug:
-> Nombre de jours pour déplacer les fichiers (jusqu’à 1 an).
+> Sélectionner le nombre de jours pour déplacer les fichiers (jusqu’à 1 an).  
+> Auto déplace les fichiers jusqu’au seuil, sans âge minimum ; pour les parts cache:<strong>yes</strong>, **Ordre de déplacement** décide lesquels partent en premier.
 :end
 
 :mover_tune_share_sizef_plug:
@@ -480,7 +521,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_filelistf_plug:
-> Ignorer les fichiers listés dans un fichier texte.
+> **Oui** ignore les fichiers et dossiers listés dans le fichier texte ci‑dessous, à la place de la liste globale. **Non** n’ignore aucun fichier listé pour cette part. **Réglage global** suit le réglage global de la liste.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -488,7 +529,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_filetypesf_plug:
-> Ignorer des types de fichiers spécifiques.
+> **Oui** ignore les types de fichiers ci‑dessous en plus des types globaux. **Non** n’ignore aucun type de fichier pour cette part, pas même les types globaux. **Réglage global** suit le réglage global.
 :end
 
 :mover_tune_share_filetypesv_plug:
@@ -500,7 +541,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Secondaire→Primaire_**, en ignorant les filtres et les seuils. Les priorités du processus du mover et des E/S disque ainsi que les scripts avant et après le mover s’appliquent quand même.
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -516,5 +557,5 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant tous les paramètres existants du mover.
+> En cliquant sur **Déplacer Maintenant**, le **mover Unraid** sera exécuté spécifiquement pour cette part. Il déplacera l’intégralité de la part vers l’espace de stockage **_Primary→Secondary_**, en ignorant les filtres et les seuils. Les priorités du processus du mover et des E/S disque ainsi que les scripts avant et après le mover s’appliquent quand même.
 :end

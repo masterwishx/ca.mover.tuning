@@ -220,7 +220,10 @@ mover_state() {
     echo "### mover processes"
     pgrep -af 'age_mover|share_mover|sbin/mover|unraid/move' || echo "none"
     echo "### emhttpd"
-    grep -E '^shareMover(Active|Schedule)=' /var/local/emhttp/var.ini
+    grep -E '^shareMover(Active|Schedule|Progress)=' /var/local/emhttp/var.ini
+    # Unraid's own mover reads Mover Progress from here, which can lack the line while var.ini has one
+    echo "### share.cfg"
+    grep -E '^shareMoverProgress=' /boot/config/share.cfg || echo "no shareMoverProgress line"
 }
 mover_state >$DEBUGROOT/PLUGIN/mover_state.txt 2>&1
 
