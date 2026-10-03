@@ -20,13 +20,10 @@ version=$($PLGR next-version --channel "$CHANNEL" --tz "$TZ")
 echo "release version: $version"
 
 since=$($PLGR since-ref --changelog "$CHANGELOG" --channel "$CHANNEL")
-if [ "$CHANNEL" = stable ]; then
-  $PLGR check --changelog "$CHANGELOG" --plg "$PLG" --channel stable --branch "$BASE" --require-nonempty --require-edited --since "$since"
-else
-  $PLGR check --changelog "$CHANGELOG" --plg "$PLG" --channel beta --branch "$BASE" --require-nonempty
-  $PLGR check --changelog "$CHANGELOG" --plg "$PLG" --channel beta --branch "$BASE" --require-edited --since "$since" >/dev/null \
-    || echo "::warning::beta notes still contain bullets copied from commit subjects"
-fi
+$PLGR check --changelog "$CHANGELOG" --plg "$PLG" --channel "$CHANNEL" --branch "$BASE" --require-nonempty
+# Only a warning once the PR is merged: the stable release PR's notes check (ci.yml) shows these before the merge.
+$PLGR check --changelog "$CHANGELOG" --plg "$PLG" --channel "$CHANNEL" --branch "$BASE" --require-edited --since "$since" >/dev/null \
+  || echo "::warning::$CHANNEL notes still contain bullets copied from commit subjects"
 
 beta_flag=()
 [ "$CHANNEL" != beta ] || beta_flag=(--beta)
