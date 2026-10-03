@@ -2,8 +2,7 @@
 
 ## Unreleased
 
-- Leave empty folder rows out of the file count (3a000c3)
-- Count only real files in the Deciding the action log line (b6b3e68)
+- fix: The "Deciding the action" log line now counts only real files.
 
 ## 2026.10.01a (beta)
 
