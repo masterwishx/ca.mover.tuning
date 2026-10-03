@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Leave empty folder rows out of the file count (3a000c3)
+- Count only real files in the Deciding the action log line (b6b3e68)
+
 ## 2026.10.01a (beta)
 
 - doc: warnings updated
