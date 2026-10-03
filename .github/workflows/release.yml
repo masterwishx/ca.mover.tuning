@@ -54,6 +54,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # The branch tip, not the event commit: a queued or re-run job's commit can be behind the branch it pushes to.
+          ref: ${{ github.ref }}
           fetch-depth: 0
           token: ${{ secrets.RELEASE_TOKEN }}
           # The scripts attach the token to origin themselves, around the pushes that need
@@ -61,9 +63,12 @@ jobs:
           persist-credentials: false
 
       - name: Stage the release scripts
-        # the scripts switch branches in this checkout, so they run from a copy that cannot change under them
+        # The scripts switch branches in this checkout, so they run from a copy that cannot change under them, taken
+        # from the commit this run started from: the checkout is the branch tip, whose scripts may not match this workflow.
         run: |
-          cp -r .github/scripts/release "$RUNNER_TEMP/release"
+          set -euo pipefail
+          mkdir "$RUNNER_TEMP/release"
+          git archive "$GITHUB_SHA" .github/scripts/release | tar -x --strip-components=3 -C "$RUNNER_TEMP/release"
           echo "SCRIPTS=$RUNNER_TEMP/release" >> "$GITHUB_ENV"
 
       - name: Decide channel and mode
@@ -89,14 +94,23 @@ jobs:
           # From state, not from the pushed commit: a merged release PR is due until a release tag contains its merge.
           # Prints the PR number when due. set -e does not reach into $( ), so every failure returns 1 itself.
           due() {  # $1 channel, $2 branch, $3 the branch's commit
-            local latest merged released
-            latest=$(gh pr list --repo "$GITHUB_REPOSITORY" --state merged --head "release/$1" --base "$2" \
-              --limit 20 --json number,mergeCommit,mergedAt \
-              --jq 'sort_by(.mergedAt) | last | "\(.number // "") \(.mergeCommit.oid // "")"') || return 1
+            local latest merged released tag
+            # head=owner:branch leaves forks' PRs out on the server, so none can crowd this repo's out of a page
+            latest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls?state=closed&base=$2&head=${GITHUB_REPOSITORY%%/*}:release/$1&per_page=100" \
+              --jq '.[] | select(.merged_at != null) | "\(.merged_at) \(.number) \(.merge_commit_sha)"' | sort | tail -n 1) || return 1
+            latest="${latest#* }"
             merged="${latest#* }"
             [ -n "$merged" ] && git merge-base --is-ancestor "$merged" "$3" 2>/dev/null || return 0
             released=$(git tag --list '[0-9][0-9][0-9][0-9].[0-9][0-9].[0-9][0-9]*' --contains "$merged") || return 1
-            [ -n "$released" ] || echo "${latest%% *}"
+            # The cut commits on the branch and moves it last: a tag the branch has is a finished release, one whose
+            # parent alone it has is this channel's cut that stopped part way, and any other is the other channel's.
+            for tag in $released; do git merge-base --is-ancestor "refs/tags/$tag" "$3" && return 0; done
+            for tag in $released; do
+              git merge-base --is-ancestor "refs/tags/$tag^" "$3" 2>/dev/null || continue
+              echo "::error::$tag contains the merge of #${latest%% *} but $2 does not have it: a release run stopped part way. Undo it with gh release delete $tag --cleanup-tag --yes (or git push --delete origin refs/tags/$tag if it made no release), then run Release again." >&2
+              return 1
+            done
+            echo "${latest%% *}"
           }
           mode="$MODE_IN"
           pr=""
@@ -104,19 +118,22 @@ jobs:
             pr=$(due "$ch" "$GITHUB_REF_NAME" HEAD)
             if [ -n "$pr" ]; then mode="release"; else mode="pr"; fi
           fi
+          # A release run skips refreshing the other channel's PR while that channel's merged release waits for its cut.
+          other_pr=""
+          if [ "$mode" = release ] || [ "${GITHUB_EVENT_NAME:-}" = push ]; then
+            other_pr=$(due "$other" "$other_branch" "origin/$other_branch")
+          fi
           # Both branches share one queue, so this push may have cancelled the other channel's waiting release:
           # start it again. Only from pushes, so two stuck channels cannot keep starting runs for each other.
-          if [ "${GITHUB_EVENT_NAME:-}" = push ]; then
-            other_pr=$(due "$other" "$other_branch" "origin/$other_branch")
-            if [ -n "$other_pr" ]; then
-              GH_TOKEN="$DISPATCH_TOKEN" gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$other_branch" -f mode=auto
-              echo "::notice::#$other_pr is merged into $other_branch without a release yet: started a Release run for it"
-            fi
+          if [ -n "$other_pr" ] && [ "${GITHUB_EVENT_NAME:-}" = push ]; then
+            GH_TOKEN="$DISPATCH_TOKEN" gh workflow run release.yml --repo "$GITHUB_REPOSITORY" --ref "$other_branch" -f mode=auto
+            echo "::notice::#$other_pr is merged into $other_branch without a release yet: started a Release run for it"
           fi
           {
             echo "channel=$ch"
             echo "mode=$mode"
             echo "pr_number=$pr"
+            echo "other_pr=$other_pr"
           } >> "$GITHUB_OUTPUT"
           echo "channel=$ch mode=$mode pr=${pr:-none}"
 
@@ -140,9 +157,10 @@ jobs:
           PR_NUMBER: ${{ steps.decide.outputs.pr_number }}
         run: bash "$SCRIPTS/plg_release_cut.sh"
 
-      # A beta release changes what the next stable will contain.
+      # A beta release changes what the next stable will contain. A merged stable release still waiting for its cut
+      # would be rebuilt into a new PR, so its own run refreshes instead.
       - name: Refresh stable release PR after a beta
-        if: steps.decide.outputs.mode == 'release' && steps.decide.outputs.channel == 'beta'
+        if: steps.decide.outputs.mode == 'release' && steps.decide.outputs.channel == 'beta' && steps.decide.outputs.other_pr == ''
         env:
           CHANNEL: stable
           BASE: ${{ env.STABLE_BRANCH }}
@@ -156,8 +174,9 @@ jobs:
           VERSION: ${{ steps.cut.outputs.version }}
         run: bash "$SCRIPTS/plg_release_backmerge.sh"
 
+      # Likewise skipped while a merged beta release waits for its cut.
       - name: Refresh beta release PR after a stable
-        if: steps.decide.outputs.mode == 'release' && steps.decide.outputs.channel == 'stable'
+        if: steps.decide.outputs.mode == 'release' && steps.decide.outputs.channel == 'stable' && steps.decide.outputs.other_pr == ''
         env:
           CHANNEL: beta
           BASE: ${{ env.BETA_BRANCH }}

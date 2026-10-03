@@ -7,15 +7,21 @@
 ; PART 1: single line entries.
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s Dateien und %s Ordner mit einer Größe von %s konnten vom Mover Tuning Plugin nicht verschoben/synchronisiert werden.
+Action=Aktion
 All community developers=Alle Entwickler der Community
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s Dateien und %s Ordner wurden verschoben/synchronisiert, aber rsync hat dabei Fehler gemeldet. Bitte das Mover‑Tuning‑Protokoll prüfen.
 Allow force mover schedule to run during a parity checkrebuild=Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung
+All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Alle Plugin‑Einstellungen werden auf ihre Standardwerte zurückgesetzt, einschließlich des Mover‑Tuning‑Zeitplans, des Zeitplans für das erzwungene Verschieben und des Cache-Watchdogs, und die überschriebenen Einstellungen aller Freigaben werden gelöscht.
 Array → Cache=Speicherverbund → Cache
 A total of %s files and %s folders representing %s were successfully movedsynced by Mover Tuning plugin Elapsed time %s=Insgesamt wurden %s Dateien und %s Ordner mit einer Größe von %s erfolgreich durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
+Backing off %s still %s after last run Next try %s, or at %s=Wartet: %s nach dem letzten Lauf noch %s. Nächster Versuch %s, oder bei %s.
 Before proceeding, click on an option or press F1 to read detailed descriptions of all settings=Bevor du fortfährst, klicke auf eine Option oder drücke F1, um detaillierte Beschreibungen aller Einstellungen zu lesen.
 by=von
 Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
+Cache watchdog=Cache-Watchdog
+Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Mover Tuning wird gestartet.
 Cache → Array=Cache → Speicherverbund
+Cancel=Abbrechen
 Clean empty folders=Leere Ordner bereinigen
 Clean empty ZFS datasets=Leere ZFS‑Datasets bereinigen
 CLI help commands=CLI‑Hilfebefehle
@@ -36,14 +42,18 @@ Error Failed to convert CRLF line endings in %s Check file permissions=Fehler: C
 Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Fehler: Ungültiger Dateipfad %s. Bitte Dateinamen korrigieren oder die Prüfung von Dateinamen deaktivieren.
 Error No files found to move for %s=Fehler: Keine Dateien zum Verschieben für %s gefunden.
 Errors Only=Nur Fehler
+Estimated Completion=Geschätzte Fertigstellung
+ETA=Restzeit
 Failed to destroy ZFS dataset %s — attempting to remount=ZFS‑Dataset %s konnte nicht gelöscht werden — erneutes Einhängen wird versucht.
 Failed to remount dataset %s=Dataset %s konnte nicht erneut eingehängt werden.
+Failed to reset Mover Tuning Check the logs=Zurücksetzen von Mover Tuning fehlgeschlagen. Bitte Protokolle prüfen.
 Failed to start Mover Tuning Check the logs=Start des Mover‑Tunings fehlgeschlagen. Bitte Protokolle prüfen.
 Failed to unmount ZFS dataset %s=ZFS‑Dataset %s konnte nicht ausgehängt werden.
 Fatal error %s does not exist, check this=Schwerer Fehler: %s existiert nicht. Bitte prüfen.
 Fatal error cache not enabled and less than 2 pools set up=Schwerer Fehler: Cache‑Pool nicht aktiviert und weniger als zwei Pools eingerichtet.
 Fatal error cache not present, or only cache present, and less than 2 pools set up=Schwerer Fehler: Cache‑Pool fehlt oder nur Cache‑Pool vorhanden und weniger als zwei Pools eingerichtet.
 File and Syslog=Datei und Syslog
+File being processed=Datei in Bearbeitung
 File list path=Pfad zur Dateiliste
 File Only=Nur Datei
 Fill upprime up to this level of used Primary cache space=Primärspeicher bis zu diesem Füllstand vorbereiten/auffüllen
@@ -63,25 +73,28 @@ Ignore All hidden files and directories=Alle versteckten Dateien und Ordner igno
 Ignore files and folders listed inside of a text file=Dateien und Ordner ignorieren, die in einer Textdatei aufgelistet sind
 Ignore file types=Dateitypen ignorieren
 Invalid characters to block=Ungültige Zeichen zum Blockieren
+Largest first=Größte zuerst
 Let scheduled mover run during a parity check rebuild=Zeitplan für Datenverschiebung während Paritätsprüfung/Wiederherstellung erlauben
 Log Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins protokollieren
 Logs parent folder for Mover Tuning plugin=Übergeordneter Ordner für Protokolle des Mover‑Tuning‑Plugins
 Low=Niedrig
 Maintainers=Betreuer
 make those plugins with ❤️ and a lot of ☕=machen diese Plugins mit ❤️ und viel ☕
-Move ALL files from current pool wont use mover settings=ALLE Dateien aus dem aktuellen Pool verschieben (Einstellungen der Datenverschiebung werden nicht verwendet)
-Move ALL files to current pool wont use mover settings=ALLE Dateien in den aktuellen Pool verschieben (Einstellungen der Datenverschiebung werden nicht verwendet)
+Move ALL files from current pool ignores filters and thresholds=ALLE Dateien aus dem aktuellen Pool verschieben (ohne Filter und Schwellenwerte)
+Move ALL files to current pool ignores filters and thresholds=ALLE Dateien in den aktuellen Pool verschieben (ohne Filter und Schwellenwerte)
 Move All from Primary->Secondary cacheyes shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben (cache:yes) – Pool‑Prozent
 Move All from Primary->Secondary cacheyes shares when disk is above a certain percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben (cache:yes), wenn der Füllstand über einem bestimmten Wert liegt
 Move All from Primary->Secondary shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben – Pool‑Prozent
 Move All threshold raised to %1 to stay above the moving threshold=Grenze „Alles verschieben“ auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
+Move All threshold set to %1, as the global settings have none=Grenze „Alles verschieben“ auf %1 gesetzt, da die globalen Einstellungen keine haben.
+Move order=Reihenfolge der Verschiebung
 Moved Only=Nur verschobene Dateien
 Move empty folders=Leere Ordner verschieben
+Move files based on age=Dateien basierend auf ihrem Alter verschieben
 Move files based on minimum size=Dateien basierend auf Mindestgröße verschieben
 Move files based on size=Dateien basierend auf Größe verschieben
 Move files based on sparseness=Dateien basierend auf ihrer Ausdünnung verschieben
 Move files off Primary cache based on age=Dateien basierend auf Alter aus dem Primärspeicher (Cache) verschieben
-Move files off Primary cache based on sparseness=Dateien basierend auf Ausdünnung aus dem Primärspeicher (Cache) verschieben
 Move files that are greater than this many days old=Dateien verschieben, die älter sind als diese Anzahl Tage
 Move files that are greater than this sparseness=Dateien verschieben, deren Ausdünnung größer ist als dieser Wert
 Move files that are in use=Dateien verschieben, die gerade verwendet werden
@@ -101,25 +114,30 @@ Mover Tuning - Share Settings=Mover‑Tuning – Freigaben‑Einstellungen
 Mover Tuning Debug Package zip=Mover‑Tuning‑Debug‑Paket (.zip)
 Mover Tuning Notification=Mover‑Tuning‑Benachrichtigung
 Mover Tuning schedule=Mover‑Tuning‑Zeitplan
+Mover Tuning settings are available for existing shares only=Mover‑Tuning‑Einstellungen sind nur für bestehende Freigaben verfügbar.
 Mover Tuning settings not available for this share=Mover‑Tuning‑Einstellungen für diese Freigabe nicht verfügbar
 Mover Tuning thresholds=Mover‑Tuning‑Schwellwerte
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Keine Dateien wurden durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
 Not Applicable Share Does Not Exist Yet=Nicht anwendbar (Freigabe existiert noch nicht)
 Notify Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins melden
+Oldest first=Älteste zuerst
 Only move files larger than this in MB=Nur Dateien verschieben, die größer sind als dieser Wert (in MB)
 Only move files that are older than this in days=Nur Dateien verschieben, die älter sind als dieser Wert (in Tagen)
 Only move if above this threshold of used Primary cache space=Nur verschieben, wenn dieser Füllstand des Primärspeichers (Cache) überschritten ist
 Open=Öffnen
+Overall Progress=Gesamtfortschritt
 Override Mover Tuning settings for this share=Mover‑Tuning‑Einstellungen für diese Freigabe überschreiben
 Plugin mover=Plugin‑Mover
 Plugin thread @ Unraid community=Plugin‑Thread in der Unraid‑Community
 Priority for disk IO=Priorität für Datenträger‑I/O
 Priority for mover process=Priorität für Datenverschiebungs‑Prozess
 Rebalance shares=Freigaben neu verteilen
+Reset Mover Tuning to defaults=Mover Tuning auf Standardwerte zurücksetzen?
 Resynchronize all Primary files to Secondary=Alle Dateien des Primärspeichers mit dem Sekundärspeicher neu synchronisieren
 Rsync=Rsync
 Run Mover Tuning=Mover‑Tuning ausführen…
 Run once=Einmal ausführen
+Schedule disabled Mover Tuning only runs when the pool reaches the watchdog trigger level=Zeitplan deaktiviert: Mover Tuning läuft nur, wenn der Pool die Auslöseschwelle des Watchdogs erreicht.
 Script to run after mover No checks, always runs=Skript nach der Datenverschiebung ausführen (keine Prüfungen, läuft immer)
 Script to run before mover No checks, always runs=Skript vor der Datenverschiebung ausführen (keine Prüfungen, läuft immer)
 Share size calculation=Freigabengrößenberechnung
@@ -128,28 +146,36 @@ Show advanced options=Erweiterte Optionen anzeigen
 Show advanced settings=Erweiterte Einstellungen anzeigen
 Skip files listed in text file=Dateien überspringen, die in einer Textdatei aufgelistet sind
 Skip file types=Dateitypen überspringen
+Smallest first=Kleinste zuerst
+Speed=Geschwindigkeit
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Ab Unraid 7.2.1 hat sich das Verhalten des Mover‑Tuning‑Plugins geändert
 Start Mover Tuning=Mover‑Tuning starten
 Sync files based on maximum size=Dateien basierend auf Maximalgröße synchronisieren
 Sync files that are smaller than this size In MB=Dateien synchronisieren, die kleiner sind als diese Größe (in MB)
 Synchronize Primary files to Secondary=Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren
-Test Mode - no files will be movedsynced=Testmodus – es werden keine Dateien verschoben/synchronisiert.
+Test Mode - no files will be movedsynced by Mover Tuning the original Mover can still run, see help=Testmodus – Mover‑Tuning verschiebt/synchronisiert keine Dateien (der originale Mover kann trotzdem laufen, siehe Hilfe).
 TEST MODE A total of %s files and %s folders representing %s would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Insgesamt würden %s Dateien und %s Ordner mit einer Gesamtgröße von %s verschoben/synchronisiert werden. Verstrichene Zeit %s
 Test Mode dry run=Testmodus (Trockenlauf)
 TEST MODE No files would be movedsynced by Mover Tuning plugin Elapsed time %s=TESTMODUS: Es würden keine Dateien verschoben/synchronisiert werden. Verstrichene Zeit %s
 Thank you for using this plugin=Danke, dass du dieses Plugin verwendest.
 The saved freeing threshold is %1, above the moving threshold of %2 The mover starts at %2 and stops at %1, so nothing is moved while the pool sits between them This page now shows %3, and saving will store that=Die gespeicherte Freigabegrenze beträgt %1 und liegt über der Verschiebegrenze %2. Die Datenverschiebung startet bei %2 und stoppt bei %1, daher wird nichts verschoben, solange der Pool zwischen diesen Werten liegt. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
-The saved Move All threshold is %1, at or below the moving threshold of %2 Everything on cacheyes shares moves, skip list and filters ignored, before the moving threshold is reached This page now shows %3, and saving will store that=Die gespeicherte „Alles verschieben“-Grenze beträgt %1 und liegt auf oder unter der Verschiebegrenze %2. Alles auf cache:yes‑Freigaben wird verschoben, Skip‑Liste und Filter werden ignoriert, bevor die Verschiebegrenze erreicht wird. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
+The saved Move All threshold is %1, at or below the moving threshold of %2 Once the pool is above %1, everything on cacheyes shares moves, skip list and filters ignored This page now shows %3, and saving will store that=Die gespeicherte „Alles verschieben“-Grenze beträgt %1 und liegt auf oder unter der Verschiebegrenze %2. Sobald der Pool über %1 liegt, wird alles auf cache:yes‑Freigaben verschoben, Skip‑Liste und Filter werden ignoriert. Diese Seite zeigt nun %3 an, und das Speichern übernimmt diesen Wert.
+The global Move All threshold of %1 is at or below the moving threshold of this share, %2, so everything on this share moves from %1=Die globale „Alles verschieben“-Grenze von %1 liegt auf oder unter der Verschiebegrenze dieser Freigabe (%2), daher wird ab %1 alles auf dieser Freigabe verschoben.
 Top Folder=Oberster Ordner
+Transfer complete=Übertragung abgeschlossen
+Unknown=Unbekannt
 Unraid mover=Unraid‑Mover
 Unraid Mover schedule is currently enabled=Unraid‑Mover‑Zeitplan ist derzeit **aktiviert**
 Use ATIME=ATIME verwenden
-Use CTIME=CTIME verwenden
+Use CTIME change time=CTIME (Statusänderungszeit) verwenden
+Use global=Global verwenden
 Used IDE=Verwendete IDE
 User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
 Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
 Very Low=Sehr niedrig
 Want to support the developer and say Thank You=Möchtest du den Entwickler unterstützen und **Danke** sagen?
+Watchdog trigger level=Auslöseschwelle des Watchdogs
+Watchdog trigger level raised to %1 to stay above the moving threshold=Auslöseschwelle des Watchdogs auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
 We=Wir
 Wishing you a stable array, fast mover runs, and zero parity errors=Wir wünschen dir einen stabilen Speicherverbund, schnelle Datenverschiebungen und null Paritätsfehler!
 Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
@@ -170,8 +196,9 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p>Du kannst die Datenverschiebung dann nur noch <strong>manuell</strong> starten:</p>
 <ul>
   <li>Klicke auf die Schaltfläche <strong>„Jetzt verschieben“</strong> in <strong>Mover Tuning – Optionen</strong>.</li>
-  <li>Führe <strong>„age_mover start“</strong> in der <strong>CLI</strong> aus.</li>
+  <li>Führe <strong>„age_mover start“</strong> in der <strong>CLI</strong> aus (ohne die Prioritäten für den Datenverschiebungs‑Prozess und Datenträger‑I/O).</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
 :end
 
 :mover_tune_disable_legacy_plug:
@@ -182,6 +209,17 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
   <li>Klicke auf <strong>„Verschieben“</strong> auf der <strong>Hauptseite</strong>.</li>
   <li>Führe <strong>„mover start“</strong> in der <strong>CLI</strong> aus.</li>
 </ul>
+<p>Ein <strong>erzwungenes Verschieben</strong> läuft weiterhin nach seinem eigenen Zeitplan: Um auch dieses zu stoppen, setze <strong>Erweiterte Einstellungen anzeigen</strong> auf <strong>Ja</strong> und dann <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> auf <strong>Nein</strong>.</p>
+:end
+
+:mover_tune_watchdog_plug:
+<p>Prüft alle 5 Minuten den Primärspeicher (<em>Cache</em>) jeder cache:<strong>yes</strong>-Freigabe. Ab der <strong>Auslöseschwelle des Watchdogs</strong> startet er einen normalen Mover-Tuning-Lauf, höchstens einmal pro Stunde und Pool, mit einer Benachrichtigung. Er läuft auch während einer Paritätsprüfung oder Wiederherstellung.</p>
+<p>Er ist ein Sicherheitsnetz, kein Ersatz für den Zeitplan: Unterhalb der Auslöseschwelle verschieben nur geplante Läufe Dateien zurück in den Pool (cache:<strong>prefer</strong>), synchronisieren, verteilen neu oder verschieben Dateien nach Alter.</p>
+<p>Kann ein Lauf den Pool nicht unter die Auslöseschwelle bringen, wartet der Watchdog vor dem nächsten Lauf länger: 2 h, dann 4 h, 8 h … bis 24 h. Das setzt sich zurück, sobald der Pool unter die Auslöseschwelle fällt.</p>
+:end
+
+:mover_tune_watchdogthreshold_plug:
+<p>Belegter Speicher im Primärspeicher (<em>Cache</em>), ab dem der Watchdog einen Lauf startet. Sie bleibt über der Verschiebegrenze, denn ein darunter gestarteter Lauf würde nichts verschieben.</p>
 :end
 
 :mover_tune_movertunecron_plug:
@@ -191,8 +229,8 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_testmode_plug:
-<p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben.</p>
-<p>Achtung – Wenn "Move Now button follows plug‑in filters" auf <strong>Nein</strong> steht, wird der originale Mover trotzdem ausgeführt.</p>
+<p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben. Die Skripte vor und nach dem Lauf werden trotzdem ausgeführt.</p>
+<p>Achtung – Der Testmodus hält den originalen Mover nicht auf: Er läuft trotzdem nach dem Zeitplan der Option <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> und über die Schaltfläche „Jetzt verschieben“, wenn die Option <strong>„Jetzt verschieben“ folgt den Plugin‑Filtern</strong> auf <strong>Nein</strong> steht. Ab Unraid 7.2.1 starten der Mover‑Zeitplan und die Verschieben‑Schaltflächen von Unraid selbst immer den originalen Mover.</p>
 :end
 
 :mover_tune_validate_plug:
@@ -257,7 +295,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_parity_plug:
-> Wenn eine Paritätsprüfung oder ein Wiederherstellungsvorgang läuft, wird die Datenverschiebung verhindert.
+> Bei <strong>Nein</strong> wird ein geplanter Lauf, der in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen. Von Hand gestartete Läufe (<strong>Jetzt verschieben</strong>, das Verschieben einer einzelnen Freigabe, die CLI) und der Cache-Watchdog laufen trotzdem.
 :end
 
 :mover_tune_moverio_plug:
@@ -296,15 +334,11 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 
 :mover_tune_movingthreshold_plug:
 <p>Legt den Füllstand des <strong>Primärspeichers → Sekundärspeicher</strong> (cache:<strong>yes</strong>) fest, ab dem die Datenverschiebung startet.</p>
-<p><u>Hinweis:</u> Wenn die Datenverschiebung nicht startet, obwohl sie sollte, erhöhe die <strong>Verschiebegrenze</strong>, um die Lücke zwischen Verschiebe‑ und Freigabegrenze zu vergrößern.</p>
-<p>Der Mover berechnet die Summe aus belegtem Cache‑Pool und Dateigröße. Große Dateien können dazu führen, dass die Freigabegrenze nicht erreicht wird.</p>
 :end
 
 :mover_tune_freeingthreshold_plug:
 <p>Legt den Füllstand des <strong>Primärspeichers → Sekundärspeicher</strong> (cache:<strong>yes</strong>) fest, bis zu dem Dateien verschoben werden.</p>
 <p><strong>0 %</strong> bedeutet: alles wird verschoben.</p>
-<p><u>Hinweis:</u> Wenn die Datenverschiebung nicht startet, obwohl sie sollte, senke die <strong>Freigabegrenze</strong>, um die Lücke zwischen den Schwellenwerten zu vergrößern.</p>
-<p>Große Dateien können dazu führen, dass die Freigabegrenze nicht erreicht wird.</p>
 :end
 
 :mover_tune_fillupthreshold_plug:
@@ -312,11 +346,15 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_age_plug:
-> Wähle diese Option, um Dateien basierend auf ihrem Alter (in Tagen) aus dem Primärspeicher zu verschieben.
+> Wähle diese Option, um Dateien basierend auf ihrem Alter (in Tagen) zu verschieben. Gilt für cache:<strong>yes</strong>‑Freigaben (aus dem Primärspeicher heraus) und für cache:<strong>prefer</strong>‑Freigaben (in den Primärspeicher hinein).
 :end
 
 :mover_tune_daysold_plug:
-> Anzahl der **Tage**, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt von alt nach neu, bis der Schwellenwert erreicht ist.
+> Anzahl der **Tage**, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; bei cache:<strong>yes</strong>‑Freigaben bestimmt **Reihenfolge der Verschiebung**, welche zuerst gehen.
+:end
+
+:mover_tune_moveorder_plug:
+> Welche Dateien von cache:<strong>yes</strong>‑Freigaben den Primärspeicher zuerst verlassen. Sie legt nur die Reihenfolge fest: Altersfilter, **Auto** und **Alles verschieben** entscheiden weiterhin, welche Dateien verschoben werden.
 :end
 
 :mover_tune_advancedfilters_plug:
@@ -324,11 +362,11 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_ctime_plug:
-> <strong>CTIME</strong> (Erstellungszeit) statt <strong>MTIME</strong> (Änderungszeit) im <em>find</em>‑Befehl verwenden.
+> <strong>CTIME</strong> (Statusänderungszeit) statt <strong>MTIME</strong> (Änderungszeit) als Dateizeit verwenden: für den Altersfilter, die Reihenfolge, in der Dateien verschoben werden, und den Abgleich seit der letzten Synchronisation, auch wenn **Dateien basierend auf ihrem Alter verschieben** aus ist. Die Statusänderungszeit wird aktualisiert, sobald sich der Inhalt oder die Attribute (Name, Besitzer, Berechtigungen) einer Datei ändern; sie ist nicht die Erstellungszeit.
 :end
 
 :mover_tune_atime_plug:
-> <strong>ATIME</strong> (Zugriffszeit) statt <strong>MTIME</strong> (Änderungszeit) im <em>find</em>‑Befehl verwenden.
+> <strong>ATIME</strong> (Zugriffszeit) statt <strong>MTIME</strong> (Änderungszeit) als Dateizeit verwenden: für den Altersfilter, die Reihenfolge, in der Dateien verschoben werden, und den Abgleich seit der letzten Synchronisation, auch wenn **Dateien basierend auf ihrem Alter verschieben** aus ist.
 :end
 
 :mover_tune_sizef_plug:
@@ -340,7 +378,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_sizefsync_plug:
-> Wähle <strong>Ja</strong>, um Dateien basierend auf ihrer Größe (in MB) zu synchronisieren. Nur aktiv, wenn Synchronisieren/Neu‑Synchronisieren aktiviert ist.
+> Wähle <strong>Ja</strong>, damit beim Synchronisieren der auf dem Primärspeicher verbleibenden Dateien von cache:yes‑Freigaben nur Dateien kopiert werden, die kleiner als die unten gewählte Größe (in MB) sind. Gilt, solange <strong>Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren</strong> auf <strong>Ja</strong> steht, auch bei Neu‑Synchronisierungen. Dateien, die auf cache:prefer‑Freigaben zurückgeholt oder neu verteilt werden, sind nicht begrenzt.
 :end
 
 :mover_tune_sizeinmsync_plug:
@@ -356,7 +394,8 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filelistv_plug:
-<p>Vollständiger Pfad zu einer Datei, die eine Liste von Dateien/Ordnern enthält, die nicht verschoben werden sollen.</p>
+<p>Vollständiger Pfad zu einer Datei mit Dateien und Ordnern, die der Mover dort lässt, wo sie sind: auf dem Primärspeicher (Cache) bei Freigaben mit cache:<strong>yes</strong> und auf dem Sekundärspeicher (Array) bei Freigaben mit cache:<strong>prefer</strong>.</p>
+<p>Einträge beginnen mit dem Pfad des Primär‑Pools der Freigabe (<em>/mnt/cache_ssd/Files/...</em>, wie in den Beispielen unten) oder mit ihrem User‑Share‑Pfad (<em>/mnt/user/Files/...</em>). Pfade auf dem Sekundärspeicher wie <em>/mnt/disk1/Files/...</em> werden nicht unterstützt.</p>
 <p><strong>Dateiliste</strong> Beispiel: <em>/mnt/user/Files/mover_ignore.txt</em> – eine Zeile pro Eintrag.</p>
 <p><strong>Ordner</strong> Beispiel: <em>/mnt/cache_ssd/Files/MyFolder</em> – kein (<em>*</em>) oder (<em>/</em>) am Ende.</p>
 <p><strong>Datei</strong> Beispiel: <em>/mnt/cache_ssd/Files/MyFile.txt</em></p>
@@ -386,7 +425,6 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :mover_tune_omoverthresh_plug:
 <p>Legt den Füllstand des Primärspeichers fest, ab dem alle Dateien einer <strong>Primär→Sekundär</strong>‑Freigabe (cache:<strong>yes</strong>) verschoben werden.</p>
 <p>Filter werden weiterhin angewendet, wenn andere Pools den Schwellenwert nicht erreichen.</p>
-<p>Dieser Wert sollte mindestens <strong>5 %</strong> höher sein als die Einstellung „Nur verschieben, wenn dieser Füllstand des Primärspeichers erreicht ist“.</p>
 :end
 
 :mover_tune_enableturbo_plug:
@@ -414,7 +452,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_cleandatasets_plug:
-> Hängt das übergeordnete ZFS‑Dataset aus und löscht es, sofern es <strong>keine Unter‑Datasets</strong> enthält.
+> Hängt das übergeordnete ZFS‑Dataset aus und löscht es, sofern es <strong>keine Unter‑Datasets</strong> enthält. Funktioniert nur, wenn <strong>Leere Ordner bereinigen</strong> auf <strong>Ja</strong> oder <strong>Oberster Ordner</strong> steht.
 :end
 
 :mover_tune_sharecalculation_plug:
@@ -428,7 +466,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p><u>Hinweis:</u></p>
 <ul>
   <li><strong>NUR geänderte Dateien</strong> seit der letzten Synchronisation werden <strong>synchronisiert</strong>.</li>
-  <li><strong>NUR Dateien</strong> im Cache‑Pool <strong>unterhalb</strong> der Verschiebe‑ und Freigabeschwellen können <strong>synchronisiert</strong> werden.</li>
+  <li><strong>NUR Dateien</strong>, die nach dem Lauf im Cache‑Pool bleiben, werden <strong>synchronisiert</strong>.</li>
 </ul>
 :end
 
@@ -439,17 +477,19 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :mover_tune_rebalanceshares_plug:
 <p>Verschiebt Dateien von Freigaben zu deren Primär‑ und/oder Sekundärspeicher, wenn sie sich auf <strong><em>Unattended Storage</em></strong> befinden (Datenträger/Pools, die nicht als Primär oder Sekundär der Freigabe zugewiesen sind).</p>
 <p>Kann ältere Dateien von <strong><em>Primär→Sekundär</em></strong> oder <strong><em>Sekundär→Primär</em></strong> verschieben, wenn dies erlaubt ist (cache:prefer, cache:yes, cache:only), um Speicherplatz freizugeben.</p>
-<p>Die Einstellung „Einmal ausführen“ wird nach dem nächsten Durchlauf automatisch wieder auf <strong>Nein</strong> gesetzt.</p>
+<p>Die Einstellung „Einmal ausführen“ wird nach dem nächsten Durchlauf automatisch wieder auf <strong>Nein</strong> gesetzt. Ein Durchlauf im Testmodus lässt sie unverändert.</p>
 :end
 
 :mover_tune_resynchronizecache_plug:
 <p>Dies wird alle Dateien im Primärspeicher (Cache) sowohl auf dem Primär‑ als auch auf dem Sekundärspeicher (Array) erneut synchronisieren, sodass sie gesichert und durch Parität geschützt sind.</p>
 <p>Alle Dateien werden unabhängig von ihrer Änderungszeit erneut synchronisiert.</p>
-<p>Dies kann ein sehr langer Vorgang sein. Die Einstellung „Einmal ausführen“ wird nach dem nächsten Durchlauf automatisch wieder auf <strong>Nein</strong> gesetzt.</p>
+<p>Gilt für die Freigaben, die synchronisieren – über <strong>Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren</strong> hier oder in den eigenen Mover‑Tuning‑Einstellungen einer Freigabe – und ist ausgegraut, solange keine Freigabe synchronisiert.</p>
+<p>Nach dem Verringern der Tage des Altersfilters oder dem Umstellen auf Nein oder Auto hier <strong>Einmal ausführen</strong> wählen, sonst werden die vom Filter zurückgehaltenen Dateien nicht synchronisiert.</p>
+<p>Dies kann ein sehr langer Vorgang sein. Die Einstellung „Einmal ausführen“ wird nach dem nächsten Durchlauf automatisch wieder auf <strong>Nein</strong> gesetzt. Ein Durchlauf im Testmodus lässt sie unverändert.</p>
 :end
 
 :mover_tune_moveroverride_plug:
-> Wähle **Ja**, um die primären Mover‑Tuning‑Einstellungen für diese Freigabe zu überschreiben.
+> Wähle **Ja**, um unten eigene Mover‑Tuning‑Einstellungen für diese Freigabe festzulegen. **Global verwenden** lässt eine Einstellung der globalen folgen, auch wenn diese sich später ändert; jede andere Wahl, auch **Nein**, gilt für diese Freigabe statt der globalen Einstellung.
 :end
 
 :mover_tune_share_age_prefer_plug:
@@ -457,7 +497,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_share_daysold_plug:
-> Wähle die Anzahl der Tage, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt von den ältesten zu den neuesten Dateien, bis der Schwellenwert erreicht ist.
+> Wähle die Anzahl der Tage, die eine Datei alt sein muss, um verschoben zu werden (bis zu 1 Jahr). Auto verschiebt Dateien, bis der Schwellenwert erreicht ist, ohne Mindestalter; bei cache:<strong>yes</strong>‑Freigaben bestimmt **Reihenfolge der Verschiebung**, welche zuerst gehen.
 :end
 
 :mover_tune_share_sizef_plug:
@@ -473,7 +513,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filelistf_plug:
-> Wähle **Ja**, um Dateien zu überspringen, die in einer angegebenen Textdatei gelistet sind.
+> **Ja** überspringt die Dateien und Ordner aus der Textdatei unten, statt der globalen Liste. **Nein** überspringt für diese Freigabe keine gelisteten Dateien. **Global verwenden** folgt der globalen Einstellung der Liste.
 :end
 
 :mover_tune_share_filelistv_plug:
@@ -481,7 +521,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_filetypesf_plug:
-> Wähle **Ja**, um bestimmte Dateitypen zusätzlich zu den globalen auszuschließen.
+> **Ja** schließt die Dateitypen unten zusätzlich zu den globalen aus. **Nein** schließt für diese Freigabe keine Dateitypen aus, auch nicht die globalen. **Global verwenden** folgt der globalen Einstellung.
 :end
 
 :mover_tune_share_filetypesv_plug:
@@ -493,7 +533,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_share_moveshare_prefer_plug:
-> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Secondary→Primary_**, unabhängig von bestehenden Mover‑Einstellungen.
+> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Secondary→Primary_**, unabhängig von Filtern und Schwellenwerten. Die Prioritäten für den Datenverschiebungs‑Prozess und Datenträger‑I/O sowie die Skripte vor und nach der Datenverschiebung gelten trotzdem.
 :end
 
 :mover_tune_share_movingthreshold_plug:
@@ -509,5 +549,5 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_share_moveshare_yes_plug:
-> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Primary→Secondary_**, unabhängig von bestehenden Mover‑Einstellungen.
+> Durch Klicken auf **Move Now** wird der **Unraid‑Mover** speziell für diese Freigabe ausgeführt. Er verschiebt die gesamte Freigabe **_Primary→Secondary_**, unabhängig von Filtern und Schwellenwerten. Die Prioritäten für den Datenverschiebungs‑Prozess und Datenträger‑I/O sowie die Skripte vor und nach der Datenverschiebung gelten trotzdem.
 :end

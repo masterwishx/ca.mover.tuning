@@ -4,11 +4,16 @@ require_once("/usr/local/emhttp/plugins/dynamix/include/Wrappers.php");
 
 $cfg = parse_plugin_cfg("ca.mover.tuning");
 $vars = @parse_ini_file("/var/local/emhttp/var.ini");
-$cron = $argv[1] == "crond";
-$bash = $argv[1] == "bash";
+// a web request (Move button, status check) may have no $argv[1]
+$mode = $argv[1] ?? "";
+$cron = $mode === "crond";
+$watchdog = $mode === "watchdog";
+$bash = $mode === "bash";
 $args = [];
 // the forced-move schedule (updateCron.php make_cron) calls: mover.php force start
-$force = ($argv[1] ?? "") === "force";
+$force = $mode === "force";
+// the per-share Move (moveShareNow.php) calls: mover.php share, with the share name in MOVER_SHARE
+$share = $mode === "share";
 
 // Read-only status check (no state change, no CSRF risk)
 if (!empty($_GET['check'])) {
@@ -90,8 +95,17 @@ function setWriteMethod($method)
     }
 }
 
+// with_scripts reads the before and after scripts from the environment, so the command line stays constant
+function scriptEnv()
+{
+    global $cfg;
+
+    putenv("MT_BEFORE_SCRIPT=" . ($cfg['beforeScript'] ?? ""));
+    putenv("MT_AFTER_SCRIPT=" . ($cfg['afterScript'] ?? ""));
+}
+
 // The forced move runs Unraid's own mover on its own schedule, without the plugin's filters or the Mover Tuning
-// schedule and parity settings. Its own parity option, the two priorities and turbo write apply to it.
+// schedule and parity settings. Its own parity option, the two priorities, turbo write and the scripts apply to it.
 function forceMove()
 {
     global $vars, $cfg;
@@ -118,22 +132,40 @@ function forceMove()
         setWriteMethod("1");
     }
     logger("Starting forced move (Unraid mover)");
+    scriptEnv();
     // cron runs this under the CLI, where runMover blocks until the move ends; the restore below relies on that
-    runMover("ionice $ioLevel nice -n $niceLevel $mover start");
+    runMover("ionice $ioLevel nice -n $niceLevel /usr/local/emhttp/plugins/ca.mover.tuning/with_scripts $mover start");
     if ($turbo === true) {
         logger("Restoring original turbo write mode");
         setWriteMethod($writeMethod);
     }
 }
 
+// The per-share Move runs share_mover with the two priorities and the scripts. Started by hand, it never waits for a
+// parity check. The name comes from the environment and reaches the shell only as "$MOVER_SHARE", never parsed.
+function moveShare()
+{
+    $shareName = getenv("MOVER_SHARE");
+    $cfgs = glob("/boot/config/shares/*.cfg");
+    $shares = $cfgs === false ? [] : array_map(fn($cfg) => basename($cfg, ".cfg"), $cfgs);
+    if (is_string($shareName) === false || in_array($shareName, $shares, true) === false) {
+        logger("Refusing the per-share move: no such share");
+        return;
+    }
+    [$niceLevel, $ioLevel] = moverPriority();
+    scriptEnv();
+    logger("Starting the per-share move of $shareName");
+    runMover("ionice $ioLevel nice -n $niceLevel /usr/local/emhttp/plugins/ca.mover.tuning/with_scripts /usr/local/emhttp/plugins/ca.mover.tuning/share_mover \"\$MOVER_SHARE\"");
+}
+
 //function startMover($options = "start")
 function startMover()
 {
-    global $vars, $cfg, $cron, $bash, $argv, $args;
+    global $vars, $cfg, $cron, $watchdog, $bash, $argv, $args;
 
     logger("Starting Mover Tuning ...");
 
-    if ($argv[2]) {
+    if (empty($argv[2]) === false) {
         $args[] = trim($argv[2]);
     }
 
@@ -145,6 +177,9 @@ function startMover()
         // If run via crond then log it as cron
         else if ($cron) {
             logger("Auto executed (crond)\n");
+        }
+        else if ($watchdog === true) {
+            logger("Auto executed (cache watchdog)\n");
         }
         // If run manually by button, $argv[1] is not set (""), then log it as move button
         else if (empty($argv[1])) {
@@ -227,7 +262,12 @@ function startMover()
         exit();
     }
 
-    if ($cron or $cfg['movenow'] == "yes") {
+    // names the run in its log; age_mover then logs to syslog itself, as the watchdog's cron line discards output
+    if ($watchdog === true) {
+        putenv("MOVER_RUN_METHOD=cache watchdog");
+    }
+
+    if ($cron === true || $watchdog === true || $cfg['movenow'] === "yes") {
         //exec("echo 'running from cron or move now question is yes' >> /var/log/syslog");
 
         if ($cfg['movingThreshold'] >= 0 or $cfg['fillupThreshold'] >= 0 or $cfg['age'] == "yes" or $cfg['sizef'] == "yes" or $cfg['sparsnessf'] == "yes" or $cfg['filelistf'] == "yes" or $cfg['filetypesf'] == "yes" or $cfg['beforeScript'] != '' or $cfg['afterScript'] != '' or $cfg['testmode'] == "yes") {
@@ -239,8 +279,14 @@ function startMover()
     } else {
         //exec("echo 'Running from button' >> /var/log/syslog");
         //Default "move now" button has been hit.
-        logger("ionice $ioLevel nice -n $niceLevel $mover_str $options");
-        runMover("ionice $ioLevel nice -n $niceLevel $mover_str $options");
+        // a start of the original mover gets the before and after scripts too, as a Mover Tuning run does
+        $scripts = "";
+        if ($options === "start") {
+            scriptEnv();
+            $scripts = "/usr/local/emhttp/plugins/ca.mover.tuning/with_scripts ";
+        }
+        logger("ionice $ioLevel nice -n $niceLevel $scripts$mover_str $options");
+        runMover("ionice $ioLevel nice -n $niceLevel $scripts$mover_str $options");
     }
 }
 
@@ -249,13 +295,20 @@ if ($force === true) {
     exit();
 }
 
+if ($share === true) {
+    moveShare();
+    exit();
+}
+
+// the cache watchdog is a separate opt-in trigger: it runs with the schedule disabled (the settings page warns)
 if ($cron && $cfg['moverDisabled'] == 'yes') {
     logger("Mover Tuning schedule disabled");
     exit();
 }
 
-if ($cfg['parity'] == 'no' && $vars['mdResyncPos']) {
-    logger("Parity Check / rebuild in progress.  Not running mover");
+// only a scheduled run waits for a parity check or rebuild: Move now, the cache watchdog and the CLI always run
+if ($cron === true && $cfg['parity'] === 'no' && empty($vars['mdResyncPos']) === false) {
+    logger("Parity Check / rebuild in progress.  Not running scheduled mover");
     exit();
 }
 

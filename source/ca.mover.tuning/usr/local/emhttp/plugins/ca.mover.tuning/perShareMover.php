@@ -15,13 +15,25 @@
 #---------------------------------------------------------------------------------------------------------------------
 #This section was adapted from "Wrapper.php" and includes an adapted "parse_plugin_cfg()" function.
 $docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+/** The share page's settings: each key of default.cfg, empty (Use global) unless the share file saved it. */
 function parse_share_cfg($plugin, $shareName, $sections = false, $scanner = INI_SCANNER_NORMAL)
 {
     global $docroot;
     $ram = "$docroot/plugins/$plugin/default.cfg";
     $rom = "/boot/config/plugins/$plugin/shareOverrideConfig/$shareName.cfg";
     $cfg = file_exists($ram) ? parse_ini_file($ram, $sections, $scanner) : [];
-    return file_exists($rom) ? array_replace_recursive($cfg, parse_ini_file($rom, $sections, $scanner)) : $cfg;
+    // a setting the share file has not saved is Use global (empty), as age_mover reads it, not the shipped default
+    $cfg = is_array($cfg) === true ? array_fill_keys(array_keys($cfg), '') : [];
+    $share = file_exists($rom) === true ? parse_ini_file($rom, $sections, $scanner) : [];
+    return $share === false ? $cfg : array_replace_recursive($cfg, $share);
 }
 #---------------------------------------------------------------------------------------------------------------------
+/** Whether a share name from the request names an existing share; rejects anything that could be a path */
+function mt_share_exists($shareName)
+{
+    if (is_string($shareName) === false || $shareName === '' || $shareName[0] === '.' || strpbrk($shareName, "/\\\0") !== false) {
+        return false;
+    }
+    return is_file("/boot/config/shares/$shareName.cfg");
+}
 ?>

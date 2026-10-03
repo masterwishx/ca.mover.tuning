@@ -1,0 +1,6 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+reviews:
+  auto_review:
+    # the default branch is always reviewed; new work now arrives through beta
+    base_branches:
+      - "^beta$"

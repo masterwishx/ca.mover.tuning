@@ -23,7 +23,21 @@ $cronDisabled = ($cfg['force'] != "yes") ? "disabled" : "";
 $filelistfDisabled = ($cfg['filelistf'] != "yes") ? "disabled" : "";
 $filetypesfDisabled = ($cfg['filetypesf'] != "yes") ? "disabled" : "";
 $omoverthreshDisabled = ($cfg['omovercfg'] != "yes") ? "disabled" : "";
+$watchdogDisabled = ($cfg['watchdog'] != "yes") ? "disabled" : "";
 $movingSaved = (int)($cfg['movingThreshold'] ?? 0);
+// per-pool state written by age_mover watchdog()
+$watchdogBackoff = [];
+$watchdogStates = glob("/var/run/mover.watchdog.*");
+if ($cfg['watchdog'] === "yes" && $watchdogStates !== false) {
+  foreach ($watchdogStates as $stateFile) {
+    $state = parse_ini_file($stateFile);
+    if ($state === false || ($state['backoff'] ?? "") !== "yes") {
+      continue;
+    }
+    $after = (int)($state['after'] ?? 0);
+    $watchdogBackoff[] = sprintf(_('Backing off: %s still %s after last run. Next try %s, or at %s.'), htmlspecialchars(substr($stateFile, strlen("/var/run/mover.watchdog."))), "$after%", my_time((int)($state['next'] ?? 0)), ($after + 5) . "%");
+  }
+}
 $om = $movingSaved + 5;
 $f = $movingSaved;
 $sizefDisabled = ($cfg['sizef'] != "yes") ? "disabled" : "";
@@ -32,6 +46,29 @@ $sparsnessfDisabled = ($cfg['sparsnessf'] != "yes") ? "disabled" : "";
 $version = ($cfg['version']);
 $moverRunning = file_exists('/var/run/mover.pid');
 $showMoverButton = version_compare($vars['version'] ?? '0.0.0', '7.2.1', '>=');
+// a cache:yes share syncs by its active override's own Synchronize, else by this page's; mirrors age_mover's getMoverSettings
+$syncOwnYes = false;
+$syncFollowsGlobal = false;
+$shareCfgs = glob('/boot/config/shares/*.cfg');
+if (is_array($shareCfgs) === true) {
+  foreach ($shareCfgs as $shareCfg) {
+    if (is_file($shareCfg) === false || is_readable($shareCfg) === false || strpos((string)file_get_contents($shareCfg), 'shareUseCache="yes"') === false) {
+      continue;
+    }
+    $overrideFile = '/boot/config/plugins/' . $plugin . '/shareOverrideConfig/' . basename($shareCfg);
+    $overrideText = is_file($overrideFile) === true && is_readable($overrideFile) === true ? (string)file_get_contents($overrideFile) : '';
+    $ownSync = '';
+    // what cfg()'s read loop sees: the first newline-ended synchronizeCache line, one outer quote stripped each side
+    if (strpos($overrideText, 'moverOverride="yes"') !== false && preg_match('/^synchronizeCache="?(.*?)"?\n/m', $overrideText, $m) === 1) {
+      $ownSync = $m[1];
+    }
+    if ($ownSync === 'yes') {
+      $syncOwnYes = true;
+    } elseif ($ownSync === '') {
+      $syncFollowsGlobal = true;
+    }
+  }
+}
 
 ?>
 
@@ -60,15 +97,18 @@ function toggleTime(source) {
 }
 
 function toggleAge(val) {
-  var enable = (val === 'yes');
-  // enable or disable both CTIME and ATIME based on AGE
-  $('.myage').prop('disabled', !enable);
+  // the days select only: CTIME and ATIME set the file time for the order and sync too, so they stay open
+  $('.myage').prop('disabled', val !== 'yes');
+}
 
-  // re-apply mutual exclusivity if AGE is yes
-  if (enable) {
-    toggleTime('ctime');
-    toggleTime('atime');
-  }
+// Resynchronize does nothing unless a cache:yes share synchronizes: by its own override, or by following this setting
+var mtSyncOwnYes = <?=$syncOwnYes === true ? 'true' : 'false'?>;
+var mtSyncFollowsGlobal = <?=$syncFollowsGlobal === true ? 'true' : 'false'?>;
+function toggleResync() {
+  var off = mtSyncOwnYes === false && ($('select[name="synchronizeCache"]').val() !== 'yes' || mtSyncFollowsGlobal === false);
+  $('select[name="resynchronizeCache"]').prop('disabled', off);
+  // update.php keeps a key the form does not post, and a disabled select is not posted: post No instead
+  $('input[name="resynchronizeCache"]').prop('disabled', !off);
 }
 
 function updateCron() {
@@ -76,7 +116,16 @@ function updateCron() {
   var tune_cron = $("#tune_cronSchedule").val();
 	var cronEnabled = $("#forceCron").val();
   var ismoverDisabled = $("#moverDisabled").val();
-	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled});
+  var watchdog = $("#watchdog").val();
+	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled,watchdog:watchdog});
+}
+
+// Unraid 6.10+ prefixes escapeQuotes(this) to this onsubmit once the page is ready; 6.9 never does
+function mtEscapeQuotes(form) {
+  if (/(^|;)escapeQuotes\(this\);/.test(form.getAttribute('onsubmit') || '')) return;
+  $(form).find('input[type=text]').each(function() {
+    $(this).val($(this).val().replace(/"/g, '\\"'));
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -106,6 +155,11 @@ document.addEventListener("DOMContentLoaded", () => {
         wrench.style.color = "var(--blue-700)";
     }
 
+    // mover.php answers 1 or 0 on the line after its #!/usr/bin/php, which php-fpm sends as part of the reply
+    function replySaysRunning(reply) {
+        return String(reply).trim().split("\n").pop() === "1";
+    }
+
     function startPolling() {
         let failureCount = 0;
         const MAX_FAILURES = 5;
@@ -115,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
             $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                 .done((running) => {
                     failureCount = 0;
-                    const isRunning = String(running).trim() === "1";
+                    const isRunning = replySaysRunning(running);
                     if (!isRunning) { // mover finished
                         clearInterval(pollingInterval);
                         pollingInterval = null;
@@ -159,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Immediate check to avoid race if mover finishes quickly
                 $.get("/plugins/ca.mover.tuning/mover.php", { check: 1, _: Date.now() })
                     .done((running) => {
-                        const isRunning = String(running).trim() === "1";
+                        const isRunning = replySaysRunning(running);
                         if (!isRunning) {
                             updateUIFinished();
                             location.reload();
@@ -177,17 +231,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 });
 
-function resetDefaults() { 
-  $.post("/plugins/ca.mover.tuning/reset.php");
+function resetDefaults() {
+  swal({
+    title:"_(Reset Mover Tuning to defaults?)_",
+    text:"_(All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted.)_",
+    html:true,
+    type:'warning',
+    showCancelButton:true,
+    confirmButtonText:"_(Defaults)_",
+    cancelButtonText:"_(Cancel)_"
+  },function(confirmed){
+    if (confirmed) {
+      $.post("/plugins/ca.mover.tuning/reset.php")
+        .fail(function(){alert("_(Failed to reset Mover Tuning. Check the logs.)_");})
+        .always(function(){location.reload();});
+    }
+  });
 }
 
 function updateScreenMoverTuningSettings(option,slow) {
   switch (option) {
   case 'yes':
-    $('#moverTuningSettings').hide(slow);
+    $('.moverTuningSettings').hide(slow);
     break;
   case 'no':
-    $('#moverTuningSettings').show(slow);
+    $('.moverTuningSettings').show(slow);
     break;
   }
 }
@@ -195,10 +263,10 @@ function updateScreenMoverTuningSettings(option,slow) {
 function updateScreenMoverAdvancedSettings(option,slow) {
   switch (option) {
   case 'no':
-    $('#moverAdvancedSettings').hide(slow);
+    $('.moverAdvancedSettings').hide(slow);
     break;
   case 'yes':
-    $('#moverAdvancedSettings').show(slow);
+    $('.moverAdvancedSettings').show(slow);
     break;
   }
 }
@@ -286,6 +354,16 @@ function mtRebuildThresholds(moving) {
   var omover = mtFillRange($om, moving + 5, 100, 5);
   mtNotice('#omoverthresh_notice', (omover && !$om.prop('disabled')) ?
     mtFmt('_(Move All threshold raised to %1 to stay above the moving threshold.)_', omover + '%') : '');
+
+  var $wd = $('select[name="watchdogThreshold"]');
+  var watchdog = mtFillRange($wd, moving + 5, 100, 5);
+  mtNotice('#watchdog_notice', (watchdog && !$wd.prop('disabled')) ?
+    mtFmt('_(Watchdog trigger level raised to %1 to stay above the moving threshold.)_', watchdog + '%') : '');
+}
+
+// With the schedule disabled, nothing runs while the pool stays below the watchdog trigger level.
+function mtWatchdogWarning() {
+  $('#watchdog_schedule_warning').toggle($('#watchdog').val() === 'yes' && $('#moverDisabled').val() === 'yes');
 }
 
 // A config saved before the ranges tracked each other can hold a combination this page cannot
@@ -297,7 +375,7 @@ function mtWarnSavedThresholds() {
       mtSaved.freeing + '%', mtSaved.moving + '%', $('select[name="freeingThreshold"]').val() + '%'));
   }
   if (mtSaved.omoverOn && mtSaved.omover !== null && mtSaved.omover <= mtSaved.moving) {
-    msgs.push(mtFmt('_(The saved Move All threshold is %1, at or below the moving threshold of %2. Everything on cache:yes shares moves, skip list and filters ignored, before the moving threshold is reached. This page now shows %3, and saving will store that.)_',
+    msgs.push(mtFmt('_(The saved Move All threshold is %1, at or below the moving threshold of %2. Once the pool is above %1, everything on cache:yes shares moves, skip list and filters ignored. This page now shows %3, and saving will store that.)_',
       mtSaved.omover + '%', mtSaved.moving + '%', $('select[name="omoverthresh"]').val() + '%'));
   }
   if (!msgs.length) return;
@@ -314,10 +392,12 @@ $(function() {
   updateScreenMoverAdvancedFilters('<? echo $advancedFilters ?>');
   updateScreenMoverAdvancedOptions('<? echo $advancedOptions ?>');
   updateScreenMoverInvalidCharsToBlock('<? echo $validateFilenames ?>');
+  mtWatchdogWarning();
 
   toggleTime('ctime');
   toggleTime('atime');
   toggleAge($('select[name="age"]').val());
+  toggleResync();
 
   // the share page omits these selects for cache:prefer and unavailable shares
   var $moving = $('select[name="movingThreshold"]');
@@ -454,11 +534,11 @@ if (localStorage.getItem(newYearSeasonKey) === 'yes') {
 </div>
 
 <div class='moverUpdate'></div>
-<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="updateCron();">
+<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtEscapeQuotes(this);updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 
 _(Disable Mover running on a schedule)_:
-: <select name='moverDisabled' size='1' id='moverDisabled' onchange="updateScreenMoverTuningSettings(this.value, 'slow')">
+: <select name='moverDisabled' size='1' id='moverDisabled' onchange="updateScreenMoverTuningSettings(this.value, 'slow'); mtWatchdogWarning()">
 <?=mk_option($cfg['moverDisabled'],"no",_('No'))?>
 <?=mk_option($cfg['moverDisabled'],"yes",_('Yes'))?>
 </select>
@@ -471,8 +551,9 @@ _(Disable Mover running on a schedule)_:
 <p>You will only be able to run mover by <strong>manually</strong> invoking it:</p>
 <ul>
   <li>Press the <strong>“Move now”</strong> button in <strong>Mover Tuning - Options</strong>.</li>
-  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong>.</li>
+  <li>Run <strong>“age_mover start”</strong> from the <strong>CLI</strong> (without the priorities for the mover process and disk I/O).</li>
 </ul>
+<p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
 </blockquote>
 <?php else: ?>
@@ -485,16 +566,49 @@ _(Disable Mover running on a schedule)_:
   <li>Press <strong>“Move”</strong> on the <strong>Main</strong> page.</li>
   <li>Run <strong>“mover start”</strong> from the <strong>CLI</strong>.</li>
 </ul>
+<p>A <strong>forced move</strong> still runs on its own schedule: to stop it too, set <strong>Show advanced settings</strong> to <strong>Yes</strong>, then <strong>Force move of all files on a schedule</strong> to <strong>No</strong>.</p>
 :end
 </blockquote>
 <?php endif; ?>
 
-<div markdown="1" id="moverTuningSettings">
+_(Cache watchdog)_:
+: <select name='watchdog' size='1' id='watchdog' onchange='$(".mywatchdog").prop("disabled", this.value !== "yes"); mtWatchdogWarning()'>
+<?=mk_option($cfg['watchdog'],"no",_('No'))?>
+<?=mk_option($cfg['watchdog'],"yes",_('Yes'))?>
+</select>
+<span id="watchdog_schedule_warning" class="orange-text" style="display:none; font-style:italic;"><i class="fa fa-warning"></i> _(Schedule disabled: Mover Tuning only runs when the pool reaches the watchdog trigger level.)_</span>
+
+<blockquote class="inline_help">
+:mover_tune_watchdog_plug:
+<p>Every 5 minutes, checks the Primary (<em>cache</em>) pool of each cache:<strong>yes</strong> share. At the <strong>Watchdog trigger level</strong> it starts a normal Mover Tuning run, at most once an hour per pool, with one notification. It also runs during a parity check or disk rebuild.</p>
+<p>It is a safety net, not a replacement for the schedule: below the trigger level, only scheduled runs move files back to the pool (cache:<strong>prefer</strong>), sync, rebalance or move files by age.</p>
+<p>If a run can't bring the pool below the trigger level, the watchdog waits longer before its next run: 2 h, then 4 h, 8 h … up to 24 h. It resets once the pool drops below the trigger level.</p>
+:end
+</blockquote>
+
+_(Watchdog trigger level)_:
+: <select name="watchdogThreshold" size="1" class='mywatchdog' <?=$watchdogDisabled?> onchange='mtNotice("#watchdog_notice","")'>
+<?for ($w = $movingSaved + 5; $w <= 100; $w += 5):?>
+<?=mk_option($cfg['watchdogThreshold'], $w, "$w %")?>
+<?endfor;?>
+</select>
+<span id="watchdog_notice" class="orange-text" style="display:none; font-style:italic;"></span>
+<?foreach ($watchdogBackoff as $backoffLine):?>
+<br><span class="orange-text" style="font-style:italic;"><i class="fa fa-info-circle"></i> <?=$backoffLine?></span>
+<?endforeach;?>
+
+<blockquote class="inline_help">
+:mover_tune_watchdogthreshold_plug:
+<p>Used space on the Primary (<em>cache</em>) pool at which the watchdog starts a run. It stays above the moving threshold, because a run started below it would move nothing.</p>
+:end
+</blockquote>
+
+<div markdown="1" class="moverTuningSettings">
 
 <?php if (version_compare($vars['version'], '7.2.1', '>=')): ?>
 
 _(Mover Tuning schedule)_:
-: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'])?>'>
+: <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_movertunecron_plug:
 
@@ -513,7 +627,7 @@ _(Test Mode (dry run))_:
 </select>
 <span><i class="fa fa-info i"></i>&nbsp;&nbsp;<strong>_(No)_</strong> <em>- _(disables test mode)_</em></span>
 <span id="testmode_warning" class="orange-text" style="display:<?= ($cfg['testmode'] == 'yes') ? 'block' : 'none' ?>; font-style:italic;">
-  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced.') ?></span>
+  <i class="fa fa-warning"></i> <?= _('Test Mode - no files will be moved/synced by Mover Tuning (the original Mover can still run, see help).') ?></span>
 
 <script>
 function toggleTestModeWarning(val) {
@@ -523,8 +637,8 @@ function toggleTestModeWarning(val) {
 
 <blockquote class="inline_help">
 :mover_tune_testmode_plug:
-<p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>.</p>
-<p> Caution - If you have "Move Now button follows plug-in filters" set to <strong>No</strong>, original Mover will still run.</p>
+<p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. The before and after scripts still run.</p>
+<p> Caution - Test Mode does not stop original Mover: it still runs on the "Force move of all files on a schedule" schedule, and from the Move Now button if "Move Now button follows plug-in filters" is set to <strong>No</strong>. On Unraid 7.2.1 and later, Unraid's own Mover schedule and Move buttons always run the original Mover.</p>
 :end
 </blockquote>
 
@@ -550,7 +664,7 @@ _(Validate input filenames to prevent attacks)_:
 
 <div markdown="1" id="moverInvalidCharsToBlock">
 _(Invalid characters to block)_:
-: <input type='text' name='invalidFileChars' size='1' class='myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'])?>'>
+: <input type='text' name='invalidFileChars' size='1' class='myinvalidFileChars' placeholder='$ / < > : " | ? *' value='<?=htmlspecialchars($cfg['invalidFileChars'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 <blockquote class="inline_help">
 :mover_tune_invalidfilechars_plug:
@@ -618,7 +732,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'])?>'>
+: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_loggingfolder_plug:
 
@@ -627,7 +741,7 @@ _(Logs parent folder for Mover Tuning plugin)_:
 :end
 
 _(Delete Mover Log files over than this days old)_:
-: <select name="logfilesDaysold" size="1" class='logfilesDaysold' value='<?=$cfg['logfilesDaysold']?>'>
+: <select name="logfilesDaysold" size="1" class='logfilesDaysold'>
 <?=mk_option($cfg['logfilesDaysold'], 1, "1")?>
 <?=mk_option($cfg['logfilesDaysold'], 2, "2")?>
 <?=mk_option($cfg['logfilesDaysold'], 3, "3")?>
@@ -649,7 +763,7 @@ _(Delete Mover Log files over than this days old)_:
 :end
 
 _(Delete Mover helper files over than this days old)_:
-: <select name="listfilesDaysold" size="1" class='listfilesDaysold' value='<?=$cfg['listfilesDaysold']?>'>
+: <select name="listfilesDaysold" size="1" class='listfilesDaysold'>
 <?=mk_option($cfg['listfilesDaysold'], 1, "1")?>
 <?=mk_option($cfg['listfilesDaysold'], 2, "2")?>
 <?=mk_option($cfg['listfilesDaysold'], 3, "3")?>
@@ -670,6 +784,8 @@ _(Delete Mover helper files over than this days old)_:
 
 :end
 
+</div>
+
 _(Show advanced settings)_:
 : <select name='advancedSettings' size='1' onchange="updateScreenMoverAdvancedSettings(this.value, 'slow')">
 <?=mk_option($cfg['advancedSettings'],"no",_('No'))?>
@@ -682,7 +798,8 @@ _(Show advanced settings)_:
 
 :end
 
-<div markdown="1" id="moverAdvancedSettings">
+<div markdown="1" class="moverAdvancedSettings">
+<div markdown="1" class="moverTuningSettings">
 _(Let scheduled mover run during a parity check / rebuild)_:
 : <select name='parity' size='1'>
   <?=mk_option($cfg['parity'],'yes',_('Yes'))?>
@@ -691,9 +808,11 @@ _(Let scheduled mover run during a parity check / rebuild)_:
 
 :mover_tune_parity_plug:
 
-> If a parity check or disk rebuild is in progress, this will prevent mover from running.
+> With <strong>No</strong>, a scheduled run that falls during a parity check or disk rebuild is skipped until its next scheduled time. Runs started by hand (<strong>Move now</strong>, the per-share <strong>Move</strong>, the CLI) and the cache watchdog still run.
 
 :end
+
+</div>
 
 _(Priority for mover process)_:
 : <select name='moverNice' size='1'>
@@ -730,7 +849,7 @@ _(Force move of all files on a schedule)_:
 :end
 
 _(Cron Schedule to force move all of files)_:
-: <input type='text' id='cronSchedule' name='cron' size='1' class='mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'])?>' <?=$cronDisabled?>>
+: <input type='text' id='cronSchedule' name='cron' size='1' class='mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$cronDisabled?>>
 
 :mover_tune_cron_plug:
 
@@ -754,8 +873,13 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 :end
 </blockquote>
 
+</div>
+
+<div markdown="1" class="moverTuningSettings">
+<div markdown="1" class="moverAdvancedSettings">
+
 _(Script to run before mover (No checks, always runs))_:
-: <input type='text' name='beforeScript' size='1' class='mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'])?>'>
+: <input type='text' name='beforeScript' size='1' class='mybefore' placeholder='/mnt/user/Files/script_before_mover.sh' value='<?=htmlspecialchars($cfg['beforeScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_beforescript_plug:
 
@@ -764,7 +888,7 @@ _(Script to run before mover (No checks, always runs))_:
 :end
 
 _(Script to run after mover (No checks, always runs))_:
-: <input type='text' name='afterScript' size='1' class='myafter' placeholder='/mnt/user/Files/script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'])?>'>
+: <input type='text' name='afterScript' size='1' class='myafter' placeholder='/mnt/user/Files/script_after_mover.sh' value='<?=htmlspecialchars($cfg['afterScript'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_afterscript_plug:
 
@@ -798,8 +922,6 @@ _(Only move if above this threshold of used Primary (<em>cache</em>) space)_:
 <blockquote class="inline_help">
 :mover_tune_movingthreshold_plug:
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive for mover to run. When this threshold is reached, the mover will start running to move data off the cache pool.</p>
-<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>higher moving threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
-<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
 :end
 </blockquote>
 
@@ -815,8 +937,6 @@ _(Free down/prime up to this level of used Primary (<em>cache</em>) space)_:
 <blockquote class="inline_help">
 :mover_tune_freeingthreshold_plug:
 <p> Set to the amount of disk space used on the <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) drive after the mover has completed its run. Setting this to (<strong><em> 0% </em></strong>) means that the mover will continue until all data is moved off the cache pool.</p>
-<p> <u>Note:</u> If you observe that the <strong>mover is NOT moving data when it should</strong>, try setting a <strong>lower freeing threshold</strong> to increase the gap between the moving and freeing thresholds.</p>
-<p> Mover calculates the sum of the used cache pool size and file size until exceed the freeing threshold. If you have large files, this might result in not fitting within the allocated space for freeing thresholds.</p>
 :end
 </blockquote>
 
@@ -834,7 +954,7 @@ _(Fill up/prime up to this level of used Primary (<em>cache</em>) space)_:
 
 :end
 
-_(Move files off Primary (<em>cache</em>) based on age)_?
+_(Move files based on age)_?
 : <select name="age" size='1' onchange="toggleAge(this.value)">
   <?=mk_option($cfg['age'],'no',_('No'))?>
   <?=mk_option($cfg['age'],'yes',_('Yes'))?>
@@ -842,7 +962,7 @@ _(Move files off Primary (<em>cache</em>) based on age)_?
 
 :mover_tune_age_plug:
 
-> Select if you want to move files off of the Primary (cache) based on their age - days old.
+> Select if you want to move files based on their age - days old. Applies to cache:<strong>yes</strong> shares (moved off the Primary) and to cache:<strong>prefer</strong> shares (moved onto the Primary).
 
 :end
 
@@ -866,7 +986,20 @@ _(Move files that are greater than this many days old)_:
 
 :mover_tune_daysold_plug:
 
-> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto will move from the oldest to the most recent, until threshold is met.
+> Select the number of **days old** a file has to be in order to move (Up To 1 year). Auto moves files until the threshold is met, with no minimum age; for cache:<strong>yes</strong> shares, **Move order** decides which go first.
+
+:end
+
+_(Move order)_:
+: <select name="moveOrder" size="1">
+  <?=mk_option($cfg['moveOrder'],'oldest',_('Oldest first'))?>
+  <?=mk_option($cfg['moveOrder'],'largest',_('Largest first'))?>
+  <?=mk_option($cfg['moveOrder'],'smallest',_('Smallest first'))?>
+</select>
+
+:mover_tune_moveorder_plug:
+
+> Which files of cache:<strong>yes</strong> shares leave the Primary first. It only sets the order: the age filter, **Auto** and **Move All** still decide which files move.
 
 :end
 
@@ -883,27 +1016,27 @@ _(Show advanced filters)_:
 :end
 
 <div markdown="1" id="moverAdvancedFilters">
-_(Use CTIME)_:
-: <select name="ctime" size='1' class='myage ctime' <?=$ageDisabled?> onchange="toggleTime('ctime')">
+_(Use CTIME (change time))_:
+: <select name="ctime" size='1' class='ctime' onchange="toggleTime('ctime')">
   <?=mk_option($cfg['ctime'],'no',_('No'))?>
   <?=mk_option($cfg['ctime'],'yes',_('Yes'))?>
 </select>
 
 :mover_tune_ctime_plug:
 
-> Use <strong>CTIME</strong> <em>( creation time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>CTIME</strong> <em>( change time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off. The change time is updated whenever the content or the attributes (name, owner, permissions) of a file change; it is not the creation time.
 
 :end
 
 _(Use ATIME)_:
-: <select name="atime" size='1' class='myage atime' <?=$ageDisabled?> onchange="toggleTime('atime')">
+: <select name="atime" size='1' class='atime' onchange="toggleTime('atime')">
   <?=mk_option($cfg['atime'],'no',_('No'))?>
   <?=mk_option($cfg['atime'],'yes',_('Yes'))?>
 </select>
 
 :mover_tune_atime_plug:
 
-> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> in the find command.
+> Use <strong>ATIME</strong> <em>( access time )</em> instead of <strong>MTIME</strong> <em>( modification time )</em> as the file time for the age filter, the order files move in and the last-sync check, also when **Move files based on age** is off.
 
 :end
 
@@ -951,7 +1084,7 @@ _(Sync files based on maximum size)_?
 
 :mover_tune_sizefsync_plug:
 
-> Select <strong>yes</strong> if you want to sync files based on their size in <strong>MB</strong>. This option is only applicable when the Synchronize or Resynchronize feature is enabled.
+> Select <strong>yes</strong> to copy only files smaller than the size below (in <strong>MB</strong>) when files kept on the Primary of cache:yes shares are synchronized to the Secondary. It applies while <strong>Synchronize Primary files to Secondary</strong> is <strong>Yes</strong>, Resynchronize runs included. Files brought back to cache:prefer shares and rebalanced files are not limited.
 
 :end
 
@@ -979,7 +1112,7 @@ _(Sync files that are smaller than this size (In MB))_.
 
 :end
 
-_(Move files off Primary (cache) based on sparseness)_?
+_(Move files based on sparseness)_?
 : <select name="sparsnessf" size='1' onchange='$(".mysparsnessf").toggleAttr("disabled")'>
   <?=mk_option($cfg['sparsnessf'],'no',_('No'))?>
   <?=mk_option($cfg['sparsnessf'],'yes',_('Yes'))?>
@@ -1017,11 +1150,12 @@ _(Ignore files and folders listed inside of a text file)_:
 </select>
 
 _(File list path)_:
-: <input type='text' name='filelistv' size='1' class='myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'])?>' <?=$filelistfDisabled?>>
+: <input type='text' name='filelistv' size='1' class='myfilelistf' placeholder='/mnt/user/Files/mover_ignore.txt' value='<?=htmlspecialchars($cfg['filelistv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filelistfDisabled?>>
 
 <blockquote class="inline_help">
 :mover_tune_filelistv_plug:
-<p> Full path to a file that contains a list of files and folders you want ignored from being moved off the Primary (cache) pool.</p>
+<p> Full path to a file that lists files and folders the mover leaves where they are: on the Primary (cache) pool for cache:<strong>yes</strong> shares, and on the Secondary (array) for cache:<strong>prefer</strong> shares.</p>
+<p> Write each entry with the share's Primary pool path (<strong><em>/mnt/cache_ssd/Files/...</em></strong>, as in the examples below) or with its user share path (<strong><em>/mnt/user/Files/...</em></strong>). Secondary storage paths such as <strong><em>/mnt/disk1/Files/...</em></strong> are not supported.</p>
 <p> <strong>File List</strong> example: <strong><em>/mnt/user/Files/mover_ignore.txt</em></strong> , The contents of this file should be one entry per line.</p>
 <p> <strong>Folder</strong> example: <strong><em>/mnt/cache_ssd/Files/MyFolder</em></strong> , Do <strong>NOT</strong> put (<strong><em> * </em></strong>) or (<strong><em> / </em></strong>) at the end of the line.</p>
 <p> <strong>File</strong> example: <strong><em>/mnt/cache_ssd/Files/MyFile.txt</em></strong> .</p>
@@ -1041,7 +1175,7 @@ _(Ignore file types)_:
 </select>
 
 _(Comma separated list of file types)_:
-: <input type='text' name='filetypesv' size='1' class='myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'])?>' <?=$filetypesfDisabled?>>
+: <input type='text' name='filetypesv' size='1' class='myfiletypesf' placeholder='jpg, png, zip, txt' value='<?=htmlspecialchars($cfg['filetypesv'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$filetypesfDisabled?>>
 
 :mover_tune_filetypesv_plug:
 
@@ -1088,9 +1222,10 @@ _(Move All from Primary->Secondary shares pool percentage)_:
 :mover_tune_omoverthresh_plug:
 <p>Set to the amount of disk space used on the Primary pool to initiate a move of all files in a <strong><em>Primary->Secondary</em></strong> (cache:<strong>yes</strong>) share.</p>
 <p>Filters will still run after, for any remaining pool's that do not meet this threshold.</p>
-<p>This threshold should at a minimum be <strong>5%</strong> larger than <strong><em>Only move at this threshold of used primary (cache) space</em></strong> setting above.</p>
 :end
 </blockquote>
+
+</div>
 
 </div>
 
@@ -1108,6 +1243,7 @@ _(Force turbo write during mover)_:
 
 :end
 
+<div markdown="1" class="moverTuningSettings">
 _(Move files tool)_:
 : <select name='movefilesTool' size='1'>
 <?=mk_option($cfg['movefilesTool'],"rsync",_('Rsync'))?>
@@ -1148,7 +1284,7 @@ _(Move empty folders)_:
 :end
 
 _(Clean empty folders)_:
-: <select name='cleanFolders' size='1'>
+: <select name='cleanFolders' size='1' onchange="toggleCleanDatasets(this.value)">
 <?=mk_option($cfg['cleanFolders'],"no",_('No'))?>
 <?=mk_option($cfg['cleanFolders'],"yes",_('Yes'))?>
 <?=mk_option($cfg['cleanFolders'],"topFolder",_('Top Folder'))?>
@@ -1166,12 +1302,25 @@ _(Clean empty ZFS datasets)_:
 <?=mk_option($cfg['cleanDatasets'],"no",_('No'))?>
 <?=mk_option($cfg['cleanDatasets'],"yes",_('Yes'))?>
 </select>
+<input type='hidden' name='cleanDatasets' value='no' disabled>
 
 :mover_tune_cleandatasets_plug:
 
-> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within.
+> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within. Works only when <strong>Clean empty folders</strong> is set to <strong>Yes</strong> or <strong>Top Folder</strong>.
 
 :end
+
+<script>
+// age_mover destroys a dataset only after the Clean empty folders pass
+function toggleCleanDatasets(cleanFolders) {
+  $('select[name="cleanDatasets"]').prop('disabled', cleanFolders === 'no');
+  // update.php keeps a key the form does not post, and a disabled select is not posted: post No instead
+  $('input[name="cleanDatasets"]').prop('disabled', cleanFolders !== 'no');
+}
+$(function() {
+  toggleCleanDatasets($('select[name="cleanFolders"]').val());
+});
+</script>
 
 _(Share size calculation)_:
 : <select name='shareCalculation' size='1'>
@@ -1187,7 +1336,7 @@ _(Share size calculation)_:
 </blockquote>
 
 _(Synchronize Primary files to Secondary)_:
-: <select name='synchronizeCache' size='1'>
+: <select name='synchronizeCache' size='1' onchange="toggleResync()">
 <?=mk_option($cfg['synchronizeCache'],"no",_('No'))?>
 <?=mk_option($cfg['synchronizeCache'],"yes",_('Yes'))?>
 </select>
@@ -1199,7 +1348,7 @@ _(Synchronize Primary files to Secondary)_:
 <p><u>Note:</u></p>
 <ul>
   <li><strong>ONLY modified files</strong> since the last sync are <strong>synchronized</strong>.</li>
-  <li><strong>ONLY files</strong> on the cache pool <strong>below</strong> moving and freeing thresholds can be <strong>synchronized</strong>.</li>
+  <li><strong>ONLY files</strong> that stay on the cache pool after the run are <strong>synchronized</strong>.</li>
 </ul>
 :end
 </blockquote>
@@ -1229,7 +1378,7 @@ _(Rebalance shares)_:
 :mover_tune_rebalanceshares_plug:
 <p>Moves files from shares to their Primary and/or Secondary storage if they are spread across <strong><em>Unattended Storage</em></strong> (disks/pools not assigned as a share's Primary or Secondary).</p>
 <p>May move older files from <strong><em>Primary->Secondary</em></strong> or <strong><em>Secondary->Primary</em></strong> if allowed (cache:prefer, cache:yes, cache:only) to free up space.</p>
-<p>Run-once setting will reset back to <strong>No</strong> after next run.</p>
+<p>Run-once setting will reset back to <strong>No</strong> after next run. A run in Test Mode leaves it set.</p>
 :end
 </blockquote>
 
@@ -1239,12 +1388,15 @@ _(Resynchronize all Primary files to Secondary)_:
 <?=mk_option($cfg['resynchronizeCache'],"run-once",_('Run once'))?>
 <?=mk_option($cfg['resynchronizeCache'],"yes",_('Yes'))?>
 </select>
+<input type='hidden' name='resynchronizeCache' value='no' disabled>
 
 <blockquote class="inline_help">
 :mover_tune_resynchronizecache_plug:
 <p>This will resynchronize the Primary (cached) files on both Primary and Secondary (array) so they are backed up and parity protected.</p>
 <p>All files will be synchronized again independently of modification time.</p>
-<p>This can be a long operation. Run-once setting will reset back to <strong>No</strong> after next run.</p>
+<p>It resynchronizes the shares that synchronize, through <strong>Synchronize Primary files to Secondary</strong> here or in a share's own Mover Tuning settings, and is greyed out while no share does.</p>
+<p>After lowering the number of days of the age filter, or setting it to No or Auto, set this to <strong>Run once</strong>: files the filter held back are not synchronized otherwise.</p>
+<p>This can be a long operation. Run-once setting will reset back to <strong>No</strong> after next run. A run in Test Mode leaves it set.</p>
 :end
 </blockquote>
 
@@ -1255,7 +1407,7 @@ _(Resynchronize all Primary files to Secondary)_:
 : <span class="buttons-spaced">
     <input type="submit" name="#apply" value="_(Apply)_" id='Apply'>
     <input type="button" id="DONE" value="_(Done)_" onclick="done()">
-    <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults(); location.reload()">
+    <input type="button" id="Defaults" value="_(Defaults)_" onclick="resetDefaults()">
 <?if ($showMoverButton):?>
     <button type="button" id="StartTuneMoverBtn" class="button" title="_(Run Mover Tuning...)_" aria-label="_(Start Mover Tuning)_" aria-disabled="<?=$moverRunning ? 'true' : 'false'?>" <?if($moverRunning) echo 'disabled';?>>
     <i id="MoverWrench" class="fa fa-wrench" style="color:<?=$moverRunning ? 'var(--gray-500)' : 'var(--blue-700)'?>;"></i> _(Move now)_
@@ -1283,6 +1435,7 @@ _(Resynchronize all Primary files to Secondary)_:
     <dd><span><a href="https://forums.unraid.net/topic/70783-plugin-mover-tuning/" target="_blank" rel="noopener noreferrer">_(Open)_</a> - _(Before proceeding, click on an option or press F1 to read detailed descriptions of all settings.)_</span></dd>
     <dt>_(Maintainers)_</dt>
     <dd><span><span class="plugin-year" data-start="2025"></span> - <a href="https://forums.unraid.net/profile/107418-masterwishx/" target="_blank" rel="noopener noreferrer">masterwishx</a> | 
+        2026 - <a href="https://forums.unraid.net/profile/283711-chodeus/" target="_blank" rel="noopener noreferrer">chodeus</a> | 
         2024 - <a href="https://github.com/R3yn4ld/ca.mover.tuning" target="_blank" rel="noopener noreferrer">R3yn4ld</a> | 
         2023 - <a href="https://github.com/hugenbd/ca.mover.tuning" target="_blank" rel="noopener noreferrer">hugenbd</a> | 
         2018 - <a href="https://forums.unraid.net/profile/10290-squid/" target="_blank" rel="noopener noreferrer">Andrew Zawadzki</a></span></dd>
