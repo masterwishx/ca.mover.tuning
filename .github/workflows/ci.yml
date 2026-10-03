@@ -41,7 +41,8 @@ jobs:
           bash source/ca.mover.tuning/pkg_build.sh --version 0000.00.00 --out "$RUNNER_TEMP/dist"
           test -s "$RUNNER_TEMP/dist/ca.mover.tuning-0000.00.00-x86_64-1.txz"
 
-  # The stable release only warns about bullets still copied from commit subjects, so its PR is where they fail.
+  # The stable release PR's notes, checked before the merge: the release only warns about copied commit
+  # subjects, and empty notes would stop it with the merge already done.
   release-notes:
     name: Release notes
     if: github.head_ref == 'release/stable'
@@ -57,11 +58,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: No bullet is still a copied commit subject
+      - name: The notes have bullets and none is a copied commit subject
         run: |
           since=$(python3 .github/scripts/release/plg_release.py since-ref --changelog "$CHANGELOG" --channel stable)
           python3 .github/scripts/release/plg_release.py check --changelog "$CHANGELOG" --plg "$PLG" \
-            --channel stable --branch "$GITHUB_BASE_REF" --require-edited --since "$since"
+            --channel stable --branch "$GITHUB_BASE_REF" --require-nonempty --require-edited --since "$since"
 
   release-scripts:
     name: Release script tests
