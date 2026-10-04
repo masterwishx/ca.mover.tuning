@@ -1041,6 +1041,7 @@ unraid_empty_disks() {
     if [ -z "$EMPTYING" ]; then
         mvDebuglogger "No disks configured in shareUserEmptying - skipping unraid_empty_disks()" "Empty Disks"
     else
+        moverStep "Emptying disks"
 
         IFS=',' read -ra arr <<<"$EMPTYING"
         for DISK in "${arr[@]}"; do
@@ -1071,12 +1072,15 @@ unraid_empty_disks() {
 # Its line 3 is a per-share bar; Selectlines leaves it out, as each pass here runs across the shares.
 moverStatusWrite() {
     [ "$MOVER_PROGRESS" = no ] && return 0
-    local total remain moved elapsed rate=0 eta=0 file action tmp="${MOVER_STATUS}.$$"
+    local total remain moved elapsed rate=0 eta=0 file action lines=1,2 tmp="${MOVER_STATUS}.$$"
     total=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
+    # 7.4 shows "Nothing to move" while nothing is measured yet; the plugin's own rows hide those lines too
+    [ "$total" -gt 0 ] && lines=1,2,4,5
     remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE))
     [ "$remain" -lt 0 ] && remain=0
     moved=$((total > remain ? total - remain : 0))
-    elapsed=$((START_TIME > 0 ? EPOCHSECONDS - START_TIME : 0))
+    # the speed stops at the end of the transfers, as the steps after them move nothing
+    elapsed=$((START_TIME > 0 ? ${MOVES_END_TIME:-$EPOCHSECONDS} - START_TIME : 0))
     [ "$elapsed" -gt 0 ] && rate=$((moved / elapsed))
     [ "$rate" -gt 0 ] && eta=$((remain / rate))
     # escaped for parse_ini_file as 7.4's inivalue does, and $ too, which would expand a ${...} in a name
@@ -1092,13 +1096,30 @@ moverStatusWrite() {
         echo "Action=\"$action\""
         echo "Filepercent=0"
         echo "Showlines=5"
-        echo "Selectlines=1,2,4,5"
+        echo "Selectlines=$lines"
         echo "movertitle1=File being processed:"
         echo "movertitle2=Action:"
         echo "movertitle3=Share Progress:"
         echo "movertitle4=Overall Progress:"
         echo "movertitle5=Estimated Completion:"
     } >"$tmp" && mv -f "$tmp" "$MOVER_STATUS" || rm -f "$tmp"
+}
+
+# Names a step without a file in the progress rows, which otherwise keep the last moved file until the run ends
+moverStep() {
+    GUI_ACTION=$1
+    GUI_CURRENT_FILE=""
+    moverStatusWrite
+}
+
+# A script's name for the progress rows: User Scripts keeps each one as <folder>/script, its title in <folder>/name
+scriptLabel() {
+    local file=${1##*/} dir=${1%/*} name=""
+    if [ "$file" = script ]; then
+        [ -f "$dir/name" ] && read -r name <"$dir/name"
+        file=${name:-${dir##*/}}
+    fi
+    echo "$file"
 }
 
 createFilteredFilelist() {
@@ -2886,6 +2907,8 @@ processTheMoves() {
 
     [ "$INUSEFILES" -gt 0 ] && mvlogger "$INUSEFILES files were in use and stay on the source until a later run"
     mvlogger "$(titleLine "Cleaning up" '-')"
+    MOVES_END_TIME=$EPOCHSECONDS
+    moverStep "Cleaning up"
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
         awk -F'|' '$11 ~ /^sync / { found = 1; exit } END { exit !found }' "$MOVER_ACTIONLIST"; then
@@ -3017,10 +3040,14 @@ start() {
     #Let find find hidden files.
     shopt -s nullglob dotglob
 
+    # the progress rows show the run from here on, as the before script and planning a large share take a while
+    moverProgressSetting
+
     #Run mover before script if specified.
     if [ -n "$BEFORESCRIPT" ] && [ ! -e $SOFTSTOPFILE ]; then
         if [ -f "$BEFORESCRIPT" ] && [ -x "$BEFORESCRIPT" ]; then
             mvlogger "Launching before script: $BEFORESCRIPT"
+            moverStep "Running before script: $(scriptLabel "$BEFORESCRIPT")"
             "$BEFORESCRIPT"
             mvlogger "Before script finished"
         else
@@ -3029,9 +3056,7 @@ start() {
         fi
     fi
 
-    # the progress rows show the run from here on, as planning a large share takes a while
-    moverProgressSetting
-    moverStatusWrite
+    moverStep "Calculating"
 
     # Proceed with filter and create filtered filelist and action filelist
     [ ! -e $SOFTSTOPFILE ] && createFilteredFilelist
@@ -3063,6 +3088,7 @@ start() {
     if [ -n "$AFTERSCRIPT" ] && [ ! -e "$SOFTSTOPFILE" ]; then
         if [ -f "$AFTERSCRIPT" ] && [ -x "$AFTERSCRIPT" ]; then
             mvlogger "Launching after script: $AFTERSCRIPT"
+            moverStep "Running after script: $(scriptLabel "$AFTERSCRIPT")"
             "$AFTERSCRIPT"
             rc=$?
             # rc is read instead of $?: [ overwrites $? before the || branch runs.
