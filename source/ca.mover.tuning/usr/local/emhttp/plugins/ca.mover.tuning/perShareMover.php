@@ -14,14 +14,15 @@
 <?
 #---------------------------------------------------------------------------------------------------------------------
 #This section was adapted from "Wrapper.php" and includes an adapted "parse_plugin_cfg()" function.
-$docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?: '/usr/local/emhttp';
+$docroot = $docroot ?? $_SERVER['DOCUMENT_ROOT'] ?? '';
+$docroot = $docroot === '' ? '/usr/local/emhttp' : $docroot;
 /** The share page's settings: each key of default.cfg, empty (Use global) unless the share file saved it. */
 function parse_share_cfg($plugin, $shareName, $sections = false, $scanner = INI_SCANNER_NORMAL)
 {
     global $docroot;
     $ram = "$docroot/plugins/$plugin/default.cfg";
     $rom = "/boot/config/plugins/$plugin/shareOverrideConfig/$shareName.cfg";
-    $cfg = file_exists($ram) ? parse_ini_file($ram, $sections, $scanner) : [];
+    $cfg = file_exists($ram) === true ? parse_ini_file($ram, $sections, $scanner) : [];
     // a setting the share file has not saved is Use global (empty), as age_mover reads it, not the shipped default
     $cfg = is_array($cfg) === true ? array_fill_keys(array_keys($cfg), '') : [];
     $share = file_exists($rom) === true ? parse_ini_file($rom, $sections, $scanner) : [];
