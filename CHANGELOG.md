@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- fix: Name each step of a run in the progress rows
+- fix: Shorten the cache watchdog's tooltip
+- Use strict comparisons in the PHP scripts (3bb78fd)
+
 ## 2026.10.03a (beta)
 
 - fix: The "Deciding the action" log line now counts only real files.
