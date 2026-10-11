@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026.10.11a (beta)
+
+- fix: Name each step of a run in the progress rows
+- fix: Shorten the cache watchdog's tooltip
+- Use strict comparisons in the PHP scripts (3bb78fd)
+- fix: update age_mover command descriptions and add new commands in README
+- fix: update link in README for mover operation documentation
+- feat: add new screenshot assets for filters, help, options, and settings
+
 ## 2026.10.03
 
 - new: Unraid 7.4 beta support (masterwishx - Thanks to chodeus for the PRs)

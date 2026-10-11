@@ -69,6 +69,11 @@ fi
 seed_args=(--since "$since" --until "origin/$BASE")
 # the promoted beta's notes already describe its commits, so they are not listed again from master
 [ -z "$promote" ] || seed_args+=(--beta-sections --beta-after "$OLD_SYNC_BETA" --exclude "refs/tags/$promote")
+# likewise master's own commits, which reach beta with the merge after the stable release that listed them
+if [ "$CHANNEL" = beta ]; then
+  last_stable=$($PLGR since-ref --changelog "$CHANGELOG" --channel stable)
+  [ -z "$last_stable" ] || seed_args+=(--exclude "refs/tags/$last_stable")
+fi
 carry=()
 [ -z "$OLD_CL" ] || carry=(--carry-from "$OLD_CL")
 $PLGR seed --changelog "$CHANGELOG" --channel "$CHANNEL" "${carry[@]}" "${seed_args[@]}"
@@ -104,7 +109,7 @@ body="$SCRATCH/pr-body.md"
 {
   echo "Merge this PR to cut the next **$CHANNEL** release. Edit the Unreleased section of \`$CHANGELOG\` on this branch first; the release job stamps the version, renders it into the plugin manifest, and attaches the package."
   echo
-  echo "Bullets are copied from commit subjects, and a stable release refuses any bullet that is still word for word the copy (those ending in a commit hash, for example): reword or delete each one."
+  echo "Bullets are copied from commit subjects: reword or delete each one that is still word for word the copy (those ending in a commit hash, for example). On a stable release PR the **Release notes** check fails until none is left; the release itself only warns."
   echo
   # generated PR: the release check enforces the changelog rules, so keep CodeRabbit off it
   echo "@coderabbitai ignore"

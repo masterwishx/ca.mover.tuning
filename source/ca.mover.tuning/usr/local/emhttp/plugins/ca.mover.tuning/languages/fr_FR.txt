@@ -214,7 +214,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_watchdog_plug:
 <p>Vérifie toutes les 5 minutes le pool primaire (<em>cache</em>) de chaque partage cache:<strong>yes</strong>. Au <strong>seuil de déclenchement de la surveillance</strong>, elle lance une exécution normale de Mover Tuning, au plus une fois par heure et par pool, avec une notification. Elle s’exécute aussi pendant une vérification de parité ou une reconstruction de disque.</p>
-<p>C’est un filet de sécurité, pas un remplacement de la planification : sous le seuil de déclenchement, seules les exécutions planifiées ramènent des fichiers vers le pool (cache:<strong>prefer</strong>), synchronisent, rééquilibrent ou déplacent des fichiers selon leur âge.</p>
+<p>C’est un filet de sécurité, gardez donc la planification activée.</p>
 <p>Si une exécution ne peut pas ramener le pool sous le seuil de déclenchement, la surveillance attend plus longtemps avant la suivante : 2 h, puis 4 h, 8 h … jusqu’à 24 h. Cela se réinitialise dès que le pool repasse sous le seuil de déclenchement.</p>
 :end
 
