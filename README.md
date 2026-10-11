@@ -148,12 +148,16 @@ Commands that can be launched from a terminal or a script (`age_mover` is instal
 
 | Command | What it does |
 | --- | --- |
-| `age_mover start` | Starts age_mover (the internal moving engine) with the settings you set in the GUI. |
-| `age_mover softstop` | Cleanly exits the loops (Filtering, Deciding, Moving) and age_mover. An ongoing file transfer is not interrupted; the stop occurs after the current file operation. |
-| `age_mover stop` | Kills all processes. This can leave unfinished or corrupted file transfers. |
-| `age_mover debug` | Creates a diagnostics package (.zip) for troubleshooting. |
-| `age_mover reset` | Resets all plugin settings to their defaults, including per-share overrides. |
-| `age_mover --help` | Shows all commands supported by your version. |
+| `age_mover start` | Starts the age_mover with the settings you set in the GUI. |
+| `age_mover stop` | Forced stop of the age_mover process tree. Not recommended: it can leave partial files and incomplete hardlink transfers. Use `softstop` instead. |
+| `age_mover softstop` | Soft stop (recommended). Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. |
+| `age_mover status` | Checks if the age_over is running. |
+| `age_mover reset` | Resets the plugin config and schedules to default values and deletes the override config folder. |
+| `age_mover debug` | Creates a diagnostics ZIP at `/boot/logs/ca.mover.tuning-debug-<date-time>.zip`. |
+| `age_mover watchdog` | Starts a run when a cache:yes share's primary pool reaches the Cache watchdog trigger level. Run by cron, so you normally don't need to call it yourself. |
+| `age_mover --help` | Shows the usage for your version. |
+
+On Unraid older than 7.2.1 you can use `mover` instead of `age_mover` (for example `mover start`). On 7.2.1+ `mover` runs the built-in Unraid mover, so use `age_mover`.
 
 See the [Mover Tuning thread on the Unraid support forum](https://forums.unraid.net/topic/70783-plugin-mover-tuning/) for more details and discussions. When asking for help, attach the debug package from the Help section.
 
