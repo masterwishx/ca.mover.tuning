@@ -9,6 +9,15 @@
 - fix: update link in README for mover operation documentation
 - feat: add new screenshot assets for filters, help, options, and settings
 
+## 2026.10.11
+
+- fix: Name each step of a run in the progress rows  (masterwishx - Thanks to chodeus for the PRs)
+- fix: Shorten the cache watchdog's tooltip.
+- Use strict comparisons in the PHP scripts.
+- fix: update age_mover command descriptions and add new commands in README.
+- fix: update link in README for mover operation documentation.
+- feat: add new screenshot assets for filters, help, options, and settings.
+
 ## 2026.10.03a (beta)
 
 - fix: The "Deciding the action" log line now counts only real files.
