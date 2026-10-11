@@ -4,9 +4,12 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/masterwishx/ca.mover.tuning/badge)](https://www.codefactor.io/repository/github/masterwishx/ca.mover.tuning)
 
 [![Release](https://img.shields.io/github/v/release/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/masterwishx/ca.mover.tuning/total?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/releases)
 [![License: GPL-2.0](https://img.shields.io/github/license/masterwishx/ca.mover.tuning?style=flat-square)](LICENSE)
 [![Last commit](https://img.shields.io/github/last-commit/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/commits/master)
 [![Stars](https://img.shields.io/github/stars/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/stargazers)
+
+[![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?style=flat-square&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=UDXM742YK5ZV6)
 
 ## About
 
