@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.10.11
 
 - fix: Name each step of a run in the progress rows  (masterwishx - Thanks to chodeus for the PRs)
 - fix: Shorten the cache watchdog's tooltip.

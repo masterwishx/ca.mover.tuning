@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.10.03">
-<!ENTITY md5       "1275660a55168576bffced83bfca15c5">
+<!ENTITY version   "2026.10.11">
+<!ENTITY md5       "5a37f53bd9fd81ee28cc420cb4206d55">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -14,6 +14,14 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.10.11
+- fix: Name each step of a run in the progress rows  (masterwishx - Thanks to chodeus for the PRs)
+- fix: Shorten the cache watchdog's tooltip.
+- Use strict comparisons in the PHP scripts.
+- fix: update age_mover command descriptions and add new commands in README.
+- fix: update link in README for mover operation documentation.
+- feat: add new screenshot assets for filters, help, options, and settings.
+
 ###2026.10.03
 - new: Unraid 7.4 beta support (masterwishx - Thanks to chodeus for the PRs)
 - new: The log now warns when a share's Minimum free space is smaller than the largest file to move and the disk Unraid picks could run out of room.
