@@ -7,7 +7,7 @@
 - Use strict comparisons in the PHP scripts.
 - fix: update age_mover command descriptions and add new commands in README.
 - fix: update link in README for mover operation documentation.
-- feat: add new screenshot assets for filters, help, options, and settings.
+- doc: add new screenshot assets for filters, help, options, and settings.
 
 ## 2026.10.11a (beta)
 
