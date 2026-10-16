@@ -1748,7 +1748,7 @@ holdOpenFiles() {
     [ -s "$FILTERED_FILELIST" ] || return
     tmp=$(mktemp -d)
     # device:inode of every open or mapped file, whatever path the process sees it by (a share, a container mount);
-    # mapped paths are stat'ed, as maps' device numbers differ on Btrfs; listing map_files oopses kernels 6.1.178, 6.6.145, 6.12.97-98
+    # mapped files come from maps: listing map_files oopses some kernels (#254)
     {
         find /proc/[0-9]*/fd -mindepth 1 -maxdepth 1 -type l -print0 2>/dev/null
         awk 'BEGINFILE { if (ERRNO != "") nextfile } match($0, /^[^ ]+ [^ ]+ [^ ]+ [^ ]+ [0-9]+ +\//) { split(FILENAME, f, "/"); printf "/proc/%s/root%s\0", f[3], substr($0, RLENGTH) }' /proc/[0-9]*/maps 2>/dev/null
