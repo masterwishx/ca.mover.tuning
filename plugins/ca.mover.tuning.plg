@@ -675,14 +675,14 @@
 <FILE Run="/bin/bash">
 <INLINE>
 # Remove old 'source' files
-rm -f $(ls /boot/config/plugins/&name;/&name;*.txz 2>/dev/null &#124; grep -v '&version;')
+rm -f $(ls /boot/config/plugins/&name;/&name;*.txz 2>/dev/null &#124; grep -vF '/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz')
 </INLINE>
 </FILE>
 
 <!--
-The 'source' file.
+The 'source' file. Without reinstall, upgradepkg skips a package whose name sorts below the installed one (a same-date beta, a rollback).
 -->
-<FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz" Run="upgradepkg --install-new">
+<FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz" Run="upgradepkg --install-new --reinstall">
 <URL>https://github.com/&github;/releases/download/&version;/&name;-&version;-x86_64-1.txz</URL>
 <MD5>&md5;</MD5>
 </FILE>
