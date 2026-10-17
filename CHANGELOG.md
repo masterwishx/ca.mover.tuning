@@ -2,9 +2,8 @@
 
 ## Unreleased
 
-- fix: Reinstalls, rollbacks and betas now really replace the plugin's files.
-- Shorten the open-files scan comment (dfb9bee)
-- Read mapped files from maps instead of map_files (b9f0c3c)
+- fix: Mover runs no longer cause a kernel call trace on Unraid 7.2.8. (chodeus)
+- fix: .plg improvements. Reinstalls, rollbacks and betas now really replace the plugin's files. (chodeus)
 
 ## 2026.10.11a (beta)
 
