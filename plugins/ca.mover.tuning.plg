@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.10.11">
-<!ENTITY md5       "5a37f53bd9fd81ee28cc420cb4206d55">
+<!ENTITY version   "2026.10.17">
+<!ENTITY md5       "b322048db501a5071a1bbf7558f145d5">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -14,6 +14,10 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.10.17
+- fix: Mover runs no longer cause a kernel call trace on Unraid 7.2.8. (chodeus)
+- fix: .plg improvements. Reinstalls, rollbacks and betas now really replace the plugin's files. (chodeus)
+
 ###2026.10.11
 - fix: Name each step of a run in the progress rows  (masterwishx - Thanks to chodeus for the PRs)
 - fix: Shorten the cache watchdog's tooltip.
