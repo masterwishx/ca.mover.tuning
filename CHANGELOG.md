@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- fix: Mover runs no longer cause a kernel call trace on Unraid 7.2.8. (chodeus)
+- fix: .plg improvements. Reinstalls, rollbacks and betas now really replace the plugin's files. (chodeus)
+
 ## 2026.10.17a (beta)
 
 - fix: Mover runs no longer cause a kernel call trace on Unraid 7.2.8. (chodeus)
