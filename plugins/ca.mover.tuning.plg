@@ -20,7 +20,7 @@
 - Use strict comparisons in the PHP scripts.
 - fix: update age_mover command descriptions and add new commands in README.
 - fix: update link in README for mover operation documentation.
-- feat: add new screenshot assets for filters, help, options, and settings.
+- doc: add new screenshot assets for filters, help, options, and settings.
 
 ###2026.10.03
 - new: Unraid 7.4 beta support (masterwishx - Thanks to chodeus for the PRs)
@@ -626,14 +626,16 @@
 <FILE Run="/bin/bash">
 <INLINE>
 # Remove old 'source' files
-rm -f $(ls /boot/config/plugins/&name;/&name;*.txz 2>/dev/null &#124; grep -v '&version;')
+for archive in /boot/config/plugins/&name;/&name;*.txz; do
+  [ "$archive" = "/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz" ] &#124;&#124; rm -f -- "$archive"
+done
 </INLINE>
 </FILE>
 
 <!--
-The 'source' file.
+The 'source' file. reinstall: upgradepkg skips lower-sorting names.
 -->
-<FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz" Run="upgradepkg --install-new">
+<FILE Name="/boot/config/plugins/&name;/&name;-&version;-x86_64-1.txz" Run="upgradepkg --install-new --reinstall">
 <URL>https://github.com/&github;/releases/download/&version;/&name;-&version;-x86_64-1.txz</URL>
 <MD5>&md5;</MD5>
 </FILE>
