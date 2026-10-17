@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- fix: Reinstalls, rollbacks and betas now really replace the plugin's files.
+- Shorten the open-files scan comment (dfb9bee)
+- Read mapped files from maps instead of map_files (b9f0c3c)
+
 ## 2026.10.11a (beta)
 
 - fix: Name each step of a run in the progress rows
