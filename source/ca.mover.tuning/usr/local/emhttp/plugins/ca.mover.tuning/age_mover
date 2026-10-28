@@ -105,6 +105,14 @@ if [[ "$CONFIGLOGFOLDER" != /* ]]; then
 else
     LOGFOLDER="$CONFIGLOGFOLDER"
 fi
+# A folder that cannot be created or written sends one error per log line to syslog: check the nearest one that exists
+LOGFOLDER_PROBE="${LOGFOLDER}/ca.mover.tuning"
+while [ ! -e "$LOGFOLDER_PROBE" ] && [ ! -L "$LOGFOLDER_PROBE" ]; do
+    LOGFOLDER_PROBE=$(dirname "$LOGFOLDER_PROBE")
+done
+if [ ! -d "$LOGFOLDER_PROBE" ] || [ ! -w "$LOGFOLDER_PROBE" ]; then
+    LOGFOLDER="/tmp"
+fi
 
 NOW=$(date +"%FT%H%M%S")
 FILTERED_FILELIST="${LOGFOLDER}/ca.mover.tuning/Filtered_files_$NOW.list"
@@ -927,6 +935,8 @@ getMoverSettings() {
             cfg_default loggingFolder /tmp
             LOGFOLDER="/tmp"
         fi
+    elif [ "$(cfg loggingFolder)" != "$LOGFOLDER" ]; then
+        mvlogger "Log parent folder: $LOGFOLDER ($(qp "$(cfg loggingFolder)") cannot be used)"
     else
         mvlogger "Log parent folder: $LOGFOLDER"
     fi

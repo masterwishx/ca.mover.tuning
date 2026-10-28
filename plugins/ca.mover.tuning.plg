@@ -723,8 +723,8 @@ else
   echo "Updating config file"
   if [ &upgrade; = "major" ]; then
     echo "- Major upgrade, forcing test mode"
-    if grep -q "testmode" "$config_file"; then
-      sed -i "s/testmode=.*$/testmode=\"yes\"/" "$config_file"
+    if grep -q '^testmode=' "$config_file"; then
+      sed -i "s/^testmode=.*$/testmode=\"yes\"/" "$config_file"
     else
       echo 'testmode="yes"' >> "$config_file"
     fi
@@ -732,23 +732,23 @@ else
     echo "- Minor upgrade, not forcing test mode"
   fi
   echo "- Updating version number"
-  if grep -q "version" "$config_file"; then
-    sed -i "s/version=.*$/version=\"&version;\"/" "$config_file"
+  if grep -q '^version=' "$config_file"; then
+    sed -i "s/^version=.*$/version=\"&version;\"/" "$config_file"
   else
     echo "version=\"&version;\"" >> "$config_file"
   fi
-  if grep -q "threshold=" $config_file; then
+  if grep -q '^threshold=' "$config_file"; then
     echo "- Updating movingThreshold"
-    sed "s/threshold=/movingThreshold=/" -i "$config_file"
+    sed "s/^threshold=/movingThreshold=/" -i "$config_file"
   fi
-  if grep -q 'freeingThreshold=""' "$config_file"; then
+  if grep -q '^freeingThreshold=""' "$config_file"; then
       echo "- Updating freeingThreshold"
-      thresh=$(grep "movingThreshold=" $config_file | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
-      sed "s/freeingThreshold=.*$/freeingThreshold=$thresh/" -i "$config_file"
+      thresh=$(grep -m1 '^movingThreshold=' "$config_file" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+      sed "s/^freeingThreshold=.*$/freeingThreshold=\"$thresh\"/" -i "$config_file"
   fi
-  if ! grep -q 'freeingThreshold=' $config_file; then
+  if ! grep -q '^freeingThreshold=' "$config_file"; then
     echo "- Updating freeingThreshold"
-    grep 'movingThreshold=' "$config_file" | sed 's/movingThreshold/freeingThreshold/' >> "$config_file"
+    grep -m1 '^movingThreshold=' "$config_file" | sed 's/^movingThreshold/freeingThreshold/' >> "$config_file"
   fi
 fi
 
