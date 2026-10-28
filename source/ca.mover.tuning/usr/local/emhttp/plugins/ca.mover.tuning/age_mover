@@ -96,9 +96,11 @@ declare -A POOL_FSTYPE_CACHE=()
 # per cache:yes share, from createFilteredFilelist: "name|keeps its primary files|sync size limit in bytes|age filter days" lines for decideMoveActions
 SHARE_PLAN_RULES=""
 # Get parent Logs Folder from config, if blank set to default /tmp
-CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+# First match only: duplicate keys in the cfg must never produce a multi-line path
+CONFIGLOGFOLDER=$(grep -m1 "^loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 
-if [ -z "$CONFIGLOGFOLDER" ]; then
+# Empty, relative, multi-line or over-long values fall back to /tmp
+if [ -z "$CONFIGLOGFOLDER" ] || [[ "$CONFIGLOGFOLDER" != /* ]] || [[ "$CONFIGLOGFOLDER" == *$'\n'* ]] || [ "${#CONFIGLOGFOLDER}" -gt 200 ]; then
     LOGFOLDER="/tmp"
 else
     LOGFOLDER="$CONFIGLOGFOLDER"
@@ -916,7 +918,7 @@ getMoverSettings() {
     if [ -z "$(cfg loggingFolder)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Log parent folder argument provided, defaulting to /tmp"
-            echo 'loggingFolder="/tmp"' >>$config_file
+            grep -q '^loggingFolder=' "$config_file" || echo 'loggingFolder="/tmp"' >>"$config_file"
             LOGFOLDER="/tmp"
         fi
     else
