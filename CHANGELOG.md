@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix strict comparisons and update README commands (38fccbe)
+
 ## 2026.10.17
 
 - fix: Mover runs no longer cause a kernel call trace on Unraid 7.2.8. (chodeus)
