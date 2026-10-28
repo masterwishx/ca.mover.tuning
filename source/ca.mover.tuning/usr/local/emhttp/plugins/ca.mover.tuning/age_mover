@@ -96,9 +96,11 @@ declare -A POOL_FSTYPE_CACHE=()
 # per cache:yes share, from createFilteredFilelist: "name|keeps its primary files|sync size limit in bytes|age filter days" lines for decideMoveActions
 SHARE_PLAN_RULES=""
 # Get parent Logs Folder from config, if blank set to default /tmp
-CONFIGLOGFOLDER=$(grep "loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+# First match only: duplicate keys in the cfg must never produce a multi-line path
+CONFIGLOGFOLDER=$(grep -m1 "^loggingFolder=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
 
-if [ -z "$CONFIGLOGFOLDER" ]; then
+# Empty or relative values fall back to /tmp
+if [[ "$CONFIGLOGFOLDER" != /* ]]; then
     LOGFOLDER="/tmp"
 else
     LOGFOLDER="$CONFIGLOGFOLDER"
@@ -529,6 +531,12 @@ getMoverSettings() {
         fi
         echo "$value"
     }
+    # cfg_default KEY VALUE: one KEY="VALUE" line replaces every KEY line, so a blank first value never piles up defaults
+    cfg_default() {
+        sed -i "/^$1=/d" "$config_file"
+        [ -n "$(tail -c 1 "$config_file")" ] && echo >>"$config_file"
+        echo "$1=\"$2\"" >>"$config_file"
+    }
 
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
 
@@ -553,7 +561,7 @@ getMoverSettings() {
         FREEINGPCTLIMIT=$(cfg freeingThreshold)
         if [ -z $FREEINGPCTLIMIT ]; then
             FREEINGPCTLIMIT=25
-            echo "freeingThreshold=\"$FREEINGPCTLIMIT\"" >>$config_file
+            cfg_default freeingThreshold "$FREEINGPCTLIMIT"
         fi
         mvlogger "Using global (cache:yes) freeing threshold: $FREEINGPCTLIMIT %"
     elif [ -n "$(cfg freeingThreshold)" ]; then
@@ -566,7 +574,7 @@ getMoverSettings() {
         PREFER_MOVINGPCTTHRESHOLD=0
         if [ -z $PREFER_FILLUPPCTLIMIT ]; then
             PREFER_FILLUPPCTLIMIT=95
-            echo "fillupThreshold=\"$PREFER_FILLUPPCTLIMIT\"" >>$config_file
+            cfg_default fillupThreshold "$PREFER_FILLUPPCTLIMIT"
         fi
         mvlogger "Using global (cache:prefer) fillup threshold: $PREFER_FILLUPPCTLIMIT %"
     elif [ -n "$(cfg fillupThreshold)" ]; then
@@ -579,7 +587,7 @@ getMoverSettings() {
     if [ -z $(cfg omovercfg) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Move All from Primary->Secondary shares argument provided, defaulting to no"
-            echo 'omovercfg="no"' >>$config_file
+            cfg_default omovercfg no
             OMOVERTHRESH=""
         fi
     else
@@ -596,7 +604,7 @@ getMoverSettings() {
     if [ -z $(cfg age) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Age argument provided, defaulting to no"
-            echo 'age="no"' >>$config_file
+            cfg_default age no
             AGE=0
         fi
     else
@@ -633,7 +641,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Clean folders argument provided, defaulting to no"
             CLEANFOLDERS="no"
-            echo 'cleanFolders="no"' >>$config_file
+            cfg_default cleanFolders no
         fi
     else
         CLEANFOLDERS=$(cfg cleanFolders)
@@ -646,7 +654,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Clean ZFS datasets argument provided, defaulting to no"
             CLEANDATASETS="no"
-            echo 'cleanDatasets="no"' >>$config_file
+            cfg_default cleanDatasets no
         fi
     else
         CLEANDATASETS=$(cfg cleanDatasets)
@@ -659,7 +667,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No CTIME argument provided, defaulting to no"
             CTIME="no"
-            echo 'ctime="no"' >>$config_file
+            cfg_default ctime no
         fi
     else
         CTIME=$(cfg ctime)
@@ -670,7 +678,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No ATIME argument provided, defaulting to no"
             ATIME="no"
-            echo 'atime="no"' >>$config_file
+            cfg_default atime no
         fi
     else
         ATIME=$(cfg atime)
@@ -695,7 +703,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Turbo Mode argument provided, defaulting to no"
             ENABLETURBO="no"
-            echo 'enableTurbo="no"' >>"$config_file"
+            cfg_default enableTurbo no
         fi
     else
         ENABLETURBO=$(cfg enableTurbo)
@@ -705,7 +713,7 @@ getMoverSettings() {
     if [ -z $(cfg filelistf) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Skipfiles argument provided, defaulting to no"
-            echo 'filelistf="no"' >>$config_file
+            cfg_default filelistf no
         fi
     else
         if [ "$(cfg filelistf)" = "yes" ]; then
@@ -724,7 +732,7 @@ getMoverSettings() {
     if [ -z $(cfg filetypesf) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Skip File Types argument provided, defaulting to no"
-            echo 'filetypesf="no"' >>$config_file
+            cfg_default filetypesf no
             SKIPFILETYPES=""
         fi
     else
@@ -744,7 +752,7 @@ getMoverSettings() {
     if [ -z $(cfg ignoreHidden) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Ignore Hidden Files argument provided, defaulting to no"
-            echo 'ignoreHidden="no"' >>$config_file
+            cfg_default ignoreHidden no
             IGNOREHIDDENFILES="no"
         fi
     else
@@ -755,7 +763,7 @@ getMoverSettings() {
     if [ -z $(cfg rebalanceShares) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Rebalance argument provided, defaulting to no"
-            echo 'rebalanceShares="no"' >>$config_file
+            cfg_default rebalanceShares no
             REBALANCESHARES="no"
         fi
     else
@@ -767,7 +775,7 @@ getMoverSettings() {
     if [ -z $(cfg sizef) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Size argument provided, defaulting to no"
-            echo 'sizef="no"' >>$config_file
+            cfg_default sizef no
             SIZE=0
         fi
     else
@@ -782,7 +790,7 @@ getMoverSettings() {
     if [ -z $(cfg sparsnessf) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Sparness argument provided, defaulting to no"
-            echo 'sparsnessf="no"' >>$config_file
+            cfg_default sparsnessf no
             SPARSENESS=0
         fi
     else
@@ -798,7 +806,7 @@ getMoverSettings() {
         SYNCHRONIZECACHE=$(cfg synchronizeCache)
         if [ -z $(cfg synchronizeCache) ]; then
             mvlogger "No Synchronize Primary to Secondary argument provided, defaulting to no"
-            echo 'synchronizeCache="no"' >>$config_file
+            cfg_default synchronizeCache no
             SYNCHRONIZECACHE="no"
         fi
         LASTCACHESYNC=$(cfg lastCacheSync)
@@ -821,7 +829,7 @@ getMoverSettings() {
     if [ -z $(cfg resynchronizeCache) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Resynchronize argument provided, defaulting to no"
-            echo 'resynchronizeCache="no"' >>$config_file
+            cfg_default resynchronizeCache no
             RESYNCHRONIZECACHE="no"
         fi
     else
@@ -835,7 +843,7 @@ getMoverSettings() {
     if [ -z $(cfg sizefSync) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Sync Size argument provided, defaulting to no"
-            echo 'sizefSync="no"' >>$config_file
+            cfg_default sizefSync no
             SYNC_SIZE=0
         fi
     else
@@ -860,7 +868,7 @@ getMoverSettings() {
     if [ -z $(cfg testmode) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Test Mode argument provided, defaulting to no"
-            echo 'testmode="no"' >>$config_file
+            cfg_default testmode no
             TESTMODE="no"
         fi
     else
@@ -871,7 +879,7 @@ getMoverSettings() {
     if [ -z $(cfg notify) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Notify argument provided, defaulting to yes"
-            echo 'notify="yes"' >>$config_file
+            cfg_default notify yes
             NOTIFY="yes"
         fi
     else
@@ -882,7 +890,7 @@ getMoverSettings() {
     if [ -z $(cfg logging) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Logging argument provided, defaulting to yes"
-            echo 'logging="yes"' >>$config_file
+            cfg_default logging yes
             LOGLEVEL=1
         fi
     else
@@ -899,7 +907,7 @@ getMoverSettings() {
     if [ -z $(cfg debuglogging) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Debug Logging argument provided, defaulting to no"
-            echo 'debuglogging="no"' >>$config_file
+            cfg_default debuglogging no
             DEBUGLEVEL=0
         fi
     else
@@ -916,18 +924,17 @@ getMoverSettings() {
     if [ -z "$(cfg loggingFolder)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Log parent folder argument provided, defaulting to /tmp"
-            echo 'loggingFolder="/tmp"' >>$config_file
+            cfg_default loggingFolder /tmp
             LOGFOLDER="/tmp"
         fi
     else
-        LOGFOLDER=$(cfg loggingFolder)
         mvlogger "Log parent folder: $LOGFOLDER"
     fi
 
     if [ -z $(cfg logfilesDaysold) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Log files delete age argument provided, defaulting to 5 days"
-            echo 'logfilesDaysold="5"' >>$config_file
+            cfg_default logfilesDaysold 5
             LOGFILESAGE=5
         fi
     else
@@ -938,7 +945,7 @@ getMoverSettings() {
     if [ -z $(cfg listfilesDaysold) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No List files delete age argument provided, defaulting to 10 days"
-            echo 'listfilesDaysold="10"' >>$config_file
+            cfg_default listfilesDaysold 10
             LISTFILESAGE=10
         fi
     else
@@ -949,7 +956,7 @@ getMoverSettings() {
     if [ -z $(cfg validateFilenames) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Validate Filenames argument provided, defaulting to yes"
-            echo 'validateFilenames="yes"' >>$config_file
+            cfg_default validateFilenames yes
             VALIDATE_FILENAMES="yes"
         fi
     else
@@ -961,7 +968,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             # Print and unescape the array element \" -> "
             mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]//\\\"/\"}"
-            echo "invalidFileChars=\"${DEFAULT_INVALID_FILE_CHARS[*]}\"" >>"$config_file"
+            cfg_default invalidFileChars "${DEFAULT_INVALID_FILE_CHARS[*]}"
             # Keep DEFAULT_INVALID_FILE_CHARS as an array
             INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
             # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
@@ -980,7 +987,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Move files tool argument provided, defaulting to rsync"
             MOVE_FILES_TOOL="rsync"
-            echo 'movefilesTool="rsync"' >>"$config_file"
+            cfg_default movefilesTool rsync
         fi
     else
         MOVE_FILES_TOOL=$(cfg movefilesTool)
@@ -991,7 +998,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Move empty folders argument provided, defaulting to yes"
             MOVE_EMPTY_FOLDERS="yes"
-            echo 'moveEmptyFolders="yes"' >>"$config_file"
+            cfg_default moveEmptyFolders yes
         fi
     else
         MOVE_EMPTY_FOLDERS=$(cfg moveEmptyFolders)
@@ -1004,7 +1011,7 @@ getMoverSettings() {
         if [ -z "$MOVE_IN_USE" ]; then
             mvlogger "No Move files that are in use argument provided, defaulting to no"
             MOVE_IN_USE="no"
-            echo 'moveInUse="no"' >>"$config_file"
+            cfg_default moveInUse no
         else
             mvlogger "Move files that are in use: $MOVE_IN_USE"
         fi
@@ -1015,7 +1022,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Share size calculation argument provided, defaulting to yes"
             SHARE_CALCULATION="yes"
-            echo 'shareCalculation="yes"' >>"$config_file"
+            cfg_default shareCalculation yes
         fi
     else
         SHARE_CALCULATION=$(cfg shareCalculation)
