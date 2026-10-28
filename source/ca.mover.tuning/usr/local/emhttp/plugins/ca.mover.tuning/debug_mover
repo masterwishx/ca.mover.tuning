@@ -16,7 +16,9 @@ SOFTSTOPFILE="/var/run/moversoft.stop"
 LOGFOLDER=$(grep -m1 "^loggingFolder=" "$CONFIG" | cut -d '"' -f 2)
 LOGFOLDER="${LOGFOLDER:-/tmp}/ca.mover.tuning"
 # age_mover logs to /tmp when the configured folder cannot be used
-[ -d "$LOGFOLDER" ] || LOGFOLDER="/tmp/ca.mover.tuning"
+if [ ! -d "$LOGFOLDER" ] || [ ! -w "$LOGFOLDER" ]; then
+    LOGFOLDER="/tmp/ca.mover.tuning"
+fi
 
 # Get the filelistv from config
 SKIPFILESLIST=$(grep "filelistv=" "$CONFIG" | cut -d '"' -f 2)

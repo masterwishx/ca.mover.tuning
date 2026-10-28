@@ -721,6 +721,8 @@ if [[ ! -f "$config_file" ]]; then
   echo 'version="&version;"' >> "$config_file"
 else  
   echo "Updating config file"
+  # a file without a final newline would glue a key appended below onto its last key
+  [ -n "$(tail -c 1 "$config_file")" ] &amp;&amp; echo >> "$config_file"
   if [ &upgrade; = "major" ]; then
     echo "- Major upgrade, forcing test mode"
     if grep -q '^testmode=' "$config_file"; then
