@@ -15,11 +15,6 @@ SOFTSTOPFILE="/var/run/moversoft.stop"
 # First match only: duplicate keys in the cfg must never produce a multi-line path
 LOGFOLDER=$(grep -m1 "^loggingFolder=" "$CONFIG" | cut -d '"' -f 2)
 LOGFOLDER="${LOGFOLDER:-/tmp}/ca.mover.tuning"
-# mirrors age_mover's fallback: it logs to /tmp when the configured folder cannot be used
-if [ ! -d "$LOGFOLDER" ] || [ ! -w "$LOGFOLDER" ] ||
-    { [[ "$LOGFOLDER" == /mnt/* ]] && [ "$(stat -L -c %d "$LOGFOLDER")" = "$(stat -c %d /)" ]; }; then
-    LOGFOLDER="/tmp/ca.mover.tuning"
-fi
 
 # Get the filelistv from config
 SKIPFILESLIST=$(grep "filelistv=" "$CONFIG" | cut -d '"' -f 2)
@@ -172,9 +167,13 @@ for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
 done
 
 # Newest logs up to $MAXLOGBYTES; this took only files modified today.
-if [ -d "$LOGFOLDER" ]; then
+# age_mover logs to /tmp when the configured folder cannot be used, so read both; -ef keeps one folder from counting twice
+LOGFOLDERS=()
+[ -d "$LOGFOLDER" ] && LOGFOLDERS+=("$LOGFOLDER")
+[ -d /tmp/ca.mover.tuning ] && [ ! /tmp/ca.mover.tuning -ef "$LOGFOLDER" ] && LOGFOLDERS+=(/tmp/ca.mover.tuning)
+if [ ${#LOGFOLDERS[@]} -gt 0 ]; then
     mkdir -p $DEBUGROOT/PLUGIN/Logs 2>&1
-    find "$LOGFOLDER" -maxdepth 1 -type f -printf '%T@\t%s\t%p\0' 2>/dev/null |
+    find "${LOGFOLDERS[@]}" -maxdepth 1 -type f -printf '%T@\t%s\t%p\0' 2>/dev/null |
         sort -zrn |
         gawk -v RS='\0' -v ORS='\0' -v budget="$MAXLOGBYTES" '
             {
