@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
+- fix: The settings page now saves an empty Log parent folder as /tmp. (masterwishx)
+- fix: An unusable Log parent folder now falls back to /tmp. (chodeus)
+- fix: Plugin updates now change only the settings they are meant to, and save the freeing threshold in quotes. (chodeus)
+- fix: Moving a single share can no longer turn on test mode for scheduled runs. (chodeus)
+- fix: The debug zip now also includes logs written to /tmp. (chodeus)
+
 ## 2026.10.17a (beta)
 
 - fix: Mover runs no longer cause a kernel call trace on Unraid 7.2.8. (chodeus)
