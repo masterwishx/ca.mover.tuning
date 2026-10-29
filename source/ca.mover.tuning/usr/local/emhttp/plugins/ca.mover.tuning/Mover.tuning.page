@@ -120,6 +120,12 @@ function updateCron() {
 	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled,watchdog:watchdog});
 }
 
+// An emptied Log parent folder is posted as the /tmp default, never as an empty loggingFolder
+function mtDefaultLogFolder(form) {
+  var $f = $(form).find('input[name="loggingFolder"]');
+  if ($f.length && $.trim($f.val()) === '') $f.val('/tmp');
+}
+
 // Unraid 6.10+ prefixes escapeQuotes(this) to this onsubmit once the page is ready; 6.9 never does
 function mtEscapeQuotes(form) {
   if (/(^|;)escapeQuotes\(this\);/.test(form.getAttribute('onsubmit') || '')) return;
@@ -534,7 +540,7 @@ if (localStorage.getItem(newYearSeasonKey) === 'yes') {
 </div>
 
 <div class='moverUpdate'></div>
-<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtEscapeQuotes(this);updateCron();">
+<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtDefaultLogFolder(this);mtEscapeQuotes(this);updateCron();">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
 
 _(Disable Mover running on a schedule)_:
@@ -732,7 +738,7 @@ _(Notify Mover Tuning plugin actions)_:
 </blockquote>
 
 _(Logs parent folder for Mover Tuning plugin)_:
-: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars($cfg['loggingFolder'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
+: <input type='text' name='loggingFolder' size='1' class='loggingFolder' placeholder='/tmp' value='<?=htmlspecialchars(($cfg['loggingFolder'] ?? '') !== '' ? $cfg['loggingFolder'] : '/tmp', ENT_QUOTES | ENT_SUBSTITUTE)?>'>
 
 :mover_tune_loggingfolder_plug:
 
