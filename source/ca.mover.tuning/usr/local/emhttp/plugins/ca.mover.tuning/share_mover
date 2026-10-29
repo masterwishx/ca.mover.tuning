@@ -48,6 +48,12 @@ getMoverSettings() {
         done <"$config_file"
         echo "${value//\"/}" # Print value or empty string if not found, without quotes
     }
+    # mirrors age_mover's cfg_default: one KEY="VALUE" line replaces every KEY line
+    cfg_default() {
+        sed -i "/^$1=/d" "$config_file"
+        [ -n "$(tail -c 1 "$config_file")" ] && echo >>"$config_file"
+        echo "$1=\"$2\"" >>"$config_file"
+    }
 
     timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
 
@@ -62,7 +68,7 @@ getMoverSettings() {
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Turbo Mode argument provided, defaulting to no"
             ENABLETURBO="no"
-            echo 'enableTurbo="no"' >>$config_file
+            cfg_default enableTurbo no
         fi
     else
         ENABLETURBO=$(cfg enableTurbo)
@@ -72,7 +78,7 @@ getMoverSettings() {
     if [ -z $(cfg testmode) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Test Mode argument provided, defaulting to yes"
-            echo 'testmode="yes"' >>$config_file
+            # yes for this run only: written to the global cfg it would put the scheduled mover in test mode too
             TESTMODE="yes"
         fi
     else

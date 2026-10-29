@@ -721,10 +721,12 @@ if [[ ! -f "$config_file" ]]; then
   echo 'version="&version;"' >> "$config_file"
 else  
   echo "Updating config file"
+  # a file without a final newline would glue a key appended below onto its last key
+  [ -n "$(tail -c 1 "$config_file")" ] &amp;&amp; echo >> "$config_file"
   if [ &upgrade; = "major" ]; then
     echo "- Major upgrade, forcing test mode"
-    if grep -q "testmode" "$config_file"; then
-      sed -i "s/testmode=.*$/testmode=\"yes\"/" "$config_file"
+    if grep -q '^testmode=' "$config_file"; then
+      sed -i "s/^testmode=.*$/testmode=\"yes\"/" "$config_file"
     else
       echo 'testmode="yes"' >> "$config_file"
     fi
@@ -732,23 +734,24 @@ else
     echo "- Minor upgrade, not forcing test mode"
   fi
   echo "- Updating version number"
-  if grep -q "version" "$config_file"; then
-    sed -i "s/version=.*$/version=\"&version;\"/" "$config_file"
+  if grep -q '^version=' "$config_file"; then
+    sed -i "s/^version=.*$/version=\"&version;\"/" "$config_file"
   else
     echo "version=\"&version;\"" >> "$config_file"
   fi
-  if grep -q "threshold=" $config_file; then
+  if grep -q '^threshold=' "$config_file"; then
     echo "- Updating movingThreshold"
-    sed "s/threshold=/movingThreshold=/" -i "$config_file"
+    sed "s/^threshold=/movingThreshold=/" -i "$config_file"
   fi
-  if grep -q 'freeingThreshold=""' "$config_file"; then
+  # the first freeingThreshold line is the one age_mover reads, so only that one is checked and replaced
+  if [ "$(grep -m1 '^freeingThreshold=' "$config_file" | tr -d '\r')" = 'freeingThreshold=""' ]; then
       echo "- Updating freeingThreshold"
-      thresh=$(grep "movingThreshold=" $config_file | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
-      sed "s/freeingThreshold=.*$/freeingThreshold=$thresh/" -i "$config_file"
+      thresh=$(grep -m1 '^movingThreshold=' "$config_file" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
+      sed "0,/^freeingThreshold=/s/^freeingThreshold=.*$/freeingThreshold=\"$thresh\"/" -i "$config_file"
   fi
-  if ! grep -q 'freeingThreshold=' $config_file; then
+  if ! grep -q '^freeingThreshold=' "$config_file"; then
     echo "- Updating freeingThreshold"
-    grep 'movingThreshold=' "$config_file" | sed 's/movingThreshold/freeingThreshold/' >> "$config_file"
+    grep -m1 '^movingThreshold=' "$config_file" | sed 's/^movingThreshold/freeingThreshold/' >> "$config_file"
   fi
 fi
 

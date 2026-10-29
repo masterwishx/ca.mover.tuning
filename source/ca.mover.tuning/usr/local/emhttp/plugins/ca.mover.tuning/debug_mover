@@ -167,21 +167,29 @@ for config_file in "$OVERRIDE_CFGFOLDER"/*.cfg; do
 done
 
 # Newest logs up to $MAXLOGBYTES; this took only files modified today.
-if [ -d "$LOGFOLDER" ]; then
+# age_mover logs to /tmp when the configured folder cannot be used, so read both; -ef keeps one folder from counting twice
+LOGFOLDERS=()
+[ -d "$LOGFOLDER" ] && LOGFOLDERS+=("$LOGFOLDER")
+[ -d /tmp/ca.mover.tuning ] && [ ! /tmp/ca.mover.tuning -ef "$LOGFOLDER" ] && LOGFOLDERS+=(/tmp/ca.mover.tuning)
+if [ ${#LOGFOLDERS[@]} -gt 0 ]; then
     mkdir -p $DEBUGROOT/PLUGIN/Logs 2>&1
-    find "$LOGFOLDER" -maxdepth 1 -type f -printf '%T@\t%s\t%p\0' 2>/dev/null |
+    find -H "${LOGFOLDERS[@]}" -maxdepth 1 -type f -printf '%T@\t%s\t%p\0' 2>/dev/null |
         sort -zrn |
         gawk -v RS='\0' -v ORS='\0' -v budget="$MAXLOGBYTES" '
             {
                 # index, not fields: a path may contain a tab
                 r = substr($0, index($0, "\t") + 1)
                 size = substr(r, 1, index(r, "\t") - 1)
+                # a file over what is left of the budget is skipped, so smaller ones after it still fit
+                if (total + size > budget) next
                 total += size
-                if (total > budget) exit
                 print substr(r, index(r, "\t") + 1)
             }' |
         while IFS= read -r -d '' file; do
-            cp -f "$file" $DEBUGROOT/PLUGIN/Logs/"$(basename "$file").txt" 2>&1
+            # a name taken by the newer copy from the other folder gets a prefix, keeping the .list.txt ending the anonymizer keys on
+            dest="$DEBUGROOT/PLUGIN/Logs/$(basename "$file").txt"
+            [ -e "$dest" ] && dest="$DEBUGROOT/PLUGIN/Logs/older.$(basename "$file").txt"
+            cp -f "$file" "$dest" 2>&1
         done
 fi
 
