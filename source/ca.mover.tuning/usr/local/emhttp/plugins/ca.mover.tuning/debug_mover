@@ -15,8 +15,9 @@ SOFTSTOPFILE="/var/run/moversoft.stop"
 # First match only: duplicate keys in the cfg must never produce a multi-line path
 LOGFOLDER=$(grep -m1 "^loggingFolder=" "$CONFIG" | cut -d '"' -f 2)
 LOGFOLDER="${LOGFOLDER:-/tmp}/ca.mover.tuning"
-# age_mover logs to /tmp when the configured folder cannot be used
-if [ ! -d "$LOGFOLDER" ] || [ ! -w "$LOGFOLDER" ]; then
+# mirrors age_mover's fallback: it logs to /tmp when the configured folder cannot be used
+if [ ! -d "$LOGFOLDER" ] || [ ! -w "$LOGFOLDER" ] ||
+    { [[ "$LOGFOLDER" == /mnt/* ]] && [ "$(stat -L -c %d "$LOGFOLDER")" = "$(stat -c %d /)" ]; }; then
     LOGFOLDER="/tmp/ca.mover.tuning"
 fi
 

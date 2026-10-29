@@ -110,7 +110,9 @@ LOGFOLDER_PROBE="${LOGFOLDER}/ca.mover.tuning"
 while [ ! -e "$LOGFOLDER_PROBE" ] && [ ! -L "$LOGFOLDER_PROBE" ]; do
     LOGFOLDER_PROBE=$(dirname "$LOGFOLDER_PROBE")
 done
-if [ ! -d "$LOGFOLDER_PROBE" ] || [ ! -w "$LOGFOLDER_PROBE" ]; then
+# Under /mnt a folder on the root filesystem means its pool or share is not mounted: the logs would go to RAM under the mount point
+if [ ! -d "$LOGFOLDER_PROBE" ] || [ ! -w "$LOGFOLDER_PROBE" ] ||
+    { [[ "$LOGFOLDER/" == /mnt/* ]] && [ "$(stat -L -c %d "$LOGFOLDER_PROBE")" = "$(stat -c %d /)" ]; }; then
     LOGFOLDER="/tmp"
 fi
 
