@@ -78,7 +78,7 @@ getMoverSettings() {
     if [ -z $(cfg testmode) ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Test Mode argument provided, defaulting to yes"
-            cfg_default testmode yes
+            # yes for this run only: written to the global cfg it would put the scheduled mover in test mode too
             TESTMODE="yes"
         fi
     else
