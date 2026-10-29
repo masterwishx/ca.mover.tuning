@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-- fix: ensure single match for logging folder in config to prevent multi-line paths
-- fix: handle duplicate logging folder keys and set default log folder
-- Skip an unusable log folder and match whole keys in the install step (#263) (d1c0132)
+- fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
+- fix: The settings page now saves an empty Log parent folder as /tmp. (masterwishx)
+- fix: An unusable Log parent folder now falls back to /tmp. (chodeus)
+- fix: Plugin updates now change only the settings they are meant to, and save the freeing threshold in quotes. (chodeus)
+- fix: Moving a single share can no longer turn on test mode for scheduled runs. (chodeus)
+- fix: The debug zip now also includes logs written to /tmp. (chodeus)
 
 ## 2026.10.17a (beta)
 
