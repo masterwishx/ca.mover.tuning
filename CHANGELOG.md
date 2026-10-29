@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- fix: ensure single match for logging folder in config to prevent multi-line paths
+- fix: handle duplicate logging folder keys and set default log folder
+- Skip an unusable log folder and match whole keys in the install step (#263) (d1c0132)
+
 ## 2026.10.17a (beta)
 
 - fix: Mover runs no longer cause a kernel call trace on Unraid 7.2.8. (chodeus)
