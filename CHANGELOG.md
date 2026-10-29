@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.10.29a (beta)
 
 - fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
 - fix: The settings page now saves an empty Log parent folder as /tmp. (masterwishx)
