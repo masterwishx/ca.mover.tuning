@@ -15,7 +15,6 @@
 
 <CHANGES>
 ###2026.10.30
-- Fix strict comparisons and update README commands (38fccbe)
 - fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
 - fix: The settings page now saves an empty Log parent folder as /tmp. (masterwishx)
 - fix: An unusable Log parent folder now falls back to /tmp. (chodeus)
