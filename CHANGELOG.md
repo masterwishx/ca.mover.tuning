@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix Log folder handling and settings persistence (002c361)
+
 ## 2026.10.30
 
 - fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
