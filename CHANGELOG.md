@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.10.30
 
 - Fix strict comparisons and update README commands (38fccbe)
 - fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
