@@ -2,10 +2,8 @@
 
 ## Unreleased
 
-- Don't skip scheduled moves while a parity check is paused (e4f9034)
-- Fix Log folder handling and settings persistence (002c361)
-- Read only the copying process and end the updater cleanly (de34340)
-- Update the progress rows while a file is copying (308ffb4)
+- fix: A paused parity check or rebuild no longer blocks scheduled and forced moves. (chodeus)
+- fix: The size left, speed and ETA now update every 5 seconds while a file moves, not only after each file. With the move tool they step every 2 GiB. (chodeus)
 
 ## 2026.10.30
 
