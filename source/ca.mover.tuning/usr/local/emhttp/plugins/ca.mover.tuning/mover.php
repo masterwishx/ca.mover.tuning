@@ -106,13 +106,21 @@ function scriptEnv()
     putenv("MT_AFTER_SCRIPT=" . ($cfg['afterScript'] ?? ""));
 }
 
+// A paused check, rebuild or clear keeps mdResyncPos but has mdResync 0, which Unraid's Pause/Resume button reads too
+function resyncRunning()
+{
+    global $vars;
+
+    return (int) ($vars['mdResync'] ?? 0) > 0;
+}
+
 // The forced move runs Unraid's own mover on its own schedule, without the plugin's filters or the Mover Tuning
 // schedule and parity settings. Its own parity option, the two priorities, turbo write and the scripts apply to it.
 function forceMove()
 {
     global $vars, $cfg;
 
-    if ($cfg['forceParity'] !== "yes" && empty($vars['mdResyncPos']) === false) {
+    if ($cfg['forceParity'] !== "yes" && resyncRunning() === true) {
         logger("Parity Check / Rebuild in Progress.  Not running forced move");
         return;
     }
@@ -309,7 +317,7 @@ if ($cron === true && $cfg['moverDisabled'] === 'yes') {
 }
 
 // only a scheduled run waits for a parity check or rebuild: Move now, the cache watchdog and the CLI always run
-if ($cron === true && $cfg['parity'] === 'no' && empty($vars['mdResyncPos']) === false) {
+if ($cron === true && $cfg['parity'] === 'no' && resyncRunning() === true) {
     logger("Parity Check / rebuild in progress.  Not running scheduled mover");
     exit();
 }
