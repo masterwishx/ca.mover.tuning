@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.11.05b (beta)
 
 - fix: The parity help now says in every language that a paused check or rebuild does not count. (chodeus)
 
