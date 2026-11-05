@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Say in every language that a paused check does not count (a485d0d)
+
 ## 2026.11.05a (beta)
 
 - fix: A paused parity check or rebuild no longer blocks scheduled and forced moves. (chodeus)
