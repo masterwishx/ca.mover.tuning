@@ -295,7 +295,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_parity_plug:
-> Bei <strong>Nein</strong> wird ein geplanter Lauf, der in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen. Von Hand gestartete Läufe (<strong>Jetzt verschieben</strong>, das Verschieben einer einzelnen Freigabe, die CLI) und der Cache-Watchdog laufen trotzdem.
+> Bei <strong>Nein</strong> wird ein geplanter Lauf, der in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen. Eine pausierte Prüfung oder Wiederherstellung zählt nicht. Von Hand gestartete Läufe (<strong>Jetzt verschieben</strong>, das Verschieben einer einzelnen Freigabe, die CLI) und der Cache-Watchdog laufen trotzdem.
 :end
 
 :mover_tune_moverio_plug:
@@ -316,7 +316,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p>Ein Cron‑Zeitplan für erzwungenes Verschieben führt die Datenverschiebung unabhängig von Regeln aus.</p>
 <p>Beispiel: In den Mover‑Einstellungen ist „Stündlich“ eingestellt. Die Regeln gelten während dieses Zeitplans.</p>
 <p>Ein Cron‑Eintrag wie <strong>30 03 * * *</strong> würde jedoch <strong>täglich um 03:30 Uhr</strong> alle Dateien verschieben – unabhängig von Regeln.</p>
-<p><strong>Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung</strong>: Bei <strong>Nein</strong> wird ein erzwungenes Verschieben, das in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen; bei <strong>Ja</strong> läuft es trotzdem.</p>
+<p><strong>Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung</strong>: Bei <strong>Nein</strong> wird ein erzwungenes Verschieben, das in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen; bei <strong>Ja</strong> läuft es trotzdem. Eine pausierte Prüfung oder Wiederherstellung zählt nicht.</p>
 <p>Der Zeitplan muss ein gültiger Cron‑Eintrag sein: Ein ungültiger wird nicht übernommen, und der Fehler wird ins Syslog geschrieben.</p>
 :end
 
