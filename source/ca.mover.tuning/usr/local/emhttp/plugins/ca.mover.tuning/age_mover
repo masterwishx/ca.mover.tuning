@@ -1089,13 +1089,14 @@ unraid_empty_disks() {
 
 # Same keys and format as Unraid 7.4's mover (sbin/mover writestatus), which 7.4 shows under the Move button on Main.
 # Its line 3 is a per-share bar; Selectlines leaves it out, as each pass here runs across the shares.
+# $1: bytes of the file in transfer already copied (progressTicker), not yet off the remaining counters
 moverStatusWrite() {
     [ "$MOVER_PROGRESS" = no ] && return 0
     local total remain moved elapsed rate=0 eta=0 file action lines=1,2 tmp="${MOVER_STATUS}.$$"
     total=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
     # 7.4 shows "Nothing to move" while nothing is measured yet; the plugin's own rows hide those lines too
     [ "$total" -gt 0 ] && lines=1,2,4,5
-    remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE))
+    remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE - ${1:-0}))
     [ "$remain" -lt 0 ] && remain=0
     moved=$((total > remain ? total - remain : 0))
     # the speed stops at the end of the transfers, as the steps after them move nothing
@@ -1129,6 +1130,65 @@ moverStep() {
     GUI_ACTION=$1
     GUI_CURRENT_FILE=""
     moverStatusWrite
+}
+
+# How far tool $1 has read file $2: Unraid move copies inside shfs; rsync reads in its sender, one of this run's own
+bytes_read() {
+    local pid fd pos max=0 pids=""
+    if [ "$1" = move ]; then
+        pids=$(pgrep -x shfs)
+    else
+        for pid in $(pgrep -x rsync); do
+            descends_from "$pid" "$$" && pids+=" $pid"
+        done
+    fi
+    for pid in $pids; do
+        while IFS= read -r fd; do
+            pos=$(awk '/^pos:/ {print $2; exit}' "/proc/$pid/fdinfo/$fd" 2>/dev/null)
+            [ "${pos:-0}" -gt "$max" ] && max=$pos
+        done < <(find -L "/proc/$pid/fd" -mindepth 1 -maxdepth 1 -samefile "$2" -printf '%f\n' 2>/dev/null)
+    done
+    echo "$max"
+}
+
+# Rewrites the progress rows every 5 s while tool $1 copies file $3 of $2 bytes, so a slow file shows it moves.
+# Unraid move's copy in shfs advances in steps of up to 2 GiB; rsync's sender advances as it reads.
+progressTicker() {
+    local best=0 got s=""
+    # a stop lets the status write in hand finish, and ends the sleep instead of leaving it behind
+    trap '[ -z "$s" ] || kill "$s" 2>/dev/null; exit 0' TERM
+    while :; do
+        sleep 5 &
+        s=$!
+        wait "$s" || return 0
+        s=""
+        kill -0 "$$" 2>/dev/null || return 0
+        got=$(bytes_read "$1" "$3")
+        [ "$got" -gt "$2" ] && got=$2
+        [ "$got" -gt "$best" ] && best=$got
+        moverStatusWrite "$best"
+    done
+}
+
+# Runs progressTicker while tool $1 moves or syncs the current row, a counted file, whose present names follow.
+# progressStop must end it before the next status write, so the two never write at once.
+progressStart() {
+    PROGRESS_TICKER=""
+    if [ "$MOVER_PROGRESS" = no ] || [ "$FILETYPE" != f ] || [ "$STAGE_ROW" != 0 ] || [ $# -lt 2 ]; then
+        return 0
+    fi
+    progressTicker "$1" "$FILESIZE" "${2//\/.\//\/}" &
+    PROGRESS_TICKER=$!
+}
+
+progressStop() {
+    [ -n "$PROGRESS_TICKER" ] || return 0
+    # one that ended by itself may have handed its PID on, so only a ticker still running gets the signal
+    if jobs -pr | grep -qx "$PROGRESS_TICKER"; then
+        kill "$PROGRESS_TICKER" 2>/dev/null
+    fi
+    wait "$PROGRESS_TICKER" 2>/dev/null
+    PROGRESS_TICKER=""
 }
 
 # A script's name for the progress rows: User Scripts keeps each one as <folder>/script, its title in <folder>/name
@@ -2571,6 +2631,7 @@ processTheMoves() {
                     # a folder row sends only the folder, which move leaves on the source while anything is in it
                     MOVE_DEBUG_ARGS=()
                     read -r -a MOVE_DEBUG_ARGS <<<"$DEBUGGING"
+                    progressStart move "${present[@]}"
                     MOVE_OUT=$(printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" 2>&1)
                     [ -n "$MOVE_OUT" ] && printf '%s\n' "$MOVE_OUT" >>"$MOVER_DEBUG_LOG"
                 fi
@@ -2587,6 +2648,7 @@ processTheMoves() {
                     # Perform rsync. relative paths and hardlinks
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
                         if [ ${#present[@]} -gt 0 ]; then
+                            progressStart rsync "${present[@]}"
                             # rsync's errors join the mover log: on stderr they reach syslog only when cron pipes them there
                             rsync_err=$("${RSYNC_CMD[@]}" "${present[@]}" "$DESTINATION/" 2>&1 >/dev/null) || rc=$?
                             [ -n "$rsync_err" ] && while IFS= read -r line; do mvlogger "$line"; done <<<"$rsync_err"
@@ -2597,6 +2659,7 @@ processTheMoves() {
                     fi
                 fi
             fi
+            progressStop
 
             # a dry run counts every name as done; a real run counts only verified arrivals below
             names=${#SYNCED_FILES_ARR[@]}
