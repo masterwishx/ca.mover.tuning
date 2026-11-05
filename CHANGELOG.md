@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Don't skip scheduled moves while a parity check is paused (e4f9034)
+- Fix Log folder handling and settings persistence (002c361)
+- Read only the copying process and end the updater cleanly (de34340)
+- Update the progress rows while a file is copying (308ffb4)
+
 ## 2026.10.30
 
 - fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
