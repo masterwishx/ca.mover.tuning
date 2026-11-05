@@ -1089,13 +1089,14 @@ unraid_empty_disks() {
 
 # Same keys and format as Unraid 7.4's mover (sbin/mover writestatus), which 7.4 shows under the Move button on Main.
 # Its line 3 is a per-share bar; Selectlines leaves it out, as each pass here runs across the shares.
+# $1: bytes of the file in transfer already copied (progressTicker), not yet off the remaining counters
 moverStatusWrite() {
     [ "$MOVER_PROGRESS" = no ] && return 0
     local total remain moved elapsed rate=0 eta=0 file action lines=1,2 tmp="${MOVER_STATUS}.$$"
     total=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
     # 7.4 shows "Nothing to move" while nothing is measured yet; the plugin's own rows hide those lines too
     [ "$total" -gt 0 ] && lines=1,2,4,5
-    remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE))
+    remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE - ${1:-0}))
     [ "$remain" -lt 0 ] && remain=0
     moved=$((total > remain ? total - remain : 0))
     # the speed stops at the end of the transfers, as the steps after them move nothing
@@ -1129,6 +1130,52 @@ moverStep() {
     GUI_ACTION=$1
     GUI_CURRENT_FILE=""
     moverStatusWrite
+}
+
+# Highest read position on file $1 among this run's rsync processes and shfs, which does the copy for Unraid move
+bytes_read() {
+    local pid fd pos max=0 pids
+    pids=$(pgrep -x shfs)
+    for pid in $(pgrep -x rsync); do
+        descends_from "$pid" "$$" && pids+=" $pid"
+    done
+    for pid in $pids; do
+        while IFS= read -r fd; do
+            pos=$(awk '/^pos:/ {print $2; exit}' "/proc/$pid/fdinfo/$fd" 2>/dev/null)
+            [ "${pos:-0}" -gt "$max" ] && max=$pos
+        done < <(find -L "/proc/$pid/fd" -mindepth 1 -maxdepth 1 -samefile "$1" -printf '%f\n' 2>/dev/null)
+    done
+    echo "$max"
+}
+
+# Rewrites the progress rows every 5 s while one file of $1 bytes transfers from $2, so a slow file shows it moves.
+# Unraid move's copy in shfs advances in steps of up to 2 GiB; rsync's sender advances as it reads.
+progressTicker() {
+    local best=0 got
+    while sleep 5 && kill -0 "$$" 2>/dev/null; do
+        got=$(bytes_read "$2")
+        [ "$got" -gt "$1" ] && got=$1
+        [ "$got" -gt "$best" ] && best=$got
+        moverStatusWrite "$best"
+    done
+}
+
+# Runs progressTicker beside a counted file move or sync of the current row; progressStop must end it before the
+# next status write, so the two never write at once. Takes the row's present names.
+progressStart() {
+    PROGRESS_TICKER=""
+    if [ "$MOVER_PROGRESS" = no ] || [ "$TESTMODE" = yes ] || [ "$FILETYPE" != f ] || [ "$STAGE_ROW" != 0 ] || [ $# -eq 0 ]; then
+        return 0
+    fi
+    progressTicker "$FILESIZE" "${1//\/.\//\/}" &
+    PROGRESS_TICKER=$!
+}
+
+progressStop() {
+    [ -n "$PROGRESS_TICKER" ] || return 0
+    kill "$PROGRESS_TICKER" 2>/dev/null
+    wait "$PROGRESS_TICKER" 2>/dev/null
+    PROGRESS_TICKER=""
 }
 
 # A script's name for the progress rows: User Scripts keeps each one as <folder>/script, its title in <folder>/name
@@ -2559,6 +2606,7 @@ processTheMoves() {
                 if [ -e "${f//\/.\//\/}" ]; then present+=("$f"); else GONE_BEFORE[$f]=1; fi
             done
 
+            progressStart "${present[@]}"
             rc=0
             MOVE_OUT=""
             # Check if action and move files tool is unraid move
@@ -2597,6 +2645,7 @@ processTheMoves() {
                     fi
                 fi
             fi
+            progressStop
 
             # a dry run counts every name as done; a real run counts only verified arrivals below
             names=${#SYNCED_FILES_ARR[@]}
