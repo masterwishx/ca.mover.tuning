@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Say in every language that a paused check does not count (a485d0d)
+- fix: The parity help now says in every language that a paused check or rebuild does not count. (chodeus)
 
 ## 2026.11.05a (beta)
 
