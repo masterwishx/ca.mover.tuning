@@ -294,7 +294,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 :end
 
 :mover_tune_parity_plug:
-> 设为<strong>否</strong>时，遇到奇偶校验或磁盘重建的计划运行会被跳过，直到下一次计划时间。手动启动的运行（<strong>立即移动</strong>、单个共享的移动、命令行）和缓存看门狗照常运行。
+> 设为<strong>否</strong>时，遇到奇偶校验或磁盘重建的计划运行会被跳过，直到下一次计划时间。已暂停的校验或重建不计在内。手动启动的运行（<strong>立即移动</strong>、单个共享的移动、命令行）和缓存看门狗照常运行。
 :end
 
 :mover_tune_moverio_plug:
@@ -315,7 +315,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 <p>设置强制移动的 cron 计划后，Mover 会按该计划运行。</p>
 <p>例如：在 Mover 设置中将计划设为每小时，在该计划下会遵循上面的规则。</p>
 <p>强制移动的 cron 计划可以设为 <strong>30 03 * * *</strong>，这样每天<strong>凌晨 3:30</strong> 会无视规则强制移动所有文件。</p>
-<p><strong>允许强制移动计划在奇偶校验/重建期间运行</strong>：设为<strong>否</strong>时，遇到奇偶校验或磁盘重建的强制移动会被跳过，直到下一次计划时间；设为<strong>是</strong>时，照常运行。</p>
+<p><strong>允许强制移动计划在奇偶校验/重建期间运行</strong>：设为<strong>否</strong>时，遇到奇偶校验或磁盘重建的强制移动会被跳过，直到下一次计划时间；设为<strong>是</strong>时，照常运行。已暂停的校验或重建不计在内。</p>
 <p>计划必须是有效的 cron 条目：无效的计划不会生效，错误会写入系统日志。</p>
 :end
 

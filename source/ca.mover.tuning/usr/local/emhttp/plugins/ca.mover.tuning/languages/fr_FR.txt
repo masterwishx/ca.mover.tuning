@@ -296,7 +296,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :end
 
 :mover_tune_parity_plug:
-> Avec <strong>Non</strong>, une exécution programmée qui tombe pendant une vérification de parité ou une reconstruction de disque est ignorée jusqu’à sa prochaine heure programmée. Les exécutions lancées à la main (<strong>Déplacer maintenant</strong>, le déplacement d’un partage, la CLI) et la surveillance du cache s’exécutent quand même.
+> Avec <strong>Non</strong>, une exécution programmée qui tombe pendant une vérification de parité ou une reconstruction de disque est ignorée jusqu’à sa prochaine heure programmée. Une vérification ou une reconstruction en pause ne compte pas. Les exécutions lancées à la main (<strong>Déplacer maintenant</strong>, le déplacement d’un partage, la CLI) et la surveillance du cache s’exécutent quand même.
 :end
 
 :mover_tune_moverio_plug:
@@ -319,7 +319,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p>Définir un cron forcé exécutera le mover à l’heure programmée.</p>
 <p>Exemple : dans les paramètres du mover, vous avez un horaire « Hourly ». Les règles ci‑dessus s’appliquent.</p>
 <p>Un cron forcé comme <strong>30 03 * * *</strong> déplacera tous les fichiers à <strong>3:30</strong> chaque jour, peu importe les règles.</p>
-<p><strong>Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité</strong> : avec <strong>Non</strong>, un déplacement forcé qui tombe pendant une vérification de parité ou une reconstruction de disque est ignoré jusqu’à sa prochaine heure programmée ; avec <strong>Oui</strong>, il s’exécute quand même.</p>
+<p><strong>Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité</strong> : avec <strong>Non</strong>, un déplacement forcé qui tombe pendant une vérification de parité ou une reconstruction de disque est ignoré jusqu’à sa prochaine heure programmée ; avec <strong>Oui</strong>, il s’exécute quand même. Une vérification ou une reconstruction en pause ne compte pas.</p>
 <p>La planification doit être une entrée cron valide : une entrée invalide n’est pas appliquée, et l’erreur est écrite dans le syslog.</p>
 :end
 
