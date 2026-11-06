@@ -859,7 +859,7 @@ fi
 # Clean leftover run-state files only if age_mover is NOT running
 if ! pgrep -f "age_mover" >/dev/null 2>&amp;1; then
   echo "Cleaning leftover lock/stop files..."
-  for file in mover.pid moversoft.stop; do
+  for file in mover.pid moversoft.stop mover.pause mover.moving; do
     if [[ -e "/var/run/$file" ]]; then
       rm -f "/var/run/$file"
     fi
@@ -936,7 +936,7 @@ The 'remove' script.
 # Clean leftover run-state files only if age_mover is NOT running
 if ! pgrep -f "age_mover" >/dev/null 2>&amp;1; then
   echo "Cleaning leftover lock/stop files..."
-  for file in mover.pid moversoft.stop; do
+  for file in mover.pid moversoft.stop mover.pause mover.moving; do
     if [[ -e "/var/run/$file" ]]; then
       rm -f "/var/run/$file"
     fi

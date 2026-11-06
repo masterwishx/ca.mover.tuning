@@ -114,6 +114,15 @@ function resyncRunning()
     return (int) ($vars['mdResync'] ?? 0) > 0;
 }
 
+// A scheduled run that finds a Mover Tuning run paused resumes it, so a forgotten pause cannot leave the cache filling up
+function resumePaused()
+{
+    exec('/usr/local/emhttp/plugins/ca.mover.tuning/age_mover resume', $output); // nosemgrep
+    if (in_array('mover: resumed', $output, true) === true) {
+        logger("Mover Tuning was paused: the scheduled run resumed it");
+    }
+}
+
 // The forced move runs Unraid's own mover on its own schedule, without the plugin's filters or the Mover Tuning
 // schedule and parity settings. Its own parity option, the two priorities, turbo write and the scripts apply to it.
 function forceMove()
@@ -127,6 +136,7 @@ function forceMove()
     clearstatcache();
     if (file_exists("/var/run/mover.pid") === true) {
         logger("Mover already running");
+        resumePaused();
         return;
     }
     $mover = "/usr/local/sbin/mover";
@@ -251,6 +261,9 @@ function startMover()
         $pid = @file_get_contents("/var/run/mover.pid");
         if ($pid !== false && $pid !== '') {
             logger("Mover already running");
+            if ($cron === true) {
+                resumePaused();
+            }
             exit();
         }
     }

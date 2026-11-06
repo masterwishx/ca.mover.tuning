@@ -19,6 +19,7 @@ Before proceeding, click on an option or press F1 to read detailed descriptions 
 by=par
 Cache disk not enabled=Disque cache non activé !
 Cache watchdog=Surveillance du cache
+Cache watchdog %s is at %s, at or above the trigger level of %s Resuming the paused Mover Tuning run=Surveillance du cache : %s est rempli à %s, au niveau ou au-dessus du seuil de déclenchement de %s. Reprise de l’exécution de Mover Tuning en pause.
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Surveillance du cache : %s est rempli à %s, au niveau ou au-dessus du seuil de déclenchement de %s. Démarrage de Mover Tuning.
 Cache → Array=Cache → Array
 Cancel=Annuler
@@ -127,12 +128,15 @@ Only move if above this threshold of used Primary cache space=Déplacer uniqueme
 Open=Ouvrir
 Overall Progress=Progression globale
 Override Mover Tuning settings for this share=Remplacer les paramètres Mover Tuning pour cette part
+Pause=Pause
+Pause moving files until Resume, the next scheduled run or a cache watchdog trigger=Suspendre le déplacement des fichiers jusqu’à Reprendre, la prochaine exécution planifiée ou un déclenchement de la surveillance du cache
 Plugin mover=Mover du plugin
 Plugin thread @ Unraid community=Fil du plugin sur la communauté Unraid
 Priority for disk IO=Priorité pour les E/S disque
 Priority for mover process=Priorité pour le processus du mover
 Rebalance shares=Rééquilibrer les parts
 Reset Mover Tuning to defaults=Réinitialiser Mover Tuning aux valeurs par défaut ?
+Resume=Reprendre
 Resynchronize all Primary files to Secondary=Resynchroniser tous les fichiers du primaire vers le secondaire
 Rsync=Rsync
 Run Mover Tuning=Exécuter Mover Tuning…
@@ -442,6 +446,7 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 <p>Change l’outil utilisé pour déplacer les fichiers avec filtres.</p>
 <p><strong>Move</strong> — utilise l’outil interne Unraid pour déplacer, Rsync pour synchroniser.</p>
 <p><strong>Rsync</strong> — utilise Rsync pour déplacer et synchroniser.</p>
+<p><strong>Pause</strong> suspend aussitôt une copie <strong>Rsync</strong> ; avec <strong>Move</strong>, la pause attend la fin du fichier en cours.</p>
 :end
 
 :mover_tune_moveinuse_plug:
