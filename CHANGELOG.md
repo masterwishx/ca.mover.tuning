@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Let Resume, a soft stop and the watchdog free a held copy themselves (a269dc8)
+- Tie the pause file to its run, and soft stop only Mover Tuning runs (2ca155f)
+- Pause the per-share Move and the plugin's runs of Unraid's mover too (7df959f)
+- Add Pause and Resume for a run that is moving files (c4fe615)
+- Open the log before sending headers (928ab03)
+- Let the server frame the log response (7ab8036)
+- Show log files by run time and type, and keep the row when the schedule is off (2715e0d)
+- Find logs where age_mover wrote them, in one place (c14e76b)
+- Add links to the log files on the settings page (ef0430c)
+
 ## 2026.11.05b (beta)
 
 - fix: The parity help now says in every language that a paused check or rebuild does not count. (chodeus)
