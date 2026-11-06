@@ -8,11 +8,12 @@ if (ctype_digit($pid) === false || is_dir("/proc/$pid") === false) {
     echo 'null';
     exit;
 }
-// as age_mover's pauseWindow: a Mover Tuning run while it moves files, or a run the plugin started through with_scripts
-// (Unraid's mover, the per-share Move), never one Unraid started itself; and a soft stop always wins over a pause
+// as age_mover's pauseWindow: a Mover Tuning run while it moves files and no soft stop is asked (a soft stop always wins
+// over a pause), or a run the plugin started through with_scripts (Unraid's mover, the per-share Move), never one
+// Unraid started itself
 $parent = preg_match('/^PPid:\s+(\d+)/m', (string)@file_get_contents("/proc/$pid/status"), $match) === 1 ? $match[1] : '';
 $wrapped = $parent !== '' && strpos((string)@file_get_contents("/proc/$parent/cmdline"), '/ca.mover.tuning/with_scripts') !== false;
-$moving = (strtok((string)@file_get_contents('/var/run/mover.moving'), ' ') === $pid || $wrapped === true) && file_exists('/var/run/moversoft.stop') === false;
+$moving = $wrapped === true || (strtok((string)@file_get_contents('/var/run/mover.moving'), ' ') === $pid && file_exists('/var/run/moversoft.stop') === false);
 $status = @parse_ini_file('/usr/local/emhttp/state/mover.ini');
 $progress = null;
 if (is_array($status) === true && (string)($status['MoverPid'] ?? '') === $pid) {
@@ -27,7 +28,8 @@ if (is_array($status) === true && (string)($status['MoverPid'] ?? '') === $pid) 
 }
 echo json_encode([
     'moving' => $moving,
-    'paused' => $moving === true && file_exists('/var/run/mover.pause') === true,
+    // the pause file names the run it pauses: one left by an earlier run pauses nothing
+    'paused' => $moving === true && trim((string)@file_get_contents('/var/run/mover.pause')) === $pid,
     'progress' => $progress,
 ], JSON_INVALID_UTF8_SUBSTITUTE);
 ?>

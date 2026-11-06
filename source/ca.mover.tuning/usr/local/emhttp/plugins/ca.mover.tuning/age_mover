@@ -1173,9 +1173,16 @@ movingRead() {
     [[ "$MOVING_HELD" =~ ^[0-9]+$ ]] || MOVING_HELD=0
 }
 
-# A pause is asked and no soft stop is, which always wins: what the run holds on
+# The pause file names the run it pauses ($1 here), so one an earlier run left behind pauses nothing
+pauseFor() {
+    local p
+    { read -r p <"$PAUSEFILE"; } 2>/dev/null
+    [ -n "$p" ] && [ "$p" = "$1" ]
+}
+
+# What a Mover Tuning run holds on: a pause for it, and no soft stop, which always wins
 pauseAsked() {
-    [ -e "$PAUSEFILE" ] && [ ! -e "$SOFTSTOPFILE" ]
+    pauseFor "$$" && [ ! -e "$SOFTSTOPFILE" ]
 }
 
 # A run the plugin started for Unraid's mover (forced move, Move now without the filters) or the per-share Move: the
@@ -1187,19 +1194,21 @@ wrappedRun() {
     [ -n "$parent" ] && grep -qs '/ca.mover.tuning/with_scripts' "/proc/$parent/cmdline"
 }
 
-# The Pause button's window, with no soft stop asked: a Mover Tuning run while it moves files, or a wrapped run
+# The Pause button's window: a Mover Tuning run while it moves files and no soft stop is asked, or a wrapped run, which
+# has no soft stop
 pauseWindow() {
     local pid
     pid=$(cat "$PIDFILE" 2>/dev/null)
-    if [ -e "$SOFTSTOPFILE" ] || [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
+    if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
         return 1
     fi
+    wrappedRun "$pid" && return 0
     movingRead
-    [ "$MOVING_PID" = "$pid" ] || wrappedRun "$pid"
+    [ "$MOVING_PID" = "$pid" ] && [ ! -e "$SOFTSTOPFILE" ]
 }
 
 pausedRun() {
-    [ -e "$PAUSEFILE" ] && pauseWindow
+    pauseFor "$(cat "$PIDFILE" 2>/dev/null)" && pauseWindow
 }
 
 # Adds $1 seconds to the time pauses have held this run's moves
@@ -3458,6 +3467,11 @@ softstop() {
         echo "mover: not running"
         exit 0
     fi
+    # only a Mover Tuning run reads the soft stop file; for any other it would stay behind and block a later pause
+    if ! grep -qs age_mover "/proc/$(cat $PIDFILE)/cmdline"; then
+        echo "mover: only a Mover Tuning run can be soft stopped"
+        exit 1
+    fi
     touch $SOFTSTOPFILE
     # a paused run goes on to finish its current file, then stops
     rm -f "$PAUSEFILE"
@@ -3467,8 +3481,8 @@ softstop() {
 pause() {
     # checked again once the file exists, as a soft stop or the end of the moves may come in between
     if pauseWindow; then
-        touch "$PAUSEFILE"
-        if pauseWindow; then
+        cat "$PIDFILE" >"$PAUSEFILE" 2>/dev/null
+        if pausedRun; then
             holdMovesStart
             echo "mover: paused"
             exit 0
@@ -3489,15 +3503,15 @@ holdMovesStart() {
 }
 
 # Holds the move processes of wrapped run $1 while a pause is asked. Each hands its file to shfs, which finishes it, so
-# move stops between files. They go on at Resume, a soft stop or the run's end, whoever ends it: Unraid 7.4's mover
-# stop signals only the run, and a stopped move would keep the array from stopping.
+# move stops between files. They go on at Resume or the run's end, whoever ends it: Unraid 7.4's mover stop signals
+# only the run, and a stopped move would keep the array from stopping.
 holdMoves() {
     local run=$1 pid
     HELD_PIDS=()
     trap '[ ${#HELD_PIDS[@]} -eq 0 ] || kill -CONT "${HELD_PIDS[@]}" 2>/dev/null' EXIT
     trap 'exit 0' HUP INT TERM
     # wrappedRun again, so not even a hand-typed holdmoves can hold a run Unraid started
-    while pauseAsked && [ "$(cat "$PIDFILE" 2>/dev/null)" = "$run" ] && kill -0 "$run" 2>/dev/null && wrappedRun "$run"; do
+    while pauseFor "$run" && [ "$(cat "$PIDFILE" 2>/dev/null)" = "$run" ] && kill -0 "$run" 2>/dev/null && wrappedRun "$run"; do
         for pid in $(pgrep -x move); do
             descends_from "$pid" "$run" || continue
             [[ " ${HELD_PIDS[*]} " == *" $pid "* ]] && continue
@@ -3508,10 +3522,17 @@ holdMoves() {
 }
 
 resume() {
-    local answer="mover: not paused"
+    local answer="mover: not paused" pid p
+    pid=$(cat "$PIDFILE" 2>/dev/null)
     pausedRun && answer="mover: resumed"
     # a pause file without a paused run is left over, so it goes too
     rm -f "$PAUSEFILE"
+    # a wrapped run's keeper lets its moves go on within a second; this covers a keeper that was killed
+    if [ -n "$pid" ] && wrappedRun "$pid"; then
+        for p in $(pgrep -x move); do
+            descends_from "$p" "$pid" && kill -CONT "$p" 2>/dev/null
+        done
+    fi
     echo "$answer"
     exit 0
 }

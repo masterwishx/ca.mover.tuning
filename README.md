@@ -154,7 +154,7 @@ Commands that can be launched from a terminal or a script (`age_mover` is instal
 | --- | --- |
 | `age_mover start` | Starts the age_mover with the settings you set in the GUI. |
 | `age_mover stop` | Forced stop of the age_mover process tree. Not recommended: it can leave partial files and incomplete hardlink transfers. Use `softstop` instead. |
-| `age_mover softstop` | Soft stop (recommended). Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. |
+| `age_mover softstop` | Soft stop (recommended) of a Mover Tuning run. Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. |
 | `age_mover pause` | Pauses a run that is moving files, like the Pause button: an Rsync copy waits at once, a Move copy once its file is done. |
 | `age_mover resume` | Resumes a paused run. The next scheduled run or a cache watchdog trigger also resumes it. |
 | `age_mover status` | Checks if the age_over is running. |
