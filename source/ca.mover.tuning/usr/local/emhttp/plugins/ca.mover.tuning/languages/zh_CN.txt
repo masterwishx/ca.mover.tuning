@@ -27,6 +27,7 @@ Clean empty ZFS datasets=清理空的 ZFS 数据集
 CLI help commands=命令行帮助
 Comma separated list of file types=以逗号分隔的文件扩展名列表
 Cron Schedule to force move all of files=强制移动所有文件的 Cron 计划
+Debug log=调试日志
 Debug Log Mover Tuning plugin actions=调试日志记录
 Defaults=默认值
 Delete Mover helper files over than this days old=辅助文件保留天数
@@ -35,6 +36,7 @@ Disable Mover running on a schedule=禁用 Mover 按计划运行
 disables test mode=禁用测试模式
 disables the plugins schedule=禁用插件的计划
 disables validation of input filenames=禁用文件名验证
+Download=下载
 enable smart caching=启用智能缓存
 Error checking mover status Please refresh the page=检查 Mover 状态时出错，请刷新页面。
 Error Config file %s not found=错误：找不到配置文件“%s”。
@@ -75,6 +77,7 @@ Ignore file types=忽略指定文件类型
 Invalid characters to block=要阻止的无效字符
 Largest first=最大的优先
 Let scheduled mover run during a parity check rebuild=允许计划的 Mover 在奇偶校验/重建期间运行
+Log files=日志文件
 Log Mover Tuning plugin actions=记录 Mover Tuning 插件日志
 Logs parent folder for Mover Tuning plugin=日志文件保存路径
 Low=低
@@ -105,6 +108,7 @@ Move now=立即移动
 Move Now=立即移动
 Move Now button follows plug-in filters=立即移动按钮遵循过滤器
 Mover is running=Mover 正在运行…
+Mover log=日志
 Mover Tuning=Mover Tuning
 Mover Tuning - Filters=Mover Tuning - 过滤器
 Mover Tuning - Help=Mover Tuning - 帮助
@@ -118,6 +122,7 @@ Mover Tuning settings are available for existing shares only=Mover Tuning 设置
 Mover Tuning settings not available for this share=此共享不可使用 Mover Tuning 设置
 Mover Tuning thresholds=Mover Tuning 阈值
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件没有移动/同步任何文件。耗时：%s
+No log files yet=暂无日志文件
 Not Applicable Share Does Not Exist Yet=不适用（共享尚不存在）
 Notify Mover Tuning plugin actions=通知设置
 Oldest first=最旧的优先
@@ -153,6 +158,7 @@ Smallest first=最小的优先
 Speed=速度
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=从 Unraid 7.2.1 开始，Mover Tuning 插件的行为已改变
 Start Mover Tuning=启动 Mover Tuning
+Summary=摘要
 Sync files based on maximum size=按最大大小同步文件
 Sync files that are smaller than this size In MB=同步小于此大小的文件（MB）
 Synchronize Primary files to Secondary=主存储文件同步到次存储
@@ -176,6 +182,7 @@ Used IDE=开发工具
 User shares not enabled=用户共享未启用
 Validate input filenames to prevent attacks=验证文件名防止攻击
 Very Low=很低
+View=查看
 Want to support the developer and say Thank You=想支持开发者并说声**谢谢**吗？
 Watchdog trigger level=看门狗触发阈值
 Watchdog trigger level raised to %1 to stay above the moving threshold=看门狗触发阈值已升至 %1，以保持高于移动阈值。
@@ -283,6 +290,10 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_loggingfolder_plug:
 > 日志文件的父目录路径，默认为<strong><em>/tmp</em></strong>。日志会保存在此路径下的<strong><em>ca.mover.tuning</em></strong>文件夹中。
+:end
+
+:mover_tune_logfiles_plug:
+> 最新的文件在最上方：即最近一次运行的日志。<strong>查看</strong>会在新的浏览器标签页中打开它。
 :end
 
 :mover_tune_logfilesdaysold_plug:

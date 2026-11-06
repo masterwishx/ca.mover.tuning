@@ -30,6 +30,7 @@ Clean empty ZFS datasets=
 CLI help commands=
 Comma separated list of file types=
 Cron Schedule to force move all of files=
+Debug log=
 Debug Log Mover Tuning plugin actions=
 Defaults=
 Delete Mover helper files over than this days old=
@@ -38,6 +39,7 @@ Disable Mover running on a schedule=
 disables test mode=
 disables the plugins schedule=disables the plugin's schedule
 disables validation of input filenames=
+Download=
 enable smart caching=
 Error checking mover status Please refresh the page=Error checking mover status. Please refresh the page.
 Error Config file %s not found=Error: Config file '%s' not found.
@@ -78,6 +80,7 @@ Ignore file types=
 Invalid characters to block=
 Largest first=
 Let scheduled mover run during a parity check rebuild=Let scheduled mover run during a parity check / rebuild
+Log files=
 Log Mover Tuning plugin actions=
 Logs parent folder for Mover Tuning plugin=
 Low=
@@ -108,6 +111,7 @@ Move now=
 Move Now=
 Move Now button follows plug-in filters=
 Mover is running=Mover is running...
+Mover log=
 Mover Tuning=
 Mover Tuning - Filters=
 Mover Tuning - Help=
@@ -121,6 +125,7 @@ Mover Tuning settings are available for existing shares only=Mover Tuning settin
 Mover Tuning settings not available for this share=
 Mover Tuning thresholds=
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=No files were moved/synced by Mover Tuning plugin. Elapsed time: %s
+No log files yet=
 Not Applicable Share Does Not Exist Yet=Not Applicable (Share Does Not Exist Yet)
 Notify Mover Tuning plugin actions=
 Oldest first=
@@ -156,6 +161,7 @@ Smallest first=
 Speed=
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Starting with Unraid 7.2.1, Mover Tuning plugin behavior has changed
 Start Mover Tuning=
+Summary=
 Sync files based on maximum size=
 Sync files that are smaller than this size In MB=Sync files that are smaller than this size (In MB)
 Synchronize Primary files to Secondary=
@@ -179,6 +185,7 @@ Used IDE=
 User shares not enabled=User shares not enabled!
 Validate input filenames to prevent attacks=
 Very Low=
+View=
 Want to support the developer and say Thank You=Want to support the developer and say **Thank You**?
 Watchdog trigger level=
 Watchdog trigger level raised to %1 to stay above the moving threshold=Watchdog trigger level raised to %1 to stay above the moving threshold.
@@ -286,6 +293,10 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 
 :mover_tune_loggingfolder_plug:
 > Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
+:end
+
+:mover_tune_logfiles_plug:
+> The newest file is on top: the log of the latest run. <strong>View</strong> opens it in a new browser tab.
 :end
 
 :mover_tune_logfilesdaysold_plug:

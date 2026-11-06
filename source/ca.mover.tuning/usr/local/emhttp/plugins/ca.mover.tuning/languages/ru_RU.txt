@@ -28,6 +28,7 @@ Clean empty ZFS datasets=Очистить пустые ZFS‑датасеты
 CLI help commands=Команды помощи CLI
 Comma separated list of file types=Список типов файлов через запятую
 Cron Schedule to force move all of files=Расписание Cron для принудительного перемещения всех файлов
+Debug log=Журнал отладки
 Debug Log Mover Tuning plugin actions=Отладочный журнал действий плагина Mover Tuning
 Defaults=По умолчанию
 Delete Mover helper files over than this days old=Удалять вспомогательные файлы Mover старше указанного количества дней
@@ -36,6 +37,7 @@ Disable Mover running on a schedule=Отключить запуск Mover по �
 disables test mode=отключает тестовый режим
 disables the plugins schedule=отключает расписание плагина
 disables validation of input filenames=отключает проверку имён входных файлов
+Download=Скачать
 enable smart caching=включить умное кэширование
 Error checking mover status Please refresh the page=Ошибка проверки статуса mover. Обновите страницу.
 Error Config file %s not found=Ошибка: файл конфигурации '%s' не найден.
@@ -76,6 +78,7 @@ Ignore file types=Игнорировать типы файлов
 Invalid characters to block=Недопустимые символы для блокировки
 Largest first=Сначала самые большие
 Let scheduled mover run during a parity check rebuild=Разрешить запуск Mover по расписанию во время проверки/восстановления паритета
+Log files=Файлы журнала
 Log Mover Tuning plugin actions=Журналировать действия плагина Mover Tuning
 Logs parent folder for Mover Tuning plugin=Родительская папка журналов для плагина Mover Tuning
 Low=Низкий
@@ -106,6 +109,7 @@ Move now=Переместить сейчас
 Move Now=Переместить сейчас
 Move Now button follows plug-in filters=Кнопка «Переместить сейчас» учитывает фильтры плагина
 Mover is running=Mover выполняется...
+Mover log=Журнал
 Mover Tuning=Mover Tuning
 Mover Tuning - Filters=Mover Tuning — Фильтры
 Mover Tuning - Help=Mover Tuning — Справка
@@ -119,6 +123,7 @@ Mover Tuning settings are available for existing shares only=Настройки 
 Mover Tuning settings not available for this share=Настройки Mover Tuning недоступны для этой шары
 Mover Tuning thresholds=Пороги Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Файлы не были перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
+No log files yet=Файлов журнала пока нет
 Not Applicable Share Does Not Exist Yet=Не применимо (шара ещё не существует)
 Notify Mover Tuning plugin actions=Уведомлять о действиях плагина Mover Tuning
 Oldest first=Сначала самые старые
@@ -154,6 +159,7 @@ Smallest first=Сначала самые маленькие
 Speed=Скорость
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Начиная с Unraid 7.2.1 поведение плагина Mover Tuning изменилось
 Start Mover Tuning=Запустить Mover Tuning
+Summary=Сводка
 Sync files based on maximum size=Синхронизировать файлы на основе максимального размера
 Sync files that are smaller than this size In MB=Синхронизировать файлы меньше указанного размера (в МБ)
 Synchronize Primary files to Secondary=Синхронизировать файлы основного с вторичным
@@ -177,6 +183,7 @@ Used IDE=Используемый IDE
 User shares not enabled=Пользовательские шары не включены!
 Validate input filenames to prevent attacks=Проверять имена файлов для предотвращения атак
 Very Low=Очень низкий
+View=Просмотр
 Want to support the developer and say Thank You=Хотите поддержать разработчика и сказать **Спасибо**?
 Watchdog trigger level=Порог срабатывания наблюдения
 Watchdog trigger level raised to %1 to stay above the moving threshold=Порог срабатывания наблюдения повышен до %1, чтобы оставаться выше порога перемещения.
@@ -283,6 +290,10 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 
 :mover_tune_loggingfolder_plug:
 > Путь к родительской папке журналов <strong><em>/tmp</em></strong>. Журналы сохраняются по этому родительскому пути, по умолчанию в <strong><em>/tmp/ca.mover.tuning</em></strong>.
+:end
+
+:mover_tune_logfiles_plug:
+> Самый новый файл находится вверху: это журнал последнего запуска. <strong>Просмотр</strong> открывает его в новой вкладке браузера.
 :end
 
 :mover_tune_logfilesdaysold_plug:

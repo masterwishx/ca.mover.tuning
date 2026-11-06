@@ -13,6 +13,8 @@ $plugin = 'ca.mover.tuning';
 $config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 $config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
 $cfg = parse_plugin_cfg($plugin);
+require_once '/usr/local/emhttp/plugins/ca.mover.tuning/logFiles.php';
+$moverLogFiles = array_keys(moverLogFiles($cfg));
 $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
 $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
@@ -120,6 +122,12 @@ function updateCron() {
 	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled,watchdog:watchdog});
 }
 
+// the View and Download links follow the file picked in the Log files row
+function mtLogLinks() {
+  var file = encodeURIComponent(document.getElementById('moverLogFile').value);
+  document.getElementById('moverLogView').href = '/plugins/ca.mover.tuning/viewLog.php?file=' + file;
+  document.getElementById('moverLogSave').href = '/plugins/ca.mover.tuning/viewLog.php?download=1&file=' + file;
+}
 // An emptied Log parent folder is posted as the /tmp default, never as an empty loggingFolder
 function mtDefaultLogFolder(form) {
   var $f = $(form).find('input[name="loggingFolder"]');
@@ -745,6 +753,19 @@ _(Logs parent folder for Mover Tuning plugin)_:
 > Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 
 :end
+
+</div>
+
+_(Log files)_:
+: <?if ($moverLogFiles):?><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()'><?foreach ($moverLogFiles as $moverLogFile):?><option value='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>' title='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>'><?=htmlspecialchars(moverLogLabel($moverLogFile))?></option><?endforeach;?></select><span style='display:flex;gap:1.5rem'><a id='moverLogView' href='/plugins/ca.mover.tuning/viewLog.php?file=<?=rawurlencode($moverLogFiles[0])?>' target='_blank' rel='noopener'><i class='fa fa-file-text-o'></i> _(View)_</a><a id='moverLogSave' href='/plugins/ca.mover.tuning/viewLog.php?download=1&amp;file=<?=rawurlencode($moverLogFiles[0])?>'><i class='fa fa-download'></i> _(Download)_</a></span><?else:?>_(No log files yet)_<?endif;?>
+
+:mover_tune_logfiles_plug:
+
+> The newest file is on top: the log of the latest run. <strong>View</strong> opens it in a new browser tab.
+
+:end
+
+<div markdown="1" class="moverTuningSettings">
 
 _(Delete Mover Log files over than this days old)_:
 : <select name="logfilesDaysold" size="1" class='logfilesDaysold'>
