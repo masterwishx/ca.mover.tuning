@@ -18,6 +18,7 @@ Before proceeding, click on an option or press F1 to read detailed descriptions 
 by=作者
 Cache disk not enabled=缓存磁盘未启用
 Cache watchdog=缓存看门狗
+Cache watchdog %s is at %s, at or above the trigger level of %s Resuming the paused Mover Tuning run=缓存看门狗：%s 已使用 %s，达到或超过触发阈值 %s。正在继续已暂停的 Mover Tuning 运行。
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=缓存看门狗：%s 已使用 %s，达到或超过触发阈值 %s。正在启动 Mover Tuning。
 Cache → Array=缓存 → 阵列
 Cancel=取消
@@ -131,12 +132,15 @@ Only move if above this threshold of used Primary cache space=仅当主存储（
 Open=访问
 Overall Progress=总体进度
 Override Mover Tuning settings for this share=为此共享覆盖 Mover Tuning 设置
+Pause=暂停
+Pause moving files until Resume, the next scheduled run or a cache watchdog trigger=暂停移动文件，直到点击继续、下一次计划运行或缓存看门狗触发
 Plugin mover=插件 Mover
 Plugin thread @ Unraid community=插件讨论 @ Unraid 社区
 Priority for disk IO=磁盘 I/O 优先级
 Priority for mover process=Mover 进程优先级
 Rebalance shares=重新平衡共享
 Reset Mover Tuning to defaults=将 Mover Tuning 重置为默认值？
+Resume=继续
 Resynchronize all Primary files to Secondary=重新同步所有主存储文件到次存储
 Rsync=Rsync
 Run Mover Tuning=运行 Mover Tuning…
@@ -444,6 +448,7 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 <p>选择应用<strong>插件过滤器</strong>时用于移动文件的工具，可以在 <strong>Rsync</strong> 和 Unraid 内置的文件移动工具<strong>移动</strong>之间选择。</p>
 <p><strong>移动</strong> - 使用 Unraid 内置的文件移动工具移动文件，但文件同步仍使用 <strong>Rsync</strong>。</p>
 <p><strong>Rsync</strong> - 文件移动和同步都使用 Rsync。</p>
+<p><strong>暂停</strong>会立即暂停 <strong>Rsync</strong> 复制；使用 <strong>Move</strong> 时，会等当前文件完成后再暂停。</p>
 :end
 
 :mover_tune_moveinuse_plug:

@@ -40,6 +40,12 @@
 PIDFILE="/var/run/mover.pid"
 SOFTSTOPFILE="/var/run/moversoft.stop"
 WATCHDOGSTAMP="/var/run/mover.watchdog"
+# the Pause button: the run holds while it exists
+PAUSEFILE="/var/run/mover.pause"
+# while files move: the run's pid, then the seconds pauses have held it
+MOVINGFILE="/var/run/mover.moving"
+HOLD_SINCE=""
+AGEMOVER="/usr/local/emhttp/plugins/ca.mover.tuning/age_mover"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
@@ -1089,23 +1095,26 @@ unraid_empty_disks() {
 
 # Same keys and format as Unraid 7.4's mover (sbin/mover writestatus), which 7.4 shows under the Move button on Main.
 # Its line 3 is a per-share bar; Selectlines leaves it out, as each pass here runs across the shares.
-# $1: bytes of the file in transfer already copied (progressTicker), not yet off the remaining counters
+# $1: bytes of the file in transfer already copied (copyWatch), not yet off the remaining counters
 moverStatusWrite() {
     [ "$MOVER_PROGRESS" = no ] && return 0
-    local total remain moved elapsed rate=0 eta=0 file action lines=1,2 tmp="${MOVER_STATUS}.$$"
+    local total remain moved elapsed rate=0 eta=0 file action lines=1,2 tmp="${MOVER_STATUS}.$$" MOVING_PID MOVING_HELD
     total=$((TOTALPRIMARYSIZE + TOTALSECONDARYSIZE + TOTALUNATTENDEDSIZE))
     # 7.4 shows "Nothing to move" while nothing is measured yet; the plugin's own rows hide those lines too
     [ "$total" -gt 0 ] && lines=1,2,4,5
     remain=$((REMAINING_CACHE_SIZE + REMAINING_ARRAY_SIZE + REMAINING_UNATTENDED_SIZE - ${1:-0}))
     [ "$remain" -lt 0 ] && remain=0
     moved=$((total > remain ? total - remain : 0))
-    # the speed stops at the end of the transfers, as the steps after them move nothing
-    elapsed=$((START_TIME > 0 ? ${MOVES_END_TIME:-$EPOCHSECONDS} - START_TIME : 0))
+    # the speed stops at the end of the transfers, as the steps after them move nothing, and leaves out paused time
+    movingRead
+    [ -n "$HOLD_SINCE" ] && MOVING_HELD=$((MOVING_HELD + EPOCHSECONDS - HOLD_SINCE))
+    elapsed=$((START_TIME > 0 ? ${MOVES_END_TIME:-$EPOCHSECONDS} - START_TIME - MOVING_HELD : 0))
     [ "$elapsed" -gt 0 ] && rate=$((moved / elapsed))
     [ "$rate" -gt 0 ] && eta=$((remain / rate))
     # escaped for parse_ini_file as 7.4's inivalue does, and $ too, which would expand a ${...} in a name
     file=${GUI_CURRENT_FILE//\\/\\\\} file=${file//\"/\\\"} file=${file//\$/\\\$}
     action=${GUI_ACTION//\\/\\\\} action=${action//\"/\\\"} action=${action//\$/\\\$}
+    [ -n "$HOLD_SINCE" ] && action="Paused"
     {
         echo "TotalSize=$total"
         echo "RemainSize=$remain"
@@ -1138,9 +1147,7 @@ bytes_read() {
     if [ "$1" = move ]; then
         pids=$(pgrep -x shfs)
     else
-        for pid in $(pgrep -x rsync); do
-            descends_from "$pid" "$$" && pids+=" $pid"
-        done
+        pids=$(copyPids)
     fi
     for pid in $pids; do
         while IFS= read -r fd; do
@@ -1151,18 +1158,143 @@ bytes_read() {
     echo "$max"
 }
 
-# Rewrites the progress rows every 5 s while tool $1 copies file $3 of $2 bytes, so a slow file shows it moves.
-# Unraid move's copy in shfs advances in steps of up to 2 GiB; rsync's sender advances as it reads.
-progressTicker() {
-    local best=0 got s=""
+# This run's rsync processes: the one it started and the two that one starts
+copyPids() {
+    local pid
+    for pid in $(pgrep -x rsync); do
+        descends_from "$pid" "$$" && echo "$pid"
+    done
+}
+
+# Lets the stopped copies of run $1 go on, its rsync (copyWatch holds it) and its move (holdMoves does), as Resume and
+# a soft stop do, in case the process that held them was killed; the holder lets them go on itself within a second
+runGoesOn() {
+    local p
+    for p in $(pgrep -x rsync) $(pgrep -x move); do
+        descends_from "$p" "$1" && kill -CONT "$p" 2>/dev/null
+    done
+}
+
+# Reads mover.moving into MOVING_PID and MOVING_HELD: empty and 0 while no run moves files
+movingRead() {
+    MOVING_PID="" MOVING_HELD=0
+    { read -r MOVING_PID MOVING_HELD <"$MOVINGFILE"; } 2>/dev/null
+    [[ "$MOVING_HELD" =~ ^[0-9]+$ ]] || MOVING_HELD=0
+}
+
+# The pause file names the run it pauses ($1 here), so one an earlier run left behind pauses nothing
+pauseFor() {
+    local p
+    { read -r p <"$PAUSEFILE"; } 2>/dev/null
+    [ -n "$p" ] && [ "$p" = "$1" ]
+}
+
+# What a Mover Tuning run holds on: a pause for it, and no soft stop, which always wins
+pauseAsked() {
+    pauseFor "$$" && [ ! -e "$SOFTSTOPFILE" ]
+}
+
+# A run the plugin started for Unraid's mover (forced move, Move now without the filters) or the per-share Move: the
+# plugin's with_scripts is its parent. A run Unraid starts itself (Move on Main, its schedule) is never paused, as Mover
+# Tuning stays separate from Unraid's own mover from 7.2.1.
+wrappedRun() {
+    local parent
+    parent=$(awk '/^PPid:/ {print $2}' "/proc/$1/status" 2>/dev/null)
+    [ -n "$parent" ] && grep -qs '/ca.mover.tuning/with_scripts' "/proc/$parent/cmdline"
+}
+
+# The Pause button's window: a Mover Tuning run while it moves files and no soft stop is asked, or a wrapped run, which
+# has no soft stop
+pauseWindow() {
+    local pid
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    if [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
+        return 1
+    fi
+    wrappedRun "$pid" && return 0
+    movingRead
+    [ "$MOVING_PID" = "$pid" ] && [ ! -e "$SOFTSTOPFILE" ]
+}
+
+pausedRun() {
+    pauseFor "$(cat "$PIDFILE" 2>/dev/null)" && pauseWindow
+}
+
+# Adds $1 seconds to the time pauses have held this run's moves
+heldAdd() {
+    movingRead
+    [ "$MOVING_PID" = "$$" ] || return 0
+    echo "$$ $((MOVING_HELD + $1))" >"$MOVINGFILE.$BASHPID" && mv -f "$MOVINGFILE.$BASHPID" "$MOVINGFILE"
+}
+
+# Ends the moving phase: the speed leaves out the time pauses held it, and the Pause button goes
+movesEnd() {
+    movingRead
+    [ "$MOVING_PID" = "$$" ] || MOVING_HELD=0
+    MOVES_END_TIME=$((EPOCHSECONDS - MOVING_HELD))
+    rm -f "$MOVINGFILE" "$PAUSEFILE"
+}
+
+# Holds the run before its next row while a pause is asked, until Resume or a soft stop
+pauseHold() {
+    pauseAsked || return 0
+    local file=$GUI_CURRENT_FILE
+    HOLD_SINCE=$EPOCHSECONDS
+    mvlogger "Paused: no file moves until Resume"
+    GUI_CURRENT_FILE=""
+    moverStatusWrite
+    while pauseAsked; do
+        sleep 1
+    done
+    heldAdd $((EPOCHSECONDS - HOLD_SINCE))
+    mvlogger "Resumed after $((EPOCHSECONDS - HOLD_SINCE)) s"
+    HOLD_SINCE=""
+    GUI_CURRENT_FILE=$file
+    moverStatusWrite
+}
+
+# Holds this run's rsync copy while a pause is asked, and lets it go on after; $1: bytes shown so far
+copyHold() {
+    if pauseAsked && [ -z "$HOLD_SINCE" ]; then
+        mapfile -t HELD_PIDS < <(copyPids)
+        [ ${#HELD_PIDS[@]} -gt 0 ] || return 0
+        kill -STOP "${HELD_PIDS[@]}" 2>/dev/null
+        HOLD_SINCE=$EPOCHSECONDS
+        mvlogger "Paused: the copy waits for Resume"
+    elif ! pauseAsked && [ -n "$HOLD_SINCE" ]; then
+        # counted before the copy goes on, as its end lets the run stop this watcher
+        heldAdd $((EPOCHSECONDS - HOLD_SINCE))
+        kill -CONT "${HELD_PIDS[@]}" 2>/dev/null
+        HELD_PIDS=()
+        mvlogger "Resumed after $((EPOCHSECONDS - HOLD_SINCE)) s"
+        HOLD_SINCE=""
+    else
+        return 0
+    fi
+    moverStatusWrite "$1"
+}
+
+# While tool $1 copies the current row: each second, holds an rsync copy while the run is paused, and every 5 s rewrites
+# the progress rows for counted file $3 of $2 bytes. Unraid move copies inside shfs, which serves every share, so its
+# copy is never held: the run holds before its next row. move advances in steps of up to 2 GiB; rsync as it reads.
+copyWatch() {
+    local best=0 got s="" n=0
+    HELD_PIDS=()
+    # a held copy goes on when this watcher ends, also after Unraid's mover stop, which signals only the run itself
+    trap '[ ${#HELD_PIDS[@]} -eq 0 ] || kill -CONT "${HELD_PIDS[@]}" 2>/dev/null' EXIT
     # a stop lets the status write in hand finish, and ends the sleep instead of leaving it behind
     trap '[ -z "$s" ] || kill "$s" 2>/dev/null; exit 0' TERM
     while :; do
-        sleep 5 &
+        sleep 1 &
         s=$!
         wait "$s" || return 0
         s=""
         kill -0 "$$" 2>/dev/null || return 0
+        [ "$1" = rsync ] && copyHold "$best"
+        n=$((n + 1))
+        if [ -z "$3" ] || [ -n "$HOLD_SINCE" ] || [ $((n % 5)) -ne 0 ]; then
+            continue
+        fi
         got=$(bytes_read "$1" "$3")
         [ "$got" -gt "$2" ] && got=$2
         [ "$got" -gt "$best" ] && best=$got
@@ -1170,25 +1302,29 @@ progressTicker() {
     done
 }
 
-# Runs progressTicker while tool $1 moves or syncs the current row, a counted file, whose present names follow.
-# progressStop must end it before the next status write, so the two never write at once.
-progressStart() {
-    PROGRESS_TICKER=""
-    if [ "$MOVER_PROGRESS" = no ] || [ "$FILETYPE" != f ] || [ "$STAGE_ROW" != 0 ] || [ $# -lt 2 ]; then
+# Runs copyWatch while tool $1 moves or syncs the current row, whose present names follow; only a counted file shows
+# its bytes. copyWatchStop must end it before the next status write, so the two never write at once.
+copyWatchStart() {
+    local file=""
+    COPY_WATCH=""
+    if [ "$MOVER_PROGRESS" != no ] && [ "$FILETYPE" = f ] && [ "$STAGE_ROW" = 0 ] && [ $# -ge 2 ]; then
+        file=${2//\/.\//\/}
+    fi
+    if [ -z "$file" ] && [ "$1" != rsync ]; then
         return 0
     fi
-    progressTicker "$1" "$FILESIZE" "${2//\/.\//\/}" &
-    PROGRESS_TICKER=$!
+    copyWatch "$1" "$FILESIZE" "$file" &
+    COPY_WATCH=$!
 }
 
-progressStop() {
-    [ -n "$PROGRESS_TICKER" ] || return 0
-    # one that ended by itself may have handed its PID on, so only a ticker still running gets the signal
-    if jobs -pr | grep -qx "$PROGRESS_TICKER"; then
-        kill "$PROGRESS_TICKER" 2>/dev/null
+copyWatchStop() {
+    [ -n "$COPY_WATCH" ] || return 0
+    # one that ended by itself may have handed its PID on, so only a watcher still running gets the signal
+    if jobs -pr | grep -qx "$COPY_WATCH"; then
+        kill "$COPY_WATCH" 2>/dev/null
     fi
-    wait "$PROGRESS_TICKER" 2>/dev/null
-    PROGRESS_TICKER=""
+    wait "$COPY_WATCH" 2>/dev/null
+    COPY_WATCH=""
 }
 
 # A script's name for the progress rows: User Scripts keeps each one as <folder>/script, its title in <folder>/name
@@ -2402,6 +2538,8 @@ processTheMoves() {
         return
     fi
 
+    # the Pause button shows from here until movesEnd
+    echo "$$ 0" >"$MOVINGFILE"
     mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
     if [ "$ENABLETURBO" = "yes" ]; then
         mvlogger "Forcing turbo write on"
@@ -2453,9 +2591,12 @@ processTheMoves() {
 
     for ACTION_PASS in "${MOVE_ACTIONS[@]}"; do
         while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH; do
+            # before the row's checks, so a long pause cannot leave them stale
+            pauseHold
             if [ -e $SOFTSTOPFILE ]; then
                 [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
-                return
+                # out of both loops, so the moves end as usual and turbo write is restored
+                break 2
             fi
 
             # Skip if ~blank~ line
@@ -2631,7 +2772,7 @@ processTheMoves() {
                     # a folder row sends only the folder, which move leaves on the source while anything is in it
                     MOVE_DEBUG_ARGS=()
                     read -r -a MOVE_DEBUG_ARGS <<<"$DEBUGGING"
-                    progressStart move "${present[@]}"
+                    copyWatchStart move "${present[@]}"
                     MOVE_OUT=$(printf '%s\n' "${SYNCED_FILES_ARR[@]//\/.\//\/}" | /usr/libexec/unraid/move "${MOVE_DEBUG_ARGS[@]}" 2>&1)
                     [ -n "$MOVE_OUT" ] && printf '%s\n' "$MOVE_OUT" >>"$MOVER_DEBUG_LOG"
                 fi
@@ -2648,7 +2789,7 @@ processTheMoves() {
                     # Perform rsync. relative paths and hardlinks
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
                         if [ ${#present[@]} -gt 0 ]; then
-                            progressStart rsync "${present[@]}"
+                            copyWatchStart rsync "${present[@]}"
                             # rsync's errors join the mover log: on stderr they reach syslog only when cron pipes them there
                             rsync_err=$("${RSYNC_CMD[@]}" "${present[@]}" "$DESTINATION/" 2>&1 >/dev/null) || rc=$?
                             [ -n "$rsync_err" ] && while IFS= read -r line; do mvlogger "$line"; done <<<"$rsync_err"
@@ -2659,7 +2800,7 @@ processTheMoves() {
                     fi
                 fi
             fi
-            progressStop
+            copyWatchStop
 
             # a dry run counts every name as done; a real run counts only verified arrivals below
             names=${#SYNCED_FILES_ARR[@]}
@@ -2992,7 +3133,7 @@ processTheMoves() {
 
     [ "$INUSEFILES" -gt 0 ] && mvlogger "$INUSEFILES files were in use and stay on the source until a later run"
     mvlogger "$(titleLine "Cleaning up" '-')"
-    MOVES_END_TIME=$EPOCHSECONDS
+    movesEnd
     moverStep "Cleaning up"
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
@@ -3051,6 +3192,8 @@ start() {
         rm $SOFTSTOPFILE
         mvlogger "Mover soft stop file removed."
     fi
+    # left behind by a run that was killed while it moved files
+    rm -f "$PAUSEFILE" "$MOVINGFILE"
 
     # Detect execution source (cron/cli/web)
     detect_run_method
@@ -3199,7 +3342,7 @@ start() {
     mvDebuglogger "Reset run-once settings completed" "run-once settings END"
 
     mvlogger "Cleaning lock and stop files"
-    for file in $PIDFILE $SOFTSTOPFILE $MOVER_STATUS; do
+    for file in $PIDFILE $SOFTSTOPFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE; do
         [[ -e "$file" ]] && rm -f "$file"
     done
 
@@ -3309,7 +3452,8 @@ killtree() {
     for child in $(pgrep --ns $$ -P $pid); do
         killtree $child
     done
-    [ $pid -ne $$ ] && kill -TERM $pid
+    # a paused copy acts on the TERM only once it runs again
+    [ $pid -ne $$ ] && kill -TERM $pid && kill -CONT "$pid"
 }
 
 # Caution: stopping mover like this can lead to partial files on the destination
@@ -3321,7 +3465,7 @@ stop() {
     fi
     killtree $(cat $PIDFILE)
     sleep 2
-    rm -f $PIDFILE $MOVER_STATUS
+    rm -f $PIDFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE
     echo "mover: stopped"
     exit
 }
@@ -3332,8 +3476,70 @@ softstop() {
         echo "mover: not running"
         exit 0
     fi
+    # only a Mover Tuning run reads the soft stop file; for any other it would stay behind and block a later pause
+    if ! grep -qs age_mover "/proc/$(cat $PIDFILE)/cmdline"; then
+        echo "mover: only a Mover Tuning run can be soft stopped"
+        exit 1
+    fi
     touch $SOFTSTOPFILE
+    # a paused run goes on to finish its current file, then stops
+    rm -f "$PAUSEFILE"
+    runGoesOn "$(cat $PIDFILE)"
     exit
+}
+
+pause() {
+    # checked again once the file exists, as a soft stop or the end of the moves may come in between
+    if pauseWindow; then
+        cat "$PIDFILE" >"$PAUSEFILE" 2>/dev/null
+        if pausedRun; then
+            holdMovesStart
+            echo "mover: paused"
+            exit 0
+        fi
+        rm -f "$PAUSEFILE"
+    fi
+    echo "mover: not moving files"
+    exit 1
+}
+
+# A wrapped run cannot hold itself, so holdMoves holds it: one per run
+holdMovesStart() {
+    local pid
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    wrappedRun "$pid" || return 0
+    pgrep -f "age_mover holdmoves $pid\$" >/dev/null && return 0
+    setsid "$AGEMOVER" holdmoves "$pid" </dev/null >/dev/null 2>&1 &
+}
+
+# Holds the move processes of wrapped run $1 while a pause is asked. Each hands its file to shfs, which finishes it, so
+# move stops between files. They go on at Resume or the run's end, whoever ends it: Unraid 7.4's mover stop signals
+# only the run, and a stopped move would keep the array from stopping.
+holdMoves() {
+    local run=$1 pid
+    HELD_PIDS=()
+    trap '[ ${#HELD_PIDS[@]} -eq 0 ] || kill -CONT "${HELD_PIDS[@]}" 2>/dev/null' EXIT
+    trap 'exit 0' HUP INT TERM
+    # wrappedRun again, so not even a hand-typed holdmoves can hold a run Unraid started
+    while pauseFor "$run" && [ "$(cat "$PIDFILE" 2>/dev/null)" = "$run" ] && kill -0 "$run" 2>/dev/null && wrappedRun "$run"; do
+        for pid in $(pgrep -x move); do
+            descends_from "$pid" "$run" || continue
+            [[ " ${HELD_PIDS[*]} " == *" $pid "* ]] && continue
+            kill -STOP "$pid" 2>/dev/null && HELD_PIDS+=("$pid")
+        done
+        sleep 1
+    done
+}
+
+resume() {
+    local answer="mover: not paused" pid
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    pausedRun && answer="mover: resumed"
+    # a pause file without a paused run is left over, so it goes too
+    rm -f "$PAUSEFILE"
+    [ -n "$pid" ] && runGoesOn "$pid"
+    echo "$answer"
+    exit 0
 }
 
 # Function to display usage
@@ -3343,16 +3549,19 @@ usage() {
     echo "Usage:"
     if version_ge "$UNRAID_VERSION" "7.2.1"; then
         echo "  $0 | age_mover start  # Uses age_mover only (Unraid >=7.2.1)"
-        echo "  $0 | age_mover stop | softstop | status | reset | debug"
+        echo "  $0 | age_mover stop | softstop | pause | resume | status | reset | debug"
     else
         echo "  $0 | mover start  # Can use mover or age_mover"
-        echo "  $0 | mover stop | softstop | status | reset | debug"
+        echo "  $0 | mover stop | softstop | pause | resume | status | reset | debug"
     fi
     echo
     echo "Commands:"
     echo "  start    - Start mover."
     echo "  stop     - Forced stop mover."
     echo "  softstop - Soft stop mover. (Recommended)"
+    echo "  pause    - Pause a run that is moving files: an Rsync copy waits at once, a Move copy once its file is done."
+    echo "             Also the per-share Move and the runs of Unraid's mover the plugin starts, once their file is done."
+    echo "  resume   - Resume a paused run. The next scheduled run or a cache watchdog trigger also resumes it."
     echo "  status   - Check if the mover is running."
     echo "  reset    - Reset plugin config and schedules to default values and delete the override config folder."
     echo "  debug    - Create plugin diagnostics ZIP at /boot/logs/ca.mover.tuning-debug-<date-time>.zip"
@@ -3399,7 +3608,10 @@ watchdog() {
     local -A pools=() used=() due=() backoff=()
     [ "$(grep '^watchdog=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" = "yes" ] || exit 0
     grep -qs '^mdState="STARTED"' /var/local/emhttp/var.ini || exit 0
-    [ -f "$PIDFILE" ] && exit 0
+    # a paused run keeps the pid file: once a pool reaches its trigger level, the watchdog resumes it instead of starting one
+    if [ -f "$PIDFILE" ] && ! pausedRun; then
+        exit 0
+    fi
     threshold=$(grep '^watchdogThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
     [[ "$threshold" =~ ^[0-9]+$ ]] || threshold=90
     global=$(grep '^movingThreshold=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
@@ -3448,6 +3660,18 @@ watchdog() {
             first=$pool
         fi
     done
+    if [ -f "$PIDFILE" ]; then
+        # resumed or soft-stopped while the pools were read: nothing to say
+        pausedRun || exit 0
+        for pool in "${!used[@]}"; do
+            (resume) >/dev/null
+            [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at ${used[$pool]}%, at or above the trigger level of ${pools[$pool]}%. Resuming the paused Mover Tuning run."
+            NOTIFY=$(grep '^notify=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
+            unraid_notify "$(translate_text "Cache watchdog: %s is at %s, at or above the trigger level of %s. Resuming the paused Mover Tuning run." "$pool" "${used[$pool]}%" "${pools[$pool]}%")" "warning"
+            break
+        done
+        exit 0
+    fi
     [ -n "$first" ] || exit 0
     # mover.php decides whether the run may start (a run already active; a parity check stops only scheduled runs), so announce and start the
     # cooldown only once this launch's run holds the pid file, as mover.php's own runMover waits for it
@@ -3501,7 +3725,8 @@ watchdog() {
     exit 0
 }
 
-if [ "$#" -ne 1 ]; then
+# holdmoves, started by pause, also takes the run's pid
+if [ "$#" -ne 1 ] && ! { [ "$1" = holdmoves ] && [ "$#" -eq 2 ]; }; then
     usage
     exit 1
 fi
@@ -3520,6 +3745,15 @@ stop)
     ;;
 softstop)
     softstop
+    ;;
+pause)
+    pause
+    ;;
+resume)
+    resume
+    ;;
+holdmoves)
+    holdMoves "$2"
     ;;
 status)
     status

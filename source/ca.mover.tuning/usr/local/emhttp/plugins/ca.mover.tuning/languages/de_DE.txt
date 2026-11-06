@@ -19,6 +19,7 @@ Before proceeding, click on an option or press F1 to read detailed descriptions 
 by=von
 Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
 Cache watchdog=Cache-Watchdog
+Cache watchdog %s is at %s, at or above the trigger level of %s Resuming the paused Mover Tuning run=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Der pausierte Mover-Tuning-Lauf wird fortgesetzt.
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Mover Tuning wird gestartet.
 Cache → Array=Cache → Speicherverbund
 Cancel=Abbrechen
@@ -132,12 +133,15 @@ Only move if above this threshold of used Primary cache space=Nur verschieben, w
 Open=Öffnen
 Overall Progress=Gesamtfortschritt
 Override Mover Tuning settings for this share=Mover‑Tuning‑Einstellungen für diese Freigabe überschreiben
+Pause=Pausieren
+Pause moving files until Resume, the next scheduled run or a cache watchdog trigger=Verschieben pausieren bis Fortsetzen, bis zum nächsten geplanten Lauf oder bis der Cache-Watchdog auslöst
 Plugin mover=Plugin‑Mover
 Plugin thread @ Unraid community=Plugin‑Thread in der Unraid‑Community
 Priority for disk IO=Priorität für Datenträger‑I/O
 Priority for mover process=Priorität für Datenverschiebungs‑Prozess
 Rebalance shares=Freigaben neu verteilen
 Reset Mover Tuning to defaults=Mover Tuning auf Standardwerte zurücksetzen?
+Resume=Fortsetzen
 Resynchronize all Primary files to Secondary=Alle Dateien des Primärspeichers mit dem Sekundärspeicher neu synchronisieren
 Rsync=Rsync
 Run Mover Tuning=Mover‑Tuning ausführen…
@@ -446,6 +450,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p>Legt fest, welches Werkzeug zum Verschieben von Dateien unter Verwendung der Plugin‑Filter genutzt wird: <strong>Rsync</strong> oder <strong>Move</strong> (Unraid‑Standard).</p>
 <p><strong>Move</strong> – verwendet Unraid‑Move zum Verschieben, aber weiterhin <strong>Rsync</strong> zum Synchronisieren.</p>
 <p><strong>Rsync</strong> – verwendet Rsync zum Verschieben und Synchronisieren.</p>
+<p><strong>Pausieren</strong> hält eine <strong>Rsync</strong>-Kopie sofort an; mit <strong>Move</strong> wartet es, bis die aktuelle Datei fertig ist.</p>
 :end
 
 :mover_tune_moveinuse_plug:
