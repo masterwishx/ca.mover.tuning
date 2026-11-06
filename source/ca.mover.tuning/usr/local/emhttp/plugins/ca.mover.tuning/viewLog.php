@@ -12,7 +12,6 @@ if ($file === '' || is_file($file) === false) { // nosemgrep
 }
 header('Content-Type: text/plain; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
-header('Content-Length: ' . filesize($file)); // nosemgrep
 header('Content-Disposition: ' . (($_GET['download'] ?? '') === '1' ? 'attachment' : 'inline') . "; filename=\"$name\"");
 readfile($file); // nosemgrep
 ?>
