@@ -114,7 +114,11 @@ function resyncRunning()
     return (int) ($vars['mdResync'] ?? 0) > 0;
 }
 
-// A scheduled run that finds a Mover Tuning run paused resumes it, so a forgotten pause cannot leave the cache filling up
+/**
+ * Resume a paused run when a scheduled run finds one, so a forgotten pause cannot leave the cache filling up.
+ *
+ * @return void
+ */
 function resumePaused()
 {
     exec('/usr/local/emhttp/plugins/ca.mover.tuning/age_mover resume', $output); // nosemgrep
@@ -257,8 +261,8 @@ function startMover()
     // age_mover's own commands act on the run in progress, so the running check below (for start and reset) must not
     // refuse them, and Unraid's old mover, which Move now may start, has none of them
     if (in_array($options, ["softstop", "pause", "resume", "status", "debug"], true) === true) {
-        passthru("/usr/local/emhttp/plugins/ca.mover.tuning/age_mover $options"); // nosemgrep
-        exit();
+        passthru("/usr/local/emhttp/plugins/ca.mover.tuning/age_mover $options", $rc); // nosemgrep
+        exit($rc);
     }
 
     [$niceLevel, $ioLevel] = moverPriority();

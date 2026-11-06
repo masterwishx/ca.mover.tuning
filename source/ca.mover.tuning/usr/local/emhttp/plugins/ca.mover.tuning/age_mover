@@ -1166,6 +1166,15 @@ copyPids() {
     done
 }
 
+# Lets the stopped copies of run $1 go on, its rsync (copyWatch holds it) and its move (holdMoves does), as Resume and
+# a soft stop do, in case the process that held them was killed; the holder lets them go on itself within a second
+runGoesOn() {
+    local p
+    for p in $(pgrep -x rsync) $(pgrep -x move); do
+        descends_from "$p" "$1" && kill -CONT "$p" 2>/dev/null
+    done
+}
+
 # Reads mover.moving into MOVING_PID and MOVING_HELD: empty and 0 while no run moves files
 movingRead() {
     MOVING_PID="" MOVING_HELD=0
@@ -3475,6 +3484,7 @@ softstop() {
     touch $SOFTSTOPFILE
     # a paused run goes on to finish its current file, then stops
     rm -f "$PAUSEFILE"
+    runGoesOn "$(cat $PIDFILE)"
     exit
 }
 
@@ -3522,17 +3532,12 @@ holdMoves() {
 }
 
 resume() {
-    local answer="mover: not paused" pid p
+    local answer="mover: not paused" pid
     pid=$(cat "$PIDFILE" 2>/dev/null)
     pausedRun && answer="mover: resumed"
     # a pause file without a paused run is left over, so it goes too
     rm -f "$PAUSEFILE"
-    # a wrapped run's keeper lets its moves go on within a second; this covers a keeper that was killed
-    if [ -n "$pid" ] && wrappedRun "$pid"; then
-        for p in $(pgrep -x move); do
-            descends_from "$p" "$pid" && kill -CONT "$p" 2>/dev/null
-        done
-    fi
+    [ -n "$pid" ] && runGoesOn "$pid"
     echo "$answer"
     exit 0
 }
@@ -3659,7 +3664,7 @@ watchdog() {
         # resumed or soft-stopped while the pools were read: nothing to say
         pausedRun || exit 0
         for pool in "${!used[@]}"; do
-            rm -f "$PAUSEFILE"
+            (resume) >/dev/null
             [ "$LOGLEVEL" = 1 ] && logger -t move -- "Cache watchdog: $pool is at ${used[$pool]}%, at or above the trigger level of ${pools[$pool]}%. Resuming the paused Mover Tuning run."
             NOTIFY=$(grep '^notify=' "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)
             unraid_notify "$(translate_text "Cache watchdog: %s is at %s, at or above the trigger level of %s. Resuming the paused Mover Tuning run." "$pool" "${used[$pool]}%" "${pools[$pool]}%")" "warning"
