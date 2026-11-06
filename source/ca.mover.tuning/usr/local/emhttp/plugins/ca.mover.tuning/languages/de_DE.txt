@@ -35,6 +35,7 @@ Disable Mover running on a schedule=Zeitplan für Datenverschiebung deaktivieren
 disables test mode=deaktiviert den Testmodus
 disables the plugins schedule=deaktiviert den Zeitplan des Plugins
 disables validation of input filenames=deaktiviert die Prüfung von Dateinamen
+Download=Herunterladen
 enable smart caching=Intelligentes Caching aktivieren
 Error checking mover status Please refresh the page=Fehler beim Prüfen des Status der Datenverschiebung. Bitte Seite aktualisieren.
 Error Config file %s not found=Fehler: Konfigurationsdatei %s wurde nicht gefunden.
@@ -75,6 +76,7 @@ Ignore file types=Dateitypen ignorieren
 Invalid characters to block=Ungültige Zeichen zum Blockieren
 Largest first=Größte zuerst
 Let scheduled mover run during a parity check rebuild=Zeitplan für Datenverschiebung während Paritätsprüfung/Wiederherstellung erlauben
+Log files=Protokolldateien
 Log Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins protokollieren
 Logs parent folder for Mover Tuning plugin=Übergeordneter Ordner für Protokolle des Mover‑Tuning‑Plugins
 Low=Niedrig
@@ -118,6 +120,7 @@ Mover Tuning settings are available for existing shares only=Mover‑Tuning‑Ei
 Mover Tuning settings not available for this share=Mover‑Tuning‑Einstellungen für diese Freigabe nicht verfügbar
 Mover Tuning thresholds=Mover‑Tuning‑Schwellwerte
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Keine Dateien wurden durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
+No log files yet=Noch keine Protokolldateien
 Not Applicable Share Does Not Exist Yet=Nicht anwendbar (Freigabe existiert noch nicht)
 Notify Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins melden
 Oldest first=Älteste zuerst
@@ -173,6 +176,7 @@ Used IDE=Verwendete IDE
 User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
 Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
 Very Low=Sehr niedrig
+View=Anzeigen
 Want to support the developer and say Thank You=Möchtest du den Entwickler unterstützen und **Danke** sagen?
 Watchdog trigger level=Auslöseschwelle des Watchdogs
 Watchdog trigger level raised to %1 to stay above the moving threshold=Auslöseschwelle des Watchdogs auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
@@ -280,6 +284,10 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 
 :mover_tune_loggingfolder_plug:
 > Pfad zum übergeordneten Log‑Ordner <strong><em>/tmp</em></strong>. Protokolle werden standardmäßig unter <strong><em>/tmp/ca.mover.tuning</em></strong> gespeichert.
+:end
+
+:mover_tune_logfiles_plug:
+> Die neueste Datei steht oben: das Protokoll des letzten Laufs. <strong>Anzeigen</strong> öffnet sie in einem neuen Browser-Tab.
 :end
 
 :mover_tune_logfilesdaysold_plug:

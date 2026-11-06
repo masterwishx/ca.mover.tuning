@@ -35,6 +35,7 @@ Disable Mover running on a schedule=Désactiver l’exécution programmée du mo
 disables test mode=désactive le mode test
 disables the plugins schedule=désactive la planification du plugin
 disables validation of input filenames=désactive la validation des noms de fichiers
+Download=Télécharger
 enable smart caching=activer le cache intelligent
 Error checking mover status Please refresh the page=Erreur lors de la vérification du statut du mover. Veuillez rafraîchir la page.
 Error Config file %s not found=Erreur : fichier de configuration « %s » introuvable.
@@ -75,6 +76,7 @@ Ignore file types=Ignorer les types de fichiers
 Invalid characters to block=Caractères invalides à bloquer
 Largest first=Les plus gros d’abord
 Let scheduled mover run during a parity check rebuild=Autoriser le mover programmé pendant une vérification/réparation de parité
+Log files=Fichiers journaux
 Log Mover Tuning plugin actions=Journaliser les actions du plugin Mover Tuning
 Logs parent folder for Mover Tuning plugin=Dossier parent des journaux du plugin Mover Tuning
 Low=Faible
@@ -118,6 +120,7 @@ Mover Tuning settings are available for existing shares only=Les paramètres Mov
 Mover Tuning settings not available for this share=Paramètres Mover Tuning non disponibles pour cette part
 Mover Tuning thresholds=Seuils Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Aucun fichier n’a été déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
+No log files yet=Aucun fichier journal pour le moment
 Not Applicable Share Does Not Exist Yet=Non applicable (la part n’existe pas encore)
 Notify Mover Tuning plugin actions=Notifier les actions du plugin Mover Tuning
 Oldest first=Les plus anciens d’abord
@@ -173,6 +176,7 @@ Used IDE=IDE utilisé
 User shares not enabled=Les parts utilisateur ne sont pas activées !
 Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
 Very Low=Très faible
+View=Afficher
 Want to support the developer and say Thank You=Vous souhaitez soutenir le développeur et dire **Merci** ?
 Watchdog trigger level=Seuil de déclenchement de la surveillance
 Watchdog trigger level raised to %1 to stay above the moving threshold=Seuil de déclenchement de la surveillance augmenté à %1 pour rester au-dessus du seuil de déplacement.
@@ -280,6 +284,10 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_loggingfolder_plug:
 > Chemin vers le dossier parent des journaux <strong><em>/tmp</em></strong>.  
 > Les journaux sont stockés dans ce chemin parent, par défaut dans <strong><em>/tmp/ca.mover.tuning</em></strong>.
+:end
+
+:mover_tune_logfiles_plug:
+> Le fichier le plus récent est en haut : le journal de la dernière exécution. <strong>Afficher</strong> l'ouvre dans un nouvel onglet du navigateur.
 :end
 
 :mover_tune_logfilesdaysold_plug:

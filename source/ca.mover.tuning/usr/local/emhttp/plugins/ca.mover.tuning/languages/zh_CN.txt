@@ -34,6 +34,7 @@ Disable Mover running on a schedule=禁用 Mover 按计划运行
 disables test mode=禁用测试模式
 disables the plugins schedule=禁用插件的计划
 disables validation of input filenames=禁用文件名验证
+Download=下载
 enable smart caching=启用智能缓存
 Error checking mover status Please refresh the page=检查 Mover 状态时出错，请刷新页面。
 Error Config file %s not found=错误：找不到配置文件“%s”。
@@ -74,6 +75,7 @@ Ignore file types=忽略指定文件类型
 Invalid characters to block=要阻止的无效字符
 Largest first=最大的优先
 Let scheduled mover run during a parity check rebuild=允许计划的 Mover 在奇偶校验/重建期间运行
+Log files=日志文件
 Log Mover Tuning plugin actions=记录 Mover Tuning 插件日志
 Logs parent folder for Mover Tuning plugin=日志文件保存路径
 Low=低
@@ -117,6 +119,7 @@ Mover Tuning settings are available for existing shares only=Mover Tuning 设置
 Mover Tuning settings not available for this share=此共享不可使用 Mover Tuning 设置
 Mover Tuning thresholds=Mover Tuning 阈值
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件没有移动/同步任何文件。耗时：%s
+No log files yet=暂无日志文件
 Not Applicable Share Does Not Exist Yet=不适用（共享尚不存在）
 Notify Mover Tuning plugin actions=通知设置
 Oldest first=最旧的优先
@@ -172,6 +175,7 @@ Used IDE=开发工具
 User shares not enabled=用户共享未启用
 Validate input filenames to prevent attacks=验证文件名防止攻击
 Very Low=很低
+View=查看
 Want to support the developer and say Thank You=想支持开发者并说声**谢谢**吗？
 Watchdog trigger level=看门狗触发阈值
 Watchdog trigger level raised to %1 to stay above the moving threshold=看门狗触发阈值已升至 %1，以保持高于移动阈值。
@@ -279,6 +283,10 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_loggingfolder_plug:
 > 日志文件的父目录路径，默认为<strong><em>/tmp</em></strong>。日志会保存在此路径下的<strong><em>ca.mover.tuning</em></strong>文件夹中。
+:end
+
+:mover_tune_logfiles_plug:
+> 最新的文件在最上方：即最近一次运行的日志。<strong>查看</strong>会在新的浏览器标签页中打开它。
 :end
 
 :mover_tune_logfilesdaysold_plug:
