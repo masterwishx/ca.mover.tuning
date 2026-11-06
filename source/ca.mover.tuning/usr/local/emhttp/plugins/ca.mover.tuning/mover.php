@@ -248,9 +248,16 @@ function startMover()
     // mover command line, and all three come from fixed sets: age_mover's own
     // command list, and the two priority dropdowns on the settings page.
     // Anything else is rejected rather than handed to a shell.
-    $allowedCommands = ["start", "stop", "softstop", "status", "reset", "debug"];
+    $allowedCommands = ["start", "stop", "softstop", "pause", "resume", "status", "reset", "debug"];
     if (in_array($options, $allowedCommands, true) === false) {
         logger("Refusing to run mover: unrecognised command '$options'");
+        exit();
+    }
+
+    // age_mover's own commands act on the run in progress, so the running check below (for start and reset) must not
+    // refuse them, and Unraid's old mover, which Move now may start, has none of them
+    if (in_array($options, ["softstop", "pause", "resume", "status", "debug"], true) === true) {
+        passthru("/usr/local/emhttp/plugins/ca.mover.tuning/age_mover $options"); // nosemgrep
         exit();
     }
 

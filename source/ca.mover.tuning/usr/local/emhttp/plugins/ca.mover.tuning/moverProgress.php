@@ -1,5 +1,5 @@
 <?PHP
-// The running move for MoverTuningProgress.page, null when none: whether it moves files and is paused (age_mover's
+// The running move for MoverTuningProgress.page, null when none: whether it can be paused and is (age_mover's
 // mover.moving names its pid while files move), and its progress from the status file age_mover and Unraid 7.4's mover write.
 // A status file whose MoverPid is not the live pid in /var/run/mover.pid is left over from another run: no progress.
 header('Content-Type: application/json');
@@ -8,8 +8,11 @@ if (ctype_digit($pid) === false || is_dir("/proc/$pid") === false) {
     echo 'null';
     exit;
 }
-// a soft stop always wins over a pause, as age_mover's pauseWindow has it
-$moving = strtok((string)@file_get_contents('/var/run/mover.moving'), ' ') === $pid && file_exists('/var/run/moversoft.stop') === false;
+// as age_mover's pauseWindow: a Mover Tuning run while it moves files, or a run the plugin started through with_scripts
+// (Unraid's mover, the per-share Move), never one Unraid started itself; and a soft stop always wins over a pause
+$parent = preg_match('/^PPid:\s+(\d+)/m', (string)@file_get_contents("/proc/$pid/status"), $match) === 1 ? $match[1] : '';
+$wrapped = $parent !== '' && strpos((string)@file_get_contents("/proc/$parent/cmdline"), '/ca.mover.tuning/with_scripts') !== false;
+$moving = (strtok((string)@file_get_contents('/var/run/mover.moving'), ' ') === $pid || $wrapped === true) && file_exists('/var/run/moversoft.stop') === false;
 $status = @parse_ini_file('/usr/local/emhttp/state/mover.ini');
 $progress = null;
 if (is_array($status) === true && (string)($status['MoverPid'] ?? '') === $pid) {

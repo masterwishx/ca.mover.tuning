@@ -62,13 +62,13 @@ $(function() {
     return (bytes / Math.pow(1000, base)).toFixed(1) + ' ' + units[base] + '/sec';
   }
 
-  // null when no run with progress is going on
-  function showRows(progress) {
+  // null when no run with progress is going on; Unraid's mover writes its own action, so a held run of it says Paused here
+  function showRows(progress, paused) {
     if (rows.length === 0) return;
     rows.forEach(row => row.toggle(progress !== null));
     if (progress === null) return;
     value(0).text(progress.file);
-    value(1).text(progress.action);
+    value(1).text(paused === true ? 'Paused' : progress.action);
     // while the run is planned there is nothing to measure yet
     rows[2].toggle(progress.total > 0);
     rows[3].toggle(progress.total > 0);
@@ -82,7 +82,8 @@ $(function() {
     value(3).text(text.eta + ': ' + duration(progress.eta) + ' • ' + text.speed + ': ' + speed(progress.speed));
   }
 
-  // only while a Mover Tuning run moves files: the planning before and the steps after cannot be paused
+  // only while moverProgress.php says the run can be paused: a Mover Tuning run's planning and its steps after the moves
+  // cannot, nor can a run Unraid started itself
   function showPause(reply) {
     const moving = reply !== null && reply.moving === true;
     pause.toggle(moving);
@@ -99,7 +100,7 @@ $(function() {
   // null when no run is going on
   function show(reply) {
     running = reply !== null;
-    showRows(running === true ? reply.progress : null);
+    showRows(running === true ? reply.progress : null, running === true && reply.paused === true);
     showPause(reply);
   }
 

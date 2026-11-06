@@ -45,6 +45,7 @@ PAUSEFILE="/var/run/mover.pause"
 # while files move: the run's pid, then the seconds pauses have held it
 MOVINGFILE="/var/run/mover.moving"
 HOLD_SINCE=""
+AGEMOVER="/usr/local/emhttp/plugins/ca.mover.tuning/age_mover"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
@@ -1177,11 +1178,24 @@ pauseAsked() {
     [ -e "$PAUSEFILE" ] && [ ! -e "$SOFTSTOPFILE" ]
 }
 
-# The Pause button's window: the run in the pid file moves files, and no soft stop is asked
+# A run the plugin started for Unraid's mover (forced move, Move now without the filters) or the per-share Move: the
+# plugin's with_scripts is its parent. A run Unraid starts itself (Move on Main, its schedule) is never paused, as Mover
+# Tuning stays separate from Unraid's own mover from 7.2.1.
+wrappedRun() {
+    local parent
+    parent=$(awk '/^PPid:/ {print $2}' "/proc/$1/status" 2>/dev/null)
+    [ -n "$parent" ] && grep -qs '/ca.mover.tuning/with_scripts' "/proc/$parent/cmdline"
+}
+
+# The Pause button's window, with no soft stop asked: a Mover Tuning run while it moves files, or a wrapped run
 pauseWindow() {
+    local pid
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    if [ -e "$SOFTSTOPFILE" ] || [ -z "$pid" ] || ! kill -0 "$pid" 2>/dev/null; then
+        return 1
+    fi
     movingRead
-    [ ! -e "$SOFTSTOPFILE" ] && [ -n "$MOVING_PID" ] && [ "$MOVING_PID" = "$(cat "$PIDFILE" 2>/dev/null)" ] &&
-        kill -0 "$MOVING_PID" 2>/dev/null
+    [ "$MOVING_PID" = "$pid" ] || wrappedRun "$pid"
 }
 
 pausedRun() {
@@ -2563,7 +2577,8 @@ processTheMoves() {
             pauseHold
             if [ -e $SOFTSTOPFILE ]; then
                 [ $SOFTSTOP_ACK = true ] || mvlogger "Soft Stopping requested" && SOFTSTOP_ACK=true
-                return
+                # out of both loops, so the moves end as usual and turbo write is restored
+                break 2
             fi
 
             # Skip if ~blank~ line
@@ -3266,8 +3281,6 @@ start() {
     # And now.. we move! ... if needed
     # folders alone are still work
     [ ! -e $SOFTSTOPFILE ] && [ $((TOTALFILES + TOTALFOLDERS)) -gt 0 ] && processTheMoves
-    # a soft stop returns from processTheMoves before it reaches movesEnd
-    [ -e "$MOVINGFILE" ] && movesEnd
 
     mvDebuglogger "processTheMoves completed" "processTheMoves END"
 
@@ -3456,6 +3469,7 @@ pause() {
     if pauseWindow; then
         touch "$PAUSEFILE"
         if pauseWindow; then
+            holdMovesStart
             echo "mover: paused"
             exit 0
         fi
@@ -3463,6 +3477,34 @@ pause() {
     fi
     echo "mover: not moving files"
     exit 1
+}
+
+# A wrapped run cannot hold itself, so holdMoves holds it: one per run
+holdMovesStart() {
+    local pid
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    wrappedRun "$pid" || return 0
+    pgrep -f "age_mover holdmoves $pid\$" >/dev/null && return 0
+    setsid "$AGEMOVER" holdmoves "$pid" </dev/null >/dev/null 2>&1 &
+}
+
+# Holds the move processes of wrapped run $1 while a pause is asked. Each hands its file to shfs, which finishes it, so
+# move stops between files. They go on at Resume, a soft stop or the run's end, whoever ends it: Unraid 7.4's mover
+# stop signals only the run, and a stopped move would keep the array from stopping.
+holdMoves() {
+    local run=$1 pid
+    HELD_PIDS=()
+    trap '[ ${#HELD_PIDS[@]} -eq 0 ] || kill -CONT "${HELD_PIDS[@]}" 2>/dev/null' EXIT
+    trap 'exit 0' HUP INT TERM
+    # wrappedRun again, so not even a hand-typed holdmoves can hold a run Unraid started
+    while pauseAsked && [ "$(cat "$PIDFILE" 2>/dev/null)" = "$run" ] && kill -0 "$run" 2>/dev/null && wrappedRun "$run"; do
+        for pid in $(pgrep -x move); do
+            descends_from "$pid" "$run" || continue
+            [[ " ${HELD_PIDS[*]} " == *" $pid "* ]] && continue
+            kill -STOP "$pid" 2>/dev/null && HELD_PIDS+=("$pid")
+        done
+        sleep 1
+    done
 }
 
 resume() {
@@ -3484,8 +3526,7 @@ usage() {
         echo "  $0 | age_mover stop | softstop | pause | resume | status | reset | debug"
     else
         echo "  $0 | mover start  # Can use mover or age_mover"
-        echo "  $0 | mover stop | softstop | status | reset | debug"
-        echo "  $0 | age_mover pause | resume"
+        echo "  $0 | mover stop | softstop | pause | resume | status | reset | debug"
     fi
     echo
     echo "Commands:"
@@ -3493,6 +3534,7 @@ usage() {
     echo "  stop     - Forced stop mover."
     echo "  softstop - Soft stop mover. (Recommended)"
     echo "  pause    - Pause a run that is moving files: an Rsync copy waits at once, a Move copy once its file is done."
+    echo "             Also the per-share Move and the runs of Unraid's mover the plugin starts, once their file is done."
     echo "  resume   - Resume a paused run. The next scheduled run or a cache watchdog trigger also resumes it."
     echo "  status   - Check if the mover is running."
     echo "  reset    - Reset plugin config and schedules to default values and delete the override config folder."
@@ -3657,7 +3699,8 @@ watchdog() {
     exit 0
 }
 
-if [ "$#" -ne 1 ]; then
+# holdmoves, started by pause, also takes the run's pid
+if [ "$#" -ne 1 ] && ! { [ "$1" = holdmoves ] && [ "$#" -eq 2 ]; }; then
     usage
     exit 1
 fi
@@ -3682,6 +3725,9 @@ pause)
     ;;
 resume)
     resume
+    ;;
+holdmoves)
+    holdMoves "$2"
     ;;
 status)
     status

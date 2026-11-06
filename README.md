@@ -55,7 +55,7 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 - Test Mode (dry run) with clear warnings.
 - Optional filename validation with a configurable list of blocked characters.
 - Live progress of a run (file being processed, action, overall progress, estimated completion).
-- Pause and Resume buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The next scheduled run or a cache watchdog trigger resumes a paused run.
+- Pause and Resume buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The per-share Move and the runs of the built-in mover that the plugin starts (forced move, "Move now" without the filters) pause once their current file is done; runs Unraid starts itself are left alone. The next scheduled run or a cache watchdog trigger resumes a paused run.
 - Detailed logs (file only, or file and syslog), configurable log folder and log age, and a "Run by" entry showing whether the run came from cron, the CLI or the web UI.
 - The log explains why a file did not move (for example "No space left on device") and warns when a share's minimum free space is smaller than the largest file to move.
 - Unraid notifications for failures and completion, with a "Moved Only" option.
