@@ -55,6 +55,7 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 - Test Mode (dry run) with clear warnings.
 - Optional filename validation with a configurable list of blocked characters.
 - Live progress of a run (file being processed, action, overall progress, estimated completion).
+- Pause and Resume buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The per-share Move and the runs of the built-in mover that the plugin starts (forced move, "Move now" without the filters) pause once their current file is done; runs Unraid starts itself are left alone. The next scheduled run or a cache watchdog trigger resumes a paused run.
 - Detailed logs (file only, or file and syslog), configurable log folder and log age, and a "Run by" entry showing whether the run came from cron, the CLI or the web UI.
 - The log explains why a file did not move (for example "No space left on device") and warns when a share's minimum free space is smaller than the largest file to move.
 - Unraid notifications for failures and completion, with a "Moved Only" option.
@@ -117,7 +118,7 @@ You'll find the settings on the Mover Tuning page within Settings - [Scheduler](
 | --- | --- |
 | **Plugin Settings** | Disable the plugin's schedule, cache watchdog and its trigger level, Mover Tuning schedule, Test Mode (dry run), filename validation and blocked characters, logging, debug logging and notifications, log folder and log retention, parity check behavior, mover and disk I/O priority, force move of all files on a schedule, before/after scripts. |
 | **Filters** | Whether "Move now" follows the plugin filters, thresholds (move above, free down, fill up), age, move order, CTIME/ATIME, minimum size, sync maximum size, sparseness, ignore list file, ignored file types, hidden files, and "Move All" for cache:yes shares above a pool percentage. |
-| **Options** | Force turbo write, move files tool, move files that are in use, move/clean empty folders, clean empty ZFS datasets, share size calculation, Synchronize, Rebalance and Resynchronize. Buttons: Apply, Done, Defaults and Move Now. |
+| **Options** | Force turbo write, move files tool, move files that are in use, move/clean empty folders, clean empty ZFS datasets, share size calculation, Synchronize, Rebalance and Resynchronize. Buttons: Apply, Done, Defaults and Move Now, and Pause or Resume while a run moves files. |
 | **Help** | Debug package (.zip), a link to the support thread, GitHub link and a collapsible "CLI help commands" panel. |
 
 Per-share overrides are on each share's own page (Shares → click a share → Mover Tuning).
@@ -153,7 +154,9 @@ Commands that can be launched from a terminal or a script (`age_mover` is instal
 | --- | --- |
 | `age_mover start` | Starts the age_mover with the settings you set in the GUI. |
 | `age_mover stop` | Forced stop of the age_mover process tree. Not recommended: it can leave partial files and incomplete hardlink transfers. Use `softstop` instead. |
-| `age_mover softstop` | Soft stop (recommended). Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. |
+| `age_mover softstop` | Soft stop (recommended) of a Mover Tuning run. Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. |
+| `age_mover pause` | Pauses a run that is moving files, like the Pause button: an Rsync copy waits at once, a Move copy once its file is done. |
+| `age_mover resume` | Resumes a paused run. The next scheduled run or a cache watchdog trigger also resumes it. |
 | `age_mover status` | Checks if the age_over is running. |
 | `age_mover reset` | Resets the plugin config and schedules to default values and deletes the override config folder. |
 | `age_mover debug` | Creates a diagnostics ZIP at `/boot/logs/ca.mover.tuning-debug-<date-time>.zip`. |
