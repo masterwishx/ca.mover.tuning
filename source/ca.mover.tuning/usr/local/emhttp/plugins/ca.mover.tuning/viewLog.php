@@ -1,17 +1,11 @@
 <?PHP
 // One file from the log folder for the Log files row on the Mover Tuning tab: shown in the browser, or saved with download=1.
-// Only the names age_mover gives its logs and summaries are served, so no other file can be asked for.
-$plugin = 'ca.mover.tuning';
+// Only a name from the list of logs is served, so no other file can be asked for.
+require_once '/usr/local/emhttp/plugins/ca.mover.tuning/logFiles.php';
 $name = (string)($_GET['file'] ?? '');
-if (preg_match('/\A(Mover_tuning|Debug_Mover_tuning|Summary)_\d{4}-\d{2}-\d{2}T\d{6}\.(log|txt)\z/', $name) !== 1) {
-    http_response_code(400);
-    exit;
-}
-$cfg = @parse_ini_file("/boot/config/plugins/$plugin/$plugin.cfg") ?: [];
-// as age_mover: an empty or relative folder is /tmp
-$parent = str_starts_with($cfg['loggingFolder'] ?? '', '/') ? $cfg['loggingFolder'] : '/tmp';
-$file = rtrim($parent, '/') . "/$plugin/$name";
-if (is_file($file) === false) {
+$cfg = @parse_ini_file('/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg');
+$file = moverLogFiles(is_array($cfg) ? $cfg : [])[$name] ?? '';
+if ($file === '') {
     http_response_code(404);
     exit;
 }

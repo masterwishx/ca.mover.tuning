@@ -13,13 +13,8 @@ $plugin = 'ca.mover.tuning';
 $config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 $config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
 $cfg = parse_plugin_cfg($plugin);
-// newest first, for the Log files row: the file on top is the log of the latest run
-$moverLogFolder = rtrim(str_starts_with($cfg['loggingFolder'] ?? '', '/') ? $cfg['loggingFolder'] : '/tmp', '/') . "/$plugin";
-$moverLogFiles = array_map('basename', array_merge(glob("$moverLogFolder/Mover_tuning_*.log") ?: [], glob("$moverLogFolder/Debug_Mover_tuning_*.log") ?: [], glob("$moverLogFolder/Summary_*.txt") ?: []));
-usort($moverLogFiles, function($a, $b) {
-  $stamp = fn($name) => substr($name, strrpos($name, '_') + 1, 17);
-  return [$stamp($b), strpos($a, 'Mover_tuning') === 0 ? 0 : 1] <=> [$stamp($a), strpos($b, 'Mover_tuning') === 0 ? 0 : 1];
-});
+require_once '/usr/local/emhttp/plugins/ca.mover.tuning/logFiles.php';
+$moverLogFiles = array_keys(moverLogFiles($cfg));
 $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
 $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
