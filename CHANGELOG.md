@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.11.07
 
 - feat: Pause and Resume a run from Main or the Mover Tuning tab. (chodeus)
 - feat: With the move tool, Pause waits for the current file to finish. (chodeus)
