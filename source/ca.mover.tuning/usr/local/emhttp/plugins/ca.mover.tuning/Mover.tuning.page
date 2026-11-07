@@ -128,6 +128,32 @@ function mtLogLinks() {
   document.getElementById('moverLogView').href = '/plugins/ca.mover.tuning/viewLog.php?file=' + file;
   document.getElementById('moverLogSave').href = '/plugins/ca.mover.tuning/viewLog.php?download=1&file=' + file;
 }
+// Picker text, e.g. "2026-11-07 00:00:01 – Debug log"; the stamp is cut as moverLogStamp in logFiles.php cuts it
+var mtLogKinds = <?=json_encode(['Mover_tuning' => _('Mover log'), 'Debug_Mover_tuning' => _('Debug log'), 'Summary' => _('Summary')])?>;
+function mtLogLabel(name) {
+  var cut = name.lastIndexOf('_'), kind = name.slice(0, cut), stamp = name.slice(cut + 1, cut + 18);
+  return stamp.slice(0, 10) + ' ' + [stamp.slice(11, 13), stamp.slice(13, 15), stamp.slice(15, 17)].join(':') + ' – ' + (mtLogKinds[kind] || kind);
+}
+// a run writes its log when it starts and its summary when it ends, so the tab reads the list again every 10 s
+var mtLogShown = null;
+function mtShowLogs(names) {
+  if (Array.isArray(names) === false || names.join('/') === mtLogShown) return;
+  mtLogShown = names.join('/');
+  var $pick = $('#moverLogFile'), picked = $pick.val();
+  $pick.empty().append(names.map(function(name) { return $('<option>').val(name).attr('title', name).text(mtLogLabel(name)); }));
+  if (names.indexOf(picked) !== -1) $pick.val(picked);
+  $pick.css('display', names.length > 0 ? '' : 'none');
+  $('#moverLogLinks').css('display', names.length > 0 ? 'flex' : 'none');
+  $('#moverLogNone').css('display', names.length > 0 ? 'none' : '');
+  mtLogLinks();
+}
+$(function() {
+  function poll() {
+    if (document.hidden !== true) $.getJSON('/plugins/ca.mover.tuning/logList.php', {_: Date.now()}).done(mtShowLogs);
+  }
+  setInterval(poll, 10000);
+  document.addEventListener('visibilitychange', poll);
+});
 // An emptied Log parent folder is posted as the /tmp default, never as an empty loggingFolder
 function mtDefaultLogFolder(form) {
   var $f = $(form).find('input[name="loggingFolder"]');
@@ -757,13 +783,17 @@ _(Logs parent folder for Mover Tuning plugin)_:
 </div>
 
 _(Log files)_:
-: <?if ($moverLogFiles):?><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()'><?foreach ($moverLogFiles as $moverLogFile):?><option value='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>' title='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>'><?=htmlspecialchars(moverLogLabel($moverLogFile))?></option><?endforeach;?></select><span style='display:flex;gap:1.5rem'><a id='moverLogView' href='/plugins/ca.mover.tuning/viewLog.php?file=<?=rawurlencode($moverLogFiles[0])?>' target='_blank' rel='noopener'><i class='fa fa-file-text-o'></i> _(View)_</a><a id='moverLogSave' href='/plugins/ca.mover.tuning/viewLog.php?download=1&amp;file=<?=rawurlencode($moverLogFiles[0])?>'><i class='fa fa-download'></i> _(Download)_</a></span><?else:?>_(No log files yet)_<?endif;?>
+: <span id='moverLogNone' style='display:none'>_(No log files yet)_</span><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()' style='display:none'></select><span id='moverLogLinks' style='display:none;gap:1.5rem'><a id='moverLogView' target='_blank' rel='noopener'><i class='fa fa-file-text-o'></i> _(View)_</a><a id='moverLogSave'><i class='fa fa-download'></i> _(Download)_</a></span>
 
 :mover_tune_logfiles_plug:
 
 > The newest file is on top: the log of the latest run. <strong>View</strong> opens it in a new browser tab.
 
 :end
+
+<script>
+mtShowLogs(<?=json_encode($moverLogFiles)?>);
+</script>
 
 <div markdown="1" class="moverTuningSettings">
 
