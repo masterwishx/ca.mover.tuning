@@ -23,12 +23,4 @@ function moverLogFiles(array $cfg): array {
 function moverLogStamp(string $name): string {
   return substr($name, strrpos($name, '_') + 1, 17);
 }
-
-// Picker text, e.g. "2026-11-07 00:00:01 – Debug log"; needs the page's _()
-function moverLogLabel(string $name): string {
-  $kinds = ['Mover_tuning' => _('Mover log'), 'Debug_Mover_tuning' => _('Debug log'), 'Summary' => _('Summary')];
-  $stamp = moverLogStamp($name);
-  $kind = substr($name, 0, strrpos($name, '_'));
-  return substr($stamp, 0, 10) . ' ' . implode(':', str_split(substr($stamp, 11), 2)) . ' – ' . ($kinds[$kind] ?? $kind);
-}
 ?>
