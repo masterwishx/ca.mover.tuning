@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Revert "fix: update log file icons to white for better visibility" (40de236)
+- fix: update log file icons to white for better visibility
+- Give the log list request a timeout (eeaab1d)
+- Put the log icons outside their links, in the theme's text colour (d8dadc5)
+- Send one log list request at a time (49fa309)
+- Refresh the Log files list while the tab is open (623d9e4)
+
 ## 2026.11.07a (beta)
 
 - feat: Pause and Resume on Main and the Mover Tuning tab while files move. (chodeus)
