@@ -757,7 +757,7 @@ _(Logs parent folder for Mover Tuning plugin)_:
 </div>
 
 _(Log files)_:
-: <?if ($moverLogFiles):?><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()'><?foreach ($moverLogFiles as $moverLogFile):?><option value='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>' title='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>'><?=htmlspecialchars(moverLogLabel($moverLogFile))?></option><?endforeach;?></select><span style='display:flex;gap:1.5rem'><a id='moverLogView' href='/plugins/ca.mover.tuning/viewLog.php?file=<?=rawurlencode($moverLogFiles[0])?>' target='_blank' rel='noopener'><i class='fa fa-file-text-o'></i> _(View)_</a><a id='moverLogSave' href='/plugins/ca.mover.tuning/viewLog.php?download=1&amp;file=<?=rawurlencode($moverLogFiles[0])?>'><i class='fa fa-download'></i> _(Download)_</a></span><?else:?>_(No log files yet)_<?endif;?>
+: <?if ($moverLogFiles):?><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()'><?foreach ($moverLogFiles as $moverLogFile):?><option value='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>' title='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>'><?=htmlspecialchars(moverLogLabel($moverLogFile))?></option><?endforeach;?></select><span style='display:flex;gap:1.5rem'><a id='moverLogView' href='/plugins/ca.mover.tuning/viewLog.php?file=<?=rawurlencode($moverLogFiles[0])?>' target='_blank' rel='noopener'><i class='fa fa-file-text-o' style='color:#fff'></i> _(View)_</a><a id='moverLogSave' href='/plugins/ca.mover.tuning/viewLog.php?download=1&amp;file=<?=rawurlencode($moverLogFiles[0])?>'><i class='fa fa-download' style='color:#fff'></i> _(Download)_</a></span><?else:?>_(No log files yet)_<?endif;?>
 
 :mover_tune_logfiles_plug:
 
