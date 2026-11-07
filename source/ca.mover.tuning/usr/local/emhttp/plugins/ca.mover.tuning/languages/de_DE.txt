@@ -19,6 +19,7 @@ Before proceeding, click on an option or press F1 to read detailed descriptions 
 by=von
 Cache disk not enabled=Cache‑Pool ist nicht aktiviert!
 Cache watchdog=Cache-Watchdog
+Cache watchdog %s is at %s, at or above the trigger level of %s Resuming the paused Mover Tuning run=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Der pausierte Mover-Tuning-Lauf wird fortgesetzt.
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache-Watchdog: %s ist zu %s belegt, auf oder über der Auslöseschwelle von %s. Mover Tuning wird gestartet.
 Cache → Array=Cache → Speicherverbund
 Cancel=Abbrechen
@@ -27,6 +28,7 @@ Clean empty ZFS datasets=Leere ZFS‑Datasets bereinigen
 CLI help commands=CLI‑Hilfebefehle
 Comma separated list of file types=Kommagetrennte Liste von Dateitypen
 Cron Schedule to force move all of files=Cron‑Zeitplan zum erzwungenen Verschieben aller Dateien
+Debug log=Debug‑Protokoll
 Debug Log Mover Tuning plugin actions=Debug‑Protokoll der Aktionen des Mover‑Tuning‑Plugins
 Defaults=Standardwerte
 Delete Mover helper files over than this days old=Hilfsdateien der Datenverschiebung löschen, die älter als diese Anzahl Tage sind
@@ -35,6 +37,7 @@ Disable Mover running on a schedule=Zeitplan für Datenverschiebung deaktivieren
 disables test mode=deaktiviert den Testmodus
 disables the plugins schedule=deaktiviert den Zeitplan des Plugins
 disables validation of input filenames=deaktiviert die Prüfung von Dateinamen
+Download=Herunterladen
 enable smart caching=Intelligentes Caching aktivieren
 Error checking mover status Please refresh the page=Fehler beim Prüfen des Status der Datenverschiebung. Bitte Seite aktualisieren.
 Error Config file %s not found=Fehler: Konfigurationsdatei %s wurde nicht gefunden.
@@ -75,6 +78,7 @@ Ignore file types=Dateitypen ignorieren
 Invalid characters to block=Ungültige Zeichen zum Blockieren
 Largest first=Größte zuerst
 Let scheduled mover run during a parity check rebuild=Zeitplan für Datenverschiebung während Paritätsprüfung/Wiederherstellung erlauben
+Log files=Protokolldateien
 Log Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins protokollieren
 Logs parent folder for Mover Tuning plugin=Übergeordneter Ordner für Protokolle des Mover‑Tuning‑Plugins
 Low=Niedrig
@@ -105,6 +109,7 @@ Move now=Jetzt verschieben
 Move Now=Jetzt verschieben
 Move Now button follows plug-in filters=„Jetzt verschieben“ folgt den Plugin‑Filtern
 Mover is running=Datenverschiebung läuft…
+Mover log=Protokoll
 Mover Tuning=Mover‑Tuning
 Mover Tuning - Filters=Mover‑Tuning – Filter
 Mover Tuning - Help=Mover‑Tuning – Hilfe
@@ -118,6 +123,7 @@ Mover Tuning settings are available for existing shares only=Mover‑Tuning‑Ei
 Mover Tuning settings not available for this share=Mover‑Tuning‑Einstellungen für diese Freigabe nicht verfügbar
 Mover Tuning thresholds=Mover‑Tuning‑Schwellwerte
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Keine Dateien wurden durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
+No log files yet=Noch keine Protokolldateien
 Not Applicable Share Does Not Exist Yet=Nicht anwendbar (Freigabe existiert noch nicht)
 Notify Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins melden
 Oldest first=Älteste zuerst
@@ -127,12 +133,15 @@ Only move if above this threshold of used Primary cache space=Nur verschieben, w
 Open=Öffnen
 Overall Progress=Gesamtfortschritt
 Override Mover Tuning settings for this share=Mover‑Tuning‑Einstellungen für diese Freigabe überschreiben
+Pause=Pausieren
+Pause moving files until Resume, the next scheduled run or a cache watchdog trigger=Verschieben pausieren bis Fortsetzen, bis zum nächsten geplanten Lauf oder bis der Cache-Watchdog auslöst
 Plugin mover=Plugin‑Mover
 Plugin thread @ Unraid community=Plugin‑Thread in der Unraid‑Community
 Priority for disk IO=Priorität für Datenträger‑I/O
 Priority for mover process=Priorität für Datenverschiebungs‑Prozess
 Rebalance shares=Freigaben neu verteilen
 Reset Mover Tuning to defaults=Mover Tuning auf Standardwerte zurücksetzen?
+Resume=Fortsetzen
 Resynchronize all Primary files to Secondary=Alle Dateien des Primärspeichers mit dem Sekundärspeicher neu synchronisieren
 Rsync=Rsync
 Run Mover Tuning=Mover‑Tuning ausführen…
@@ -150,6 +159,7 @@ Smallest first=Kleinste zuerst
 Speed=Geschwindigkeit
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Ab Unraid 7.2.1 hat sich das Verhalten des Mover‑Tuning‑Plugins geändert
 Start Mover Tuning=Mover‑Tuning starten
+Summary=Zusammenfassung
 Sync files based on maximum size=Dateien basierend auf Maximalgröße synchronisieren
 Sync files that are smaller than this size In MB=Dateien synchronisieren, die kleiner sind als diese Größe (in MB)
 Synchronize Primary files to Secondary=Dateien des Primärspeichers mit dem Sekundärspeicher synchronisieren
@@ -173,6 +183,7 @@ Used IDE=Verwendete IDE
 User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
 Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
 Very Low=Sehr niedrig
+View=Anzeigen
 Want to support the developer and say Thank You=Möchtest du den Entwickler unterstützen und **Danke** sagen?
 Watchdog trigger level=Auslöseschwelle des Watchdogs
 Watchdog trigger level raised to %1 to stay above the moving threshold=Auslöseschwelle des Watchdogs auf %1 erhöht, um über der Verschiebegrenze zu bleiben.
@@ -282,6 +293,10 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 > Pfad zum übergeordneten Log‑Ordner <strong><em>/tmp</em></strong>. Protokolle werden standardmäßig unter <strong><em>/tmp/ca.mover.tuning</em></strong> gespeichert.
 :end
 
+:mover_tune_logfiles_plug:
+> Die neueste Datei steht oben: das Protokoll des letzten Laufs. <strong>Anzeigen</strong> öffnet sie in einem neuen Browser-Tab.
+:end
+
 :mover_tune_logfilesdaysold_plug:
 > Anzahl der **Tage**, nach denen Logdateien (**_*.log_**) und Textdateien (**_*.txt_**) automatisch gelöscht werden sollen.
 :end
@@ -295,7 +310,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :end
 
 :mover_tune_parity_plug:
-> Bei <strong>Nein</strong> wird ein geplanter Lauf, der in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen. Von Hand gestartete Läufe (<strong>Jetzt verschieben</strong>, das Verschieben einer einzelnen Freigabe, die CLI) und der Cache-Watchdog laufen trotzdem.
+> Bei <strong>Nein</strong> wird ein geplanter Lauf, der in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen. Eine pausierte Prüfung oder Wiederherstellung zählt nicht. Von Hand gestartete Läufe (<strong>Jetzt verschieben</strong>, das Verschieben einer einzelnen Freigabe, die CLI) und der Cache-Watchdog laufen trotzdem.
 :end
 
 :mover_tune_moverio_plug:
@@ -316,7 +331,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p>Ein Cron‑Zeitplan für erzwungenes Verschieben führt die Datenverschiebung unabhängig von Regeln aus.</p>
 <p>Beispiel: In den Mover‑Einstellungen ist „Stündlich“ eingestellt. Die Regeln gelten während dieses Zeitplans.</p>
 <p>Ein Cron‑Eintrag wie <strong>30 03 * * *</strong> würde jedoch <strong>täglich um 03:30 Uhr</strong> alle Dateien verschieben – unabhängig von Regeln.</p>
-<p><strong>Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung</strong>: Bei <strong>Nein</strong> wird ein erzwungenes Verschieben, das in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen; bei <strong>Ja</strong> läuft es trotzdem.</p>
+<p><strong>Erlaubt das erzwungene Ausführen der Datenverschiebung während einer Paritätsprüfung oder Wiederherstellung</strong>: Bei <strong>Nein</strong> wird ein erzwungenes Verschieben, das in eine Paritätsprüfung oder Wiederherstellung fällt, bis zum nächsten geplanten Zeitpunkt übersprungen; bei <strong>Ja</strong> läuft es trotzdem. Eine pausierte Prüfung oder Wiederherstellung zählt nicht.</p>
 <p>Der Zeitplan muss ein gültiger Cron‑Eintrag sein: Ein ungültiger wird nicht übernommen, und der Fehler wird ins Syslog geschrieben.</p>
 :end
 
@@ -435,6 +450,7 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 <p>Legt fest, welches Werkzeug zum Verschieben von Dateien unter Verwendung der Plugin‑Filter genutzt wird: <strong>Rsync</strong> oder <strong>Move</strong> (Unraid‑Standard).</p>
 <p><strong>Move</strong> – verwendet Unraid‑Move zum Verschieben, aber weiterhin <strong>Rsync</strong> zum Synchronisieren.</p>
 <p><strong>Rsync</strong> – verwendet Rsync zum Verschieben und Synchronisieren.</p>
+<p><strong>Pausieren</strong> hält eine <strong>Rsync</strong>-Kopie sofort an; mit <strong>Move</strong> wartet es, bis die aktuelle Datei fertig ist.</p>
 :end
 
 :mover_tune_moveinuse_plug:

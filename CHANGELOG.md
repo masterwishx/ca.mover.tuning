@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased
+
+- feat: Pause and Resume a run from Main or the Mover Tuning tab. (chodeus)
+- feat: With the move tool, Pause waits for the current file to finish. (chodeus)
+- feat: The next scheduled run or cache watchdog resumes a forgotten pause. (chodeus)
+- feat: View or download any run's log from the Mover Tuning tab. (luuvasara)
+- fix: A paused parity check or rebuild no longer blocks scheduled moves. (chodeus)
+- fix: The parity help for a paused check is now translated. (chodeus)
+- fix: Size left, speed and ETA now update while a file moves. (chodeus)
+- fix: Turbo write is now restored after a Soft Stop. (chodeus)
+- fix: mover softstop and status now work on Unraid before 7.2.1. (chodeus)
+
+## 2026.11.07a (beta)
+
+- feat: Pause and Resume on Main and the Mover Tuning tab while files move. (chodeus)
+- feat: Rsync copies pause at once; the move tool pauses after the current file. (chodeus)
+- feat: The next scheduled run or the cache watchdog resumes a forgotten pause. (chodeus)
+- feat: View or download any run's log from the Mover Tuning tab. (luuvasara)
+- fix: Turbo write is now restored after a Soft Stop. (chodeus)
+- fix: On Unraid before 7.2.1, mover softstop and status now work during a run. (chodeus)
+
+## 2026.11.05b (beta)
+
+- fix: The parity help now says in every language that a paused check or rebuild does not count. (chodeus)
+
+## 2026.11.05a (beta)
+
+- fix: A paused parity check or rebuild no longer blocks scheduled and forced moves. (chodeus)
+- fix: The size left, speed and ETA now update every 5 seconds while a file moves, not only after each file. With the move tool they step every 2 GiB. (chodeus)
+
 ## 2026.10.30
 
 - fix: A blank Log parent folder no longer bloats the settings file and floods /var/log. (masterwishx)
