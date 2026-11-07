@@ -148,8 +148,12 @@ function mtShowLogs(names) {
   mtLogLinks();
 }
 $(function() {
+  // one request at a time, so an older reply can never land after a newer one
+  var asking = false;
   function poll() {
-    if (document.hidden !== true) $.getJSON('/plugins/ca.mover.tuning/logList.php', {_: Date.now()}).done(mtShowLogs);
+    if (document.hidden === true || asking === true) return;
+    asking = true;
+    $.getJSON('/plugins/ca.mover.tuning/logList.php', {_: Date.now()}).done(mtShowLogs).always(function() { asking = false; });
   }
   setInterval(poll, 10000);
   document.addEventListener('visibilitychange', poll);
