@@ -783,7 +783,7 @@ _(Logs parent folder for Mover Tuning plugin)_:
 </div>
 
 _(Log files)_:
-: <span id='moverLogNone' style='display:none'>_(No log files yet)_</span><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()' style='display:none'></select><span id='moverLogLinks' style='display:none;gap:1.5rem'><a id='moverLogView' target='_blank' rel='noopener'><i class='fa fa-file-text-o'></i> _(View)_</a><a id='moverLogSave'><i class='fa fa-download'></i> _(Download)_</a></span>
+: <span id='moverLogNone' style='display:none'>_(No log files yet)_</span><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()' style='display:none'></select><span id='moverLogLinks' style='display:none;gap:1.5rem'><a id='moverLogView' target='_blank' rel='noopener'><i class='fa fa-file-text-o' style='color:#fff'></i> _(View)_</a><a id='moverLogSave'><i class='fa fa-download' style='color:#fff'></i> _(Download)_</a></span>
 
 :mover_tune_logfiles_plug:
 
