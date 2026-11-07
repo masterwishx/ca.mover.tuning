@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.11.07a (beta)
 
 - feat: Pause and Resume on Main and the Mover Tuning tab while files move. (chodeus)
 - feat: Rsync copies pause at once; the move tool pauses after the current file. (chodeus)

@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.11.05b">
-<!ENTITY md5       "da8d54841d05168d2bc2d3a2c6f70e4e">
+<!ENTITY version   "2026.11.07a">
+<!ENTITY md5       "60aef1dd6904bc71962ef52cc9baa4b2">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -14,6 +14,14 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.11.07a
+- feat: Pause and Resume on Main and the Mover Tuning tab while files move. (chodeus)
+- feat: Rsync copies pause at once; the move tool pauses after the current file. (chodeus)
+- feat: The next scheduled run or the cache watchdog resumes a forgotten pause. (chodeus)
+- feat: View or download any run's log from the Mover Tuning tab. (luuvasara)
+- fix: Turbo write is now restored after a Soft Stop. (chodeus)
+- fix: On Unraid before 7.2.1, mover softstop and status now work during a run. (chodeus)
+
 ###2026.11.05b
 - fix: The parity help now says in every language that a paused check or rebuild does not count. (chodeus)
 
