@@ -10,6 +10,8 @@ UNRAID_CRON="/boot/config/plugins/dynamix/mover.cron*"
 OVERRIDE_CFGFOLDER="/boot/config/plugins/ca.mover.tuning/shareOverrideConfig"
 PIDFILE="/var/run/mover.pid"
 SOFTSTOPFILE="/var/run/moversoft.stop"
+PAUSEFILE="/var/run/mover.pause"
+MOVINGFILE="/var/run/mover.moving"
 
 # Get parent Logs Folder from config, if blank set to default /tmp
 # First match only: duplicate keys in the cfg must never produce a multi-line path
@@ -226,6 +228,8 @@ mover_state() {
         echo "absent"
     fi
     [ -e "$SOFTSTOPFILE" ] && echo "### $SOFTSTOPFILE present"
+    [ -e "$PAUSEFILE" ] && echo "### $PAUSEFILE present"
+    [ -e "$MOVINGFILE" ] && echo "### $MOVINGFILE: $(cat "$MOVINGFILE")"
     echo "### mover processes"
     pgrep -af 'age_mover|share_mover|sbin/mover|unraid/move' || echo "none"
     echo "### emhttpd"

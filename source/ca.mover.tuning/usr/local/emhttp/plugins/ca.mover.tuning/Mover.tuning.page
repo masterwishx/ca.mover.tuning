@@ -13,6 +13,8 @@ $plugin = 'ca.mover.tuning';
 $config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 $config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
 $cfg = parse_plugin_cfg($plugin);
+require_once '/usr/local/emhttp/plugins/ca.mover.tuning/logFiles.php';
+$moverLogFiles = array_keys(moverLogFiles($cfg));
 $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
 $advancedOptions =  ($cfg['advancedOptions'] != "yes") ? "no" : "yes";
@@ -120,6 +122,12 @@ function updateCron() {
 	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled,watchdog:watchdog});
 }
 
+// the View and Download links follow the file picked in the Log files row
+function mtLogLinks() {
+  var file = encodeURIComponent(document.getElementById('moverLogFile').value);
+  document.getElementById('moverLogView').href = '/plugins/ca.mover.tuning/viewLog.php?file=' + file;
+  document.getElementById('moverLogSave').href = '/plugins/ca.mover.tuning/viewLog.php?download=1&file=' + file;
+}
 // An emptied Log parent folder is posted as the /tmp default, never as an empty loggingFolder
 function mtDefaultLogFolder(form) {
   var $f = $(form).find('input[name="loggingFolder"]');
@@ -746,6 +754,19 @@ _(Logs parent folder for Mover Tuning plugin)_:
 
 :end
 
+</div>
+
+_(Log files)_:
+: <?if ($moverLogFiles):?><select id='moverLogFile' aria-label='_(Log files)_' onchange='mtLogLinks()'><?foreach ($moverLogFiles as $moverLogFile):?><option value='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>' title='<?=htmlspecialchars($moverLogFile, ENT_QUOTES)?>'><?=htmlspecialchars(moverLogLabel($moverLogFile))?></option><?endforeach;?></select><span style='display:flex;gap:1.5rem'><a id='moverLogView' href='/plugins/ca.mover.tuning/viewLog.php?file=<?=rawurlencode($moverLogFiles[0])?>' target='_blank' rel='noopener'><i class='fa fa-file-text-o'></i> _(View)_</a><a id='moverLogSave' href='/plugins/ca.mover.tuning/viewLog.php?download=1&amp;file=<?=rawurlencode($moverLogFiles[0])?>'><i class='fa fa-download'></i> _(Download)_</a></span><?else:?>_(No log files yet)_<?endif;?>
+
+:mover_tune_logfiles_plug:
+
+> The newest file is on top: the log of the latest run. <strong>View</strong> opens it in a new browser tab.
+
+:end
+
+<div markdown="1" class="moverTuningSettings">
+
 _(Delete Mover Log files over than this days old)_:
 : <select name="logfilesDaysold" size="1" class='logfilesDaysold'>
 <?=mk_option($cfg['logfilesDaysold'], 1, "1")?>
@@ -814,7 +835,7 @@ _(Let scheduled mover run during a parity check / rebuild)_:
 
 :mover_tune_parity_plug:
 
-> With <strong>No</strong>, a scheduled run that falls during a parity check or disk rebuild is skipped until its next scheduled time. Runs started by hand (<strong>Move now</strong>, the per-share <strong>Move</strong>, the CLI) and the cache watchdog still run.
+> With <strong>No</strong>, a scheduled run that falls during a parity check or disk rebuild is skipped until its next scheduled time. A paused check or rebuild does not count. Runs started by hand (<strong>Move now</strong>, the per-share <strong>Move</strong>, the CLI) and the cache watchdog still run.
 
 :end
 
@@ -874,7 +895,7 @@ _(Allow force mover schedule to run during a parity check/rebuild)_:
 <p>Setting a cron schedule to force a move will run mover on that schedule.</p>
 <p>Example: In Mover Settings you would have a schedule of Hourly. During that schedule the rules above are followed.</p>
 <p>The cron schedule for a force move could be set to <strong>30 03 * * *</strong> which would force all files to be moved at <strong>3:30 AM</strong> every day regardless of the rules</p>
-<p><strong>Allow force mover schedule to run during a parity check/rebuild</strong>: with <strong>No</strong>, a forced move that falls during a parity check or disk rebuild is skipped until its next scheduled time; with <strong>Yes</strong>, it runs anyway.</p>
+<p><strong>Allow force mover schedule to run during a parity check/rebuild</strong>: with <strong>No</strong>, a forced move that falls during a parity check or disk rebuild is skipped until its next scheduled time; with <strong>Yes</strong>, it runs anyway. A paused check or rebuild does not count.</p>
 <p>The schedule must be a valid cron entry: an invalid one is not applied, and the error is written to the syslog.</p>
 :end
 </blockquote>
@@ -1261,6 +1282,7 @@ _(Move files tool)_:
 <p>This will change the tool used for moving files with <strong>plugin filters</strong>, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.</p>
 <p><strong>Move</strong> - Use Unraid's built-in file-moving tool for moving, but continue to use <strong>Rsync</strong> for syncing files.</p>
 <p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
+<p><strong>Pause</strong> holds an <strong>Rsync</strong> copy at once; with <strong>Move</strong> it waits until the current file is done.</p>
 :end
 </blockquote>
 

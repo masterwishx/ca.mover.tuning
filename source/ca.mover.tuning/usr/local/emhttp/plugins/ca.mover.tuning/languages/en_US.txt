@@ -21,6 +21,7 @@ Before proceeding, click on an option or press F1 to read detailed descriptions 
 by=
 Cache disk not enabled=Cache disk not enabled!
 Cache watchdog=
+Cache watchdog %s is at %s, at or above the trigger level of %s Resuming the paused Mover Tuning run=Cache watchdog: %s is at %s, at or above the trigger level of %s. Resuming the paused Mover Tuning run.
 Cache watchdog %s is at %s, at or above the trigger level of %s Starting Mover Tuning=Cache watchdog: %s is at %s, at or above the trigger level of %s. Starting Mover Tuning.
 Cache → Array=
 Cancel=
@@ -29,6 +30,7 @@ Clean empty ZFS datasets=
 CLI help commands=
 Comma separated list of file types=
 Cron Schedule to force move all of files=
+Debug log=
 Debug Log Mover Tuning plugin actions=
 Defaults=
 Delete Mover helper files over than this days old=
@@ -37,6 +39,7 @@ Disable Mover running on a schedule=
 disables test mode=
 disables the plugins schedule=disables the plugin's schedule
 disables validation of input filenames=
+Download=
 enable smart caching=
 Error checking mover status Please refresh the page=Error checking mover status. Please refresh the page.
 Error Config file %s not found=Error: Config file '%s' not found.
@@ -77,6 +80,7 @@ Ignore file types=
 Invalid characters to block=
 Largest first=
 Let scheduled mover run during a parity check rebuild=Let scheduled mover run during a parity check / rebuild
+Log files=
 Log Mover Tuning plugin actions=
 Logs parent folder for Mover Tuning plugin=
 Low=
@@ -107,6 +111,7 @@ Move now=
 Move Now=
 Move Now button follows plug-in filters=
 Mover is running=Mover is running...
+Mover log=
 Mover Tuning=
 Mover Tuning - Filters=
 Mover Tuning - Help=
@@ -120,6 +125,7 @@ Mover Tuning settings are available for existing shares only=Mover Tuning settin
 Mover Tuning settings not available for this share=
 Mover Tuning thresholds=
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=No files were moved/synced by Mover Tuning plugin. Elapsed time: %s
+No log files yet=
 Not Applicable Share Does Not Exist Yet=Not Applicable (Share Does Not Exist Yet)
 Notify Mover Tuning plugin actions=
 Oldest first=
@@ -129,12 +135,15 @@ Only move if above this threshold of used Primary cache space=Only move if above
 Open=
 Overall Progress=
 Override Mover Tuning settings for this share=
+Pause=
+Pause moving files until Resume, the next scheduled run or a cache watchdog trigger=
 Plugin mover=
 Plugin thread @ Unraid community=
 Priority for disk IO=Priority for disk I/O
 Priority for mover process=
 Rebalance shares=
 Reset Mover Tuning to defaults=Reset Mover Tuning to defaults?
+Resume=
 Resynchronize all Primary files to Secondary=
 Rsync=
 Run Mover Tuning=Run Mover Tuning...
@@ -152,6 +161,7 @@ Smallest first=
 Speed=
 Starting with Unraid 721, Mover Tuning plugin behavior has changed=Starting with Unraid 7.2.1, Mover Tuning plugin behavior has changed
 Start Mover Tuning=
+Summary=
 Sync files based on maximum size=
 Sync files that are smaller than this size In MB=Sync files that are smaller than this size (In MB)
 Synchronize Primary files to Secondary=
@@ -175,6 +185,7 @@ Used IDE=
 User shares not enabled=User shares not enabled!
 Validate input filenames to prevent attacks=
 Very Low=
+View=
 Want to support the developer and say Thank You=Want to support the developer and say **Thank You**?
 Watchdog trigger level=
 Watchdog trigger level raised to %1 to stay above the moving threshold=Watchdog trigger level raised to %1 to stay above the moving threshold.
@@ -284,6 +295,10 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 > Path to a parent Logs folder <strong><em>/tmp</em></strong>. Logs are stored at this parent path, by default at <strong><em>/tmp/ca.mover.tuning</em></strong>.
 :end
 
+:mover_tune_logfiles_plug:
+> The newest file is on top: the log of the latest run. <strong>View</strong> opens it in a new browser tab.
+:end
+
 :mover_tune_logfilesdaysold_plug:
 > Select the number of **days old** for Mover Tuning plugin to delete log files **_*.log_** and text files **_*.txt_**.
 :end
@@ -297,7 +312,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :end
 
 :mover_tune_parity_plug:
-> With <strong>No</strong>, a scheduled run that falls during a parity check or disk rebuild is skipped until its next scheduled time. Runs started by hand (<strong>Move now</strong>, the per-share <strong>Move</strong>, the CLI) and the cache watchdog still run.
+> With <strong>No</strong>, a scheduled run that falls during a parity check or disk rebuild is skipped until its next scheduled time. A paused check or rebuild does not count. Runs started by hand (<strong>Move now</strong>, the per-share <strong>Move</strong>, the CLI) and the cache watchdog still run.
 :end
 
 :mover_tune_moverio_plug:
@@ -318,7 +333,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 <p>Setting a cron schedule to force a move will run mover on that schedule.</p>
 <p>Example: In Mover Settings you would have a schedule of Hourly. During that schedule the rules above are followed.</p>
 <p>The cron schedule for a force move could be set to <strong>30 03 * * *</strong> which would force all files to be moved at <strong>3:30 AM</strong> every day regardless of the rules</p>
-<p><strong>Allow force mover schedule to run during a parity check/rebuild</strong>: with <strong>No</strong>, a forced move that falls during a parity check or disk rebuild is skipped until its next scheduled time; with <strong>Yes</strong>, it runs anyway.</p>
+<p><strong>Allow force mover schedule to run during a parity check/rebuild</strong>: with <strong>No</strong>, a forced move that falls during a parity check or disk rebuild is skipped until its next scheduled time; with <strong>Yes</strong>, it runs anyway. A paused check or rebuild does not count.</p>
 <p>The schedule must be a valid cron entry: an invalid one is not applied, and the error is written to the syslog.</p>
 :end
 
@@ -436,6 +451,7 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 <p>This will change the tool used for moving files with <strong>plugin filters</strong>, allowing you to select between <strong>Rsync</strong> or <strong>Move</strong> Unraid's built-in file-moving utility.</p>
 <p><strong>Move</strong> - Use Unraid's built-in file-moving tool for moving, but continue to use <strong>Rsync</strong> for syncing files.</p>
 <p><strong>Rsync</strong> - Use Rsync for both moving and syncing files.</p>
+<p><strong>Pause</strong> holds an <strong>Rsync</strong> copy at once; with <strong>Move</strong> it waits until the current file is done.</p>
 :end
 
 :mover_tune_moveinuse_plug:
