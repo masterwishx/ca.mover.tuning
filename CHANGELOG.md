@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- fix: update log file icons to white for better visibility
+
 ## 2026.11.07a (beta)
 
 - feat: Pause and Resume on Main and the Mover Tuning tab while files move. (chodeus)
