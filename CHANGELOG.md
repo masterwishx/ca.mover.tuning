@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- fix: The Log files list now shows new logs without a page reload. (chodeus)
+- fix: The Log files icons now follow the theme's text colour. (chodeus)
+
 ## 2026.11.07a (beta)
 
 - feat: Pause and Resume on Main and the Mover Tuning tab while files move. (chodeus)
