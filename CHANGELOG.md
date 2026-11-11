@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- fix: Updating the plugin during a move no longer hides the running mover. (chodeus)
+
 ## 2026.11.07b (beta)
 
 - fix: The Log files list now shows new logs without a page reload. (chodeus)
