@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- fix: The Log files list now shows new logs without a page reload. (chodeus)
+- fix: The Log files icons now follow the theme's text colour. (chodeus)
+- fix: Updating the plugin during a move no longer hides the running mover. (chodeus)
+
 ## 2026.11.11a (beta)
 
 - fix: Updating the plugin during a move no longer hides the running mover. (chodeus)
