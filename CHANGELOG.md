@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.11.11a (beta)
 
 - fix: Updating the plugin during a move no longer hides the running mover. (chodeus)
 
