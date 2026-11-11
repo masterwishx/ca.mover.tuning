@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Keep a running mover's pid file when the plugin is installed or removed (06fd68c)
+- fix: Updating the plugin during a move no longer hides the running mover. (chodeus)
 
 ## 2026.11.07b (beta)
 
