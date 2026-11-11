@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Keep a running mover's pid file when the plugin is installed or removed (06fd68c)
+
 ## 2026.11.07b (beta)
 
 - fix: The Log files list now shows new logs without a page reload. (chodeus)
