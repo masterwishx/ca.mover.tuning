@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.11.13
 
 - fix: The Log files list now shows new logs without a page reload. (chodeus)
 - fix: The Log files icons now follow the theme's text colour. (chodeus)
