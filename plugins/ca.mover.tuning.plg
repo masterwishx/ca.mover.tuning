@@ -799,17 +799,33 @@ else
     chmod +x /usr/local/sbin/mover
 fi
 
-# Clean leftover run-state files only if age_mover is NOT running
-if ! pgrep -f "age_mover" >/dev/null 2>&amp;1; then
+# A run the plugin started: one of these is alive from its before script to its after script
+plugin_run_active() {
+  pgrep -f "age_mover|share_mover|ca\.mover\.tuning/with_scripts" >/dev/null 2>&amp;1
+}
+
+# Removes mover.pid unless its pid is a mover: Unraid's own mover writes this file too
+remove_stale_mover_pid() {
+  local pid
+  pid=$(cat /var/run/mover.pid 2>/dev/null)
+  # a whole argument must name a mover: "mover" alone is also inside every ca.mover.tuning path
+  if grep -qszE '^(.*/)?(age_|share_)?mover(\.old)?$' "/proc/$pid/cmdline"; then
+    return 0
+  fi
+  # a mover that started after the read above has put its own pid in the file
+  if [[ "$(cat /var/run/mover.pid 2>/dev/null)" == "$pid" ]]; then
+    rm -f /var/run/mover.pid
+  fi
+}
+
+# Clean leftover run-state files unless a run of the plugin is in progress
+if ! plugin_run_active; then
   echo "Cleaning leftover lock/stop files..."
-  for file in mover.pid moversoft.stop mover.pause mover.moving; do
-    if [[ -e "/var/run/$file" ]]; then
-      rm -f "/var/run/$file"
-    fi
-  done
+  rm -f /var/run/moversoft.stop /var/run/mover.pause /var/run/mover.moving
+  remove_stale_mover_pid
 else
   # no exit here: the permissions, symlink and cron refresh below must run even during a mover run
-  echo "age_mover is running - leaving its lock/stop files in place."
+  echo "A Mover Tuning run is in progress - leaving its lock/stop files in place."
 fi
 
 # Renaming mover.cron.disabled to mover.cron if exists (from old cron fix)
@@ -876,18 +892,33 @@ The 'remove' script.
 -->
 <FILE Run="/bin/bash" Method="remove">
 <INLINE>
-# Clean leftover run-state files only if age_mover is NOT running
-if ! pgrep -f "age_mover" >/dev/null 2>&amp;1; then
-  echo "Cleaning leftover lock/stop files..."
-  for file in mover.pid moversoft.stop mover.pause mover.moving; do
-    if [[ -e "/var/run/$file" ]]; then
-      rm -f "/var/run/$file"
-    fi
-  done
-else
-  echo "WARNING: age_mover is still running - aborting plugin removal."
+# A run the plugin started: one of these is alive from its before script to its after script
+plugin_run_active() {
+  pgrep -f "age_mover|share_mover|ca\.mover\.tuning/with_scripts" >/dev/null 2>&amp;1
+}
+
+# Removes mover.pid unless its pid is a mover: Unraid's own mover writes this file too
+remove_stale_mover_pid() {
+  local pid
+  pid=$(cat /var/run/mover.pid 2>/dev/null)
+  # a whole argument must name a mover: "mover" alone is also inside every ca.mover.tuning path
+  if grep -qszE '^(.*/)?(age_|share_)?mover(\.old)?$' "/proc/$pid/cmdline"; then
+    return 0
+  fi
+  # a mover that started after the read above has put its own pid in the file
+  if [[ "$(cat /var/run/mover.pid 2>/dev/null)" == "$pid" ]]; then
+    rm -f /var/run/mover.pid
+  fi
+}
+
+# A run of the plugin uses the files removed below; Unraid's own mover does not, so it never blocks removal
+if plugin_run_active; then
+  echo "WARNING: a Mover Tuning run is in progress - aborting plugin removal."
   exit 1
 fi
+echo "Cleaning leftover lock/stop files..."
+rm -f /var/run/moversoft.stop /var/run/mover.pause /var/run/mover.moving
+remove_stale_mover_pid
 
 # Restore the mover this plugin backed up below Unraid 7.2.1 only; 7.4 ships its own mover.old
 UNRAID_VERSION=$(grep '^version=' /etc/unraid-version | cut -d'"' -f2)
