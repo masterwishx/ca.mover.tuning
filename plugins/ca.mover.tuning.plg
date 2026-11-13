@@ -14,6 +14,11 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.11.13
+- fix: The Log files list now shows new logs without a page reload. (chodeus)
+- fix: The Log files icons now follow the theme's text colour. (chodeus)
+- fix: Updating the plugin during a move no longer hides the running mover. (chodeus)
+
 ###2026.11.11a
 - fix: Updating the plugin during a move no longer hides the running mover. (chodeus)
 
