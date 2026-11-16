@@ -22,8 +22,6 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 
 **Unraid 6.9.0-rc2 or newer.** Unraid 7.2.1+ and the 7.4 rc1 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
 
-> **Tip:** click on any option or press **F1** on the settings page to read a detailed description of all settings.
-
 ## Features
 
 **When and what to move**
@@ -125,6 +123,8 @@ You'll find the settings on the Mover Tuning page within Settings - [Scheduler](
 | **Help** | Debug package (.zip), a link to the support thread, GitHub link and a collapsible "CLI help commands" panel. |
 
 Per-share overrides are on each share's own page (Shares → click a share → Mover Tuning).
+
+> **Tip:** click on any option or press **F1** on the settings page to read a detailed description of all settings.
 
 **Plugin Settings**
 
