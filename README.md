@@ -3,11 +3,12 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/6f52a17f3cc6448c99787e6f94fafa65)](https://app.codacy.com/gh/masterwishx/ca.mover.tuning/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![CodeFactor](https://www.codefactor.io/repository/github/masterwishx/ca.mover.tuning/badge)](https://www.codefactor.io/repository/github/masterwishx/ca.mover.tuning)
 
-[![Release](https://img.shields.io/github/v/release/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/masterwishx/ca.mover.tuning/total?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/releases)
-[![License: GPL-2.0](https://img.shields.io/github/license/masterwishx/ca.mover.tuning?style=flat-square)](LICENSE)
-[![Last commit](https://img.shields.io/github/last-commit/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/commits/master)
-[![Stars](https://img.shields.io/github/stars/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/stargazers)
+[![Release](https://img.shields.io/github/v/release/masterwishx/ca.mover.tuning?style=flat-square&label=Release)](https://github.com/masterwishx/ca.mover.tuning/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/masterwishx/ca.mover.tuning/total?style=flat-square&label=Downloads)](https://github.com/masterwishx/ca.mover.tuning/releases)
+[![License: GPL-2.0](https://img.shields.io/github/license/masterwishx/ca.mover.tuning?style=flat-square&label=License)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/masterwishx/ca.mover.tuning?style=flat-square&label=Last%20commit)](https://github.com/masterwishx/ca.mover.tuning/commits/master)
+[![Stars](https://img.shields.io/github/stars/masterwishx/ca.mover.tuning?style=flat-square&label=Stars)](https://github.com/masterwishx/ca.mover.tuning/stargazers)
+[![Unraid](https://img.shields.io/badge/Unraid-6.9.0--rc2%2B-E57A3C?style=flat-square)](#requirements)
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?style=flat-square&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=UDXM742YK5ZV6)
 
@@ -17,7 +18,9 @@ This is an [Unraid](https://unraid.net/) plugin that lets you fine-tune the oper
 
 This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/pulls) from [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning) after review (cosmetics, per-share skipfiletypes merge, automatic age threshold, filename sanitizing, Unraid 7.x compatibility) and adds many new features. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
-**Requires Unraid 6.9.0-rc2 or newer.** Unraid 7.2.1+ and the 7.4 rc1 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
+## Requirements
+
+**Unraid 6.9.0-rc2 or newer.** Unraid 7.2.1+ and the 7.4 rc1 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
 
 > **Tip:** click on any option or press **F1** on the settings page to read a detailed description of all settings.
 
