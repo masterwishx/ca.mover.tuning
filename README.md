@@ -8,7 +8,7 @@
 [![License: GPL-2.0](https://img.shields.io/github/license/masterwishx/ca.mover.tuning?style=flat-square&label=License)](LICENSE)
 [![Last commit](https://img.shields.io/github/last-commit/masterwishx/ca.mover.tuning?style=flat-square&label=Last%20commit)](https://github.com/masterwishx/ca.mover.tuning/commits/master)
 [![Stars](https://img.shields.io/github/stars/masterwishx/ca.mover.tuning?style=flat-square&label=Stars)](https://github.com/masterwishx/ca.mover.tuning/stargazers)
-[![Unraid](https://img.shields.io/badge/Unraid-6.9.0--rc2%2B-E57A3C?style=flat-square)](#requirements)
+[![Unraid](https://img.shields.io/badge/Unraid-6.9.0--rc2%2B-orange?style=flat-square)](#requirements)
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?style=flat-square&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=UDXM742YK5ZV6)
 
