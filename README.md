@@ -22,16 +22,17 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 
 **Unraid 6.9.0-rc2 or newer.** Unraid 7.2.1+ and the 7.4.0 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
 
-## Featuresv
+## Features
 
 ### When and what to move
 
 - Only move files if the cache is getting full: *move above* a threshold of used Primary (cache) space, *free down* to a lower level, and *fill up* (Array → Cache) to a chosen level.
+- Threshold lists adjust to the chosen moving threshold (freeing thresholds stay at or below it, Move All thresholds above it). A warning appears when the freeing threshold is above the moving threshold, and out-of-range saved values are corrected and flagged.
 - Filter by file age ("Auto" enables smart caching), CTIME or ATIME, minimum size, sparseness, hidden files, file types, or a list of ignored files and folders in a text file.
 - **Move order:** oldest, largest or smallest first.
 - Optionally move all files from Primary → Secondary (cache:yes) shares when the pool is above a chosen percentage.
 - **Cache watchdog** (opt-in): monitors the cache and starts a run when the pool reaches a trigger level.
-- Optionally don't run the scheduled mover during a parity check / rebuild (a paused one doesn't count).
+- Optionally don't run the scheduled mover during a parity check / rebuild. A paused check or rebuild does not count, so it no longer blocks scheduled or forced moves.
 - Optionally force a move of all files on a schedule, or disable the scheduled run completely.
 - Files that are in use are left where they are, unless you enable "Move files that are in use".
 - Choose the file-moving tool: **Move** (Unraid's built-in utility) or **Rsync**. Optionally force turbo write and set the priority of the mover process and of disk I/O.
@@ -55,7 +56,8 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 
 - Test Mode (dry run) with clear warnings.
 - Optional filename **validation** with a configurable list of blocked characters.
-- **Live progress** of a run (file being processed, action, overall progress, estimated completion).
+- **Live progress** of a run under the Move button: named steps (filtering, deciding, moving), the file being processed, size left, speed and ETA. Updated every 5 seconds while a file moves (with the Move tool, in 2 GiB steps).
+- Verified results: a move or sync counts as successful only after the file has arrived at the destination and been removed from the source. Successful and failed items are counted and reported separately in logs and notifications.
 - **Pause** and **Resume** buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The per-share Move and the runs of the built-in mover that the plugin starts (forced move, "Move now" without the filters) pause once their current file is done; runs Unraid starts itself are left alone. The next scheduled run or a cache watchdog trigger resumes a paused run.
 - Detailed logs (file only, or file and syslog), configurable log folder and log age, a Log files row that views or downloads any run's log, and a "Run by" entry showing whether the run came from cron, the CLI or the web UI.
 - The log explains why a file did not move (for example "No space left on device") and warns when a share's minimum free space is smaller than the largest file to move.
@@ -69,7 +71,7 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 - Own Mover Tuning schedule, separate from the native mover, with automatic migration of the old schedule.
 - "Move now" button that shows the mover as running until it finishes.
 
-  **Languages:** English, Russian, German, French and Simplified Chinese.
+**Languages:** English, Russian, German, French and Simplified Chinese (interface, help and notifications).
 
 ## How it works
 
@@ -157,7 +159,7 @@ Commands that can be launched from a terminal or a script (`age_mover` is instal
 | --- | --- |
 | `age_mover start` | Starts the age_mover with the settings you set in the GUI. |
 | `age_mover stop` | Forced stop of the age_mover process tree. Not recommended: it can leave partial files and incomplete hardlink transfers. Use `softstop` instead. |
-| `age_mover softstop` | Soft stop (recommended) of a Mover Tuning run. Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. |
+| `age_mover softstop` | Soft stop (recommended) of a Mover Tuning run. Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. Turbo write is restored afterwards. Also works on Unraid before 7.2.1. |
 | `age_mover pause` | Pauses a run that is moving files, like the Pause button: an Rsync copy waits at once, a Move copy once its file is done. |
 | `age_mover resume` | Resumes a paused run. The next scheduled run or a cache watchdog trigger also resumes it. |
 | `age_mover status` | Checks if age_mover is running (also on Unraid before 7.2.1). |
