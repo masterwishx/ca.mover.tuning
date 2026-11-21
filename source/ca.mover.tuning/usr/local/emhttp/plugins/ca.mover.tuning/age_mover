@@ -3058,29 +3058,24 @@ processTheMoves() {
                         if [ -e "${top_folder}/.placeholder" ]; then
                             mvlogger "Not deleting top-level folder: contains .placeholder: ${top_folder}"
                         else
-                            # Count files and subfolders
-                            file_count=$(find "$top_folder" -type f | wc -l)
-                            dir_count=$(find "$top_folder" -mindepth 1 -type d | wc -l)
-
-                            mvDebuglogger "Top folder: $(qp "$top_folder"), share file(s): $file_count, share folder(s): $dir_count" "Clean Top Folder"
-
-                            # Delete only if truly empty
-                            if [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ]; then
-                                if [ "$TESTMODE" = "no" ]; then
-                                    if ! is_zfs_dataset_mountpoint "$top_folder"; then
-                                        if rmdir "$top_folder" 2>/dev/null; then
-                                            mvlogger "Deleted empty top-level folder: $top_folder"
-                                        else
-                                            mvDebuglogger "Failed to delete top-level folder (may not be empty): $top_folder" "Clean Top Folder"
-                                        fi
-                                    else
-                                        mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
-                                    fi
+                            # One immediate entry proves the folder is not empty; never walk the whole share.
+                            top_folder_entry=$(find "$top_folder" -maxdepth 1 -mindepth 1 -print -quit 2>/dev/null)
+                            top_folder_find_rc=$?
+                            if [ "$top_folder_find_rc" -ne 0 ]; then
+                                mvDebuglogger "Failed to check whether top-level folder is empty: $top_folder" "Clean Top Folder"
+                            elif [ -n "$top_folder_entry" ]; then
+                                mvDebuglogger "Top folder contains files or folders: $(qp "$top_folder")" "Clean Top Folder"
+                                mvlogger "Not deleting top-level folder: contains files or folders: ${top_folder}"
+                            elif is_zfs_dataset_mountpoint "$top_folder"; then
+                                mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
+                            elif [ "$TESTMODE" = "no" ]; then
+                                if rmdir "$top_folder" 2>/dev/null; then
+                                    mvlogger "Deleted empty top-level folder: $top_folder"
                                 else
-                                    mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
+                                    mvDebuglogger "Failed to delete top-level folder (may not be empty): $top_folder" "Clean Top Folder"
                                 fi
                             else
-                                mvlogger "Not deleting top-level folder: contains $file_count file(s), $dir_count subfolder(s): ${top_folder}"
+                                mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
                             fi
                         fi
                     fi
