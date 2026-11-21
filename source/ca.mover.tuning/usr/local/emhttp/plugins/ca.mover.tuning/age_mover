@@ -2531,6 +2531,23 @@ move_tool_said() {
     done <<<"$MOVE_OUT"
 }
 
+# Split the fixed action-list columns while leaving the final path byte-for-byte intact. Using
+# IFS='|' with FILEPATH as read's last variable loses a sole trailing delimiter (for example,
+# "share/file|" becomes "share/file"), while paths may legitimately contain that character.
+parseMoverActionRow() {
+    local row="$1" field value
+    local -a fixed_fields=(PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM \
+        THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE)
+
+    for field in "${fixed_fields[@]}"; do
+        [[ "$row" == *"|"* ]] || return 1
+        value=${row%%|*}
+        printf -v "$field" '%s' "$value"
+        row=${row#*|}
+    done
+    FILEPATH=$row
+}
+
 # Internal move engine
 processTheMoves() {
     if [ -e $SOFTSTOPFILE ]; then
@@ -2590,7 +2607,14 @@ processTheMoves() {
     # "keep on primary", "keep on secondary" and "keep misplaced" are not actions, so they are absent
 
     for ACTION_PASS in "${MOVE_ACTIONS[@]}"; do
-        while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH; do
+        while IFS= read -r ACTION_ROW; do
+            # Failure means the row ended before all 14 fixed fields were delimited. Such a row
+            # cannot identify a trustworthy action or path, so report it rather than silently
+            # treating a truncated action-list row as valid. Delimiters in FILEPATH are retained.
+            if ! parseMoverActionRow "$ACTION_ROW"; then
+                mvlogger "Skipping malformed mover action row: fewer than 14 fixed-field delimiters"
+                continue
+            fi
             # before the row's checks, so a long pause cannot leave them stale
             pauseHold
             if [ -e $SOFTSTOPFILE ]; then
@@ -2654,15 +2678,21 @@ processTheMoves() {
             #mvDebuglogger "SYNCED_FILES= $SYNCED_FILES" "SYNCED_FILES"
             #mvDebuglogger "FILEPATH= $FILEPATH" "FILEPATH"
 
-            # Only rows planned the same way join the group: hardlinks in two shares can differ, and
-            # transferring them on one share's plan would apply it to the other. A short group is held below.
-            # Get files to rsync as a real array. Passing the filenames to rsync
-            # via this array (instead of eval) stops the shell from interpreting
-            # spaces, backticks, $(...), redirections, etc. that appear in file names.
-            # every field is compared whole, so a name containing | cannot impersonate another row
-            mapfile -t SYNCED_FILES_ARR < <(awk -F'|' -v links="$NBLINKS" -v inode="$INODE" -v mtime="$MODIFYTIME" -v action="$ACTION" -v src="$SOURCE" -v dst="$DESTINATION" '
-                BEGIN { links = links ""; inode = inode ""; mtime = mtime "" }
-                $4 == mtime && $9 == links && $10 == inode && $11 == action && $12 == src && $13 == dst { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; print src "/./" p }' "$MOVER_ACTIONLIST")
+            # Ordinary files cannot belong to a hardlink group, so their current row is the complete
+            # transfer list. Avoid scanning the full action list for every such file.
+            if [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -le 1 ]; then
+                SYNCED_FILES_ARR=("$SOURCE/./$FILEPATH")
+            else
+                # Only rows planned the same way join the group: hardlinks in two shares can differ, and
+                # transferring them on one share's plan would apply it to the other. A short group is held below.
+                # Get files to rsync as a real array. Passing the filenames to rsync
+                # via this array (instead of eval) stops the shell from interpreting
+                # spaces, backticks, $(...), redirections, etc. that appear in file names.
+                # every field is compared whole, so a name containing | cannot impersonate another row
+                mapfile -t SYNCED_FILES_ARR < <(awk -F'|' -v links="$NBLINKS" -v inode="$INODE" -v mtime="$MODIFYTIME" -v action="$ACTION" -v src="$SOURCE" -v dst="$DESTINATION" '
+                    BEGIN { links = links ""; inode = inode ""; mtime = mtime "" }
+                    $4 == mtime && $9 == links && $10 == inode && $11 == action && $12 == src && $13 == dst { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; print src "/./" p }' "$MOVER_ACTIONLIST")
+            fi
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
@@ -3123,7 +3153,7 @@ processTheMoves() {
                 fi
             fi
             moverStatusWrite
-        done <<<"$(awk -F'|' -v a="$ACTION_PASS" '$11 == a' "$MOVER_ACTIONLIST")"
+        done < <(awk -F'|' -v a="$ACTION_PASS" '$11 == a' "$MOVER_ACTIONLIST")
     done
 
     [ "$INUSEFILES" -gt 0 ] && mvlogger "$INUSEFILES files were in use and stay on the source until a later run"
