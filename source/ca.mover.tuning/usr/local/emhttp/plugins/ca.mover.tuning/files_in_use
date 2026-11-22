@@ -29,6 +29,13 @@
 #                          filesystems) -> hand the whole question to fuser.
 #   This needs Perl because Bash has no way to call fcntl(F_SETLEASE).
 #
+# Files someone else already holds a lease on:
+#   Opening such a file would disturb the holder (Samba with oplocks, for example). Linux starts
+#   breaking the lease and signals the holder as part of the open, even with O_NONBLOCK, which
+#   only skips the wait. So first look the file up in /proc/locks without opening it. A lease
+#   holder has the file open, so a file with a lease is in use and is never opened. If /proc/locks
+#   cannot be read, hand the whole question to fuser, which never opens the files it checks.
+#
 # EAGAIN and EWOULDBLOCK are the same value on Linux. Both are checked only for portability.
 # Neither is a transient "try again" here: each means "in use".
 use strict;
@@ -55,18 +62,42 @@ sub fall_back_to_fuser {
     exit 2;
 }
 
+# Inode numbers of files that some process holds a lease (or NFS delegation) on, read once from
+# /proc/locks. Its lines look like "3: LEASE  ACTIVE    WRITE 1234 00:2d:5678 0 EOF", where
+# 00:2d:5678 is the filesystem's major:minor device and the inode. Only the inode is compared:
+# stat's device differs from that of /proc/locks on some filesystems (btrfs subvolumes, for
+# example). Two files with the same inode number on different filesystems can make a file look
+# in use, which only leaves it for a later run; missing a lease would break it.
+my %leased_inodes;
+open(my $locks, '<', '/proc/locks') or fall_back_to_fuser();
+while (my $line = <$locks>) {
+    next unless $line =~ /\b(?:LEASE|DELEG)\b/;
+    $leased_inodes{$1} = 1 if $line =~ /\s[0-9a-f]+:[0-9a-f]+:(\d+)\s/;
+}
+close $locks;
+
 for my $path (@ARGV) {
-    my $file;
-    # Open read-only, so the check itself never changes the file. O_NONBLOCK matters if another
-    # process (Samba with oplocks, for example) already holds a lease on the file. A plain open
-    # would block until that lease is broken, which disturbs the holder. With O_NONBLOCK the open
-    # fails at once with EWOULDBLOCK, and someone holding a lease is in use.
-    if (!sysopen($file, $path, O_RDONLY | O_NONBLOCK)) {
+    # stat does not open the file, so it cannot disturb a lease holder.
+    my @stat = stat($path);
+    if (!@stat) {
         my $error = 0 + $!;
         # The file was removed or renamed since the move list was made, so nothing has it open.
         # age_mover deals with the missing file itself.
         next if $error == ENOENT || $error == ENOTDIR;
-        # Another process holds a lease on it: in use.
+        fall_back_to_fuser();
+    }
+    # Someone holds a lease on it, so they have it open: in use. Don't open it.
+    exit 0 if $leased_inodes{$stat[1]};
+
+    my $file;
+    # Open read-only, so the check itself never changes the file. O_NONBLOCK covers a lease taken
+    # after /proc/locks was read: the open still disturbs that holder, but fails at once with
+    # EWOULDBLOCK instead of waiting for the lease to be given up.
+    if (!sysopen($file, $path, O_RDONLY | O_NONBLOCK)) {
+        my $error = 0 + $!;
+        # Removed or renamed since the stat above: not in use, as above.
+        next if $error == ENOENT || $error == ENOTDIR;
+        # A lease was taken after /proc/locks was read: in use.
         exit 0 if $error == EAGAIN || $error == EWOULDBLOCK;
         # Any other failure to open (permissions, I/O error): let fuser try.
         fall_back_to_fuser();

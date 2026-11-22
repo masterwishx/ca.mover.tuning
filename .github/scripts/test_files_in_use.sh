@@ -92,6 +92,36 @@ hold_file read "$alias"
 expect_status 0 "$plain" "$alias"
 release_holder
 
+# A file that another process holds a lease on is in use, and checking it must not disturb that
+# lease: opening it would make the kernel signal the holder to give the lease up.
+leased="$TMP/leased"
+printf x >"$leased"
+rm -f -- "$TMP/ready" "$TMP/broken"
+perl -e '
+    use Fcntl qw(F_WRLCK);
+    my ($file, $ready, $broken) = @ARGV;
+    open(my $fh, "<", $file) or die "open: $!";
+    $SIG{IO} = sub { open(my $m, ">", $broken); close $m };
+    fcntl($fh, 1024, F_WRLCK) or die "lease: $!";
+    open(my $r, ">", $ready); close $r;
+    sleep 30;
+' "$leased" "$TMP/ready" "$TMP/broken" &
+HOLDER=$!
+for _ in {1..100}; do
+    [ -e "$TMP/ready" ] && break
+    sleep 0.01
+done
+[ -e "$TMP/ready" ] || { echo "lease holder did not start" >&2; exit 1; }
+grep -q LEASE /proc/locks
+expect_status 0 "$leased"
+expect_status 0 "$plain" "$leased"
+sleep 0.2
+if [ -e "$TMP/broken" ]; then
+    echo "checking a leased file broke its lease" >&2
+    exit 1
+fi
+release_holder
+
 # A device cannot be leased. A distinctive fake fuser status proves that the
 # one-shot helper immediately replaces itself with the compatibility command.
 mkdir "$TMP/bin"
@@ -123,6 +153,8 @@ source <(sed -n '/^filesInUse() {/,/^}/p' "$MOVER")
 fake_helper="$TMP/fake-helper"
 printf '#!/bin/sh\nexit "$CHECK_STATUS"\n' >"$fake_helper"
 chmod +x "$fake_helper"
+# Read by the sourced filesInUse, which ShellCheck cannot see.
+# shellcheck disable=SC2034
 FILES_IN_USE_HELPER=$fake_helper
 LOG_COUNT=0
 mvlogger() { LOG_COUNT=$((LOG_COUNT + 1)); }
