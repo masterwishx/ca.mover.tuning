@@ -11,7 +11,7 @@
 <!ENTITY pluginURL "https://raw.githubusercontent.com/&github;/beta/plugins/&name;.plg">
 ]>
 
-<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
+<PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.11.0">
 
 <CHANGES>
 ###2026.11.13
@@ -703,11 +703,11 @@
   $displayversion = $version['version'];
   echo "Unraid v$displayversion \n";
 
-  if ( version_compare($version['version'],"6.9.0-rc2", "<") )
+  if ( version_compare($version['version'],"6.11.0", "<") )
   {
     echo "********************************************************************\n";
     echo "\n";
-    echo "CA Mover Tuning Requires unRaid version 6.9.0-rc2 or greater to run\n";
+    echo "CA Mover Tuning Requires unRaid version 6.11.0 or greater to run\n";
     echo "\n";
     echo "********************************************************************\n";
     exit(1);
