@@ -396,6 +396,16 @@ escape_find_path() {
 # embedded quote - an edge case, but the last redaction hole - would expose the rest.
 qp() { local p=${1//\\/\\\\}; printf '"%s"' "${p//\"/\\\"}"; }
 
+# qpAll VAR ITEM...: sets VAR to each ITEM as qp quotes it, each followed by a space. The escapes
+# apply to every item at once, so a list costs no subshell per item.
+qpAll() {
+    local -a items=("${@:2}")
+    items=("${items[@]//\\/\\\\}")
+    items=("${items[@]//\"/\\\"}")
+    # printf with no arguments would still print the format once
+    if [ ${#items[@]} -gt 0 ]; then printf -v "$1" '"%s" ' "${items[@]}"; else printf -v "$1" ''; fi
+}
+
 # Fills each %s in TEXT from the remaining arguments; an inserted argument is never rescanned.
 fill_template() {
     local text="$1" out="" arg
@@ -2769,9 +2779,7 @@ processTheMoves() {
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
-            SYNCED_FILES=""
-            SYNCED_FILES=""
-            for f in "${SYNCED_FILES_ARR[@]}"; do SYNCED_FILES+="$(qp "$f") "; done
+            qpAll SYNCED_FILES "${SYNCED_FILES_ARR[@]}"
             GUI_CURRENT_FILE="$SOURCE/$FILEPATH"
 
             # Check if list is complete (array length is exact, unlike parsing the string)
@@ -2866,8 +2874,7 @@ processTheMoves() {
                     # one quoted token per argv element, like SYNCED_FILES above: [*] joins the
                     # paths with spaces, and the anonymiser cannot tell where one ends
                     if [ "$DEBUGLEVEL" != 0 ]; then
-                        RSYNC_CMD_LOG=""
-                        for a in "${RSYNC_CMD[@]}"; do RSYNC_CMD_LOG+="$(qp "$a") "; done
+                        qpAll RSYNC_CMD_LOG "${RSYNC_CMD[@]}"
                         mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
                     fi
                     # Perform rsync. relative paths and hardlinks
