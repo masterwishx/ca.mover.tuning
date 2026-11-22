@@ -305,16 +305,29 @@ zfs_busy() {
     mvlogger "ZFS dataset [$1] is busy, will not delete: a process or another mount, such as a container's, may hold it."
 }
 
-titleLine() {
-    local title="$1"
-    local padding_char="$2"
-    local line_length=71
+# titleLineTo VAR TITLE CHAR: sets VAR to TITLE centred in CHAR padding, in bash alone. The printf | tr
+# pipelines it replaces forked four processes per line, and every debug block draws two lines.
+titleLineTo() {
+    local title="$2" padding_char="$3" line_length=71 left_padding right_padding
     local padding_left=$((line_length - ${#title} / 2))
     local padding_right=$((padding_left - ${#title} % 2 - 1))
-    local left_padding right_padding
-    left_padding=$(printf "%*s" "$padding_left" "" | tr ' ' "$padding_char")
-    right_padding=$(printf "%*s" "$padding_right" "" | tr ' ' "$padding_char")
-    echo "${left_padding}$padding_char $title $padding_char${right_padding}"
+    # a negative width pads on the left, as printf | tr did
+    printf -v left_padding '%*s' "$padding_left" ""
+    printf -v right_padding '%*s' "$padding_right" ""
+    # the quoted replacement keeps a padding character such as & literal
+    printf -v "$1" '%s%s %s %s%s' "${left_padding// /"$padding_char"}" "$padding_char" "$title" "$padding_char" "${right_padding// /"$padding_char"}"
+}
+
+titleLine() {
+    local line
+    titleLineTo line "$1" "$2"
+    echo "$line"
+}
+
+# Prints MESSAGE after the current time as date +"%T.%3N" prints it, without forking date
+timestamped() {
+    local now=$EPOCHREALTIME
+    printf '%(%T)T.%.3s %s\n' "${now%[.,]*}" "${now#*[.,]}" "$1"
 }
 
 # Function to convert byte size to human-readable format
@@ -428,16 +441,16 @@ mvlogger() {
             echo "$msg"
         else
             # CLI or BUTTON → echo + logger
-            echo "$(date +"%T.%3N") $msg"
+            timestamped "$msg"
             logger -t move -- "$msg"
         fi
 
         # Always append to mover log
-        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
+        timestamped "$msg" >>"$MOVER_LOG"
 
     elif [ "$LOGLEVEL" = 2 ]; then
         # Files-only mode
-        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
+        timestamped "$msg" >>"$MOVER_LOG"
     fi
 
     # Optional notification
@@ -455,10 +468,14 @@ mvlogger() {
 #   IS_CRON=0 → CLI or GUI button (echo + logger)
 #
 # DEBUGLEVEL:
+#   0 → nothing, and nothing is built
 #   1 → echo + debug log
 #   2 → debug log only
 #
+# Arguments are expanded before the call, so a call site whose message needs a subshell
+# (such as $(qp ...)) on every file should test DEBUGLEVEL itself.
 mvDebuglogger() {
+    [ "$DEBUGLEVEL" = 1 ] || [ "$DEBUGLEVEL" = 2 ] || return 0
     local msg="$1"
     local tag="$2"
 
@@ -468,13 +485,10 @@ mvDebuglogger() {
     fi
 
     # Build formatted debug block
-    local block
-    block="$(
-        printf '%s\n%s\n%s\n' \
-            "$(titleLine "Debugging $tag" '-')" \
-            "$(date +"%T.%3N") $msg" \
-            "$(titleLine " " ' ')"
-    )"
+    local block title_line blank_line now=$EPOCHREALTIME
+    titleLineTo title_line "Debugging $tag" '-'
+    titleLineTo blank_line " " ' '
+    printf -v block '%s\n%(%T)T.%.3s %s\n%s' "$title_line" "${now%[.,]*}" "${now#*[.,]}" "$msg" "$blank_line"
 
     if [ "$DEBUGLEVEL" = 1 ]; then
 
@@ -2835,7 +2849,7 @@ processTheMoves() {
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
-                    mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
                     # Unraid move keeps hardlinks only among names given in one run and skips the file otherwise;
                     # a folder row sends only the folder, which move leaves on the source while anything is in it
                     MOVE_DEBUG_ARGS=()
@@ -2851,9 +2865,11 @@ processTheMoves() {
                 else
                     # one quoted token per argv element, like SYNCED_FILES above: [*] joins the
                     # paths with spaces, and the anonymiser cannot tell where one ends
-                    RSYNC_CMD_LOG=""
-                    for a in "${RSYNC_CMD[@]}"; do RSYNC_CMD_LOG+="$(qp "$a") "; done
-                    mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
+                    if [ "$DEBUGLEVEL" != 0 ]; then
+                        RSYNC_CMD_LOG=""
+                        for a in "${RSYNC_CMD[@]}"; do RSYNC_CMD_LOG+="$(qp "$a") "; done
+                        mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
+                    fi
                     # Perform rsync. relative paths and hardlinks
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
                         if [ ${#present[@]} -gt 0 ]; then
@@ -2946,7 +2962,7 @@ processTheMoves() {
                     # Collapse the rsync --relative marker ("/./" -> "/")
                     FILE="${FILE//\/.\//\/}"
                     DIR=$(dirname "$FILE")
-                    mvDebuglogger "Current file: $(qp "$FILE"), Current folder: $(qp "$DIR"), Previous folder: $(qp "$LAST_DIR"), Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Current file: $(qp "$FILE"), Current folder: $(qp "$DIR"), Previous folder: $(qp "$LAST_DIR"), Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
@@ -3003,9 +3019,9 @@ processTheMoves() {
                 if [ ! -d "$START_DIR" ]; then
                     START_DIR="$(dirname "${START_DIR}")"
                     if [ -d "$START_DIR" ]; then
-                        mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists, using upper folder: $(qp "$(dirname "${START_DIR}")")" "Clean Empty Moved Folder"
+                        [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists, using upper folder: $(qp "$(dirname "${START_DIR}")")" "Clean Empty Moved Folder"
                     else
-                        mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists" "Clean Empty Moved Folder"
+                        [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists" "Clean Empty Moved Folder"
                         continue
                     fi
                 fi
