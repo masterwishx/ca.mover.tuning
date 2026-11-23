@@ -841,11 +841,14 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
             echo "Found shareMoverSchedule: [$SHARE_MOV_SCHED]"
             echo "Setting moverTuneCron to: [$SHARE_MOV_SCHED]"
             echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
-            # mover.tuning.cron is left to the updateCron.php sync further down
 
-            # Rename old dynamix cron file
-            echo "Renaming old schedule: mover.cron → mover.cron.old"
-            mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
+            # the old schedule goes once the sync has written its replacement or found the Mover Tuning schedule disabled
+            if /usr/bin/php -q /usr/local/emhttp/plugins/&name;/updateCron.php sync || [[ -f "$TUNING_CRON_FILE" ]]; then
+                echo "Renaming old schedule: mover.cron → mover.cron.old"
+                mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
+            else
+                echo "mover.tuning.cron was not written (the reason is in the syslog), so the old schedule stays in mover.cron."
+            fi
         else
             echo "shareMoverSchedule is empty — nothing to migrate."
         fi
