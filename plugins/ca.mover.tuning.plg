@@ -841,14 +841,7 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
             echo "Found shareMoverSchedule: [$SHARE_MOV_SCHED]"
             echo "Setting moverTuneCron to: [$SHARE_MOV_SCHED]"
             echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
-
-            # Create cron file for Mover Tuning, unless its schedule was disabled before 7.2.1
-            if grep -q '^moverDisabled="yes"' "$config_file"; then
-                echo "Mover Tuning schedule is disabled — no Mover Tuning cron file created."
-            else
-                echo "Creating Mover Tuning cron file: $TUNING_CRON_FILE"
-                printf '# Generated schedule for Mover Tuning move:\n%s /usr/local/emhttp/plugins/&name;/mover start |&amp; logger -t move\n' "$SHARE_MOV_SCHED" > "$TUNING_CRON_FILE"
-            fi
+            # mover.tuning.cron is left to the updateCron.php sync further down
 
             # Rename old dynamix cron file
             echo "Renaming old schedule: mover.cron → mover.cron.old"
@@ -856,12 +849,6 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
         else
             echo "shareMoverSchedule is empty — nothing to migrate."
         fi
-    fi
-
-    # Fix old cron entries using age_mover -> mover
-    if [[ -f "$TUNING_CRON_FILE" ]] &amp;&amp; grep -q '/age_mover start' "$TUNING_CRON_FILE"; then
-        sed -i 's|/age_mover start|/mover start|' "$TUNING_CRON_FILE"
-        echo "Migrated cron entry: age_mover → mover"
     fi
 
 else
@@ -933,11 +920,6 @@ if [[ -x /usr/local/emhttp/plugins/&name;/age_mover ]]; then
   echo "Created symlink: /usr/local/sbin/age_mover → plugin age_mover"
 fi
 
-# The forced move runs through mover.php again so its parity option applies; rewrite schedules saved before that
-if [[ -f /boot/config/plugins/&name;/mover.cron ]]; then
-  sed -i -E 's#/usr/local/sbin/mover(\.old)? (start|force)#/usr/local/emhttp/plugins/&name;/mover.php force start#' /boot/config/plugins/&name;/mover.cron
-fi
-
 # Once per install history: a share override saved before Use global existed followed the global setting where it said No
 # for these keys. The marker is also in default.cfg, so a No saved after Defaults is never rewritten.
 if [[ -f "$config_file" ]] &amp;&amp; ! grep -q '^migratedOverrideNo=' "$config_file"; then
@@ -952,7 +934,7 @@ if [[ -f "$config_file" ]] &amp;&amp; ! grep -q '^migratedOverrideNo=' "$config_
   echo 'migratedOverrideNo="yes"' >> "$config_file"
 fi
 
-# The plugin's own cron files follow the saved settings: missing ones are written back (reinstall), stale ones removed
+# Bring the plugin's own cron files in line with the saved settings; an invalid schedule is logged and its file kept
 /usr/bin/php -q /usr/local/emhttp/plugins/&name;/updateCron.php sync
 
 # Refresh cron
