@@ -36,13 +36,11 @@ Delete Mover Log files over than this days old=Удалять лог‑файл�
 Disable Mover running on a schedule=Отключить запуск Mover по расписанию
 disables test mode=отключает тестовый режим
 disables the plugins schedule=отключает расписание плагина
-disables validation of input filenames=отключает проверку имён входных файлов
 Download=Скачать
 enable smart caching=включить умное кэширование
 Error checking mover status Please refresh the page=Ошибка проверки статуса mover. Обновите страницу.
 Error Config file %s not found=Ошибка: файл конфигурации '%s' не найден.
 Error Failed to convert CRLF line endings in %s Check file permissions=Ошибка: не удалось преобразовать окончания строк CRLF в %s. Проверьте права доступа к файлу.
-Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Ошибка: недопустимый путь имени файла: %s. Измените имя файла или отключите параметр «Проверять имена входных файлов».
 Error No files found to move for %s=Ошибка: не найдено файлов для перемещения для %s
 Errors Only=Только ошибки
 Estimated Completion=Ожидаемое завершение
@@ -75,7 +73,6 @@ If you want Mover Tuning to fully manage scheduling, disable it in Mover Setting
 Ignore All hidden files and directories=Игнорировать все скрытые файлы и каталоги
 Ignore files and folders listed inside of a text file=Игнорировать файлы и каталоги, перечисленные в текстовом файле
 Ignore file types=Игнорировать типы файлов
-Invalid characters to block=Недопустимые символы для блокировки
 Largest first=Сначала самые большие
 Let scheduled mover run during a parity check rebuild=Разрешить запуск Mover по расписанию во время проверки/восстановления паритета
 Log files=Файлы журнала
@@ -181,7 +178,6 @@ Use CTIME change time=Использовать CTIME (время изменен�
 Use global=Глобальная настройка
 Used IDE=Используемый IDE
 User shares not enabled=Пользовательские шары не включены!
-Validate input filenames to prevent attacks=Проверять имена файлов для предотвращения атак
 Very Low=Очень низкий
 View=Просмотр
 Want to support the developer and say Thank You=Хотите поддержать разработчика и сказать **Спасибо**?
@@ -241,31 +237,6 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 :mover_tune_testmode_plug:
 <p> Тестовый режим <strong>не</strong> запустит mover, но выведет результаты пользовательской команды find в <em>/tmp/ca.mover.tuning/</em>. Скрипты до и после работы Mover всё равно выполняются.</p>
 <p> Внимание — тестовый режим не останавливает оригинальный Mover: он всё равно запускается по расписанию параметра <strong>Принудительно перемещать все файлы по расписанию</strong>, а также кнопкой «Переместить сейчас», если параметр <strong>Кнопка «Переместить сейчас» учитывает фильтры плагина</strong> установлен в <strong>Нет</strong>. Начиная с Unraid 7.2.1, собственное расписание Mover и кнопки перемещения Unraid всегда запускают оригинальный Mover.</p>
-:end
-
-:mover_tune_validate_plug:
-<p> <strong><em>В сфере кибербезопасности имена файлов могут являться критическим вектором для потенциальных атак и уязвимостей системы. Несанитизированные имена файлов создают значительные риски, способные нарушить целостность и безопасность системы.</em></strong></p>
-<p> Проверка имён входных файлов проверяет каждое имя файла перед его обработкой Mover'ом. Это гарантирует, что принимаются <strong>только допустимые</strong> имена файлов, <strong>снижая риск</strong> атак и уязвимостей.</p>
-<p> Отключайте <strong>только</strong> если у вас много файлов для перемещения и вы <strong>уверены</strong>, что все имена файлов <strong>допустимы</strong> и не содержат потенциальных угроз безопасности.</p>
-<p> 1. <strong>Проверка длины имени файла</strong> — если имя файла превышает 255 символов, оно будет отклонено.</p>
-<p> 2. <strong>Проверка недопустимых символов</strong> — имя файла не должно содержать символы, считающиеся недопустимыми для имён файлов, такие как 
-(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> | </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>).</p>
-<p> 3. <strong>Предотвращение обхода пути</strong> — имя файла не должно содержать символы, которые могут использоваться для обхода каталогов, такие как (<strong><em> ../ </em></strong>).</p>
-<p> Если одна из этих проверок не пройдена, имя файла будет отклонено.</p>
-:end
-
-:mover_tune_invalidfilechars_plug:
-<p> Символы имени файла, такие как:
-  <strong><em>$</em></strong>
-  <strong><em>/</em></strong>
-  <strong><em><</em></strong>
-  <strong><em>></em></strong>
-  <strong><em>:</em></strong>
-  <strong><em>"</em></strong>
-  <strong><em>|</em></strong>
-  <strong><em>?</em></strong>
-  <strong><em>*</em></strong>.
-</p>
 :end
 
 :mover_tune_logging_plug:

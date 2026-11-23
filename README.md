@@ -15,7 +15,7 @@
 
 This is an [Unraid](https://unraid.net/) plugin that lets you fine-tune the operation of the [mover](https://docs.unraid.net/unraid-os/using-unraid-to/manage-storage/cache-pools/#using-mover).
 
-This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/pulls) from [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning) after review (cosmetics, per-share skipfiletypes merge, automatic age threshold, filename sanitizing, Unraid 7.x compatibility) and adds many new features. See [CHANGELOG.md](CHANGELOG.md) for the full history.
+This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/pulls) from [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning) after review (cosmetics, per-share skipfiletypes merge, automatic age threshold, Unraid 7.x compatibility) and adds many new features. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
 **Requires Unraid 6.9.0-rc2 or newer.** Unraid 7.2.1+ and the 7.4 rc1 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
 
@@ -53,7 +53,6 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 **Safety, logging and troubleshooting**
 
 - Test Mode (dry run) with clear warnings.
-- Optional filename validation with a configurable list of blocked characters.
 - Live progress of a run (file being processed, action, overall progress, estimated completion).
 - Pause and Resume buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The per-share Move and the runs of the built-in mover that the plugin starts (forced move, "Move now" without the filters) pause once their current file is done; runs Unraid starts itself are left alone. The next scheduled run or a cache watchdog trigger resumes a paused run.
 - Detailed logs (file only, or file and syslog), configurable log folder and log age, a Log files row that views or downloads any run's log, and a "Run by" entry showing whether the run came from cron, the CLI or the web UI.
@@ -116,7 +115,7 @@ You'll find the settings on the Mover Tuning page within Settings - [Scheduler](
 
 | Section | What you can set |
 | --- | --- |
-| **Plugin Settings** | Disable the plugin's schedule, cache watchdog and its trigger level, Mover Tuning schedule, Test Mode (dry run), filename validation and blocked characters, logging, debug logging and notifications, log folder, log files (view or download) and log retention, parity check behavior, mover and disk I/O priority, force move of all files on a schedule, before/after scripts. |
+| **Plugin Settings** | Disable the plugin's schedule, cache watchdog and its trigger level, Mover Tuning schedule, Test Mode (dry run), logging, debug logging and notifications, log folder, log files (view or download) and log retention, parity check behavior, mover and disk I/O priority, force move of all files on a schedule, before/after scripts. |
 | **Filters** | Whether "Move now" follows the plugin filters, thresholds (move above, free down, fill up), age, move order, CTIME/ATIME, minimum size, sync maximum size, sparseness, ignore list file, ignored file types, hidden files, and "Move All" for cache:yes shares above a pool percentage. |
 | **Options** | Force turbo write, move files tool, move files that are in use, move/clean empty folders, clean empty ZFS datasets, share size calculation, Synchronize, Rebalance and Resynchronize. Buttons: Apply, Done, Defaults and Move Now, and Pause or Resume while a run moves files. |
 | **Help** | Debug package (.zip), a link to the support thread, GitHub link and a collapsible "CLI help commands" panel. |

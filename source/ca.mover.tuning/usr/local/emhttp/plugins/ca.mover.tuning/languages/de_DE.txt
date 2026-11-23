@@ -36,13 +36,11 @@ Delete Mover Log files over than this days old=Protokolldateien der Datenverschi
 Disable Mover running on a schedule=Zeitplan für Datenverschiebung deaktivieren
 disables test mode=deaktiviert den Testmodus
 disables the plugins schedule=deaktiviert den Zeitplan des Plugins
-disables validation of input filenames=deaktiviert die Prüfung von Dateinamen
 Download=Herunterladen
 enable smart caching=Intelligentes Caching aktivieren
 Error checking mover status Please refresh the page=Fehler beim Prüfen des Status der Datenverschiebung. Bitte Seite aktualisieren.
 Error Config file %s not found=Fehler: Konfigurationsdatei %s wurde nicht gefunden.
 Error Failed to convert CRLF line endings in %s Check file permissions=Fehler: CRLF‑Zeilenenden in %s konnten nicht konvertiert werden. Bitte Dateiberechtigungen prüfen.
-Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Fehler: Ungültiger Dateipfad %s. Bitte Dateinamen korrigieren oder die Prüfung von Dateinamen deaktivieren.
 Error No files found to move for %s=Fehler: Keine Dateien zum Verschieben für %s gefunden.
 Errors Only=Nur Fehler
 Estimated Completion=Geschätzte Fertigstellung
@@ -75,7 +73,6 @@ If you want Mover Tuning to fully manage scheduling, disable it in Mover Setting
 Ignore All hidden files and directories=Alle versteckten Dateien und Ordner ignorieren
 Ignore files and folders listed inside of a text file=Dateien und Ordner ignorieren, die in einer Textdatei aufgelistet sind
 Ignore file types=Dateitypen ignorieren
-Invalid characters to block=Ungültige Zeichen zum Blockieren
 Largest first=Größte zuerst
 Let scheduled mover run during a parity check rebuild=Zeitplan für Datenverschiebung während Paritätsprüfung/Wiederherstellung erlauben
 Log files=Protokolldateien
@@ -181,7 +178,6 @@ Use CTIME change time=CTIME (Statusänderungszeit) verwenden
 Use global=Global verwenden
 Used IDE=Verwendete IDE
 User shares not enabled=Benutzerfreigaben sind nicht aktiviert!
-Validate input filenames to prevent attacks=Eingabedateinamen validieren, um Angriffe zu verhindern
 Very Low=Sehr niedrig
 View=Anzeigen
 Want to support the developer and say Thank You=Möchtest du den Entwickler unterstützen und **Danke** sagen?
@@ -242,31 +238,6 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 :mover_tune_testmode_plug:
 <p>Im Testmodus wird die Datenverschiebung <strong>nicht</strong> ausgeführt. Stattdessen werden die Ergebnisse des benutzerdefinierten <em>find</em>‑Befehls nach <em>/tmp/ca.mover.tuning/</em> geschrieben. Die Skripte vor und nach dem Lauf werden trotzdem ausgeführt.</p>
 <p>Achtung – Der Testmodus hält den originalen Mover nicht auf: Er läuft trotzdem nach dem Zeitplan der Option <strong>Erzwungenes Verschieben aller Dateien nach Zeitplan</strong> und über die Schaltfläche „Jetzt verschieben“, wenn die Option <strong>„Jetzt verschieben“ folgt den Plugin‑Filtern</strong> auf <strong>Nein</strong> steht. Ab Unraid 7.2.1 starten der Mover‑Zeitplan und die Verschieben‑Schaltflächen von Unraid selbst immer den originalen Mover.</p>
-:end
-
-:mover_tune_validate_plug:
-<p><strong><em>In der Cybersicherheit können Dateinamen ein kritischer Angriffsvektor sein. Nicht geprüfte Dateinamen stellen ein erhebliches Risiko dar und können die Systemintegrität gefährden.</em></strong></p>
-<p>Die Validierung von Dateinamen prüft jeden Dateinamen, bevor er vom Mover verarbeitet wird. Dadurch wird sichergestellt, dass <strong>nur gültige</strong> Dateinamen akzeptiert werden und das Risiko von Angriffen reduziert wird.</p>
-<p>Deaktiviere diese Option <strong>nur</strong>, wenn du sehr viele Dateien verschieben musst und <strong>sicher</strong> bist, dass alle Dateinamen gültig sind und keine Sicherheitsrisiken enthalten.</p>
-<p>1. <strong>Längenprüfung</strong> – Dateinamen über 255 Zeichen werden abgelehnt.</p>
-<p>2. <strong>Ungültige Zeichen</strong> – Dateinamen dürfen keine Zeichen enthalten wie  
-(<strong><em>$</em></strong>), (<strong><em>/</em></strong>), (<strong><em><</em></strong>), (<strong><em>></em></strong>), (<strong><em>:</em></strong>), (<strong><em>"</em></strong>), (<strong><em>|</em></strong>), (<strong><em>?</em></strong>), (<strong><em>*</em></strong>).</p>
-<p>3. <strong>Pfad‑Traversal verhindern</strong> – Dateinamen dürfen keine Sequenzen wie (<strong><em>../</em></strong>) enthalten.</p>
-<p>Wenn eine dieser Prüfungen fehlschlägt, wird der Dateiname abgelehnt.</p>
-:end
-
-:mover_tune_invalidfilechars_plug:
-<p> Ungültige Zeichen in Dateinamen sind unter anderem:
-  <strong><em>$</em></strong>
-  <strong><em>/</em></strong>
-  <strong><em><</em></strong>
-  <strong><em>></em></strong>
-  <strong><em>:</em></strong>
-  <strong><em>"</em></strong>
-  <strong><em>|</em></strong>
-  <strong><em>?</em></strong>
-  <strong><em>*</em></strong>.
-</p>
 :end
 
 :mover_tune_logging_plug:

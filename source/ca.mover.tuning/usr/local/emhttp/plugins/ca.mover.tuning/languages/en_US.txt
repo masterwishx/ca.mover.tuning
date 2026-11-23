@@ -38,13 +38,11 @@ Delete Mover Log files over than this days old=
 Disable Mover running on a schedule=
 disables test mode=
 disables the plugins schedule=disables the plugin's schedule
-disables validation of input filenames=
 Download=
 enable smart caching=
 Error checking mover status Please refresh the page=Error checking mover status. Please refresh the page.
 Error Config file %s not found=Error: Config file '%s' not found.
 Error Failed to convert CRLF line endings in %s Check file permissions=Error: Failed to convert CRLF line endings in %s. Check file permissions.
-Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option.
 Error No files found to move for %s=Error: No files found to move for %s
 Errors Only=
 Estimated Completion=
@@ -77,7 +75,6 @@ If you want Mover Tuning to fully manage scheduling, disable it in Mover Setting
 Ignore All hidden files and directories=
 Ignore files and folders listed inside of a text file=
 Ignore file types=
-Invalid characters to block=
 Largest first=
 Let scheduled mover run during a parity check rebuild=Let scheduled mover run during a parity check / rebuild
 Log files=
@@ -183,7 +180,6 @@ Use CTIME change time=Use CTIME (change time)
 Use global=
 Used IDE=
 User shares not enabled=User shares not enabled!
-Validate input filenames to prevent attacks=
 Very Low=
 View=
 Want to support the developer and say Thank You=Want to support the developer and say **Thank You**?
@@ -244,31 +240,6 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 :mover_tune_testmode_plug:
 <p> Test Mode will <strong>Not</strong> run mover but will output the custom find command results to <em>/tmp/ca.mover.tuning/</em>. The before and after scripts still run.</p>
 <p> Caution - Test Mode does not stop original Mover: it still runs on the "Force move of all files on a schedule" schedule, and from the Move Now button if "Move Now button follows plug-in filters" is set to <strong>No</strong>. On Unraid 7.2.1 and later, Unraid's own Mover schedule and Move buttons always run the original Mover.</p>
-:end
-
-:mover_tune_validate_plug:
-<p> <strong><em>In cybersecurity, filenames can be a critical vector for potential attacks and system vulnerabilities. Unsanitized filenames pose significant risks that can compromise system integrity and security.</em></strong></p>
-<p> Validate input filenames will check every filename before it is processed by the Mover. This ensures that <strong>only valid</strong> filenames are accepted, <strong>reducing the risk</strong> of attacks and vulnerabilities.</p>
-<p> Disable <strong>Only</strong> if you have many files to move and you are <strong>sure</strong> that all filenames are <strong>valid</strong> and do not contain any potential security risks.</p>
-<p> 1. <strong>Check filename length</strong> - If the filename exceeds 255 characters, it will be rejected.</p>
-<p> 2. <strong>Check for invalid characters</strong> - The filename should not contain any characters that are considered invalid for filenames, such as 
-(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> | </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>).</p>
-<p> 3. <strong>Prevent path traversal</strong> - The filename should not contain any characters that can be used to traverse directories, such as (<strong><em> ../ </em></strong>).</p>
-<p> If one of these checks fails, the filename will be rejected.</p>
-:end
-
-:mover_tune_invalidfilechars_plug:
-<p> The filename characters such as:
-  <strong><em>$</em></strong>
-  <strong><em>/</em></strong>
-  <strong><em><</em></strong>
-  <strong><em>></em></strong>
-  <strong><em>:</em></strong>
-  <strong><em>"</em></strong>
-  <strong><em>|</em></strong>
-  <strong><em>?</em></strong>
-  <strong><em>*</em></strong>.
-</p>
 :end
 
 :mover_tune_logging_plug:

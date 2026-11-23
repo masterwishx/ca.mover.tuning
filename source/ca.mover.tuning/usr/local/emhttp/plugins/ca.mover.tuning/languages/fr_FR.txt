@@ -36,13 +36,11 @@ Delete Mover Log files over than this days old=Supprimer les journaux du mover p
 Disable Mover running on a schedule=Désactiver l’exécution programmée du mover
 disables test mode=désactive le mode test
 disables the plugins schedule=désactive la planification du plugin
-disables validation of input filenames=désactive la validation des noms de fichiers
 Download=Télécharger
 enable smart caching=activer le cache intelligent
 Error checking mover status Please refresh the page=Erreur lors de la vérification du statut du mover. Veuillez rafraîchir la page.
 Error Config file %s not found=Erreur : fichier de configuration « %s » introuvable.
 Error Failed to convert CRLF line endings in %s Check file permissions=Erreur : impossible de convertir les fins de ligne CRLF dans %s. Vérifiez les permissions du fichier.
-Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Erreur : chemin de fichier invalide %s. Corrigez le nom ou désactivez l’option de validation des noms de fichiers.
 Error No files found to move for %s=Erreur : aucun fichier trouvé à déplacer pour %s
 Errors Only=Erreurs uniquement
 Estimated Completion=Fin estimée
@@ -75,7 +73,6 @@ If you want Mover Tuning to fully manage scheduling, disable it in Mover Setting
 Ignore All hidden files and directories=Ignorer tous les fichiers et dossiers cachés
 Ignore files and folders listed inside of a text file=Ignorer les fichiers et dossiers listés dans un fichier texte
 Ignore file types=Ignorer les types de fichiers
-Invalid characters to block=Caractères invalides à bloquer
 Largest first=Les plus gros d’abord
 Let scheduled mover run during a parity check rebuild=Autoriser le mover programmé pendant une vérification/réparation de parité
 Log files=Fichiers journaux
@@ -181,7 +178,6 @@ Use CTIME change time=Utiliser CTIME (date de changement d’état)
 Use global=Réglage global
 Used IDE=IDE utilisé
 User shares not enabled=Les parts utilisateur ne sont pas activées !
-Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
 Very Low=Très faible
 View=Afficher
 Want to support the developer and say Thank You=Vous souhaitez soutenir le développeur et dire **Merci** ?
@@ -242,30 +238,6 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 :mover_tune_testmode_plug:
 <p>Le mode test ne <strong>lance pas</strong> le mover mais affiche les résultats de la commande find personnalisée dans <em>/tmp/ca.mover.tuning/</em>. Les scripts avant et après s’exécutent quand même.</p>
 <p>Attention — le mode test n’arrête pas le mover original : il s’exécute quand même selon l’horaire de l’option <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong>, et depuis le bouton « Déplacer maintenant » si l’option <strong>Le bouton « Déplacer maintenant » suit les filtres du plugin</strong> est réglée sur <strong>Non</strong>. À partir d’Unraid 7.2.1, la planification du mover et les boutons de déplacement d’Unraid lancent toujours le mover original.</p>
-:end
-
-:mover_tune_validate_plug:
-<p><strong><em>En cybersécurité, les noms de fichiers peuvent être un vecteur critique d’attaques et de vulnérabilités. Des noms non vérifiés peuvent compromettre l’intégrité et la sécurité du système.</em></strong></p>
-<p>La validation des noms de fichiers vérifie chaque nom avant qu’il ne soit traité par le mover. Cela garantit que seuls des noms <strong>valides</strong> sont acceptés, <strong>réduisant les risques</strong> d’attaques.</p>
-<p>Désactivez cette option <strong>uniquement</strong> si vous avez beaucoup de fichiers à déplacer et que vous êtes <strong>certain</strong> que tous les noms sont valides et sans risque.</p>
-<p>1. <strong>Longueur du nom</strong> — si le nom dépasse 255 caractères, il est rejeté.</p>
-<p>2. <strong>Caractères invalides</strong> — le nom ne doit pas contenir des caractères interdits tels que (<strong><em>$</em></strong>), (<strong><em>/</em></strong>), (<strong><em><</em></strong>), (<strong><em>></em></strong>), (<strong><em>:</em></strong>), (<strong><em>"</em></strong>), (<strong><em>|</em></strong>), (<strong><em>?</em></strong>), (<strong><em>*</em></strong>).</p>
-<p>3. <strong>Éviter la traversée de répertoires</strong> — le nom ne doit pas contenir (<strong><em>../</em></strong>).</p>
-<p>Si une vérification échoue, le nom est rejeté.</p>
-:end
-
-:mover_tune_invalidfilechars_plug:
-<p>Caractères invalides dans un nom de fichier :
-  <strong><em>$</em></strong>
-  <strong><em>/</em></strong>
-  <strong><em><</em></strong>
-  <strong><em>></em></strong>
-  <strong><em>:</em></strong>
-  <strong><em>"</em></strong>
-  <strong><em>|</em></strong>
-  <strong><em>?</em></strong>
-  <strong><em>*</em></strong>.
-</p>
 :end
 
 :mover_tune_logging_plug:
