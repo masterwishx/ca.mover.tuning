@@ -41,8 +41,8 @@ function cron_field_ok($field, $min, $max, $names)
 			if ($value === '') {
 				continue;
 			}
-			// names count from $min, so jan is 1 and sun is 0
-			$index = array_search(strtolower($value), $names, true);
+			// names count from $min, so jan is 1 and sun is 0; dcron reads a name only as mon or Mon, so MON is rejected
+			$index = array_search(lcfirst($value), $names, true);
 			$n = ctype_digit($value) === true ? (int)$value : ($index === false ? -1 : $index + $min);
 			if ($n < $min || $n > $max) {
 				return false;
