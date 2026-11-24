@@ -83,3 +83,21 @@ jobs:
 
       - name: Run tests
         run: python -m pytest .github/scripts/release/tests -q
+
+  age-mover:
+    name: age_mover tests
+    runs-on: ubuntu-latest
+    container: debian:bookworm-slim
+    steps:
+      - name: Install the tools the mover uses
+        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends rsync gawk psmisc procps util-linux
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run the age_mover tests
+        env:
+          AGE_MOVER_TEST: '1'
+        run: bash tests/age_mover/run.sh
