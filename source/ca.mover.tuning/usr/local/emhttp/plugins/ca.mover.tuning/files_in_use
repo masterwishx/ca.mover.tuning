@@ -1,0 +1,127 @@
+#!/usr/bin/perl
+# SPDX-License-Identifier: GPL-2.0-only
+# Copyright (C) 2026 Mover Tuning contributors
+#
+# files_in_use FILE...
+#
+# A faster stand-in for "fuser -s FILE...": answers whether any other process has one of the files
+# open, so age_mover can leave such files for a later run.
+#
+# Exit status (0 and 1 match fuser -s; 2 is specific to this tool):
+#   0   at least one file is in use
+#   1   no file is in use (files that have vanished count as not in use)
+#   2   no reliable answer: neither a lease nor fuser could check the files; the caller treats the
+#       files as in use. (Once we exec fuser, its own exit status is returned, whatever it is.)
+#
+# Why not just run fuser?
+#   fuser walks /proc for every process on the system. On a busy Unraid host (thousands of
+#   processes, dozens of containers) that measured ~146 ms per call, which nearly doubled the time
+#   to move many small files. Asking the kernel for a lease is a few microseconds.
+#
+# How the lease test works:
+#   Linux grants a write lease (fcntl F_SETLEASE with F_WRLCK) only when the caller's descriptor is
+#   the only open one for the file. So:
+#     - lease granted   -> nobody else has the file open -> not in use. We release the lease at
+#                          once; we never hold it.
+#     - EAGAIN          -> someone else has it open -> in use.
+#     - any other error -> the kernel or filesystem cannot answer (for example leases are disabled,
+#                          or the filesystem does not support them, as with FUSE and network
+#                          filesystems) -> hand the whole question to fuser.
+#   This needs Perl because Bash has no way to call fcntl(F_SETLEASE).
+#
+# Files someone else already holds a lease on:
+#   Opening such a file would disturb the holder (Samba with oplocks, for example). Linux starts
+#   breaking the lease and signals the holder as part of the open, even with O_NONBLOCK, which
+#   only skips the wait. So first look the file up in /proc/locks without opening it. A lease
+#   holder has the file open, so a file with a lease is in use and is never opened. If /proc/locks
+#   cannot be read, hand the whole question to fuser, which never opens the files it checks.
+#
+# EAGAIN and EWOULDBLOCK are the same value on Linux. Both are checked only for portability.
+# Neither is a transient "try again" here: each means "in use".
+use strict;
+use warnings;
+
+use Errno qw(EAGAIN EWOULDBLOCK ENOENT ENOTDIR);
+use Fcntl qw(O_NONBLOCK O_RDONLY F_UNLCK F_WRLCK);
+
+# Linux-specific fcntl command. The plugin package is x86_64-only, where F_SETLEASE is
+# F_LINUX_SPECIFIC_BASE + 0.
+my $F_SETLEASE = 1024;
+# The kernel sends SIGIO to a lease holder when another process opens the file and so asks for the
+# lease to be broken. SIGIO kills the process by default. That can happen in the few instructions
+# between taking and releasing the lease, so ignore it. Closing the descriptor releases the lease
+# anyway.
+local $SIG{IO} = 'IGNORE';
+
+@ARGV or die "Usage: $0 FILE...\n";
+
+# Hand every file to fuser, not just the rest, so its exit status answers for all of them. exec
+# only returns if fuser cannot be run, so exit 2 (no answer).
+sub fall_back_to_fuser {
+    exec 'fuser', '-s', @ARGV;
+    exit 2;
+}
+
+# Inode numbers of files that some process holds a lease (or NFS delegation) on, read once from
+# /proc/locks. Its lines look like "3: LEASE  ACTIVE    WRITE 1234 00:2d:5678 0 EOF", where
+# 00:2d:5678 is the filesystem's major:minor device and the inode. Only the inode is compared:
+# stat's device differs from that of /proc/locks on some filesystems (btrfs subvolumes, for
+# example). Two files with the same inode number on different filesystems can make a file look
+# in use, which only leaves it for a later run; missing a lease would break it.
+my %leased_inodes;
+open(my $locks, '<', '/proc/locks') or fall_back_to_fuser();
+while (my $line = <$locks>) {
+    next unless $line =~ /\b(?:LEASE|DELEG)\b/x;
+    $leased_inodes{$1} = 1 if $line =~ /\s[0-9a-f]+:[0-9a-f]+:(\d+)\s/x;
+}
+close $locks;
+
+for my $path (@ARGV) {
+    # stat does not open the file, so it cannot disturb a lease holder.
+    my @stat = stat($path);
+    if (!@stat) {
+        my $error = 0 + $!;
+        # The file was removed or renamed since the move list was made, so nothing has it open.
+        # age_mover deals with the missing file itself.
+        next if $error == ENOENT || $error == ENOTDIR;
+        fall_back_to_fuser();
+    }
+    # Someone holds a lease on it, so they have it open: in use. Don't open it.
+    exit 0 if $leased_inodes{$stat[1]};
+
+    my $file;
+    # Open read-only, so the check itself never changes the file. O_NONBLOCK covers a lease taken
+    # after /proc/locks was read: the open still disturbs that holder, but fails at once with
+    # EWOULDBLOCK instead of waiting for the lease to be given up.
+    if (!sysopen($file, $path, O_RDONLY | O_NONBLOCK)) {
+        my $error = 0 + $!;
+        # Removed or renamed since the stat above: not in use, as above.
+        next if $error == ENOENT || $error == ENOTDIR;
+        # A lease was taken after /proc/locks was read: in use.
+        exit 0 if $error == EAGAIN || $error == EWOULDBLOCK;
+        # Any other failure to open (permissions, I/O error): let fuser try.
+        fall_back_to_fuser();
+    }
+
+    # The actual test: a write lease is refused with EAGAIN while any other descriptor for the file
+    # is open, in this process or any other.
+    if (!fcntl($file, $F_SETLEASE, F_WRLCK)) {
+        my $error = 0 + $!;
+        close $file;
+        # Another process has the file open: in use.
+        exit 0 if $error == EAGAIN || $error == EWOULDBLOCK;
+        # Typically EINVAL: this filesystem or kernel does not support leases.
+        fall_back_to_fuser();
+    }
+
+    # We got the lease, so the file was not in use. Release it at once. If releasing fails,
+    # something unexpected is going on: don't trust our answer, let fuser decide.
+    if (!fcntl($file, $F_SETLEASE, F_UNLCK)) {
+        close $file;
+        fall_back_to_fuser();
+    }
+    close $file;
+}
+
+# Every file was free (or gone). As with fuser -s, 1 means "not in use".
+exit 1;

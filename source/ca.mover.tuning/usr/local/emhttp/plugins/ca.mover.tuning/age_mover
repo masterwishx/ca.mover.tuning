@@ -28,7 +28,8 @@
 # Files at the top level of the cache or an array disk (i.e not in a share) are never moved.
 
 # The list is then passed to original unraid mover.
-# For each file, if the file is not "in use" by any process (as detected by 'fuser' command),
+# For each file, if the file is not "in use" by any process (as detected by an exclusive file lease,
+# with fuser as a compatibility fallback, and when Perl is missing, as before Unraid 6.11.0),
 # then the file is moved, and upon success, deleted from the source disk.  If the file already
 # exists on the target, it is not moved and the sourceis not deleted.  All meta-data of moved
 # files/directories is preserved: permissions, ownership, extended attributes, and access/modified
@@ -46,6 +47,7 @@ PAUSEFILE="/var/run/mover.pause"
 MOVINGFILE="/var/run/mover.moving"
 HOLD_SINCE=""
 AGEMOVER="/usr/local/emhttp/plugins/ca.mover.tuning/age_mover"
+FILES_IN_USE_HELPER="/usr/local/emhttp/plugins/ca.mover.tuning/files_in_use"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
@@ -2515,6 +2517,38 @@ move_tool_said() {
     done <<<"$MOVE_OUT"
 }
 
+# Sets processTheMoves' FILES_IN_USE_CMD: the files_in_use helper through the perl in PATH (Unraid 6.11.0 and newer have
+# Perl), else fuser -s as before the helper. A helper that does not compile would fail closed on every file
+chooseFilesInUseCheck() {
+    if command -v perl >/dev/null && perl -c "$FILES_IN_USE_HELPER" >/dev/null 2>&1; then
+        FILES_IN_USE_CMD=(perl "$FILES_IN_USE_HELPER")
+        return
+    fi
+    FILES_IN_USE_CMD=(fuser -s)
+    [ "$MOVE_IN_USE" = yes ] && return
+    if command -v perl >/dev/null; then
+        mvlogger "The file lease helper could not start, so files are checked for use with fuser, which is slower on busy servers."
+    else
+        mvlogger "Perl not found, so files are checked for use with fuser, which is slower on busy servers. Perl is part of Unraid 6.11.0 and newer."
+    fi
+}
+
+# Succeeds when a path is in use or when FILES_IN_USE_CMD gives no answer, which it logs once per run through
+# processTheMoves' FILE_IN_USE_FAILURE_LOGGED
+filesInUse() {
+    local rc
+    if "${FILES_IN_USE_CMD[@]}" "$@" 2>/dev/null; then rc=0; else rc=$?; fi
+    case "$rc" in
+    0) return 0 ;;
+    1) return 1 ;;
+    esac
+    if [ "$FILE_IN_USE_FAILURE_LOGGED" != yes ]; then
+        mvlogger "A file could not be checked for use, so it stays where it is until a later run. Set 'Move files that are in use' to Yes to move such files anyway."
+        FILE_IN_USE_FAILURE_LOGGED=yes
+    fi
+    return 0
+}
+
 # In topFolder mode, notes this row's share top folder for the check after the pass; fills processTheMoves' TOP_SEEN
 # and TOP_FOLDERS
 note_top_folder() {
@@ -2746,12 +2780,10 @@ processTheMoves() {
     local -A DATASET_PROBLEM=()
     local DATASET_PROBLEM_LEVEL=""
     local top ds
-    # without fuser an open file cannot be told apart, so none is moved while moveInUse is no
-    local fuser_missing=0
-    if [ "$MOVE_IN_USE" != "yes" ] && ! command -v fuser >/dev/null; then
-        fuser_missing=1
-        mvlogger "fuser not found: files stay where they are, since they cannot be checked for use. Set 'Move files that are in use' to Yes to move them anyway."
-    fi
+    # set by filesInUse the first time a file cannot be checked
+    local FILE_IN_USE_FAILURE_LOGGED=no
+    local -a FILES_IN_USE_CMD=()
+    chooseFilesInUseCheck
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -2869,9 +2901,9 @@ processTheMoves() {
                 continue
             fi
 
-            # an open name keeps its source copy alive, so moving it frees nothing: skip it like Unraid's move
-            # (fuser takes no "--": with it, psmisc fuser reports an open file as not in use)
-            if [ "$MOVE_IN_USE" != "yes" ] && [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && { [ "$fuser_missing" = 1 ] || fuser -s "${SYNCED_FILES_ARR[@]//\/.\//\/}" 2>/dev/null; }; then
+            # An open name keeps its source copy alive, so moving it frees nothing: skip it like Unraid's move.
+            # filesInUse takes an exclusive lease at this point, or uses fuser when leases are unavailable.
+            if [ "$MOVE_IN_USE" != "yes" ] && [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && filesInUse "${SYNCED_FILES_ARR[@]//\/.\//\/}"; then
                 mvlogger "In use, left for a later run: $SYNCED_FILES"
                 # a move from primary left in place was not synced either, so lastCacheSync must wait; a staged row leaves that to its sync row
                 if [ "$STAGE_ROW" = 1 ]; then STAGED_INUSE[$chain_key]=1; else INUSEFILES=$((INUSEFILES + NBFILES)); fi
