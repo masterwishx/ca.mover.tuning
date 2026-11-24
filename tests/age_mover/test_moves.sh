@@ -3,20 +3,21 @@
 . "$(dirname "$0")/lib.sh"
 
 for tool in rsync move; do
-    begin "names with space, |, \$, quotes and Unicode ($tool)" movefilesTool "$tool"
-    names=('sh/o/a b.txt' 'sh/o/p|ipe.txt' 'sh/o/trail|' 'sh/o/$HOME.txt' "sh/o/q\"uote's.txt" 'sh/o/ünï.txt')
+    begin "names with space, |, \$, quotes, a backslash and Unicode ($tool)" movefilesTool "$tool"
+    names=('sh/o/a b.txt' 'sh/o/p|ipe.txt' 'sh/o/trail|' 'sh/o/$HOME.txt' "sh/o/q\"uote's.txt" 'sh/o/back\slash.txt' 'sh/o/ünï.txt')
     mk cache "${names[@]}"
     for n in "${names[@]}"; do row 'move from primary' f "$n"; done | list
     run_moves
     array_is sh sh/o "${names[@]}"
     cache_is sh sh/o
-    counter MOVEDFILES 6
+    counter MOVEDFILES 7
     counter REMAINING_CACHE_FILES 0
-    counter MOVEDSIZE 12
+    counter MOVEDSIZE 14
     check "debug blocks written only with AGE_MOVER_DEBUG=2" "$([ "${AGE_MOVER_DEBUG:-0}" = 2 ] && echo yes || echo no)" \
         "$(grep -qF Debugging "$MOVER_DEBUG_LOG" && echo yes || echo no)"
     log_has 'Moving "/mnt/cache/./sh/o/trail|"  to  "/mnt/user0/"'
     log_has "Moving \"/mnt/cache/./sh/o/q\\\"uote's.txt\"  to  \"/mnt/user0/\""
+    log_has 'Moving "/mnt/cache/./sh/o/back\\slash.txt"  to  "/mnt/user0/"'
 
     begin "hardlink group, every name listed ($tool)" movefilesTool "$tool"
     mk cache sh/h/a.txt
