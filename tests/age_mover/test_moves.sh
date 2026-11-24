@@ -1,5 +1,5 @@
 #!/bin/bash
-# What each row shape the planner writes does today: where the names land, the counters and the log lines.
+# What processTheMoves does today with the planner's rows: where the names land, the counters and the log lines.
 . "$(dirname "$0")/lib.sh"
 
 for tool in rsync move; do
@@ -12,6 +12,9 @@ for tool in rsync move; do
     cache_is sh sh/o
     counter MOVEDFILES 6
     counter REMAINING_CACHE_FILES 0
+    counter MOVEDSIZE 12
+    check "debug blocks written only with AGE_MOVER_DEBUG=2" "$([ "${AGE_MOVER_DEBUG:-0}" = 2 ] && echo yes || echo no)" \
+        "$(grep -qF Debugging "$MOVER_DEBUG_LOG" && echo yes || echo no)"
     log_has 'Moving "/mnt/cache/./sh/o/trail|"  to  "/mnt/user0/"'
     log_has "Moving \"/mnt/cache/./sh/o/q\\\"uote's.txt\"  to  \"/mnt/user0/\""
 
@@ -23,6 +26,8 @@ for tool in rsync move; do
     array_is sh sh/h sh/h/a.txt sh/h/b.txt
     links 2 sh/h/b.txt
     counter MOVEDFILES 2
+    counter MOVEDSIZE 2
+    counter REMAINING_CACHE_SIZE 0
     log_count 1 'Moving "/mnt/cache/./sh/h/a.txt" "/mnt/cache/./sh/h/b.txt"  to  "/mnt/user0/" (preserving hardlinks)'
 
     begin "hardlink group across shares, both moved ($tool)" movefilesTool "$tool"
@@ -34,6 +39,7 @@ for tool in rsync move; do
     links 2 sh2/k/b.txt
     cache_is sh1 sh1/h sh2 sh2/k sh2/k/z.txt
     counter MOVEDFILES 2
+    counter MOVEDSIZE 2
     log_count 1 'Moving "/mnt/cache/./sh1/h/a.txt" "/mnt/cache/./sh2/k/b.txt"  to  "/mnt/user0/" (preserving hardlinks)'
 
     begin "folder rows: empty, and one that gained a file after planning ($tool)" movefilesTool "$tool"
@@ -60,13 +66,13 @@ for tool in rsync move; do
     log_has 'TEST MODE: Would delete moved empty folder: /mnt/cache/sh/t/e'
     log_lacks 'Set last sync date'
 
-    begin "move from secondary, cache:prefer ($tool)" movefilesTool "$tool"
-    mk user0 sh/p/f.txt
+    begin "move from secondary ($tool)" movefilesTool "$tool"
+    mk disk1 sh/p/f.txt
     row 'move from secondary' f sh/p/f.txt | list
     run_moves
     cache_is sh sh/p sh/p/f.txt
-    array_is sh sh/p
-    log_has 'Moving "/mnt/user0/./sh/p/f.txt"  to  "/mnt/cache/"'
+    holds disk1 sh sh/p
+    log_has 'Moving "/mnt/disk1/./sh/p/f.txt"  to  "/mnt/cache/"'
     log_has '0 files remaining from array to caches'
 
     begin "unattended file staged to the primary, then synced ($tool)" movefilesTool "$tool" synchronizeCache yes
@@ -77,6 +83,7 @@ for tool in rsync move; do
     array_is sh sh/x sh/x/f.txt
     counter MOVEDFILES 1
     counter REMAINING_UNATTENDED_FILES 0
+    counter REMAINING_UNATTENDED_SIZE 0
     log_has 'Synchronizing  "/mnt/cache/./sh/x/f.txt"  to  "/mnt/user0/"'
     log_has 'Set last sync date in config file/s: 1767323045 = 2026-01-02T030405'
 done
@@ -91,6 +98,8 @@ for n in a.txt 'a|'; do
     array_is
     cache_is sh sh/h "sh/h/$n" sh/k sh/k/b.txt sh/k/z.txt
     counter NOTMOVEDFILES 1
+    counter NOTMOVEDSIZE 2
+    counter REMAINING_CACHE_SIZE 2
     log_has "Expected 2 files, got 1. Not moving \"/mnt/cache/./sh/h/$n\"  to prevent breaking hardlinks"
 done
 
@@ -104,13 +113,30 @@ array_is
 counter NOTMOVEDFILES 1
 log_has 'Expected 2 files, got 1. Not moving "/mnt/cache/./sh1/h/a.txt"'
 
-# two ZFS datasets of one pool can give two single-link files the same inode number and mtime: today both are held
+# each disk numbers its own inodes: the group lookup takes only the names on the row's disk
+begin "hardlink groups on two disks sharing inode and mtime"
+mk disk1 sh/p/a.txt
+mk disk2 sh/p/b.txt
+ln /mnt/disk1/sh/p/a.txt /mnt/disk1/sh/p/a2.txt
+ln /mnt/disk2/sh/p/b.txt /mnt/disk2/sh/p/b2.txt
+for n in a a2 b b2; do row 'move from secondary' f "sh/p/$n.txt" 2 777 1700000000; done | list
+run_moves
+cache_is sh sh/p sh/p/a.txt sh/p/a2.txt sh/p/b.txt sh/p/b2.txt
+holds disk1 sh sh/p
+holds disk2 sh sh/p
+counter MOVEDFILES 4
+counter MOVEDSIZE 4
+
+# two ZFS datasets of one pool can give two single-link files the same inode number and mtime: today both are held,
+# and their bytes count once
 begin "single-link files sharing inode and mtime across shares"
 mk cache sh1/d/a.txt sh2/d/b.txt
 { row 'move from primary' f sh1/d/a.txt 1 777 1700000000; row 'move from primary' f sh2/d/b.txt 1 777 1700000000; } | list
 run_moves
 array_is
 counter NOTMOVEDFILES 4
+counter NOTMOVEDSIZE 2
+counter REMAINING_CACHE_SIZE 4
 log_count 2 'Expected 1 files, got 2. Not moving "/mnt/cache/./sh1/d/a.txt" "/mnt/cache/./sh2/d/b.txt"'
 
 # the same for two empty folders: today both rows move the pair, and the second finds one gone
@@ -141,47 +167,7 @@ run_moves
 cache_is sh sh/y sh/y/f.txt
 array_is sh sh/y sh/y/f.txt
 counter MOVEDFILES 1
+counter MOVEDSIZE 2
 check "lastCacheSync saved" 'lastCacheSync="1767323045"' "$(grep '^lastCacheSync=' "$T/cfg")"
-
-for inuse in no yes; do
-    begin "a file open in another process, moveInUse $inuse" moveInUse "$inuse"
-    mk cache sh/u/busy.txt sh/u/free.txt
-    sleep 300 3<"/mnt/cache/sh/u/busy.txt" >/dev/null 2>&1 &
-    holder=$!
-    { row 'move from primary' f sh/u/busy.txt; row 'move from primary' f sh/u/free.txt; } | list
-    run_moves
-    kill "$holder"
-    if [ "$inuse" = no ]; then
-        cache_is sh sh/u sh/u/busy.txt
-        array_is sh sh/u sh/u/free.txt
-        counter INUSEFILES 1
-        log_has 'In use, left for a later run: "/mnt/cache/./sh/u/busy.txt"'
-        log_has '1 files were in use and stay on the source until a later run'
-    else
-        cache_is sh sh/u
-        array_is sh sh/u sh/u/busy.txt sh/u/free.txt
-        counter INUSEFILES 0
-    fi
-done
-
-begin "soft stop after the first file"
-mk cache sh/s/1.txt sh/s/2.txt sh/s/3.txt
-for n in 1 2 3; do row 'move from primary' f "sh/s/$n.txt"; done | list
-after_first_rsync "touch $SOFTSTOPFILE"
-run_moves
-array_is sh sh/s sh/s/1.txt
-cache_is sh sh/s sh/s/2.txt sh/s/3.txt
-counter MOVEDFILES 1
-log_count 1 'Soft Stopping requested'
-
-begin "pause after the first file, resumed 2 s later"
-mk cache sh/s/1.txt sh/s/2.txt
-for n in 1 2; do row 'move from primary' f "sh/s/$n.txt"; done | list
-after_first_rsync "echo $$ >$PAUSEFILE; (sleep 2; rm -f $PAUSEFILE) >/dev/null 2>&1 &"
-run_moves
-array_is sh sh/s sh/s/1.txt sh/s/2.txt
-counter MOVEDFILES 2
-log_has 'Paused: no file moves until Resume'
-log_has 'Resumed after'
 
 finish

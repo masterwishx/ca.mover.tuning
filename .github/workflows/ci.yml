@@ -88,10 +88,8 @@ jobs:
     name: age_mover tests
     runs-on: ubuntu-latest
     container: debian:bookworm-slim
+    timeout-minutes: 10
     steps:
-      - name: Install the tools the mover uses
-        run: apt-get update -qq && apt-get install -y -qq --no-install-recommends rsync gawk psmisc procps util-linux
-
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

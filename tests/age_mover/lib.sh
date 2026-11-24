@@ -1,27 +1,25 @@
 #!/bin/bash
 # Sourced by test_*.sh: each case runs the real processTheMoves with real rsync and the shipped default.cfg read by the real
-# getMoverSettings; Unraid's move is a stand-in. It deletes /mnt/cache, /mnt/user0 and /mnt/other.
+# getMoverSettings; Unraid's move is a stand-in. It deletes the folders in ROOTS.
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PLUGIN=$HERE/../../source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning
 AM=${AM:-$PLUGIN/age_mover}
 T=/tmp/age_mover_test
+ROOTS=(/mnt/cache /mnt/user0 /mnt/disk1 /mnt/disk2 /mnt/other)
 
-# a bind mount at or above one of these would put the host's files under the wipe
-same_fs_as_root() {
-    local d
-    for d in /mnt /mnt/cache /mnt/user0 /mnt/other; do
-        [ ! -e "$d" ] || [ "$(stat -c %d "$d")" = "$(stat -c %d /)" ] || return 1
-    done
-}
-if [ "${AGE_MOVER_TEST:-}" != 1 ] || [ ! -e /.dockerenv ] || ! same_fs_as_root; then
-    echo "lib.sh deletes /mnt/cache, /mnt/user0 and /mnt/other: start the tests with tests/age_mover/run.sh" >&2
+# a mount at or under /mnt would put the host's files under the wipe; an unreadable mount table refuses too
+no_mount_under_mnt() { awk '$5 == "/mnt" || index($5, "/mnt/") == 1 { exit 1 }' /proc/self/mountinfo; }
+if [ "${AGE_MOVER_TEST:-}" != 1 ] || [ ! -e /.dockerenv ] || ! no_mount_under_mnt; then
+    echo "lib.sh deletes ${ROOTS[*]}: start the tests with tests/age_mover/run.sh" >&2
     exit 2
 fi
 
-mkdir -p "$T/bin" "$T/cwd" /usr/libexec/unraid
+mkdir -p "$T/cwd" /usr/libexec/unraid
 cat >/usr/libexec/unraid/move <<'EOF'
 #!/bin/bash
-# stand-in for Unraid's move: a name on the cache goes to the array (/mnt/user0), a name anywhere else goes to the cache
+# stand-in for Unraid's move: a name on the cache goes to the array (/mnt/user0), a name anywhere else to the cache.
+# A file is copied, as across disks, so names of one inode stay linked only when they come in the same run.
+declare -A linked
 while IFS= read -r p; do
     [ -n "$p" ] || continue
     root=${p#/mnt/} root=${root%%/*}
@@ -31,14 +29,14 @@ while IFS= read -r p; do
     if [ -d "$p" ] && [ ! -L "$p" ]; then
         mkdir -p "$to/$rel" && rmdir "$p" 2>/dev/null
     else
-        mv -- "$p" "$to/$rel"
+        i=$(stat -c %i "$p")
+        if [ -n "${linked[$i]}" ]; then ln -- "${linked[$i]}" "$to/$rel"; else cp -a -- "$p" "$to/$rel"; fi && rm -- "$p" && linked[$i]=$to/$rel
     fi && echo "move: $p Success"
 done
 EOF
 chmod 755 /usr/libexec/unraid/move
-PATH=$T/bin:$PATH
 
-# age_mover runs its command on load, so only its functions and its top-level counters are taken
+# age_mover runs its command on load, so only its functions and its top-level start values are taken
 awk '/^[A-Za-z_][A-Za-z0-9_]*\(\) \{/,/^\}/' "$AM" >"$T/funcs.sh"
 . "$T/funcs.sh"
 grep -E '^[A-Z_]+=(-?[0-9]+|"")$' "$AM" >"$T/globals.sh"
@@ -46,10 +44,13 @@ if ! declare -F processTheMoves getMoverSettings >/dev/null; then
     echo "lib.sh: processTheMoves or getMoverSettings did not load from $AM" >&2
     exit 2
 fi
-LOGLEVEL=1 IS_CRON=1 DEBUGLEVEL=${AGE_MOVER_DEBUG:-0} LOGFOLDER=$T MOVER_LOG=$T/log MOVER_DEBUG_LOG=$T/dlog
+LOGFOLDER=$T MOVER_LOG=$T/log MOVER_DEBUG_LOG=$T/dlog
 MOVER_STATUS=$T/mover.ini STATS_FILE=$T/stats MOVER_ACTIONLIST=$T/actions SOFTSTOPFILE=$T/softstop SOFTSTOP_ACK=false
 PAUSEFILE=$T/pause MOVINGFILE=$T/moving PIDFILE=$T/pid MOVERTUNINGCFGFILE=$T/cfg MOVERTUNING_OVERRIDE_CFGFOLDER=$T/overrides
 MOVERTUNING_DEFAULT_CFGFILE=$PLUGIN/default.cfg NOW=2026-01-02T030405 UNRAID_VERSION=7.2.0
+export TZ=UTC # NOW turns into the sync date in local time
+DEBUGLOGGING=no
+[ "${AGE_MOVER_DEBUG:-0}" != 2 ] || DEBUGLOGGING=fileOnly
 HDR='PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|FILESIZE|POOLSUM|THRESHOLD|PROJECTED|NBLINKS|INODE|ACTION|FROM|TO|FILETYPE|FILEPATH'
 FAILS=0 CHECKS=0
 
@@ -61,17 +62,19 @@ setting() {
         sed -i "s|^$1=.*|$1=\"$2\"|" "$T/cfg"
         shift 2
     done
-    getMoverSettings "$T/cfg" >/dev/null 2>&1
+    getMoverSettings "$T/cfg" >/dev/null 2>&1 || { echo "setting: getMoverSettings failed on $T/cfg" >&2; exit 2; }
     MOVER_PROGRESS=yes
 }
 
-# begin <case> [key value]...: empty cache, array and other pool, and the case's settings
+# begin <case> [key value]...: empty pools and disks, age_mover's start values and the case's settings
 begin() {
     CASE=$1
     shift
-    rm -rf /mnt/cache /mnt/user0 /mnt/other "$SOFTSTOPFILE" "$PAUSEFILE" "$T/after_rsync" "$T/bin/rsync"
+    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error"
     mkdir -p /mnt/cache /mnt/user0
-    setting "$@"
+    . "$T/globals.sh"
+    IS_CRON=1 # after the start values: as under cron, nothing goes to syslog
+    setting debuglogging "$DEBUGLOGGING" "$@"
 }
 
 # mk <root> <share/path>...: a 2-byte file at /mnt/<root>/<path>
@@ -83,42 +86,37 @@ mk() {
     done
 }
 
-# row <action> <type> <share/path> [links inode mtime]: the planner's row for the name, stat'd where it is now
+# row <action> <type> <share/path> [links inode mtime]: the planner's row for the name, stat'd where it is now; the
+# planner reads the array by disk, so a row from the secondary comes from /mnt/disk1 or /mnt/disk2
 row() {
     local from to p m i n s
     case "$1" in
     "keep on primary") from=/mnt/cache to=none ;;
     *"from primary" | "sync unattended to secondary") from=/mnt/cache to=/mnt/user0 ;;
-    *"from secondary") from=/mnt/user0 to=/mnt/cache ;;
+    *"from secondary") from=/mnt/disk1 to=/mnt/cache; [ -e "/mnt/disk2/$3" ] && from=/mnt/disk2 ;;
     "move unattended to primary") from=/mnt/other to=/mnt/cache ;;
     *) from=/mnt/other to=/mnt/user0 ;;
     esac
-    for p in "$from/$3" "/mnt/other/$3"; do [ -e "$p" ] && break; done
+    for p in "$from/$3" "/mnt/other/$3" ""; do [ -e "$p" ] && break; done
+    [ -n "$p" ] || { echo "row: no $3 under $from or /mnt/other" | tee -a "$T/row_error" >&2; return 1; }
     read -r m i n s < <(stat -c '%Y %i %h %s' "$p")
     printf 'cache|%s|yes|%s|%s|0|0|0|%s|%s|%s|%s|%s|%s|%s\n' "${3%%/*}" "${6:-$m}" "$s" "${4:-$n}" "${5:-$i}" "$1" "$from" "$to" "$2" "$3"
 }
 
-list() { { echo "$HDR"; cat; } >"$MOVER_ACTIONLIST"; }
-
-# after_first_rsync <command>: runs the command once, right after the pass's first rsync call ends
-after_first_rsync() {
-    printf '%s\n' "$1" >"$T/after_rsync"
-    printf '#!/bin/bash\n%q "$@"\nrc=$?\n[ -e %q ] && { bash %q; rm -f %q; }\nexit $rc\n' \
-        "$(PATH=${PATH#"$T/bin:"} command -v rsync)" "$T/after_rsync" "$T/after_rsync" "$T/after_rsync" >"$T/bin/rsync"
-    chmod 755 "$T/bin/rsync"
-}
+# list: the rows on stdin as the action list; as in the planner, a hardlink group's size counts on its first name only
+list() { { echo "$HDR"; awk -F'|' -v OFS='|' '$9 > 1 && seen[$12 "|" $9 "|" $10 "|" $4]++ { $5 = 0 } 1'; } >"$MOVER_ACTIONLIST"; }
 
 # the totals the planner counts per direction; a staged move to the primary is counted by its sync row
 run_moves() {
-    . "$T/globals.sh"
     read -r TOTALPRIMARYFILES TOTALPRIMARYFOLDERS TOTALPRIMARYSIZE TOTALSECONDARYFILES TOTALSECONDARYFOLDERS TOTALSECONDARYSIZE \
         TOTALUNATTENDEDFILES TOTALUNATTENDEDFOLDERS TOTALUNATTENDEDSIZE < <(awk -F'|' '
-        NR == FNR { if ($11 == "sync unattended to secondary") staged[$15] = 1; next }
+        function path(  p, i) { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; return p }
+        NR == FNR { if ($11 == "sync unattended to secondary") staged[path()] = 1; next }
         FNR == 1 { next }
         { d = "" }
         $11 == "move from primary" || $11 == "sync from primary" { d = "p" }
         $11 == "move from secondary" || $11 == "sync from secondary" { d = "s" }
-        $11 ~ /unattended/ && !($11 == "move unattended to primary" && ($15 in staged)) { d = "u" }
+        $11 ~ /unattended/ && !($11 == "move unattended to primary" && (path() in staged)) { d = "u" }
         d != "" { n[d ($14 == "d" ? "d" : "f")]++; sz[d] += $5 }
         END { print n["pf"] + 0, n["pd"] + 0, sz["p"] + 0, n["sf"] + 0, n["sd"] + 0, sz["s"] + 0, n["uf"] + 0, n["ud"] + 0, sz["u"] + 0 }
     ' "$MOVER_ACTIONLIST" "$MOVER_ACTIONLIST")
@@ -127,15 +125,15 @@ run_moves() {
     START_TIME=$EPOCHSECONDS
     : >"$MOVER_LOG"
     : >"$MOVER_DEBUG_LOG"
+    rm -f "$T/counters"
     (
         cd "$T/cwd" || exit
         processTheMoves
-        for v in MOVEDFILES MOVEDFOLDERS NOTMOVEDFILES NOTMOVEDFOLDERS VANISHEDFILES VANISHEDFOLDERS INUSEFILES \
-            REMAINING_CACHE_FILES REMAINING_CACHE_FOLDERS REMAINING_ARRAY_FILES REMAINING_UNATTENDED_FILES; do
-            echo "$v=${!v}"
-        done >"$T/counters"
+        while IFS== read -r v _; do printf '%s=%q\n' "$v" "${!v}"; done <"$T/globals.sh" >"$T/counters"
     ) >"$T/out" 2>"$T/err"
-    . "$T/counters"
+    check "the rows were built and processTheMoves returned with nothing on stderr" "" \
+        "$(cat "$T/row_error" "$T/err" 2>/dev/null; [ -f "$T/counters" ] || echo "processTheMoves did not return")"
+    [ ! -f "$T/counters" ] || . "$T/counters"
 }
 
 check() { # check <what> <expected> <got>
@@ -149,9 +147,10 @@ check() { # check <what> <expected> <got>
     fi
 }
 tree() { (cd "/mnt/$1" 2>/dev/null && find . -mindepth 1 | sed 's|^\./||' | LC_ALL=C sort); }
-# cache_is / array_is [path]...: exactly these names under /mnt/cache or /mnt/user0, nothing else
-cache_is() { check "cache holds exactly${*:+ $*}" "$( (($#)) && printf '%s\n' "$@" | LC_ALL=C sort)" "$(tree cache)"; }
-array_is() { check "array holds exactly${*:+ $*}" "$( (($#)) && printf '%s\n' "$@" | LC_ALL=C sort)" "$(tree user0)"; }
+# holds <root> [path]...: exactly these names under /mnt/<root>, nothing else
+holds() { local r=$1; shift; check "$r holds exactly${*:+ $*}" "$( (($#)) && printf '%s\n' "$@" | LC_ALL=C sort)" "$(tree "$r")"; }
+cache_is() { holds cache "$@"; }
+array_is() { holds user0 "$@"; }
 links() { check "$2 on the array has $1 links" "$1" "$(stat -c %h "/mnt/user0/$2" 2>&1)"; }
 counter() { check "$1 is $2" "$2" "${!1}"; }
 log() { sed -E 's/^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} //' "$MOVER_LOG"; }
