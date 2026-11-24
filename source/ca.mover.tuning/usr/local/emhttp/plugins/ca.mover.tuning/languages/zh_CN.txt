@@ -124,6 +124,7 @@ Mover Tuning thresholds=Mover Tuning 阈值
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件没有移动/同步任何文件。耗时：%s
 No log files yet=暂无日志文件
 Not Applicable Share Does Not Exist Yet=不适用（共享尚不存在）
+Not a valid cron schedule it is not applied=无效的 cron 计划：不会生效。
 Notify Mover Tuning plugin actions=通知设置
 Oldest first=最旧的优先
 Only move files larger than this in MB=仅移动大于此大小的文件（MB）
@@ -236,6 +237,8 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 > 使用自定义 cron 条目运行 Mover Tuning 插件的 <strong><code>age_mover</code></strong> 计划（应用所有插件过滤器）。
 >
 > Cron 计划示例 <strong>0 */4 * * *</strong>。&nbsp; 表示<em>每</em><strong> 4 小时</strong>运行一次。&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> 什么是 Cron</a>
+>
+> 计划必须是有效的 cron 条目：无效的计划不会生效，错误会写入系统日志。
 :end
 
 :mover_tune_testmode_plug:

@@ -14,6 +14,7 @@ $config_file = '/boot/config/plugins/' . $plugin . '/' . $plugin . '.cfg';
 $config_default_file = '/usr/local/emhttp/plugins/' . $plugin . '/default.cfg';
 $cfg = parse_plugin_cfg($plugin);
 require_once '/usr/local/emhttp/plugins/ca.mover.tuning/logFiles.php';
+require_once '/usr/local/emhttp/plugins/ca.mover.tuning/cronSchedule.php';
 $moverLogFiles = array_keys(moverLogFiles($cfg));
 $advancedSettings =  ($cfg['advancedSettings'] != "yes") ? "no" : "yes";
 $advancedFilters =  ($cfg['advancedFilters'] != "yes") ? "no" : "yes";
@@ -111,15 +112,6 @@ function toggleResync() {
   $('select[name="resynchronizeCache"]').prop('disabled', off);
   // update.php keeps a key the form does not post, and a disabled select is not posted: post No instead
   $('input[name="resynchronizeCache"]').prop('disabled', !off);
-}
-
-function updateCron() {
-  var cron = $("#cronSchedule").val();
-  var tune_cron = $("#tune_cronSchedule").val();
-	var cronEnabled = $("#forceCron").val();
-  var ismoverDisabled = $("#moverDisabled").val();
-  var watchdog = $("#watchdog").val();
-	$.post("/plugins/ca.mover.tuning/updateCron.php",{cronEnabled:cronEnabled,cron:cron,tune_cron:tune_cron,ismoverDisabled:ismoverDisabled,watchdog:watchdog});
 }
 
 // the View and Download links follow the file picked in the Log files row
@@ -579,8 +571,11 @@ if (localStorage.getItem(newYearSeasonKey) === 'yes') {
 </div>
 
 <div class='moverUpdate'></div>
-<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtDefaultLogFolder(this);mtEscapeQuotes(this);updateCron();">
+<form markdown="1" method="POST" action="/update.php" target="progressFrame" onsubmit="mtDefaultLogFolder(this);mtEscapeQuotes(this);">
 <input type="hidden" name="#file" value="<?=$plugin?>/<?=$plugin?>.cfg">
+<!-- update.php runs this once it has saved the settings, so updateCron.php reads the saved values -->
+<input type="hidden" name="#command" value="/plugins/<?=$plugin?>/updateCron.php">
+<input type="hidden" name="#arg[1]" value="apply">
 
 _(Disable Mover running on a schedule)_:
 : <select name='moverDisabled' size='1' id='moverDisabled' onchange="updateScreenMoverTuningSettings(this.value, 'slow'); mtWatchdogWarning()">
@@ -654,12 +649,15 @@ _(Watchdog trigger level)_:
 
 _(Mover Tuning schedule)_:
 : <input type='text' id='tune_cronSchedule' name='moverTuneCron' size='1' class='tune_mycron' placeholder='0 */4 * * *' value='<?=htmlspecialchars($cfg['moverTuneCron'], ENT_QUOTES | ENT_SUBSTITUTE)?>'>
+<?php if (saved_cron_invalid($cfg['moverTuneCron'] ?? '')): ?><span class="orange-text" style="font-style:italic;"><i class="fa fa-warning"></i> _(Not a valid cron schedule: it is not applied.)_</span><?php endif; ?>
 
 :mover_tune_movertunecron_plug:
 
 > Runs the <strong><code>age_mover</code></strong> schedule from the Mover Tuning plugin using your custom cron entry (includes all plugin filters).
 >
 > Cron Schedule entry example <strong>0 */4 * * *</strong>.&nbsp; To run at <em>every</em><strong> 4 hours</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> What Is Cron</a>
+>
+> The schedule must be a valid cron entry: an invalid one is not applied, and the error is written to the syslog.
 
 :end
 
@@ -912,6 +910,7 @@ _(Force move of all files on a schedule)_:
 
 _(Cron Schedule to force move all of files)_:
 : <input type='text' id='cronSchedule' name='cron' size='1' class='mycron' placeholder='20 4 1 * *' value='<?=htmlspecialchars($cfg['cron'], ENT_QUOTES | ENT_SUBSTITUTE)?>' <?=$cronDisabled?>>
+<?php if (saved_cron_invalid($cfg['cron'] ?? '')): ?><span class="orange-text" style="font-style:italic;"><i class="fa fa-warning"></i> _(Not a valid cron schedule: it is not applied.)_</span><?php endif; ?>
 
 :mover_tune_cron_plug:
 
