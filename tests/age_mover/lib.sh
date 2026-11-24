@@ -41,22 +41,41 @@ done
 EOF
     chmod 755 /usr/libexec/unraid/move
 fi
-# a path listed in $T/zfs is a ZFS mountpoint whose dataset has no children; zfs records each call, and fails on any it
-# has no answer for. unmount unlists it and keeps its folder; destroy rmdirs the folder, as OpenZFS does when inherited
+# a path in $T/zfs is a ZFS mountpoint (a tab, then its dataset, else the path less /mnt/); zfs logs each call to
+# $T/zfs.calls and fails on calls it has no answer for and on the subcommand $T/zfs.fail names
 cat >"$T/bin/findmnt" <<'EOF'
 #!/bin/bash
-grep -qxF -- "${@: -1}" "${0%/bin/findmnt}/zfs" 2>/dev/null && echo zfs
-exit 0
+l=$(awk -F'\t' -v p="${*: -1}" '$1 == p {print; exit}' "${0%/bin/findmnt}/zfs" 2>/dev/null)
+[ -n "$l" ] || exit 0
+case "$2" in
+source) n=${l#*$'\t'}; [ "$n" != "$l" ] || n=${l#/mnt/}; echo "$n" ;;
+*) echo zfs ;;
+esac
 EOF
 cat >"$T/bin/zfs" <<'EOF'
 #!/bin/bash
 d=${0%/bin/zfs}
+n=${*: -1}
 echo "zfs $*" >>"$d/zfs.calls"
+[ "$1" = "$(cat "$d/zfs.fail" 2>/dev/null)" ] && { echo "cannot $1 '$n': zfs.fail" >&2; exit 1; }
+# the line of file $1 for dataset $n
+entry() { awk -F'\t' -v n="$n" '(NF > 1 ? $2 : substr($1, 6)) == n' "$1" 2>/dev/null; }
 case "$*" in
-"list -Hpo usedbychildren "*) echo 0 ;;
-"list -r -H -o name "*) echo "${@: -1}" ;;
-"unmount "*) grep -vxF -- "/mnt/${*: -1}" "$d/zfs" >"$d/zfs.new"; mv "$d/zfs.new" "$d/zfs" ;;
-"destroy "*) rmdir -- "/mnt/${*: -1}" 2>/dev/null; exit 0 ;;
+# $T/zfs.on_list runs first, as a write while zfs lists; $T/zfs.children holds the children and snapshots
+"list -r -H -t filesystem,volume,snapshot -o name "*)
+    [ ! -f "$d/zfs.on_list" ] || bash "$d/zfs.on_list"
+    echo "$n"; cat "$d/zfs.children" 2>/dev/null || :
+    ;;
+# unmount unlists the dataset and keeps its folder; mount lists it again
+"unmount "*)
+    l=$(entry "$d/zfs")
+    [ -n "$l" ] || { echo "cannot unmount '$n': not currently mounted" >&2; exit 1; }
+    echo "$l" >>"$d/zfs.off"
+    grep -vxF -- "$l" "$d/zfs" >"$d/zfs.new"; mv "$d/zfs.new" "$d/zfs"
+    ;;
+"mount "*) entry "$d/zfs.off" >>"$d/zfs" ;;
+# the dataset's files go with it, and OpenZFS removes an inherited mountpoint
+"destroy "*) rm -rf -- "$(entry "$d/zfs.off" | tail -n 1 | cut -f1)" ;;
 *) echo "zfs stand-in has no answer for: zfs $*" >&2; exit 1 ;;
 esac
 EOF
@@ -104,7 +123,7 @@ fresh() {
 begin() {
     CASE=$1
     shift
-    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs.calls" "$T/after_rsync" "$T/bin/rsync" \
+    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs".* "$T/after_rsync" "$T/bin/rsync" \
         "$MOVER_LOG"
     mkdir -p /mnt/cache /mnt/user0
     fresh "$@"
@@ -203,6 +222,7 @@ log_has() { check "log has: $1" 1 "$(log | grep -cF -- "$1" | sed 's/^[1-9][0-9]
 log_lacks() { check "log lacks: $1" 0 "$(log | grep -cF -- "$1")"; }
 log_count() { check "log has $1 lines with: $2" "$1" "$(log | grep -cF -- "$2")"; }
 dlog_has() { check "debug log has: $1" 1 "$(grep -cF -- "$1" "$MOVER_DEBUG_LOG" | sed 's/^[1-9][0-9]*$/1/')"; }
+dlog_lacks() { check "debug log lacks: $1" 0 "$(grep -cF -- "$1" "$MOVER_DEBUG_LOG")"; }
 
 finish() {
     echo "# $(basename "$0"): $((CHECKS - FAILS)) of $CHECKS checks passed"

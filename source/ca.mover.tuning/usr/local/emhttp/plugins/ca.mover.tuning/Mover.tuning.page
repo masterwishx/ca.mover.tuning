@@ -1301,7 +1301,7 @@ _(Clean empty folders)_:
 <blockquote class="inline_help">
 :mover_tune_cleanfolders_plug:
 <p><strong>Yes</strong> - Removes the parent folder <strong>only of moved</strong> files.</p>
-<p><strong>Top Folder</strong> - Removes the top-level <strong>share folder</strong> of the moved content, including <strong>all empty subfolders</strong> on the primary storage.</p>
+<p><strong>Top Folder</strong> - As <strong>Yes</strong>, and also removes the share's <strong>top-level folder</strong> where the files moved from, once it is empty, unless it is a ZFS dataset (see <strong>Clean empty ZFS datasets</strong>).</p>
 :end
 </blockquote>
 
@@ -1314,7 +1314,7 @@ _(Clean empty ZFS datasets)_:
 
 :mover_tune_cleandatasets_plug:
 
-> This will <strong>unmount</strong> and <strong>destroy</strong> the parent ZFS dataset on share of moved files, <strong>only if not contain</strong> child datasets within. Works only when <strong>Clean empty folders</strong> is set to <strong>Yes</strong> or <strong>Top Folder</strong>.
+> This will <strong>unmount</strong> and <strong>destroy</strong> the share's ZFS dataset on the primary storage after its files move, <strong>only if</strong> it has no child datasets or snapshots and each entry left in it is a folder that the secondary storage also has. The dataset's own ZFS settings, such as compression or quota, are deleted with it. Works only when <strong>Clean empty folders</strong> is set to <strong>Yes</strong> or <strong>Top Folder</strong>.
 
 :end
 

@@ -446,11 +446,11 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_cleanfolders_plug:
 <p><strong>Oui</strong> — supprime le dossier parent des fichiers déplacés.</p>
-<p><strong>Dossier principal</strong> — supprime le dossier de la part et tous les sous‑dossiers vides.</p>
+<p><strong>Dossier principal</strong> — comme <strong>Oui</strong>, et supprime aussi le dossier de premier niveau de la part, là d’où les fichiers ont été déplacés, une fois vide, sauf s’il s’agit d’un dataset ZFS (voir <strong>Nettoyer les datasets ZFS vides</strong>).</p>
 :end
 
 :mover_tune_cleandatasets_plug:
-> Démonte et détruit le dataset ZFS parent si aucun dataset enfant n’existe. Fonctionne uniquement si <strong>Nettoyer les dossiers vides</strong> est réglé sur <strong>Oui</strong> ou <strong>Dossier principal</strong>.
+> Démonte et détruit le dataset ZFS de la part sur le stockage primaire après le déplacement de ses fichiers, <strong>uniquement</strong> s’il n’a ni dataset enfant ni snapshot et si chaque élément restant est un dossier qui existe aussi sur le stockage secondaire. Les réglages ZFS propres au dataset, comme la compression ou le quota, disparaissent avec lui. Fonctionne uniquement si <strong>Nettoyer les dossiers vides</strong> est réglé sur <strong>Oui</strong> ou <strong>Dossier principal</strong>.
 :end
 
 :mover_tune_sharecalculation_plug:
