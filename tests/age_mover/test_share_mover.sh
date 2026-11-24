@@ -5,9 +5,9 @@
 . "$(dirname "$0")/lib.sh"
 SM=${SM:-$PLUGIN/share_mover}
 CFG=/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg
-# the cases rewrite /boot/config and /var/local/emhttp: a mount there (Unraid's flash drive) refuses
-if ! awk '$5 ~ "^/(boot|var/local)(/|$)" { exit 1 }' /proc/self/mountinfo; then
-    echo "test_share_mover.sh rewrites /boot/config: start it with tests/age_mover/run.sh" >&2
+# the cases write under /boot, /var/local and /usr/local, and /var/run/mover.pid: a mount at one (Unraid's flash drive) refuses
+if ! awk '$5 ~ "^/(boot|var/local|usr/local)(/|$)" || $5 ~ "^/(var/)?run(/mover\\.pid)?$" { exit 1 }' /proc/self/mountinfo; then
+    echo "test_share_mover.sh writes Unraid's paths and one is a mount here: start it with tests/age_mover/run.sh" >&2
     exit 2
 fi
 mkdir -p /usr/local/sbin
@@ -86,6 +86,16 @@ log_count 2 'Success'
 cache_is sh sh/d
 array_is sh sh/b.txt sh/d sh/d/a.txt
 mdcmd_calls
+
+share 'no move at /usr/libexec/unraid, so the one in PATH' yes
+mk cache sh/a.txt
+mv /usr/libexec/unraid/move "$T/move.aside"
+cp "$T/move.aside" "$T/bin/move"
+run 1
+mv "$T/move.aside" /usr/libexec/unraid/move
+rm "$T/bin/move"
+log_has "Complete Mover Command: find \"/mnt/cache/sh\" -type f -depth | $T/bin/move -d 1"
+array_is sh sh/a.txt
 
 share 'a prefer share' prefer
 mk disk1 sh/c.txt
