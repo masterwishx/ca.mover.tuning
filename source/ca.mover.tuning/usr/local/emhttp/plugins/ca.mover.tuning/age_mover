@@ -311,7 +311,7 @@ titleLineTo() {
     local title="$2" padding_char="$3" line_length=71 left_padding right_padding
     local padding_left=$((line_length - ${#title} / 2))
     local padding_right=$((padding_left - ${#title} % 2 - 1))
-    # a negative width pads on the left, as printf | tr did
+    # a negative width still pads by its size (printf left-justifies the empty string), as printf | tr did
     printf -v left_padding '%*s' "$padding_left" ""
     printf -v right_padding '%*s' "$padding_right" ""
     # the quoted replacement keeps a padding character such as & literal
@@ -394,10 +394,10 @@ escape_find_path() {
 #
 # Wraps a path for a log message: the debug package ends a path at the quote, so an
 # embedded quote - an edge case, but the last redaction hole - would expose the rest.
-qp() { local p=${1//\\/\\\\}; printf '"%s"' "${p//\"/\\\"}"; }
+qp() { local q; qpAll q "$1"; printf '%s' "${q% }"; }
 
-# qpAll VAR ITEM...: sets VAR to each ITEM as qp quotes it, each followed by a space. The escapes
-# apply to every item at once, so a list costs no subshell per item.
+# qpAll VAR ITEM...: sets VAR to each ITEM quoted for qp, each followed by a space. It owns the escapes,
+# which apply to every item at once, so a list costs no subshell per item.
 qpAll() {
     local -a items=("${@:2}")
     items=("${items[@]//\\/\\\\}")
