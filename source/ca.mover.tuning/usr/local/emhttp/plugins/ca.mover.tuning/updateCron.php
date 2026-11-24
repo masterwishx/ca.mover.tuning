@@ -185,17 +185,17 @@ function sync_watchdog_cron()
 	}
 }
 
-/** From Unraid 7.2.1, after the install migrated Unraid's schedule: renames Unraid's mover.cron to mover.cron.old once mover.tuning.cron exists or the schedule is disabled */
+/** From Unraid 7.2.1, after the install migrated Unraid's schedule: renames Unraid's mover.cron to mover.cron.old unless the Mover Tuning schedule is on, set and not written yet */
 function retire_unraid_cron()
 {
-	global $vars, $cfg_moverDisabled;
+	global $vars, $cfg_moverDisabled, $cfg_moverTuneCron;
 
 	$mark = "/boot/config/plugins/ca.mover.tuning/retire.unraid.schedule";
 	$unraidFile = "/boot/config/plugins/dynamix/mover.cron";
 	if (is_file($mark) === false || $vars['version'] === '' || version_compare($vars['version'], '7.2.1', '<') === true) {
 		return;
 	}
-	if ($cfg_moverDisabled !== 'yes' && is_file("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron") === false) {
+	if ($cfg_moverDisabled !== 'yes' && $cfg_moverTuneCron !== '' && is_file("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron") === false) {
 		logger("Unraid's mover schedule in $unraidFile is kept: mover.tuning.cron is not written yet.");
 		return;
 	}

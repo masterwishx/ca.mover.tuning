@@ -841,9 +841,9 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
             echo "Setting moverTuneCron to: [$SHARE_MOV_SCHED]"
             echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
 
-            # updateCron.php retires mover.cron at the first sync or apply that finds this marker and the schedule replaced or disabled
+            # updateCron.php retires mover.cron at the first sync or apply that finds this marker and the schedule written, cleared or disabled
             if touch /boot/config/plugins/&name;/retire.unraid.schedule; then
-                echo "mover.cron becomes mover.cron.old once mover.tuning.cron is written or the schedule is disabled."
+                echo "mover.cron becomes mover.cron.old once mover.tuning.cron is written, or the schedule is cleared or disabled."
             else
                 echo "The retirement marker could not be written, so mover.cron stays: rename it to mover.cron.old by hand."
             fi
