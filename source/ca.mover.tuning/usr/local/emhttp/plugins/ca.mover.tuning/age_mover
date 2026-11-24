@@ -249,6 +249,12 @@ unraid_notify() {
     else
         severity="warning"
     fi
+    # before 7.2 Unraid shows the description as raw HTML; from 7.2 its API sanitizes it (and from API 4.26 decodes
+    # entities first, undoing an escape). The quotes stop bash 5.2 reading & in the replacement as the matched text
+    if ! version_ge "$UNRAID_VERSION" 7.2; then
+        message=${message//</"&lt;"}
+        message=${message//>/"&gt;"}
+    fi
     #
     # Call the Unraid notification script
     /usr/local/emhttp/webGui/scripts/notify -s "$(translate_text "Mover Tuning Notification")" -d "$message" -i "$severity" -l "/Settings/Scheduler"
