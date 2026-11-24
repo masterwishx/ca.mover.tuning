@@ -91,8 +91,6 @@ COUNT_SECONDARY_FILES=0
 overrideFlag=0
 UNRAID_MOVER_LOGLEVEL=0
 UNRAID_MOVER=0
-# PHP requires escaped quotes (" -> \") for text fields
-DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
@@ -342,34 +340,6 @@ skiplist_share_lines() {
             }
         }
     ' "$list"
-}
-
-# Sanitize input filename to prevent attacks
-validate_filename() {
-    local filename="$1"
-
-    ## Check filename length
-    if [[ ${#filename} -gt 255 ]]; then
-        mvlogger "Error: Filename too long: '$filename'"
-        return 1
-    fi
-
-    # Invalid characters (Linux + Windows + macOS safe)
-    if [[ "$filename" == *["$INVALID_FILE_CHARS_STR"]* ]]; then
-        mvlogger "Error: Invalid characters in filename: '$filename'"
-        return 1
-    fi
-
-    # Fast path traversal detection
-    if [[ "$filename" == *".."* ]]; then
-        # Only block if '..' is used as a path segment
-        if [[ "$filename" == "../"* || "$filename" == *"/.."* || "$filename" == "..\\"* || "$filename" == *"\\.."* ]]; then
-            mvlogger "Error: Path traversal attempt detected: '$filename'"
-            return 1
-        fi
-    fi
-
-    return 0
 }
 
 # find's -path glob and the eval each strip one level, so a literal backslash
@@ -975,36 +945,6 @@ getMoverSettings() {
     else
         LISTFILESAGE=$(cfg listfilesDaysold)
         mvlogger "List files delete age: $LISTFILESAGE days"
-    fi
-
-    if [ -z $(cfg validateFilenames) ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Validate Filenames argument provided, defaulting to yes"
-            cfg_default validateFilenames yes
-            VALIDATE_FILENAMES="yes"
-        fi
-    else
-        VALIDATE_FILENAMES=$(cfg validateFilenames)
-        mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
-    fi
-
-    if [ -z "$(cfg invalidFileChars)" ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            # Print and unescape the array element \" -> "
-            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]//\\\"/\"}"
-            cfg_default invalidFileChars "${DEFAULT_INVALID_FILE_CHARS[*]}"
-            # Keep DEFAULT_INVALID_FILE_CHARS as an array
-            INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
-            # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
-            INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
-        fi
-    else
-        # Convert the string from cfg invalidFileChars to an array
-        IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
-        # Print and unescape the array element \" -> "
-        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"
-        # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
-        INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
     fi
 
     if [ -z $(cfg movefilesTool) ]; then
@@ -2596,7 +2536,10 @@ processTheMoves() {
     # "keep on primary", "keep on secondary" and "keep misplaced" are not actions, so they are absent
 
     for ACTION_PASS in "${MOVE_ACTIONS[@]}"; do
-        while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH; do
+        while IFS= read -r ROW; do
+            IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH <<<"$ROW"
+            # read can drop a | that ends the row, so a set path is cut whole from the row, as the awk lookups below take it
+            if [ -n "$FILEPATH" ]; then FILEPATH=$ROW; for _ in {1..14}; do FILEPATH=${FILEPATH#*|}; done; fi
             # before the row's checks, so a long pause cannot leave them stale
             pauseHold
             if [ -e $SOFTSTOPFILE ]; then
@@ -2676,27 +2619,6 @@ processTheMoves() {
             SYNCED_FILES=""
             for f in "${SYNCED_FILES_ARR[@]}"; do SYNCED_FILES+="$(qp "$f") "; done
             GUI_CURRENT_FILE="$SOURCE/$FILEPATH"
-
-            # Check File by validate function and skip if error; rsync gets every hardlink name, so check them all
-            if [ "$VALIDATE_FILENAMES" = "yes" ]; then
-                for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
-                    # a name already gone is counted as vanished after the transfer, never as invalid
-                    [ -e "${f//\/.\//\/}" ] || continue
-                    validate_filename "$(basename "$f")" && continue
-                    mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
-                    gone=0
-                    for g in "${SYNCED_FILES_ARR[@]}"; do [ -e "${g//\/.\//\/}" ] || gone=$((gone + 1)); done
-                    # a staged row is counted once, by its sync row, which finds the move incomplete and takes the gone names from here
-                    if [ "$STAGE_ROW" = 0 ]; then
-                        not_moved "$(( ${#SYNCED_FILES_ARR[@]} - gone > 0 ? ${#SYNCED_FILES_ARR[@]} - gone : 1 ))"
-                        [ "$FILETYPE" = "f" ] && VANISHEDFILES=$((VANISHEDFILES + gone))
-                        remaining_done "$gone" 0
-                    else
-                        STAGED_VANISHED[$chain_key]=$gone
-                    fi
-                    continue 2
-                done
-            fi
 
             # Check if list is complete (array length is exact, unlike parsing the string)
             NBFILES=${#SYNCED_FILES_ARR[@]}
