@@ -8,10 +8,11 @@ AM=${AM:-$PLUGIN/age_mover}
 T=${T:-/tmp/age_mover_test} # test_folders.sh runs its plain-user half with its own T
 ROOTS=(/mnt/cache /mnt/user0 /mnt/disk1 /mnt/disk2 /mnt/other)
 
-# a mount at or under /mnt would put the host's files under the wipe; an unreadable mount table refuses too
-no_mount_under_mnt() { awk '$5 == "/mnt" || index($5, "/mnt/") == 1 { exit 1 }' /proc/self/mountinfo; }
-if [ "${AGE_MOVER_TEST:-}" != 1 ] || [ ! -e /.dockerenv ] || ! no_mount_under_mnt; then
-    echo "lib.sh deletes ${ROOTS[*]}: start the tests with tests/age_mover/run.sh" >&2
+# a mount at or under /mnt would put the host's files under the wipe, and one at /usr/libexec/unraid/move or above it the
+# host's mover under the stand-in; an unreadable mount table refuses too
+no_host_mount() { awk '$5 == "/mnt" || index($5, "/mnt/") == 1 || $5 ~ "^/usr(/libexec(/unraid(/move)?)?)?$" { exit 1 }' /proc/self/mountinfo; }
+if [ "${AGE_MOVER_TEST:-}" != 1 ] || [ ! -e /.dockerenv ] || ! no_host_mount; then
+    echo "lib.sh deletes ${ROOTS[*]} and writes /usr/libexec/unraid/move: start the tests with tests/age_mover/run.sh" >&2
     exit 2
 fi
 
@@ -103,9 +104,21 @@ fresh() {
 begin() {
     CASE=$1
     shift
-    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs.calls"
+    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs.calls" "$T/after_rsync" "$T/bin/rsync" \
+        "$MOVER_LOG"
     mkdir -p /mnt/cache /mnt/user0
     fresh "$@"
+}
+
+# after_first_rsync <command>: runs the command once, right after the case's first rsync ends; its errors go to the stderr
+# run_moves checks. The wrapper renames its process, or copyPids would take it for the copy
+after_first_rsync() {
+    local h=$T/after_rsync e=$T/row_error
+    printf '%s\n' "$1" >"$h"
+    # shellcheck disable=SC2016 # the wrapper expands its own $$, $@ and $?
+    printf '#!/bin/bash\nprintf hook >/proc/$$/comm\n%q "$@"\nrc=$?\n[ -e %q ] && { bash %q 2>>%q || echo "after_first_rsync: the command failed" >>%q; rm -f %q; }\nexit $rc\n' \
+        "$(PATH=${PATH#"$T/bin:"} command -v rsync)" "$h" "$h" "$e" "$e" "$h" >"$T/bin/rsync"
+    chmod 755 "$T/bin/rsync"
 }
 
 # mk <root> <share/path>...: a 2-byte file at /mnt/<root>/<path>

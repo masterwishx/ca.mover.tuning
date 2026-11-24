@@ -1,5 +1,6 @@
 #!/bin/bash
-# The folder cleanup after each row today: Clean Folders no / yes / topFolder, Move empty folders, Clean ZFS datasets.
+# The folder cleanup after each row and the top-folder check after the pass: Clean Folders no / yes / topFolder, Move
+# empty folders, Clean ZFS datasets.
 . "$(dirname "$0")/lib.sh"
 
 # the half of an unreadable-folder case that runs as a plain user, since root lists any folder
@@ -127,8 +128,27 @@ for tool in rsync move; do
     log_has 'Deleted empty top-level folder: /mnt/cache/sh'
 done
 
-# today a file row that empties its folder leaves the top-folder check on for the move rows after it, until a file row
-# leaves files behind
+# with move the cleanup finds the folder already gone, and its parent is the top folder
+for tool in rsync move; do
+    begin "topFolder, a share holding only an empty folder ($tool)" cleanFolders topFolder movefilesTool "$tool"
+    mkdir -p /mnt/cache/sh/e
+    row 'move from primary' d sh/e | list
+    run_moves
+    cache_is
+    array_is sh sh/e
+    log_has 'Deleted empty top-level folder: /mnt/cache/sh'
+done
+
+begin "topFolder, a folder row whose parent keeps a file" cleanFolders topFolder
+mk cache sh/p/k.txt
+mkdir -p /mnt/cache/sh/p/e
+row 'move from primary' d sh/p/e | list
+run_moves
+cache_is sh sh/p sh/p/k.txt
+log_has 'Not deleting folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh/p'
+log_lacks 'top-level'
+
+# the reporter's shape: one top-folder check for the share, whichever row empties a folder first
 for order in file-first folders-first; do
     begin "topFolder, one file row and three folder rows, $order" cleanFolders topFolder
     mk cache sh/a/f.txt sh/p/other.txt sh/keep/stay.txt
@@ -140,9 +160,30 @@ for order in file-first folders-first; do
     } | list
     run_moves
     cache_is sh sh/keep sh/keep/stay.txt sh/p sh/p/other.txt
-    log_count "$([ "$order" = file-first ] && echo 4 || echo 1)" 'top-level folder'
+    log_count 1 'top-level folder'
     log_has 'Not deleting top-level folder: contains 2 file(s), 2 subfolder(s): /mnt/cache/sh'
 done
+
+begin "topFolder, two shares, their rows taking turns" cleanFolders topFolder
+mk cache s1/a/f.txt s1/b/g.txt s1/keep/k.txt s2/a/f.txt s2/b/g.txt
+for f in s1/a/f.txt s2/a/f.txt s1/b/g.txt s2/b/g.txt; do row 'move from primary' f "$f"; done | list
+run_moves
+cache_is s1 s1/keep s1/keep/k.txt
+array_is s1 s1/a s1/a/f.txt s1/b s1/b/g.txt s2 s2/a s2/a/f.txt s2/b s2/b/g.txt
+log_count 2 'top-level folder'
+log_has 'Not deleting top-level folder: contains 1 file(s), 1 subfolder(s): /mnt/cache/s1'
+log_has 'Deleted empty top-level folder: /mnt/cache/s2'
+
+begin "topFolder, a soft stop after the first row" cleanFolders topFolder
+mk cache sh/a/f.txt sh/b/g.txt
+{ row 'move from primary' f sh/a/f.txt; row 'move from primary' f sh/b/g.txt; } | list
+after_first_rsync "touch '$SOFTSTOPFILE'"
+run_moves
+array_is sh sh/a sh/a/f.txt
+cache_is sh sh/b sh/b/g.txt
+check "the top folder is checked after the soft stop" \
+    "$(printf '%s\n' 'Soft Stopping requested' 'Not deleting top-level folder: contains 1 file(s), 1 subfolder(s): /mnt/cache/sh')" \
+    "$(log | grep -oE 'Soft Stopping requested|Not deleting top-level folder.*')"
 
 # today the destroy counts regular files only: an empty folder and a symlink go with the dataset
 for left in nothing 'a file' 'an empty folder and a symlink'; do
