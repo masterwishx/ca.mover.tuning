@@ -46,12 +46,12 @@ use Fcntl qw(O_NONBLOCK O_RDONLY F_UNLCK F_WRLCK);
 
 # Linux-specific fcntl command. The plugin package is x86_64-only, where F_SETLEASE is
 # F_LINUX_SPECIFIC_BASE + 0.
-use constant F_SETLEASE => 1024;
+my $F_SETLEASE = 1024;
 # The kernel sends SIGIO to a lease holder when another process opens the file and so asks for the
 # lease to be broken. SIGIO kills the process by default. That can happen in the few instructions
 # between taking and releasing the lease, so ignore it. Closing the descriptor releases the lease
 # anyway.
-$SIG{IO} = 'IGNORE';
+local $SIG{IO} = 'IGNORE';
 
 @ARGV or die "Usage: $0 FILE...\n";
 
@@ -71,8 +71,8 @@ sub fall_back_to_fuser {
 my %leased_inodes;
 open(my $locks, '<', '/proc/locks') or fall_back_to_fuser();
 while (my $line = <$locks>) {
-    next unless $line =~ /\b(?:LEASE|DELEG)\b/;
-    $leased_inodes{$1} = 1 if $line =~ /\s[0-9a-f]+:[0-9a-f]+:(\d+)\s/;
+    next unless $line =~ /\b(?:LEASE|DELEG)\b/x;
+    $leased_inodes{$1} = 1 if $line =~ /\s[0-9a-f]+:[0-9a-f]+:(\d+)\s/x;
 }
 close $locks;
 
@@ -105,7 +105,7 @@ for my $path (@ARGV) {
 
     # The actual test: a write lease is refused with EAGAIN while any other descriptor for the file
     # is open, in this process or any other.
-    if (!fcntl($file, F_SETLEASE, F_WRLCK)) {
+    if (!fcntl($file, $F_SETLEASE, F_WRLCK)) {
         my $error = 0 + $!;
         close $file;
         # Another process has the file open: in use.
@@ -116,7 +116,7 @@ for my $path (@ARGV) {
 
     # We got the lease, so the file was not in use. Release it at once. If releasing fails,
     # something unexpected is going on: don't trust our answer, let fuser decide.
-    if (!fcntl($file, F_SETLEASE, F_UNLCK)) {
+    if (!fcntl($file, $F_SETLEASE, F_UNLCK)) {
         close $file;
         fall_back_to_fuser();
     }
