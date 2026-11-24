@@ -107,9 +107,8 @@ case "$*" in
 *) echo "zfs stand-in has no answer for: zfs $*" >&2; exit 1 ;;
 esac
 EOF
-# age_mover's only mount: mount -t zfs -o ro,zfsutil <unmounted dataset> <empty folder outside /mnt> brings the dataset's
-# files into the folder, noted in $T/zfs.private; umount takes them back. Both log to zfs.calls, a mktemp folder as
-# PRIVATE, run $T/zfs.on_mount.zfs or zfs.on_umount first and fail on mount.zfs or umount in zfs.fail
+# mount -t zfs -o ro,zfsutil DATASET DIR moves an unmounted dataset's files into an empty DIR outside /mnt, umount back; both
+# log to zfs.calls with a mktemp DIR as PRIVATE, run zfs.on_mount.zfs or zfs.on_umount, and fail on mount.zfs or umount
 cat >"$T/bin/mount" <<'EOF'
 #!/bin/bash
 d=${0%/bin/mount}
@@ -121,7 +120,7 @@ echo "mount ${*:1:$#-1} $shown" >>"$d/zfs.calls"
 n=$5
 if grep -qxF mount.zfs "$d/zfs.fail" 2>/dev/null; then
     r=$(cat "$d/zfs.reason" 2>/dev/null) || r=zfs.fail
-    echo "filesystem '$n' cannot be mounted: $r" >&2
+    echo "filesystem '$n' cannot be mounted, $r" >&2
     exit 1
 fi
 case $p in /mnt | /mnt/*) echo "mount stand-in: $p is under /mnt" >&2; exit 1 ;; esac
@@ -153,7 +152,16 @@ find "$p" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.store/${l#*$'\t'}" {} +
 grep -vxF -- "$l" "$d/zfs.private" >"$d/zfs.new"
 mv "$d/zfs.new" "$d/zfs.private"
 EOF
-chmod 755 "$T/bin/findmnt" "$T/bin/zfs" "$T/bin/mount" "$T/bin/umount"
+# as Linux does, rmdir refuses a folder something is mounted on
+cat >"$T/bin/rmdir" <<'EOF'
+#!/bin/bash
+if [ -n "$(awk -F'\t' -v p="${*: -1}" '$1 == p' "${0%/bin/rmdir}/zfs.private" 2>/dev/null)" ]; then
+    echo "rmdir: failed to remove '${*: -1}': Device or resource busy" >&2
+    exit 1
+fi
+exec /bin/rmdir "$@"
+EOF
+chmod 755 "$T/bin/findmnt" "$T/bin/zfs" "$T/bin/mount" "$T/bin/umount" "$T/bin/rmdir"
 PATH=$T/bin:$PATH
 export NOTIFY_LOG=$T/notify
 
