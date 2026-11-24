@@ -144,10 +144,10 @@ log_has 'already running'
 log_lacks 'Processing sh share'
 cache_is sh sh/a.txt
 
-share 'the pid file holds the running mover with spaces and a second line' yes
+share 'the pid file holds the running mover with spaces, then a second line' yes
 mk cache sh/a.txt
 bg mover sleep 30
-printf ' %s \n\n' $! >/var/run/mover.pid
+printf ' %s \n99999999\n' $! >/var/run/mover.pid
 run 1
 kill $! 2>/dev/null
 wait $! 2>/dev/null
