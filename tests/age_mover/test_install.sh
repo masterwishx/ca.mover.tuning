@@ -9,7 +9,7 @@ CFG=/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg
 STANDINS=(/usr/bin/php /usr/local/sbin/update_cron)
 # the step writes under /boot, /usr/local and /var/run, and the test writes /usr/bin/php and /etc/unraid-version: a mount at
 # one (Unraid's flash drive) refuses, and so does a php or update_cron this test did not write
-if ! awk '$5 ~ "^/(boot|usr/local)(/|$)" || $5 ~ "^/(usr(/bin(/php)?)?|etc(/unraid-version)?|(var/)?run)$" { exit 1 }' /proc/self/mountinfo; then
+if ! awk '$5 ~ "^/(boot|usr/local)(/|$)" || $5 ~ "^/(usr(/bin(/php)?)?|var|etc(/unraid-version)?|(var/)?run)$" { exit 1 }' /proc/self/mountinfo; then
     echo "test_install.sh writes Unraid's paths and one is a mount here: start it with tests/age_mover/run.sh" >&2
     exit 2
 fi
