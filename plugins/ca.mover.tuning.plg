@@ -807,6 +807,10 @@ else
     echo "- Updating freeingThreshold"
     grep -m1 '^movingThreshold=' "$config_file" | sed 's/^movingThreshold/freeingThreshold/' >> "$config_file"
   fi
+  if grep -qE '^(validateFilenames|invalidFileChars)=' "$config_file"; then
+    echo "- Removing the old filename check's settings"
+    sed -i -E '/^(validateFilenames|invalidFileChars)=/d' "$config_file"
+  fi
 fi
 
 # Read Unraid version
