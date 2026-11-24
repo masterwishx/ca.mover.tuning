@@ -197,7 +197,8 @@ check "the top folder is checked after the soft stop" \
 
 LS='list -r -H -t filesystem,volume,snapshot -o name'
 # the destroy goes ahead only when it loses nothing: each entry left is a folder the array also has
-for left in nothing 'a middle folder the array has' 'a file' 'a file beside it' 'a symlink' 'an empty folder the array lacks'; do
+for left in nothing 'a middle folder the array has' '.zfs, as snapdir=visible shows it,' 'a file' 'a file beside it' 'a symlink' \
+    'an empty folder the array lacks' 'a nested .zfs folder the array lacks'; do
     begin "Clean ZFS datasets, $left left in the share" cleanFolders topFolder cleanDatasets yes
     f=sh/only/f.txt
     [ "$left" = 'a middle folder the array has' ] && f=sh/a/b/f.txt
@@ -207,13 +208,15 @@ for left in nothing 'a middle folder the array has' 'a file' 'a file beside it' 
     'a file beside it') mk cache sh/only/g.txt; kept=(sh/only sh/only/g.txt) ;;
     'a symlink') ln -s /nowhere /mnt/cache/sh/link; kept=(sh/link) ;;
     'an empty folder'*) mkdir /mnt/cache/sh/e; kept=(sh/e) ;;
+    .zfs*) mkdir -p /mnt/cache/sh/.zfs/snapshot /mnt/cache/sh/.zfs/shares ;;
+    'a nested .zfs'*) mkdir /mnt/cache/sh/only/.zfs; kept=(sh/only sh/only/.zfs) ;;
     esac
     printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
     row 'move from primary' f "$f" | list
     run_moves
     if [ "$f" = sh/a/b/f.txt ]; then array_is sh sh/a sh/a/b "$f"; else array_is sh sh/only "$f"; fi
     case $left in
-    nothing | 'a middle'*)
+    nothing | 'a middle'* | .zfs*)
         check "zfs calls" "$(printf 'zfs %s cache/sh\n' "$LS" unmount destroy)" "$(cat "$T/zfs.calls")"
         log_has 'ZFS dataset [cache/sh] successfully destroyed.'
         cache_is
@@ -247,6 +250,33 @@ check "zfs calls" "zfs $LS cache/sh" "$(cat "$T/zfs.calls")"
 cache_is sh sh/new.txt
 [ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'Keeping ZFS dataset [cache/sh]: a destroy could lose "/mnt/cache/sh/new.txt"'
 
+# the kept name never passed the planner: a newline in it must not end the debug line before debug_mover mangles it
+begin "Clean ZFS datasets, a file named with a newline left in the share" cleanFolders topFolder cleanDatasets yes
+mk cache sh/only/f.txt
+printf 'x\n' >$'/mnt/cache/sh/Tax\nSecret.pdf'
+printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "zfs calls" "zfs $LS cache/sh" "$(cat "$T/zfs.calls")"
+if [ "${AGE_MOVER_DEBUG:-0}" = 2 ]; then
+    sed -n "/^cat >\"\$ANONAWK\" <<'ANONEOF'\$/,/^ANONEOF\$/p" "$PLUGIN/debug_mover" | sed '1d;$d' >"$T/anon.awk"
+    anon=$(gawk -v POOLS='user user0 cache' -v SHARES=sh -v LIST=0 -f "$T/anon.awk" "$MOVER_DEBUG_LOG")
+    check "debug_mover mangles the whole name" 'could lose "/mnt/cache/sh/-----------.pdf"' "$(grep -o 'could lose .*' <<<"$anon")"
+fi
+
+# a folder row that empties the share notes its dataset as a file row does, with Clean empty folders on only
+for clean in topFolder no; do
+    begin "Clean ZFS datasets, Clean empty folders $clean, a folder row empties the share" cleanFolders $clean cleanDatasets yes
+    mkdir -p /mnt/cache/sh/new
+    printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+    row 'move from primary' d sh/new | list
+    run_moves
+    array_is sh sh/new
+    if [ $clean = no ]; then calls=; else calls=$(printf 'zfs %s cache/sh\n' "$LS" unmount destroy); fi
+    check "zfs calls" "$calls" "$(cat "$T/zfs.calls" 2>/dev/null)"
+    if [ $clean = no ]; then cache_is sh; else cache_is; fi
+done
+
 for has in 'a snapshot' 'another name'; do
     begin "Clean ZFS datasets, the share's dataset has $has" cleanFolders topFolder cleanDatasets yes
     mk cache sh/only/f.txt
@@ -254,10 +284,12 @@ for has in 'a snapshot' 'another name'; do
     if [ "$has" = 'a snapshot' ]; then
         printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
         echo cache/sh@daily >"$T/zfs.children"
+        # as snapdir=visible shows it: the content check skips .zfs, so the snapshot is what keeps the dataset
+        mk cache sh/.zfs/snapshot/daily/f.txt
         run_moves
         check "zfs calls" "zfs $LS cache/sh" "$(cat "$T/zfs.calls")"
         log_has 'ZFS dataset [cache/sh] has child datasets or snapshots, will not delete...'
-        cache_is sh
+        cache_is sh sh/.zfs sh/.zfs/snapshot sh/.zfs/snapshot/daily sh/.zfs/snapshot/daily/f.txt
     else
         # only dataset pool/share at /mnt/pool/share is destroyed; another dataset mounted there is kept
         printf '/mnt/cache\n/mnt/cache/sh\tcache/data/sh\n' >"$T/zfs"
@@ -317,26 +349,40 @@ for pool in 'not ZFS' 'ZFS, the share a plain folder on it'; do
     [ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_lacks 'Keeping'
 done
 
-for fail in list unmount destroy; do
+for fail in list unmount destroy 'destroy and mount' 'destroy, busy,'; do
     begin "Clean ZFS datasets, zfs $fail fails" cleanFolders topFolder cleanDatasets yes notify no
     mk cache sh/only/f.txt
     printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
-    echo "$fail" >"$T/zfs.fail"
+    case $fail in
+    'destroy and mount') printf '%s\n' destroy mount ;;
+    *busy*) echo destroy; echo 'dataset is busy' >"$T/zfs.reason" ;;
+    *) echo "$fail" ;;
+    esac >"$T/zfs.fail"
     row 'move from primary' f sh/only/f.txt | list
-    # age_mover's stderr is discarded in use, so zfs's message goes to the log
+    # age_mover's stderr is discarded in use, so zfs's reason goes to the log, without the child zfs names after it
     run_moves
-    if [ "$fail" = list ]; then
-        log_has "ZFS dataset [cache/sh] could not be listed, will not delete: cannot list 'cache/sh': zfs.fail"
-    else
-        log_has "Failed to $fail ZFS dataset [cache/sh]"
-        log_has "zfs: cannot $fail 'cache/sh': zfs.fail"
-    fi
+    case $fail in
+    list) log_has "ZFS dataset [cache/sh] could not be listed, will not delete: zfs.fail" ;;
+    # the failure notice goes out with the "Failed to" line
+    *busy*)
+        log_has "ZFS dataset [cache/sh] is busy, will not delete: another mount, such as a container's, may hold it."
+        log_lacks 'Failed to destroy'
+        ;;
+    *) log_has "Failed to ${fail%% *} ZFS dataset [cache/sh]"; log_has 'zfs: zfs.fail' ;;
+    esac
+    log_lacks 'cache/sh/child'
     array_is sh sh/only sh/only/f.txt
-    cache_is sh
-    log_lacks 'Failed to remount'
-    # the row still logs and counts what it moved; the dataset is mounted at the end, so its top folder stays
+    # the row still logs and counts what it moved
     log_has '0 files remaining from caches to array'
     counter REMAINING_CACHE_FILES 0
+    if [ "$fail" = 'destroy and mount' ]; then
+        log_has 'Failed to remount dataset [cache/sh]'
+        log_count 2 'zfs: zfs.fail'
+        continue
+    fi
+    # the dataset is mounted at the end, so its top folder stays
+    cache_is sh
+    log_lacks 'Failed to remount'
     log_has 'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh'
 done
 

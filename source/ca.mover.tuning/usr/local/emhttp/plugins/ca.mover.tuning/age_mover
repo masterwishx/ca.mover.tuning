@@ -295,6 +295,10 @@ zfs_dataset_at() {
     is_zfs_dataset_mountpoint "$1" && findmnt -no source --mountpoint "$1" | tail -n 1
 }
 
+# Prints zfs message $1's first line, from after its quoted name if it has one: later lines can list children's names,
+# which debug_mover does not mangle
+zfs_reason() { local r=${1%%$'\n'*}; printf '%s' "${r#*\': }"; }
+
 titleLine() {
     local title="$1"
     local padding_char="$2"
@@ -2491,10 +2495,11 @@ note_top_folder() {
     TOP_FOLDERS+=("$top")
 }
 
-# With Clean datasets on and test mode off, notes this row's pool/share and destination for cleanShareDataset after the
-# pass, if the row moved off the primary; fills processTheMoves' DATASET_DEST
+# With Clean datasets and Clean folders on and test mode off, notes this row's pool/share and destination for
+# cleanShareDataset after the pass, if the row moved off the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
 note_share_dataset() {
-    [ "$CLEANDATASETS" = "yes" ] && [ "$TESTMODE" = "no" ] && [ "$SOURCE" = "/mnt/$PRIMARYSTORAGENAME" ] || return 0
+    [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] && [ "$TESTMODE" = "no" ] &&
+        [ "$SOURCE" = "/mnt/$PRIMARYSTORAGENAME" ] || return 0
     local ds="$PRIMARYSTORAGENAME/$SHARENAME"
     [ -n "${DATASET_DEST[$ds]+x}" ] && return 0
     DATASET_DEST[$ds]=$DESTINATION
@@ -2525,14 +2530,15 @@ cleanTopFolder() {
     fi
 }
 
-# Prints folder $1's first entry that is not a folder, or is a folder that folder $2 lacks; $1 itself when cd or find fails
+# Prints folder $1's first entry that is not a folder, or is a folder that folder $2 lacks; $1 itself when cd or find fails.
+# Skips $1/.zfs, which snapdir=visible shows: its snapshots keep the dataset at the children check
 dataset_loses() {
     local src=$1 dest=$2 entry
     # two passes: the destination is read only once nothing but folders is left
     entry=$(cd "$src" && {
-        first=$(find . -mindepth 1 ! -type d -print -quit) || exit
+        first=$(find . -mindepth 1 -path ./.zfs -prune -o ! -type d -print -quit) || exit
         [ -n "$first" ] && { printf '%s' "$first"; exit; }
-        find . -mindepth 1 -type d ! -exec test -d "$dest/{}" \; -print -quit
+        find . -mindepth 1 -path ./.zfs -prune -o -type d ! -exec test -d "$dest/{}" \; -print -quit
     }) || { printf '%s' "$src"; return; }
     [ -n "$entry" ] && printf '%s' "$src/${entry#./}"
 }
@@ -2548,12 +2554,13 @@ cleanShareDataset() {
     fi
     # listed first, so between the content check and the unmount only a log line is written
     if ! names=$(zfs list -r -H -t filesystem,volume,snapshot -o name "$dataset" 2>&1); then
-        mvlogger "ZFS dataset [${dataset}] could not be listed, will not delete: ${names}"
+        mvlogger "ZFS dataset [${dataset}] could not be listed, will not delete: $(zfs_reason "$names")"
         return 0
     fi
     lost=$(dataset_loses "$folder" "$3/$2")
     if [ -n "$lost" ]; then
-        mvDebuglogger "Keeping ZFS dataset [${dataset}]: a destroy could lose $(qp "$lost")" "Clean Dataset"
+        # the planner never saw this name: a newline in it would end the debug line before debug_mover's mangling
+        mvDebuglogger "Keeping ZFS dataset [${dataset}]: a destroy could lose $(qp "${lost//$'\n'/\\n}")" "Clean Dataset"
         return 0
     fi
     if [[ $names == *$'\n'* ]]; then
@@ -2564,14 +2571,22 @@ cleanShareDataset() {
     # stderr is discarded on both launch paths, so zfs's reason goes to the log
     if ! err=$(zfs unmount "$dataset" 2>&1); then
         mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "$dataset"
-        mvlogger "zfs: ${err}"
+        mvlogger "zfs: $(zfs_reason "$err")"
         return 0
     fi
     mvlogger "ZFS dataset [${dataset}] successfully unmounted."
     if ! err=$(zfs destroy "$dataset" 2>&1); then
-        mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "$dataset"
-        mvlogger "zfs: ${err}"
-        zfs mount "$dataset" 2>/dev/null || mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
+        err=$(zfs_reason "$err")
+        if [[ $err == *busy* ]]; then
+            mvlogger "ZFS dataset [${dataset}] is busy, will not delete: another mount, such as a container's, may hold it. Remounting..."
+        else
+            mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "$dataset"
+            mvlogger "zfs: ${err}"
+        fi
+        if ! err=$(zfs mount "$dataset" 2>&1); then
+            mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
+            mvlogger "zfs: $(zfs_reason "$err")"
+        fi
         return 0
     fi
     mvlogger "ZFS dataset [${dataset}] successfully destroyed."
@@ -3031,7 +3046,7 @@ processTheMoves() {
                     fi
 
                 done <<<"${DIR_LIST}"
-                [ "$chain_emptied" = 1 ] && note_top_folder
+                [ "$chain_emptied" = 1 ] && { note_top_folder; note_share_dataset; }
             fi
 
             # Setting mover status: a name leaves the remaining-work counters once it arrived or was found gone,

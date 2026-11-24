@@ -42,7 +42,8 @@ EOF
     chmod 755 /usr/libexec/unraid/move
 fi
 # a path in $T/zfs is a ZFS mountpoint (a tab, then its dataset, else the path less /mnt/); zfs logs each call to
-# $T/zfs.calls and fails on calls it has no answer for and on the subcommand $T/zfs.fail names
+# $T/zfs.calls and fails on calls it has no answer for and on each subcommand $T/zfs.fail lists, giving the reason in
+# $T/zfs.reason (else zfs.fail) and, as zfs can, a child's name on a second line
 cat >"$T/bin/findmnt" <<'EOF'
 #!/bin/bash
 l=$(awk -F'\t' -v p="${*: -1}" '$1 == p {print; exit}' "${0%/bin/findmnt}/zfs" 2>/dev/null)
@@ -57,7 +58,11 @@ cat >"$T/bin/zfs" <<'EOF'
 d=${0%/bin/zfs}
 n=${*: -1}
 echo "zfs $*" >>"$d/zfs.calls"
-[ "$1" = "$(cat "$d/zfs.fail" 2>/dev/null)" ] && { echo "cannot $1 '$n': zfs.fail" >&2; exit 1; }
+if grep -qxF -- "$1" "$d/zfs.fail" 2>/dev/null; then
+    r=$(cat "$d/zfs.reason" 2>/dev/null) || r=zfs.fail
+    printf "cannot %s '%s': %s\n%s/child\n" "$1" "$n" "$r" "$n" >&2
+    exit 1
+fi
 # the line of file $1 for dataset $n
 entry() { awk -F'\t' -v n="$n" '(NF > 1 ? $2 : substr($1, 6)) == n' "$1" 2>/dev/null; }
 case "$*" in
