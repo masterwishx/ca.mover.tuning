@@ -176,4 +176,37 @@ counter MOVEDFILES 1
 counter MOVEDSIZE 2
 check "lastCacheSync saved" 'lastCacheSync="1767323045"' "$(grep '^lastCacheSync=' "$T/cfg")"
 
+# the in-use check covers every name of a hardlink group: here only the second name is open. A helper that does not
+# compile leaves the check to fuser
+shipped=$FILES_IN_USE_HELPER
+for helper in shipped 'not compiling'; do
+    begin "a hardlink group with one name held open, beside a free file, $helper helper"
+    [ "$helper" = shipped ] || FILES_IN_USE_HELPER=$T/no_such_helper
+    mk cache sh/u/a.txt sh/u/free.txt
+    ln /mnt/cache/sh/u/a.txt /mnt/cache/sh/u/b.txt
+    for n in a b free; do row 'move from primary' f "sh/u/$n.txt"; done | list
+    sleep 60 9</mnt/cache/sh/u/b.txt &
+    holder=$!
+    for _ in {1..100}; do [ "$(readlink "/proc/$holder/fd/9" 2>/dev/null)" = /mnt/cache/sh/u/b.txt ] && break; sleep 0.05; done
+    check "the holder has b.txt open" /mnt/cache/sh/u/b.txt "$(readlink "/proc/$holder/fd/9" 2>/dev/null)"
+    run_moves
+    kill "$holder"
+    wait "$holder" 2>/dev/null
+    FILES_IN_USE_HELPER=$shipped
+    cache_is sh sh/u sh/u/a.txt sh/u/b.txt
+    array_is sh sh/u sh/u/free.txt
+    counter INUSEFILES 2
+    counter MOVEDFILES 1
+    log_has 'In use, left for a later run: "/mnt/cache/./sh/u/a.txt" "/mnt/cache/./sh/u/b.txt"'
+    log_has '2 files were in use and stay on the source until a later run'
+    if [ "$helper" = shipped ]; then
+        log_lacks 'helper could not start'
+    elif command -v perl >/dev/null; then
+        log_has 'The file lease helper could not start'
+    else
+        log_has 'Perl not found'
+    fi
+    log_lacks 'could not be checked for use'
+done
+
 finish

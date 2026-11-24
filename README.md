@@ -17,7 +17,7 @@ This is an [Unraid](https://unraid.net/) plugin that lets you fine-tune the oper
 
 This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/pulls) from [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning) after review (cosmetics, per-share skipfiletypes merge, automatic age threshold, Unraid 7.x compatibility) and adds many new features. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
-**Requires Unraid 6.9.0-rc2 or newer.** Unraid 7.2.1+ and the 7.4 rc1 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
+**Requires Unraid 6.9.0-rc2 or newer.** With Perl, which is part of Unraid's base distribution from 6.11.0, the mover checks whether a file is in use faster, with a Linux file lease. Unraid 7.2.1+ and the 7.4 rc1 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
 
 > **Tip:** click on any option or press **F1** on the settings page to read a detailed description of all settings.
 
@@ -82,7 +82,7 @@ Please note that if the age setting is set to something other than "Auto (smart 
 Files at the top level of the cache or an array disk (i.e. not in a share) are never moved.
 
 The list is then passed to the original Unraid mover.
-For each file, if the file is not "in use" by any process (as detected by the 'fuser' command), then the file is moved and, upon success, deleted from the source disk. If the file already exists on the target, it is not moved and the source is not deleted. All metadata of moved files/directories is preserved: permissions, ownership, extended attributes, and access/modified timestamps.
+For each file, if the file is not "in use" by any process (as detected by an exclusive Linux file lease, with `fuser` as a compatibility fallback when leases or Perl are unavailable), then the file is moved and, upon success, deleted from the source disk. If the file already exists on the target, it is not moved and the source is not deleted. All metadata of moved files/directories is preserved: permissions, ownership, extended attributes, and access/modified timestamps.
 If an error occurs while copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
