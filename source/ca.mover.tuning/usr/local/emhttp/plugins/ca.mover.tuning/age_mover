@@ -2557,7 +2557,9 @@ processTheMoves() {
             # a move, so later rows are matched on the SYNCED_FILES_ARR key below, not the file. The key
             # carries the plan, so a group split across plans keeps every partition instead of dropping one.
             NBLINKS="${NBLINKS:-0}"
-            if [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -gt 1 ]; then
+            link_group=0
+            [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -gt 1 ] && link_group=1
+            if [ "$link_group" = 1 ]; then
                 link_key="$ACTION|$SOURCE|$DESTINATION|$NBLINKS|$INODE|$MODIFYTIME"
                 [ -n "${HANDLED_LINKS[$link_key]}" ] && continue
                 HANDLED_LINKS[$link_key]=1
@@ -2609,9 +2611,14 @@ processTheMoves() {
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
             # every field is compared whole, so a name containing | cannot impersonate another row
-            mapfile -t SYNCED_FILES_ARR < <(awk -F'|' -v links="$NBLINKS" -v inode="$INODE" -v mtime="$MODIFYTIME" -v action="$ACTION" -v src="$SOURCE" -v dst="$DESTINATION" '
-                BEGIN { links = links ""; inode = inode ""; mtime = mtime "" }
-                $4 == mtime && $9 == links && $10 == inode && $11 == action && $12 == src && $13 == dst { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; print src "/./" p }' "$MOVER_ACTIONLIST")
+            # a row that is not a link group moves only its own name, without a scan of the action list
+            if [ "$link_group" = 1 ]; then
+                mapfile -t SYNCED_FILES_ARR < <(awk -F'|' -v links="$NBLINKS" -v inode="$INODE" -v mtime="$MODIFYTIME" -v action="$ACTION" -v src="$SOURCE" -v dst="$DESTINATION" '
+                    BEGIN { links = links ""; inode = inode ""; mtime = mtime "" }
+                    $4 == mtime && $9 == links && $10 == inode && $11 == action && $12 == src && $13 == dst { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; print src "/./" p }' "$MOVER_ACTIONLIST")
+            else
+                SYNCED_FILES_ARR=("$SOURCE/./$FILEPATH")
+            fi
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
@@ -2660,15 +2667,15 @@ processTheMoves() {
             # Proceed with rsync
             if [[ "$ACTION" =~ "move" ]]; then
                 # Some verbosity
-                GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
-                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Moving to $DESTINATION/ $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
+                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
                 rsync_action="Move"
                 # Finalize RSYNC_CMD
                 RSYNC_CMD+=(--remove-source-files)
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
-                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
-                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
+                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
                 rsync_action="Sync"
             fi
 
