@@ -438,11 +438,11 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 
 :mover_tune_cleanfolders_plug:
 <p><strong>Ja</strong> – entfernt den übergeordneten Ordner <strong>nur der verschobenen Dateien</strong>.</p>
-<p><strong>Oberster Ordner</strong> – entfernt den gesamten <strong>Freigabe‑Ordner</strong> einschließlich aller leeren Unterordner im Primärspeicher.</p>
+<p><strong>Oberster Ordner</strong> – wie <strong>Ja</strong>, und entfernt zusätzlich den obersten <strong>Freigabe‑Ordner</strong> dort, woher die Dateien verschoben wurden, sobald er leer ist, außer er ist ein ZFS‑Dataset (siehe <strong>Leere ZFS‑Datasets bereinigen</strong>).</p>
 :end
 
 :mover_tune_cleandatasets_plug:
-> Hängt das übergeordnete ZFS‑Dataset aus und löscht es, sofern es <strong>keine Unter‑Datasets</strong> enthält. Funktioniert nur, wenn <strong>Leere Ordner bereinigen</strong> auf <strong>Ja</strong> oder <strong>Oberster Ordner</strong> steht.
+> Hängt das ZFS‑Dataset der Freigabe im Primärspeicher aus und löscht es, nachdem ihre Dateien verschoben wurden, <strong>nur wenn</strong> es <strong>keine Unter‑Datasets oder Snapshots</strong> enthält und alles, was darin übrig ist, ein Ordner ist, den es auch im Sekundärspeicher gibt. Die eigenen ZFS‑Einstellungen des Datasets, etwa Komprimierung oder Quota, werden mit gelöscht. Funktioniert nur, wenn <strong>Leere Ordner bereinigen</strong> auf <strong>Ja</strong> oder <strong>Oberster Ordner</strong> steht.
 :end
 
 :mover_tune_sharecalculation_plug:

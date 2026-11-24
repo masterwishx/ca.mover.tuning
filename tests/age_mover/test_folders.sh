@@ -1,6 +1,6 @@
 #!/bin/bash
 # The folder cleanup after each row and the top-folder check after the pass: Clean Folders no / yes / topFolder, Move
-# empty folders, Clean ZFS datasets.
+# empty folders. Clean ZFS datasets: test_datasets.sh.
 . "$(dirname "$0")/lib.sh"
 
 # the half of an unreadable-folder case that runs as a plain user, since root lists any folder
@@ -184,37 +184,6 @@ cache_is sh sh/b sh/b/g.txt
 check "the top folder is checked after the soft stop" \
     "$(printf '%s\n' 'Soft Stopping requested' 'Not deleting top-level folder: contains 1 file(s), 1 subfolder(s): /mnt/cache/sh')" \
     "$(log | grep -oE 'Soft Stopping requested|Not deleting top-level folder.*')"
-
-# today the destroy counts regular files only: an empty folder and a symlink go with the dataset
-for left in nothing 'a file' 'an empty folder and a symlink'; do
-    begin "Clean ZFS datasets, $left left in the share" cleanFolders topFolder cleanDatasets yes
-    mk cache sh/only/f.txt
-    case $left in
-    'a file') mk cache sh/keep/k.txt ;;
-    'an empty folder'*) mkdir /mnt/cache/sh/e && ln -s /nowhere /mnt/cache/sh/link ;;
-    esac
-    printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
-    row 'move from primary' f sh/only/f.txt | list
-    run_moves
-    array_is sh sh/only sh/only/f.txt
-    if [ "$left" = 'a file' ]; then
-        check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
-        cache_is sh sh/keep sh/keep/k.txt
-        log_has 'Not deleting top-level folder: contains 1 file(s), 1 subfolder(s): /mnt/cache/sh'
-        continue
-    fi
-    check "zfs calls" "$(printf 'zfs %s cache/sh\n' 'list -Hpo usedbychildren' 'list -r -H -o name' unmount destroy)" "$(cat "$T/zfs.calls")"
-    log_has 'ZFS dataset [cache/sh] successfully destroyed.'
-    if [ "$left" = nothing ]; then cache_is; log_lacks 'top-level'; fi
-done
-
-begin "Clean ZFS datasets, a share that empties on a pool that is not ZFS" cleanFolders topFolder cleanDatasets yes
-mk cache sh/only/f.txt
-row 'move from primary' f sh/only/f.txt | list
-run_moves
-check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
-cache_is
-log_has 'Deleted empty top-level folder: /mnt/cache/sh'
 
 id tester >/dev/null 2>&1 || useradd -M tester
 U=/tmp/age_mover_tester

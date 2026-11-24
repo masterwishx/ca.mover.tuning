@@ -290,6 +290,21 @@ is_zfs_dataset_mountpoint() {
     [ "$(findmnt -no fstype --mountpoint "$1" | tail -n 1)" = "zfs" ]
 }
 
+# Prints the ZFS dataset mounted at exactly path $1; nothing for a folder inside one
+zfs_dataset_at() {
+    is_zfs_dataset_mountpoint "$1" && findmnt -no source --mountpoint "$1" | tail -n 1
+}
+
+# Prints zfs message $1's first line, from after its quoted name if it has one: later lines can list children's names,
+# which debug_mover does not mangle
+zfs_reason() { local r=${1%%$'\n'*}; printf '%s' "${r#*\': }"; }
+
+# When zfs message $2 says dataset $1 is busy, logs one plain line and succeeds: something else holds it, so no notice
+zfs_busy() {
+    [[ $(zfs_reason "$2") == *busy* ]] || return 1
+    mvlogger "ZFS dataset [$1] is busy, will not delete: a process or another mount, such as a container's, may hold it."
+}
+
 titleLine() {
     local title="$1"
     local padding_char="$2"
@@ -2486,6 +2501,21 @@ note_top_folder() {
     TOP_FOLDERS+=("$top")
 }
 
+# With Clean datasets and Clean folders on and test mode off, notes this row's pool/share and destination for
+# cleanShareDataset after the pass when the row's source is the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
+note_share_dataset() {
+    [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] && [ "$TESTMODE" = "no" ] &&
+        [ "$SOURCE" = "/mnt/$PRIMARYSTORAGENAME" ] || return 0
+    local ds="$PRIMARYSTORAGENAME/$SHARENAME"
+    [ -n "${DATASET_DEST[$ds]+x}" ] && return 0
+    DATASET_DEST[$ds]=$DESTINATION
+    SHARE_DATASETS+=("$ds")
+}
+
+# A folder in this row's share emptied: hands the share to the top-folder and dataset checks after the pass, each
+# under its own settings
+note_emptied_share() { note_top_folder; note_share_dataset; }
+
 # Deletes share top folder $1 if it is empty, unless it is a ZFS dataset mountpoint or test mode is on
 cleanTopFolder() {
     local top_folder=$1 file_count dir_count
@@ -2508,6 +2538,71 @@ cleanTopFolder() {
     else
         mvDebuglogger "Failed to delete top-level folder (may not be empty): $top_folder" "Clean Top Folder"
     fi
+}
+
+# Prints folder $1's first entry that is not a folder, or is a folder that folder $2 lacks; $1 itself when cd or find fails.
+# Skips $1/.zfs, which snapdir=visible shows: its snapshots keep the dataset at the children check
+dataset_loses() {
+    local src=$1 dest=$2 entry
+    # two passes: the destination is read only once nothing but folders is left
+    entry=$(cd "$src" && {
+        first=$(find . -mindepth 1 -path ./.zfs -prune -o ! -type d -print -quit) || exit
+        [ -n "$first" ] && { printf '%s' "$first"; exit; }
+        find . -mindepth 1 -path ./.zfs -prune -o -type d ! -exec test -d "$dest/{}" \; -print -quit
+    }) || { printf '%s' "$src"; return; }
+    [ -n "$entry" ] && printf '%s' "$src/${entry#./}"
+}
+
+# Destroys dataset $1/$2 if it is mounted at /mnt/$1/$2, has no children or snapshots, and dataset_loses against $3/$2 is empty
+cleanShareDataset() {
+    local folder="/mnt/$1/$2" dataset="$1/$2" mounted names lost err
+    mounted=$(zfs_dataset_at "$folder")
+    [ -n "$mounted" ] || return 0
+    if [ "$mounted" != "$dataset" ]; then
+        mvDebuglogger "Keeping the ZFS dataset mounted at $(qp "$folder"): it is not ${dataset}" "Clean Dataset"
+        return 0
+    fi
+    # listed first, so between the content check and the unmount only a log line is written
+    if ! names=$(zfs list -r -H -t filesystem,volume,snapshot -o name "$dataset" 2>&1); then
+        mvlogger "ZFS dataset [${dataset}] could not be listed, will not delete: $(zfs_reason "$names")"
+        return 0
+    fi
+    lost=$(dataset_loses "$folder" "$3/$2")
+    if [ -n "$lost" ]; then
+        # the planner never saw this name: a newline in it would end the debug line before debug_mover's mangling
+        mvDebuglogger "Keeping ZFS dataset [${dataset}]: a destroy could lose $(qp "${lost//$'\n'/\\n}")" "Clean Dataset"
+        return 0
+    fi
+    if [[ $names == *$'\n'* ]]; then
+        mvlogger "ZFS dataset [${dataset}] has child datasets or snapshots, will not delete..."
+        return 0
+    fi
+    mvlogger "ZFS dataset [${dataset}] holds only folders the destination also has, attempting to unmount and delete..."
+    # stderr is discarded on both launch paths, so zfs's reason goes to the log
+    if ! err=$(zfs unmount "$dataset" 2>&1); then
+        zfs_busy "$dataset" "$err" || {
+            mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "$dataset"
+            mvlogger "zfs: $(zfs_reason "$err")"
+        }
+        return 0
+    fi
+    mvlogger "ZFS dataset [${dataset}] successfully unmounted."
+    if ! err=$(zfs destroy "$dataset" 2>&1); then
+        zfs_busy "$dataset" "$err" || {
+            mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "$dataset"
+            mvlogger "zfs: $(zfs_reason "$err")"
+        }
+        # a write through /mnt/user while it was unmounted lands in the bare folder, and a mount over it would hide it
+        if [ -n "$(find "$folder" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+            mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
+            mvlogger "Not remounting ZFS dataset [${dataset}]: its folder ${folder} holds files that a mount would hide"
+        elif ! err=$(zfs mount "$dataset" 2>&1); then
+            mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
+            mvlogger "zfs: $(zfs_reason "$err")"
+        fi
+        return 0
+    fi
+    mvlogger "ZFS dataset [${dataset}] successfully destroyed."
 }
 
 # Internal move engine
@@ -2545,7 +2640,9 @@ processTheMoves() {
     local -A STAGED_INUSE=()
     local -A TOP_SEEN=()
     local -a TOP_FOLDERS=()
-    local top
+    local -A DATASET_DEST=()
+    local -a SHARE_DATASETS=()
+    local top ds
     # without fuser an open file cannot be told apart, so none is moved while moveInUse is no
     local fuser_missing=0
     if [ "$MOVE_IN_USE" != "yes" ] && ! command -v fuser >/dev/null; then
@@ -2877,7 +2974,7 @@ processTheMoves() {
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
-                        note_top_folder
+                        note_emptied_share
                         if [ "$TESTMODE" = "no" ]; then
                             # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
                             if [ -d "${DIR}" ]; then
@@ -2894,51 +2991,6 @@ processTheMoves() {
                         fi
                     fi
                 done
-            fi
-
-            # Clean parent ZFS dataset if empty
-            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
-                # Check counter if equal to 0 then check datasets
-                if [ "$LAST_COUNT" -eq 0 ]; then
-                    # Count files in share
-                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l)
-                    mvDebuglogger "Cycle of delete dataset" "Clean Dataset - Start Loop"
-                    # If no files in share
-                    if [ "${share_file_count}" -eq 0 ]; then
-                        # Check if mount point is ZFS
-                        if is_zfs_pool "$PRIMARYSTORAGENAME"; then
-                            DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
-                            #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
-                            # If ZFS dataset children size is zero and No ZFS dataset children exist
-                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
-                                # Check for any files in the ZFS dataset avalible
-                                dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
-                                if [ "${dataset_file_count}" -eq 0 ]; then
-                                    mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
-                                    # Unmount the ZFS dataset
-                                    if ! zfs unmount "${DATASET}"; then
-                                        mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "${DATASET}"
-                                        continue
-                                    else
-                                        mvlogger "ZFS dataset [${DATASET}] successfully unmounted."
-                                    fi
-                                    # Destroy the ZFS dataset
-                                    if ! zfs destroy "${DATASET}"; then
-                                        mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "${DATASET}"
-                                        zfs mount "${DATASET}" 2>/dev/null || mvlogger_t "Failed to remount dataset [%s]" "warning" "${DATASET}"
-                                        continue
-                                    else
-                                        mvlogger "ZFS dataset [${DATASET}] successfully destroyed."
-                                    fi
-                                else
-                                    mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
-                                fi
-                            else
-                                mvlogger "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
-                            fi
-                        fi
-                    fi
-                fi
             fi
 
             # Clean moved empty folders
@@ -3013,7 +3065,7 @@ processTheMoves() {
                     fi
 
                 done <<<"${DIR_LIST}"
-                [ "$chain_emptied" = 1 ] && note_top_folder
+                [ "$chain_emptied" = 1 ] && note_emptied_share
             fi
 
             # Setting mover status: a name leaves the remaining-work counters once it arrived or was found gone,
@@ -3065,6 +3117,7 @@ processTheMoves() {
     movesEnd
     moverStep "Cleaning up"
     # once per noted share, after the pass: a soft stop's break 2 lands here too
+    for ds in "${SHARE_DATASETS[@]}"; do cleanShareDataset "${ds%%/*}" "${ds#*/}" "${DATASET_DEST[$ds]}"; done
     for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&

@@ -436,11 +436,11 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_cleanfolders_plug:
 <p><strong>是</strong> - <strong>仅</strong>删除<strong>已移动</strong>文件的父文件夹。</p>
-<p><strong>顶层文件夹</strong> - 删除已移动内容的顶层<strong>共享文件夹</strong>，包括主存储上的<strong>所有空子文件夹</strong>。</p>
+<p><strong>顶层文件夹</strong> - 与<strong>是</strong>相同，并在文件移出位置的顶层<strong>共享文件夹</strong>变空后将其删除，除非它是 ZFS 数据集（见<strong>清理空的 ZFS 数据集</strong>）。</p>
 :end
 
 :mover_tune_cleandatasets_plug:
-> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>空的父 ZFS 数据集，<strong>仅在不包含</strong>子数据集时执行。仅在<strong>清理空文件夹</strong>设为<strong>是</strong>或<strong>顶层文件夹</strong>时生效。
+> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>主存储上该共享的 ZFS 数据集，<strong>仅在</strong>其没有子数据集或快照、且剩下的每一项都是次存储上也存在的文件夹时执行。数据集自身的 ZFS 设置（如压缩或配额）会随之删除。仅在<strong>清理空文件夹</strong>设为<strong>是</strong>或<strong>顶层文件夹</strong>时生效。
 :end
 
 :mover_tune_sharecalculation_plug:
