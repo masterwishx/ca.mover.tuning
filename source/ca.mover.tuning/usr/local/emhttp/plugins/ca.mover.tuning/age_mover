@@ -299,6 +299,12 @@ zfs_dataset_at() {
 # which debug_mover does not mangle
 zfs_reason() { local r=${1%%$'\n'*}; printf '%s' "${r#*\': }"; }
 
+# When zfs message $2 says dataset $1 is busy, logs one plain line and succeeds: something else holds it, so no notice
+zfs_busy() {
+    [[ $(zfs_reason "$2") == *busy* ]] || return 1
+    mvlogger "ZFS dataset [$1] is busy, will not delete: a process or another mount, such as a container's, may hold it."
+}
+
 titleLine() {
     local title="$1"
     local padding_char="$2"
@@ -2496,7 +2502,7 @@ note_top_folder() {
 }
 
 # With Clean datasets and Clean folders on and test mode off, notes this row's pool/share and destination for
-# cleanShareDataset after the pass, if the row moved off the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
+# cleanShareDataset after the pass when the row's source is the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
 note_share_dataset() {
     [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] && [ "$TESTMODE" = "no" ] &&
         [ "$SOURCE" = "/mnt/$PRIMARYSTORAGENAME" ] || return 0
@@ -2505,6 +2511,10 @@ note_share_dataset() {
     DATASET_DEST[$ds]=$DESTINATION
     SHARE_DATASETS+=("$ds")
 }
+
+# A folder in this row's share emptied: hands the share to the top-folder and dataset checks after the pass, each
+# under its own settings
+note_emptied_share() { note_top_folder; note_share_dataset; }
 
 # Deletes share top folder $1 if it is empty, unless it is a ZFS dataset mountpoint or test mode is on
 cleanTopFolder() {
@@ -2570,20 +2580,23 @@ cleanShareDataset() {
     mvlogger "ZFS dataset [${dataset}] holds only folders the destination also has, attempting to unmount and delete..."
     # stderr is discarded on both launch paths, so zfs's reason goes to the log
     if ! err=$(zfs unmount "$dataset" 2>&1); then
-        mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "$dataset"
-        mvlogger "zfs: $(zfs_reason "$err")"
+        zfs_busy "$dataset" "$err" || {
+            mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "$dataset"
+            mvlogger "zfs: $(zfs_reason "$err")"
+        }
         return 0
     fi
     mvlogger "ZFS dataset [${dataset}] successfully unmounted."
     if ! err=$(zfs destroy "$dataset" 2>&1); then
-        err=$(zfs_reason "$err")
-        if [[ $err == *busy* ]]; then
-            mvlogger "ZFS dataset [${dataset}] is busy, will not delete: another mount, such as a container's, may hold it. Remounting..."
-        else
+        zfs_busy "$dataset" "$err" || {
             mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "$dataset"
-            mvlogger "zfs: ${err}"
-        fi
-        if ! err=$(zfs mount "$dataset" 2>&1); then
+            mvlogger "zfs: $(zfs_reason "$err")"
+        }
+        # a write through /mnt/user while it was unmounted lands in the bare folder, and a mount over it would hide it
+        if [ -n "$(find "$folder" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+            mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
+            mvlogger "Not remounting ZFS dataset [${dataset}]: its folder ${folder} holds files that a mount would hide"
+        elif ! err=$(zfs mount "$dataset" 2>&1); then
             mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
             mvlogger "zfs: $(zfs_reason "$err")"
         fi
@@ -2961,8 +2974,7 @@ processTheMoves() {
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
-                        note_top_folder
-                        note_share_dataset
+                        note_emptied_share
                         if [ "$TESTMODE" = "no" ]; then
                             # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
                             if [ -d "${DIR}" ]; then
@@ -3053,7 +3065,7 @@ processTheMoves() {
                     fi
 
                 done <<<"${DIR_LIST}"
-                [ "$chain_emptied" = 1 ] && { note_top_folder; note_share_dataset; }
+                [ "$chain_emptied" = 1 ] && note_emptied_share
             fi
 
             # Setting mover status: a name leaves the remaining-work counters once it arrived or was found gone,

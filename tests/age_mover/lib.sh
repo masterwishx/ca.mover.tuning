@@ -41,9 +41,8 @@ done
 EOF
     chmod 755 /usr/libexec/unraid/move
 fi
-# a path in $T/zfs is a ZFS mountpoint (a tab, then its dataset, else the path less /mnt/); zfs logs each call to
-# $T/zfs.calls and fails on calls it has no answer for and on each subcommand $T/zfs.fail lists, giving the reason in
-# $T/zfs.reason (else zfs.fail) and, as zfs can, a child's name on a second line
+# a path in $T/zfs is a ZFS mountpoint (a tab, then its dataset, else the path less /mnt/); zfs logs calls to $T/zfs.calls
+# and fails unanswered calls and each subcommand in $T/zfs.fail, with $T/zfs.reason (else zfs.fail) then a child's name
 cat >"$T/bin/findmnt" <<'EOF'
 #!/bin/bash
 l=$(awk -F'\t' -v p="${*: -1}" '$1 == p {print; exit}' "${0%/bin/findmnt}/zfs" 2>/dev/null)
@@ -58,6 +57,8 @@ cat >"$T/bin/zfs" <<'EOF'
 d=${0%/bin/zfs}
 n=${*: -1}
 echo "zfs $*" >>"$d/zfs.calls"
+# $T/zfs.on_<subcommand> runs first, as a write while zfs works
+[ ! -f "$d/zfs.on_$1" ] || bash "$d/zfs.on_$1"
 if grep -qxF -- "$1" "$d/zfs.fail" 2>/dev/null; then
     r=$(cat "$d/zfs.reason" 2>/dev/null) || r=zfs.fail
     printf "cannot %s '%s': %s\n%s/child\n" "$1" "$n" "$r" "$n" >&2
@@ -66,21 +67,27 @@ fi
 # the line of file $1 for dataset $n
 entry() { awk -F'\t' -v n="$n" '(NF > 1 ? $2 : substr($1, 6)) == n' "$1" 2>/dev/null; }
 case "$*" in
-# $T/zfs.on_list runs first, as a write while zfs lists; $T/zfs.children holds the children and snapshots
+# $T/zfs.children holds the children and snapshots
 "list -r -H -t filesystem,volume,snapshot -o name "*)
-    [ ! -f "$d/zfs.on_list" ] || bash "$d/zfs.on_list"
     echo "$n"; cat "$d/zfs.children" 2>/dev/null || :
     ;;
-# unmount unlists the dataset and keeps its folder; mount lists it again
+# unmount unlists the dataset and hides its files, keeping its folder; mount lists it and brings them back, hiding,
+# as an overlay mount does, what the folder gained meanwhile
 "unmount "*)
     l=$(entry "$d/zfs")
     [ -n "$l" ] || { echo "cannot unmount '$n': not currently mounted" >&2; exit 1; }
     echo "$l" >>"$d/zfs.off"
     grep -vxF -- "$l" "$d/zfs" >"$d/zfs.new"; mv "$d/zfs.new" "$d/zfs"
+    mkdir -p "$d/zfs.store/$n" && find "${l%%$'\t'*}" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.store/$n" {} +
     ;;
-"mount "*) entry "$d/zfs.off" >>"$d/zfs" ;;
+"mount "*)
+    l=$(entry "$d/zfs.off" | tail -n 1) && f=${l%%$'\t'*}
+    mkdir -p "$d/zfs.hidden" "$f" && find "$f" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.hidden" {} +
+    find "$d/zfs.store/$n" -mindepth 1 -maxdepth 1 -exec mv -t "$f" {} +
+    echo "$l" >>"$d/zfs"
+    ;;
 # the dataset's files go with it, and OpenZFS removes an inherited mountpoint
-"destroy "*) rm -rf -- "$(entry "$d/zfs.off" | tail -n 1 | cut -f1)" ;;
+"destroy "*) rm -rf -- "$(entry "$d/zfs.off" | tail -n 1 | cut -f1)" "$d/zfs.store/$n" ;;
 *) echo "zfs stand-in has no answer for: zfs $*" >&2; exit 1 ;;
 esac
 EOF
