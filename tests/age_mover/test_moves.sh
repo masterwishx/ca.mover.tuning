@@ -127,19 +127,23 @@ holds disk2 sh sh/p
 counter MOVEDFILES 4
 counter MOVEDSIZE 4
 
-# two ZFS datasets of one pool can give two single-link files the same inode number and mtime: today both are held,
-# and their bytes count once
+# two ZFS datasets of one pool can give two single-link files the same inode number and mtime: each row moves its own file
 begin "single-link files sharing inode and mtime across shares"
 mk cache sh1/d/a.txt sh2/d/b.txt
 { row 'move from primary' f sh1/d/a.txt 1 777 1700000000; row 'move from primary' f sh2/d/b.txt 1 777 1700000000; } | list
 run_moves
-array_is
-counter NOTMOVEDFILES 4
-counter NOTMOVEDSIZE 2
-counter REMAINING_CACHE_SIZE 4
-log_count 2 'Expected 1 files, got 2. Not moving "/mnt/cache/./sh1/d/a.txt" "/mnt/cache/./sh2/d/b.txt"'
+array_is sh1 sh1/d sh1/d/a.txt sh2 sh2/d sh2/d/b.txt
+cache_is sh1 sh1/d sh2 sh2/d
+counter MOVEDFILES 2
+counter MOVEDSIZE 4
+counter NOTMOVEDFILES 0
+counter REMAINING_CACHE_FILES 0
+counter REMAINING_CACHE_SIZE 0
+log_has 'Moving "/mnt/cache/./sh1/d/a.txt"  to  "/mnt/user0/"'
+log_has 'Moving "/mnt/cache/./sh2/d/b.txt"  to  "/mnt/user0/"'
+log_lacks 'Expected 1 files'
 
-# the same for two empty folders: today both rows move the pair, and the second finds one gone
+# the same for two empty folders
 begin "folder rows sharing inode and mtime across shares"
 mkdir -p /mnt/cache/sh1/e /mnt/cache/sh2/e
 { row 'move from primary' d sh1/e 2 778 1700000000; row 'move from primary' d sh2/e 2 778 1700000000; } | list
@@ -147,10 +151,11 @@ run_moves
 array_is sh1 sh1/e sh2 sh2/e
 cache_is sh1 sh2
 counter MOVEDFOLDERS 2
-counter VANISHEDFOLDERS 1
-counter REMAINING_CACHE_FOLDERS -2
-log_count 2 'Moving "/mnt/cache/./sh1/e" "/mnt/cache/./sh2/e"  to  "/mnt/user0/"'
-log_has 'Gone from the source before its turn: "/mnt/cache/sh1/e"'
+counter VANISHEDFOLDERS 0
+counter REMAINING_CACHE_FOLDERS 0
+log_has 'Moving "/mnt/cache/./sh1/e"  to  "/mnt/user0/"'
+log_has 'Moving "/mnt/cache/./sh2/e"  to  "/mnt/user0/"'
+log_lacks 'Gone from the source'
 
 begin "a pass with nothing to move"
 mk cache sh/k/k.txt
