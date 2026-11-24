@@ -29,7 +29,7 @@
 
 # The list is then passed to original unraid mover.
 # For each file, if the file is not "in use" by any process (as detected by an exclusive file lease,
-# with fuser as a compatibility fallback),
+# with fuser as a compatibility fallback, and when Perl is missing, as before Unraid 6.11.0),
 # then the file is moved, and upon success, deleted from the source disk.  If the file already
 # exists on the target, it is not moved and the sourceis not deleted.  All meta-data of moved
 # files/directories is preserved: permissions, ownership, extended attributes, and access/modified
@@ -2517,12 +2517,26 @@ move_tool_said() {
     done <<<"$MOVE_OUT"
 }
 
+# files_in_use is Perl, which is part of Unraid's base distribution from 6.11.0; older releases have it only if the user
+# installed it. Without Perl, files are checked with fuser -s, as before the helper. The helper runs through the perl in
+# PATH, so one installed outside /usr/bin works too. Sets processTheMoves' FILES_IN_USE_CMD.
+chooseFilesInUseCheck() {
+    if command -v perl >/dev/null; then
+        FILES_IN_USE_CMD=(perl "$FILES_IN_USE_HELPER")
+        return
+    fi
+    FILES_IN_USE_CMD=(fuser -s)
+    [ "$MOVE_IN_USE" = yes ] ||
+        mvlogger "Perl not found, so files are checked for use with fuser, which is slower on busy servers. Perl is part of Unraid 6.11.0 and newer."
+}
+
 # Returns success when at least one path is in use, or when no reliable answer is
 # available. The helper owns both the lease check and its fuser fallback.
-# FILE_IN_USE_FAILURE_LOGGED is a local of processTheMoves, so the warning appears at most once per run.
+# FILE_IN_USE_FAILURE_LOGGED and FILES_IN_USE_CMD are locals of processTheMoves, so the warning appears at most once
+# per run.
 filesInUse() {
     local rc
-    if "$FILES_IN_USE_HELPER" "$@" 2>/dev/null; then rc=0; else rc=$?; fi
+    if "${FILES_IN_USE_CMD[@]}" "$@" 2>/dev/null; then rc=0; else rc=$?; fi
     case "$rc" in
     0) return 0 ;;
     1) return 1 ;;
@@ -2688,6 +2702,8 @@ processTheMoves() {
     local top ds
     # set by filesInUse the first time a file cannot be checked
     local FILE_IN_USE_FAILURE_LOGGED=no
+    local -a FILES_IN_USE_CMD=()
+    chooseFilesInUseCheck
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then

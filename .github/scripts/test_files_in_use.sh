@@ -67,7 +67,7 @@ perl -c "$HELPER"
 # F_SETLEASE and fuser -s are Linux interfaces. macOS development machines can
 # still validate syntax and the intentionally small age_mover integration.
 if [ "$(uname -s)" != Linux ]; then
-    grep -q '"$FILES_IN_USE_HELPER" "$@"' "$MOVER"
+    grep -q '"${FILES_IN_USE_CMD\[@\]}" "$@"' "$MOVER"
     grep -qE 'FILE_IN_USE_MODE|FILE_IN_USE_CHECK|FUSER_BATCH_SAFE|actionRows' "$MOVER" && exit 1
     grep -qE 'coproc|--server|fileLease(Start|Stop|Request)' "$MOVER" && exit 1
     echo "file lease Linux tests skipped on $(uname -s)"
@@ -144,14 +144,16 @@ set -e
 
 # Keep age_mover's integration deliberately small: it knows only the helper's
 # result contract, not whether a lease or fuser produced the answer.
-grep -q '"$FILES_IN_USE_HELPER" "$@"' "$MOVER"
+grep -q '"${FILES_IN_USE_CMD\[@\]}" "$@"' "$MOVER"
 grep -qE 'FILE_IN_USE_MODE|FILE_IN_USE_CHECK|FUSER_BATCH_SAFE|actionRows' "$MOVER" && exit 1
 grep -qE 'coproc|--server|fileLease(Start|Stop|Request)' "$MOVER" && exit 1
 
 # age_mover treats an unavailable answer as in-use, and reports it only once.
-source <(sed -n '/^filesInUse() {/,/^}/p' "$MOVER")
+source <(sed -n '/^\(chooseFilesInUseCheck\|filesInUse\)() {/,/^}/p' "$MOVER")
+MOVE_IN_USE=no
 fake_helper="$TMP/fake-helper"
-printf '#!/bin/sh\nexit "$CHECK_STATUS"\n' >"$fake_helper"
+# age_mover runs the helper through perl
+printf 'exit $ENV{CHECK_STATUS};\n' >"$fake_helper"
 chmod +x "$fake_helper"
 # Read by the sourced filesInUse, which ShellCheck cannot see.
 # shellcheck disable=SC2034
@@ -161,6 +163,8 @@ mvlogger() { LOG_COUNT=$((LOG_COUNT + 1)); }
 # Stands in for processTheMoves, which owns the once-per-run flag as a local.
 mover_run() {
     local FILE_IN_USE_FAILURE_LOGGED=no
+    local -a FILES_IN_USE_CMD=()
+    chooseFilesInUseCheck
     export CHECK_STATUS=0
     filesInUse "$plain"
     export CHECK_STATUS=1
@@ -178,5 +182,47 @@ mover_run
 mover_run
 [ "$LOG_COUNT" -eq 2 ]
 [ -z "${FILE_IN_USE_FAILURE_LOGGED+set}" ]
+[ -z "${FILES_IN_USE_CMD+set}" ]
+
+# Without Perl, as before Unraid 6.11.0, age_mover runs fuser -s itself, and says so once per run.
+old_run() {
+    local FILE_IN_USE_FAILURE_LOGGED=no
+    local -a FILES_IN_USE_CMD=()
+    chooseFilesInUseCheck
+    [ "${FILES_IN_USE_CMD[*]}" = "fuser -s" ]
+    export FUSER_STATUS=0
+    filesInUse "$plain"
+    export FUSER_STATUS=1
+    if filesInUse "$plain"; then
+        echo "clear fuser result was reported in use" >&2
+        exit 1
+    fi
+}
+printf '#!/bin/sh\n[ "$1" = -s ] || exit 9\nexit "$FUSER_STATUS"\n' >"$TMP/bin/fuser"
+LOG_COUNT=0
+PATH="$TMP/bin" old_run
+[ "$LOG_COUNT" -eq 1 ]
+# Without fuser either, the file stays put and the unchecked-file warning follows the fuser one.
+no_fuser_run() {
+    local FILE_IN_USE_FAILURE_LOGGED=no
+    local -a FILES_IN_USE_CMD=()
+    PATH="$TMP/empty-bin" chooseFilesInUseCheck
+    PATH="$TMP/empty-bin" filesInUse "$plain"
+    PATH="$TMP/empty-bin" filesInUse "$plain"
+}
+LOG_COUNT=0
+no_fuser_run
+[ "$LOG_COUNT" -eq 2 ]
+# With "Move files that are in use" on, nothing is checked, so the fuser note is not logged.
+# shellcheck disable=SC2034 # read by the sourced chooseFilesInUseCheck
+MOVE_IN_USE=yes
+LOG_COUNT=0
+PATH="$TMP/empty-bin" chooseFilesInUseCheck
+[ "$LOG_COUNT" -eq 0 ]
+# With Perl in PATH, wherever it is, the helper runs through it.
+mkdir "$TMP/perl-bin"
+ln -s "$(command -v perl)" "$TMP/perl-bin/perl"
+PATH="$TMP/perl-bin" chooseFilesInUseCheck
+[ "${FILES_IN_USE_CMD[*]}" = "perl $FILES_IN_USE_HELPER" ]
 
 echo "file lease tests passed"
