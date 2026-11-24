@@ -3,7 +3,7 @@
 # The per-share Move: the real share_mover on share sh, with Unraid's config files as each case writes them under /boot and
 # /var/local/emhttp, lib.sh's move stand-in and an mdcmd stand-in. SM=<file> runs another copy of share_mover.
 . "$(dirname "$0")/lib.sh"
-SM=${SM:-$PLUGIN/share_mover}
+SM=$(realpath "${SM:-$PLUGIN/share_mover}") # run starts it from $T/cwd
 CFG=/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg
 # the cases write under /boot, /var/local and /usr/local, and /var/run/mover.pid: a mount at one (Unraid's flash drive) refuses
 if ! awk '$5 ~ "^/(boot|var/local|usr/local)(/|$)" || $5 ~ "^/(var/)?run(/mover\\.pid)?$" { exit 1 }' /proc/self/mountinfo; then
@@ -144,6 +144,16 @@ log_has 'already running'
 log_lacks 'Processing sh share'
 cache_is sh sh/a.txt
 
+share 'the pid file holds the running mover with spaces and a second line' yes
+mk cache sh/a.txt
+bg mover sleep 30
+printf ' %s \n\n' $! >/var/run/mover.pid
+run 1
+kill $! 2>/dev/null
+wait $! 2>/dev/null
+log_has 'already running'
+cache_is sh sh/a.txt
+
 share 'the pid file names a process that is no mover' yes
 mk cache sh/a.txt
 bg sleep sleep 30
@@ -185,5 +195,5 @@ for pools in 1 0; do
     cache_is sh sh/a.txt
 done
 
-rm -rf "${ROOTS[@]}" /boot/config /var/local/emhttp /var/run/mover.pid
+rm -rf "${ROOTS[@]}" /boot/config /var/local/emhttp /var/run/mover.pid /usr/local/sbin/mdcmd
 finish
