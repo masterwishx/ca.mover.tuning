@@ -125,6 +125,7 @@ Mover Tuning thresholds=Mover‑Tuning‑Schwellwerte
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Keine Dateien wurden durch das Mover Tuning Plugin verschoben/synchronisiert. Verstrichene Zeit %s
 No log files yet=Noch keine Protokolldateien
 Not Applicable Share Does Not Exist Yet=Nicht anwendbar (Freigabe existiert noch nicht)
+Not a valid cron schedule it is not applied=Kein gültiger Cron‑Zeitplan: Er wird nicht übernommen.
 Notify Mover Tuning plugin actions=Aktionen des Mover‑Tuning‑Plugins melden
 Oldest first=Älteste zuerst
 Only move files larger than this in MB=Nur Dateien verschieben, die größer sind als dieser Wert (in MB)
@@ -237,6 +238,8 @@ Youre welcome 😊 Thanks for using=Gern geschehen 😊 Danke für die Nutzung!
 > Führt den <strong><code>age_mover</code></strong>‑Zeitplan des Mover‑Tuning‑Plugins anhand deines eigenen Cron‑Eintrags aus (inklusive aller Plugin‑Filter).
 >
 > Beispiel Cron‑Eintrag: <strong>0 */4 * * *</strong>.&nbsp; Führt den Vorgang <em>alle</em> <strong>4 Stunden</strong> aus. <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Was ist Cron?</a>
+>
+> Der Zeitplan muss ein gültiger Cron‑Eintrag sein: Ein ungültiger wird nicht übernommen, und der Fehler wird ins Syslog geschrieben.
 :end
 
 :mover_tune_testmode_plug:

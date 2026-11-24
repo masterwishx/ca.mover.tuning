@@ -125,6 +125,7 @@ Mover Tuning thresholds=Seuils Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Aucun fichier n’a été déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
 No log files yet=Aucun fichier journal pour le moment
 Not Applicable Share Does Not Exist Yet=Non applicable (la part n’existe pas encore)
+Not a valid cron schedule it is not applied=Planification cron invalide : elle n’est pas appliquée.
 Notify Mover Tuning plugin actions=Notifier les actions du plugin Mover Tuning
 Oldest first=Les plus anciens d’abord
 Only move files larger than this in MB=Déplacer uniquement les fichiers plus grands que cette taille (en Mo)
@@ -237,6 +238,8 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 > Exécute le calendrier <strong><code>age_mover</code></strong> du plugin Mover Tuning en utilisant votre entrée cron personnalisée (inclut tous les filtres du plugin).
 >
 > Exemple d’entrée Cron : <strong>0 */4 * * *</strong>.&nbsp; Pour exécuter <strong>toutes les 4 heures</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Qu’est‑ce que Cron</a>
+>
+> La planification doit être une entrée cron valide : une entrée invalide n’est pas appliquée, et l’erreur est écrite dans le syslog.
 :end
 
 :mover_tune_testmode_plug:

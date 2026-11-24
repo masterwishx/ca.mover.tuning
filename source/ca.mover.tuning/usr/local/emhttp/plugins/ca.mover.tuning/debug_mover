@@ -140,6 +140,16 @@ mkdir -p $DEBUGROOT/PLUGIN 2>&1
 
 [ -f $CRON ] && cp -f $CRON $DEBUGROOT/PLUGIN/ca.mover.tuning.cron.txt 2>&1
 
+for file in "${CRON%/*}/mover.tuning.cron" "${CRON%/*}/mover.watchdog.cron"; do
+    [ -f "$file" ] && cp -f "$file" "$DEBUGROOT/PLUGIN/${file##*/}.txt" 2>&1
+done
+
+# the mover lines crond runs now, to compare with the cron files and the settings
+{
+    echo "### mover lines in /etc/cron.d/root"
+    grep -F -e ca.mover.tuning -e /usr/local/sbin/mover /etc/cron.d/root || echo "none"
+} >$DEBUGROOT/PLUGIN/crontab.txt 2>&1
+
 for file in $UNRAID_CRON; do
     if [[ -f $file ]]; then
         cp -f "$file" "${DEBUGROOT}/PLUGIN/unraid.${file##*/}.txt" 2>&1

@@ -3436,8 +3436,7 @@ reset() {
     # Remove the schedule files, then write back the ones default.cfg sets; this runs after a failed step too, so the
     # schedules follow whichever settings are left
     rm -f "${MOVERTUNINGCFGFILE%/*}/mover.cron" "${MOVERTUNINGCFGFILE%/*}/mover.tuning.cron" "${MOVERTUNINGCFGFILE%/*}/mover.watchdog.cron" || failed=1
-    /usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/updateCron.php sync || failed=1
-    /usr/local/sbin/update_cron || failed=1
+    /usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/updateCron.php apply || failed=1
     if [ "$failed" -ne 0 ]; then
         echo "mover: Error: The reset did not complete, see the lines above."
         exit 1
