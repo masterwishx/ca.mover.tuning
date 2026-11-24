@@ -68,8 +68,8 @@ perl -c "$HELPER"
 # still validate syntax and the intentionally small age_mover integration.
 if [ "$(uname -s)" != Linux ]; then
     grep -q '"$FILES_IN_USE_HELPER" "$@"' "$MOVER"
-    ! grep -qE 'FILE_IN_USE_MODE|FILE_IN_USE_CHECK|FUSER_BATCH_SAFE|actionRows' "$MOVER"
-    ! grep -qE 'coproc|--server|fileLease(Start|Stop|Request)' "$MOVER"
+    grep -qE 'FILE_IN_USE_MODE|FILE_IN_USE_CHECK|FUSER_BATCH_SAFE|actionRows' "$MOVER" && exit 1
+    grep -qE 'coproc|--server|fileLease(Start|Stop|Request)' "$MOVER" && exit 1
     echo "file lease Linux tests skipped on $(uname -s)"
     exit
 fi
@@ -145,8 +145,8 @@ set -e
 # Keep age_mover's integration deliberately small: it knows only the helper's
 # result contract, not whether a lease or fuser produced the answer.
 grep -q '"$FILES_IN_USE_HELPER" "$@"' "$MOVER"
-! grep -qE 'FILE_IN_USE_MODE|FILE_IN_USE_CHECK|FUSER_BATCH_SAFE|actionRows' "$MOVER"
-! grep -qE 'coproc|--server|fileLease(Start|Stop|Request)' "$MOVER"
+grep -qE 'FILE_IN_USE_MODE|FILE_IN_USE_CHECK|FUSER_BATCH_SAFE|actionRows' "$MOVER" && exit 1
+grep -qE 'coproc|--server|fileLease(Start|Stop|Request)' "$MOVER" && exit 1
 
 # age_mover treats an unavailable answer as in-use, and reports it only once.
 source <(sed -n '/^filesInUse() {/,/^}/p' "$MOVER")
