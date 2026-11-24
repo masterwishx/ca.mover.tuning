@@ -1,6 +1,6 @@
 #!/bin/bash
 # shellcheck disable=SC2034 # the settings set here are read by age_mover's functions, sourced from funcs.sh
-# Sourced by test_*.sh: each case runs the real processTheMoves with real rsync and the shipped default.cfg read by the real
+# Sourced by test_*.sh: each age_mover case runs the real processTheMoves with real rsync and the shipped default.cfg read by the real
 # getMoverSettings; Unraid's move, findmnt and zfs are stand-ins. It deletes the folders in ROOTS.
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PLUGIN=$HERE/../../source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning
