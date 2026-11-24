@@ -127,7 +127,8 @@ for tool in rsync move; do
     log_has 'Deleted empty top-level folder: /mnt/cache/sh'
 done
 
-# today the top folder is checked again on every later row once one file row emptied its folder
+# today a file row that empties its folder leaves the top-folder check on for the move rows after it, until a file row
+# leaves files behind
 for order in file-first folders-first; do
     begin "topFolder, one file row and three folder rows, $order" cleanFolders topFolder
     mk cache sh/a/f.txt sh/p/other.txt sh/keep/stay.txt
@@ -143,27 +144,41 @@ for order in file-first folders-first; do
     log_has 'Not deleting top-level folder: contains 2 file(s), 2 subfolder(s): /mnt/cache/sh'
 done
 
-for left in no yes; do
-    begin "Clean ZFS datasets, $([ $left = yes ] && echo 'a file left in the share' || echo 'a share that empties')" \
-        cleanFolders topFolder cleanDatasets yes
+# today the destroy counts regular files only: an empty folder and a symlink go with the dataset
+for left in nothing 'a file' 'an empty folder and a symlink'; do
+    begin "Clean ZFS datasets, $left left in the share" cleanFolders topFolder cleanDatasets yes
     mk cache sh/only/f.txt
-    [ "$left" = yes ] && mk cache sh/keep/k.txt
+    case $left in
+    'a file') mk cache sh/keep/k.txt ;;
+    'an empty folder'*) mkdir /mnt/cache/sh/e && ln -s /nowhere /mnt/cache/sh/link ;;
+    esac
     printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
     row 'move from primary' f sh/only/f.txt | list
     run_moves
-    if [ "$left" = no ]; then
-        check "zfs calls" "$(printf 'zfs %s cache/sh\n' 'list -Hpo usedbychildren' 'list -r -H -o name' unmount destroy)" "$(cat "$T/zfs.calls")"
-        log_has 'ZFS dataset [cache/sh] successfully destroyed.'
-        log_has 'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh'
-    else
+    array_is sh sh/only sh/only/f.txt
+    if [ "$left" = 'a file' ]; then
         check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
+        cache_is sh sh/keep sh/keep/k.txt
+        log_has 'Not deleting top-level folder: contains 1 file(s), 1 subfolder(s): /mnt/cache/sh'
+        continue
     fi
+    check "zfs calls" "$(printf 'zfs %s cache/sh\n' 'list -Hpo usedbychildren' 'list -r -H -o name' unmount destroy)" "$(cat "$T/zfs.calls")"
+    log_has 'ZFS dataset [cache/sh] successfully destroyed.'
+    if [ "$left" = nothing ]; then cache_is; log_lacks 'top-level'; fi
 done
+
+begin "Clean ZFS datasets, a share that empties on a pool that is not ZFS" cleanFolders topFolder cleanDatasets yes
+mk cache sh/only/f.txt
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
+cache_is
+log_has 'Deleted empty top-level folder: /mnt/cache/sh'
 
 id tester >/dev/null 2>&1 || useradd -M tester
 U=/tmp/age_mover_tester
 for keep in no yes; do
-    begin "topFolder, a top folder its user cannot list, $([ $keep = yes ] && echo 'holding a file' || echo 'empty after the move')"
+    begin "topFolder, a top folder a plain-user mover cannot list, $([ $keep = yes ] && echo 'holding a file' || echo 'empty after the move')"
     mk cache sh/only/f.txt
     [ "$keep" = yes ] && mk cache sh/stay.txt
     rm -rf "$U" && mkdir -p "$U"
@@ -171,7 +186,7 @@ for keep in no yes; do
     chown -R tester /mnt/cache /mnt/user0 "$U"
     chmod 0333 /mnt/cache/sh
     runuser -u tester -- env AGE_MOVER_TEST=1 AGE_MOVER_DEBUG="${AGE_MOVER_DEBUG:-0}" T="$U" bash "$0" --as-tester "$CASE" "$keep"
-    check "the checks run as the mover's user pass" 0 "$?"
+    check "the checks run as the plain user pass" 0 "$?"
     [ ! -d /mnt/cache/sh ] || chmod 0755 /mnt/cache/sh
     if [ "$keep" = yes ]; then cache_is sh sh/stay.txt; else cache_is; fi
 done

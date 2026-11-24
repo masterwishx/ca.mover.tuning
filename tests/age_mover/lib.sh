@@ -40,8 +40,8 @@ done
 EOF
     chmod 755 /usr/libexec/unraid/move
 fi
-# a path listed in $T/zfs is a ZFS mountpoint whose dataset has no children; zfs records each call and fails on any it
-# has no answer for
+# a path listed in $T/zfs is a ZFS mountpoint whose dataset has no children; zfs records each call, and fails on any it
+# has no answer for. unmount unlists it and keeps its folder; destroy rmdirs the folder, as OpenZFS does when inherited
 cat >"$T/bin/findmnt" <<'EOF'
 #!/bin/bash
 grep -qxF -- "${@: -1}" "${0%/bin/findmnt}/zfs" 2>/dev/null && echo zfs
@@ -49,11 +49,13 @@ exit 0
 EOF
 cat >"$T/bin/zfs" <<'EOF'
 #!/bin/bash
-echo "zfs $*" >>"${0%/bin/zfs}/zfs.calls"
+d=${0%/bin/zfs}
+echo "zfs $*" >>"$d/zfs.calls"
 case "$*" in
 "list -Hpo usedbychildren "*) echo 0 ;;
 "list -r -H -o name "*) echo "${@: -1}" ;;
-"unmount "* | "destroy "*) ;;
+"unmount "*) grep -vxF -- "/mnt/${*: -1}" "$d/zfs" >"$d/zfs.new"; mv "$d/zfs.new" "$d/zfs" ;;
+"destroy "*) rmdir -- "/mnt/${*: -1}" 2>/dev/null; exit 0 ;;
 *) echo "zfs stand-in has no answer for: zfs $*" >&2; exit 1 ;;
 esac
 EOF
