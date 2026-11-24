@@ -2613,7 +2613,7 @@ dataset_problem() {
 dataset_problems_notice() {
     local ds names=""
     for ds in "${SHARE_DATASETS[@]}"; do [ -z "${DATASET_PROBLEM[$ds]}" ] || names+="${names:+ }[$ds]"; done
-    [ -z "$names" ] || mvlogger_t "Clean ZFS datasets did not finish for %s: see the mover log." "$DATASET_PROBLEM_LEVEL" "$names"
+    [ -z "$names" ] || mvlogger_t "Clean empty ZFS datasets did not finish for %s: see the mover log." "$DATASET_PROBLEM_LEVEL" "$names"
 }
 
 # Mounts dataset $1 again at its folder $2, unless the folder gained files that a mount would hide

@@ -25,6 +25,7 @@ Cache → Array=Cache → Array
 Cancel=Annuler
 Clean empty folders=Nettoyer les dossiers vides
 Clean empty ZFS datasets=Nettoyer les datasets ZFS vides
+Clean empty ZFS datasets did not finish for %s see the mover log=Nettoyer les datasets ZFS vides n'a pas abouti pour %s : voir le journal.
 CLI help commands=Commandes d’aide CLI
 Comma separated list of file types=Liste de types de fichiers séparés par des virgules
 Cron Schedule to force move all of files=Cron pour forcer le déplacement de tous les fichiers

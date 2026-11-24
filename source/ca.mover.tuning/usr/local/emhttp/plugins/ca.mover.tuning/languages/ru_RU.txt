@@ -25,6 +25,7 @@ Cache → Array=Кэш → Массив
 Cancel=Отмена
 Clean empty folders=Очистить пустые папки
 Clean empty ZFS datasets=Очистить пустые ZFS‑датасеты
+Clean empty ZFS datasets did not finish for %s see the mover log=Очистка пустых ZFS‑датасетов не завершена для %s: см. журнал.
 CLI help commands=Команды помощи CLI
 Comma separated list of file types=Список типов файлов через запятую
 Cron Schedule to force move all of files=Расписание Cron для принудительного перемещения всех файлов

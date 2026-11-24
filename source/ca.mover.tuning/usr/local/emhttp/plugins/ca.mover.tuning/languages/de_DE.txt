@@ -25,6 +25,7 @@ Cache → Array=Cache → Speicherverbund
 Cancel=Abbrechen
 Clean empty folders=Leere Ordner bereinigen
 Clean empty ZFS datasets=Leere ZFS‑Datasets bereinigen
+Clean empty ZFS datasets did not finish for %s see the mover log=Leere ZFS‑Datasets bereinigen wurde für %s nicht abgeschlossen: siehe Protokoll.
 CLI help commands=CLI‑Hilfebefehle
 Comma separated list of file types=Kommagetrennte Liste von Dateitypen
 Cron Schedule to force move all of files=Cron‑Zeitplan zum erzwungenen Verschieben aller Dateien

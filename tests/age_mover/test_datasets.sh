@@ -19,7 +19,7 @@ LS='list -r -H -t filesystem,volume,snapshot -o name'
 # a destroy's calls: list, unmount, the check at a private read-only mount, destroy
 DESTROYED=$(printf '%s\n' "zfs $LS cache/sh" 'zfs unmount cache/sh' 'mount -t zfs -o ro,zfsutil cache/sh PRIVATE' 'umount PRIVATE' \
     'zfs destroy cache/sh')
-NOTICE='warning|Clean ZFS datasets did not finish for [cache/sh]: see the mover log.'
+NOTICE='warning|Clean empty ZFS datasets did not finish for [cache/sh]: see the mover log.'
 no_private() { check "no private mount folder left" "" "$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'ca.mover.tuning.*')"; }
 notices() { check "notices" "$1" "$(cat "$NOTIFY_LOG" 2>/dev/null)"; }
 # the destroy goes ahead only when it loses nothing: each entry left is a folder the array also has
@@ -122,7 +122,7 @@ run_moves
 log_has 'Failed to unmount ZFS dataset [cache/a]'
 log_has 'zfs: not currently mounted'
 log_has "ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: mount: filesystem 'cache/sh' cannot be mounted: zfs.fail"
-notices 'warning|Clean ZFS datasets did not finish for [cache/a] [cache/sh]: see the mover log.'
+notices 'warning|Clean empty ZFS datasets did not finish for [cache/a] [cache/sh]: see the mover log.'
 no_private
 
 # the kept name never passed the planner: a newline in it must not end the debug line before debug_mover mangles it
