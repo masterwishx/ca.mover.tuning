@@ -103,9 +103,20 @@ fresh() {
 begin() {
     CASE=$1
     shift
-    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs.calls"
+    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs.calls" "$T/after_rsync" "$T/bin/rsync" \
+        "$MOVER_LOG"
     mkdir -p /mnt/cache /mnt/user0
     fresh "$@"
+}
+
+# after_first_rsync <command>: runs the command once, right after the case's first rsync ends; its errors go to the stderr
+# run_moves checks. The wrapper renames its process, or copyPids would take it for the copy
+after_first_rsync() {
+    local h=$T/after_rsync e=$T/row_error
+    printf '%s\n' "$1" >"$h"
+    printf '#!/bin/bash\nprintf hook >/proc/$$/comm\n%q "$@"\nrc=$?\n[ -e %q ] && { bash %q 2>>%q || echo "after_first_rsync: the command failed" >>%q; rm -f %q; }\nexit $rc\n' \
+        "$(PATH=${PATH#"$T/bin:"} command -v rsync)" "$h" "$h" "$e" "$e" "$h" >"$T/bin/rsync"
+    chmod 755 "$T/bin/rsync"
 }
 
 # mk <root> <share/path>...: a 2-byte file at /mnt/<root>/<path>
