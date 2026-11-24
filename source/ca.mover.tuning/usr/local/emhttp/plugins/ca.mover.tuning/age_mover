@@ -95,7 +95,6 @@ UNRAID_MOVER=0
 LAST_DIR=""
 LAST_COUNT=-1
 LAST_FOLDER_COUNT=-1
-EMPTY_DIR_COUNT=-1
 declare -A POOL_FSTYPE_CACHE=()
 # per cache:yes share, from createFilteredFilelist: "name|keeps its primary files|sync size limit in bytes|age filter days" lines for decideMoveActions
 SHARE_PLAN_RULES=""
@@ -2477,6 +2476,40 @@ move_tool_said() {
     done <<<"$MOVE_OUT"
 }
 
+# In topFolder mode, notes this row's share top folder for the check after the pass; fills processTheMoves' TOP_SEEN
+# and TOP_FOLDERS
+note_top_folder() {
+    [ "$CLEANFOLDERS" = "topFolder" ] || return 0
+    local top="${SOURCE}/${SHARENAME}"
+    [ -n "${TOP_SEEN[$top]}" ] && return 0
+    TOP_SEEN[$top]=1
+    TOP_FOLDERS+=("$top")
+}
+
+# Deletes share top folder $1 if it is empty, unless it is a ZFS dataset mountpoint or test mode is on
+cleanTopFolder() {
+    local top_folder=$1 file_count dir_count
+    [ -d "$top_folder" ] || return 0
+    if [ -e "${top_folder}/.placeholder" ]; then
+        mvlogger "Not deleting top-level folder: contains .placeholder: ${top_folder}"
+        return 0
+    fi
+    file_count=$(find "$top_folder" -type f | wc -l)
+    dir_count=$(find "$top_folder" -mindepth 1 -type d | wc -l)
+    mvDebuglogger "Top folder: $(qp "$top_folder"), share file(s): $file_count, share folder(s): $dir_count" "Clean Top Folder"
+    if [ "$file_count" -ne 0 ] || [ "$dir_count" -ne 0 ]; then
+        mvlogger "Not deleting top-level folder: contains $file_count file(s), $dir_count subfolder(s): ${top_folder}"
+    elif [ "$TESTMODE" != "no" ]; then
+        mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
+    elif is_zfs_dataset_mountpoint "$top_folder"; then
+        mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
+    elif rmdir "$top_folder" 2>/dev/null; then
+        mvlogger "Deleted empty top-level folder: $top_folder"
+    else
+        mvDebuglogger "Failed to delete top-level folder (may not be empty): $top_folder" "Clean Top Folder"
+    fi
+}
+
 # Internal move engine
 processTheMoves() {
     if [ -e $SOFTSTOPFILE ]; then
@@ -2510,6 +2543,9 @@ processTheMoves() {
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
     local -A STAGED_INUSE=()
+    local -A TOP_SEEN=()
+    local -a TOP_FOLDERS=()
+    local top
     # without fuser an open file cannot be told apart, so none is moved while moveInUse is no
     local fuser_missing=0
     if [ "$MOVE_IN_USE" != "yes" ] && ! command -v fuser >/dev/null; then
@@ -2834,6 +2870,7 @@ processTheMoves() {
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
+                        note_top_folder
                         if [ "$TESTMODE" = "no" ]; then
                             # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
                             if [ -d "${DIR}" ]; then
@@ -2902,7 +2939,6 @@ processTheMoves() {
                 START_DIR="${SOURCE}/${FILEPATH}"
 
                 LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
-                EMPTY_DIR_COUNT=-1
 
                 # If Unraid already deleted the folder (move mode) using upper folder, skip cleanup
                 if [ ! -d "$START_DIR" ]; then
@@ -2926,9 +2962,11 @@ processTheMoves() {
                     DIR="$(dirname "${DIR}")"
                 done
 
-                # Process each directory using while read
+                # Process each directory using while read; a break leaves chain_emptied 0
+                chain_emptied=1
                 while IFS= read -r DIR; do
                     [ -z "$DIR" ] && continue
+                    chain_emptied=0
                     mvDebuglogger "Empty folder ${DIR}" "Clean Empty Moved Folder"
 
                     # Stop at ZFS dataset boundaries
@@ -2959,6 +2997,7 @@ processTheMoves() {
                         else
                             mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
                         fi
+                        chain_emptied=1
 
                         mvDebuglogger "Cycle of delete empty folder, Previous count: $LAST_FOLDER_COUNT, Count of all empty folders: $((LAST_FOLDER_COUNT - 1))" "Clean Empty Moved Folder - End Loop"
                     else
@@ -2967,52 +3006,7 @@ processTheMoves() {
                     fi
 
                 done <<<"${DIR_LIST}"
-
-                if [ -n "${empty_file_count+x}" ] && [ -n "${empty_dir_count+x}" ]; then
-                    EMPTY_DIR_COUNT=$((empty_file_count + empty_dir_count))
-                else
-                    EMPTY_DIR_COUNT=-1
-                fi
-            fi
-
-            # Clean top level folder if empty
-            if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "topFolder" ]; then
-                # Check counters if equal to 0 then check top share
-                if [[ "$LAST_COUNT" -eq 0 || "$EMPTY_DIR_COUNT" -eq 0 ]]; then
-                    # Determine top-level share folder
-                    top_folder="${SOURCE}/${SHARENAME}"
-                    # Skip if placeholder exists
-                    if [ -d "$top_folder" ]; then
-                        if [ -e "${top_folder}/.placeholder" ]; then
-                            mvlogger "Not deleting top-level folder: contains .placeholder: ${top_folder}"
-                        else
-                            # Count files and subfolders
-                            file_count=$(find "$top_folder" -type f | wc -l)
-                            dir_count=$(find "$top_folder" -mindepth 1 -type d | wc -l)
-
-                            mvDebuglogger "Top folder: $(qp "$top_folder"), share file(s): $file_count, share folder(s): $dir_count" "Clean Top Folder"
-
-                            # Delete only if truly empty
-                            if [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ]; then
-                                if [ "$TESTMODE" = "no" ]; then
-                                    if ! is_zfs_dataset_mountpoint "$top_folder"; then
-                                        if rmdir "$top_folder" 2>/dev/null; then
-                                            mvlogger "Deleted empty top-level folder: $top_folder"
-                                        else
-                                            mvDebuglogger "Failed to delete top-level folder (may not be empty): $top_folder" "Clean Top Folder"
-                                        fi
-                                    else
-                                        mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
-                                    fi
-                                else
-                                    mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
-                                fi
-                            else
-                                mvlogger "Not deleting top-level folder: contains $file_count file(s), $dir_count subfolder(s): ${top_folder}"
-                            fi
-                        fi
-                    fi
-                fi
+                [ "$chain_emptied" = 1 ] && note_top_folder
             fi
 
             # Setting mover status: a name leaves the remaining-work counters once it arrived or was found gone,
@@ -3063,6 +3057,8 @@ processTheMoves() {
     mvlogger "$(titleLine "Cleaning up" '-')"
     movesEnd
     moverStep "Cleaning up"
+    # once per noted share, after the pass: a soft stop's break 2 lands here too
+    for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
         awk -F'|' '$11 ~ /^sync / { found = 1; exit } END { exit !found }' "$MOVER_ACTIONLIST"; then
