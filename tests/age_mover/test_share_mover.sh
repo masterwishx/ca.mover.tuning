@@ -6,7 +6,7 @@
 SM=$(realpath "${SM:-$PLUGIN/share_mover}") # run starts it from $T/cwd
 CFG=/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg
 # the cases write under /boot, /var/local and /usr/local, and /var/run/mover.pid: a mount at one (Unraid's flash drive) refuses
-if ! awk '$5 ~ "^/(boot|var/local|usr/local)(/|$)" || $5 ~ "^/(var/)?run(/mover\\.pid)?$" { exit 1 }' /proc/self/mountinfo; then
+if ! awk '$5 ~ "^/(boot|var/local|usr/local)(/|$)" || $5 ~ "^/(var|usr|(var/)?run(/mover\\.pid)?)$" { exit 1 }' /proc/self/mountinfo; then
     echo "test_share_mover.sh writes Unraid's paths and one is a mount here: start it with tests/age_mover/run.sh" >&2
     exit 2
 fi
