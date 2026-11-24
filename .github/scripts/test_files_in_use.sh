@@ -20,7 +20,7 @@ expect_status() {
     local expected=$1 actual
     shift
     set +e
-    perl "$HELPER" "$@"
+    PATH="$TMP/bin:$PATH" perl "$HELPER" "$@"
     actual=$?
     set -e
     if [ "$actual" -ne "$expected" ]; then
@@ -74,6 +74,11 @@ if [ "$(uname -s)" != Linux ]; then
     exit
 fi
 
+# expect_status runs the helper with this fuser first in PATH: a regular file answered by fuser, not a lease, gets its 7
+mkdir "$TMP/bin"
+printf '#!/bin/sh\nexit 7\n' >"$TMP/bin/fuser"
+chmod +x "$TMP/bin/fuser"
+
 expect_status 1 "$plain" "$space" "$newline" "$leading"
 expect_status 1 "$TMP/vanished"
 
@@ -124,14 +129,7 @@ release_holder
 
 # A device cannot be leased. A distinctive fake fuser status proves that the
 # one-shot helper immediately replaces itself with the compatibility command.
-mkdir "$TMP/bin"
-printf '#!/bin/sh\nexit 7\n' >"$TMP/bin/fuser"
-chmod +x "$TMP/bin/fuser"
-set +e
-PATH="$TMP/bin:$PATH" perl "$HELPER" /dev/null
-fallback_status=$?
-set -e
-[ "$fallback_status" -eq 7 ]
+expect_status 7 /dev/null
 
 # If leases cannot answer and fuser cannot be executed, status 2 tells
 # age_mover not to mistake the file for clear.
