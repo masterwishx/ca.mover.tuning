@@ -1,18 +1,22 @@
 #!/bin/bash
 # shellcheck disable=SC2034 # the settings set here are read by age_mover's functions, sourced from funcs.sh
 # Sourced by test_*.sh: each age_mover case runs the real processTheMoves with real rsync and the shipped default.cfg read by the real
-# getMoverSettings; Unraid's move, findmnt and zfs are stand-ins. It deletes the folders in ROOTS.
+# getMoverSettings; Unraid's move and notify, findmnt, zfs, mount and umount are stand-ins. It deletes the folders in ROOTS.
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PLUGIN=$HERE/../../source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning
 AM=${AM:-$PLUGIN/age_mover}
 T=${T:-/tmp/age_mover_test} # test_folders.sh runs its plain-user half with its own T
 ROOTS=(/mnt/cache /mnt/user0 /mnt/disk1 /mnt/disk2 /mnt/other)
 
-# a mount at or under /mnt would put the host's files under the wipe, and one at /usr/libexec/unraid/move or above it the
-# host's mover under the stand-in; an unreadable mount table refuses too
-no_host_mount() { awk '$5 == "/mnt" || index($5, "/mnt/") == 1 || $5 ~ "^/usr(/libexec(/unraid(/move)?)?)?$" { exit 1 }' /proc/self/mountinfo; }
+# a mount at or under /mnt would put the host's files under the wipe, and one at a stand-in's path or above it the
+# host's own under the stand-in; an unreadable mount table refuses too
+no_host_mount() {
+    awk '$5 == "/mnt" || index($5, "/mnt/") == 1 || $5 ~ "^/usr(/libexec(/unraid(/move)?)?)?$" ||
+        $5 ~ "^/usr/local(/emhttp(/webGui(/scripts(/notify)?)?)?)?$" { exit 1 }' /proc/self/mountinfo
+}
 if [ "${AGE_MOVER_TEST:-}" != 1 ] || [ ! -e /.dockerenv ] || ! no_host_mount; then
-    echo "lib.sh deletes ${ROOTS[*]} and writes /usr/libexec/unraid/move: start the tests with tests/age_mover/run.sh" >&2
+    echo "lib.sh deletes ${ROOTS[*]} and writes /usr/libexec/unraid/move and /usr/local/emhttp/webGui/scripts/notify: start" \
+        "the tests with tests/age_mover/run.sh" >&2
     exit 2
 fi
 
@@ -40,6 +44,16 @@ while IFS= read -r p; do
 done
 EOF
     chmod 755 /usr/libexec/unraid/move
+    mkdir -p /usr/local/emhttp/webGui/scripts
+    cat >/usr/local/emhttp/webGui/scripts/notify <<'EOF'
+#!/bin/bash
+# stand-in for Unraid's notify: each notice's importance and description, as one line in $NOTIFY_LOG
+while getopts 's:d:i:l:' o; do
+    case $o in d) desc=$OPTARG ;; i) imp=$OPTARG ;; s | l) ;; *) exit 1 ;; esac
+done
+printf '%s|%s\n' "$imp" "$desc" >>"${NOTIFY_LOG:?}"
+EOF
+    chmod 755 /usr/local/emhttp/webGui/scripts/notify
 fi
 # a path in $T/zfs is a ZFS mountpoint (a tab, then its dataset, else the path less /mnt/); zfs logs calls to $T/zfs.calls
 # and fails unanswered calls and each subcommand in $T/zfs.fail, with $T/zfs.reason (else zfs.fail) then a child's name
@@ -72,7 +86,7 @@ case "$*" in
     echo "$n"; cat "$d/zfs.children" 2>/dev/null || :
     ;;
 # unmount unlists the dataset and hides its files, keeping its folder; mount lists it and brings them back, hiding,
-# as an overlay mount does, what the folder gained meanwhile
+# as an overlay mount does, what the folder gained meanwhile, and fails while mount has it at a private folder
 "unmount "*)
     l=$(entry "$d/zfs")
     [ -n "$l" ] || { echo "cannot unmount '$n': not currently mounted" >&2; exit 1; }
@@ -81,6 +95,8 @@ case "$*" in
     mkdir -p "$d/zfs.store/$n" && find "${l%%$'\t'*}" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.store/$n" {} +
     ;;
 "mount "*)
+    [ -z "$(awk -F'\t' -v n="$n" '$2 == n' "$d/zfs.private" 2>/dev/null)" ] ||
+        { echo "cannot mount '$n': filesystem already mounted" >&2; exit 1; }
     l=$(entry "$d/zfs.off" | tail -n 1) && f=${l%%$'\t'*}
     mkdir -p "$d/zfs.hidden" "$f" && find "$f" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.hidden" {} +
     find "$d/zfs.store/$n" -mindepth 1 -maxdepth 1 -exec mv -t "$f" {} +
@@ -91,8 +107,55 @@ case "$*" in
 *) echo "zfs stand-in has no answer for: zfs $*" >&2; exit 1 ;;
 esac
 EOF
-chmod 755 "$T/bin/findmnt" "$T/bin/zfs"
+# age_mover's only mount: mount -t zfs -o ro,zfsutil <unmounted dataset> <empty folder outside /mnt> brings the dataset's
+# files into the folder, noted in $T/zfs.private; umount takes them back. Both log to zfs.calls, a mktemp folder as
+# PRIVATE, run $T/zfs.on_mount.zfs or zfs.on_umount first and fail on mount.zfs or umount in zfs.fail
+cat >"$T/bin/mount" <<'EOF'
+#!/bin/bash
+d=${0%/bin/mount}
+p=${*: -1}
+[[ $p == "${TMPDIR:-/tmp}"/ca.mover.tuning.?????? ]] && shown=PRIVATE || shown=$p
+echo "mount ${*:1:$#-1} $shown" >>"$d/zfs.calls"
+[ ! -f "$d/zfs.on_mount.zfs" ] || bash "$d/zfs.on_mount.zfs"
+[ $# = 6 ] && [ "$1 $2 $3 $4" = "-t zfs -o ro,zfsutil" ] || { echo "mount stand-in has no answer for: mount $*" >&2; exit 1; }
+n=$5
+if grep -qxF mount.zfs "$d/zfs.fail" 2>/dev/null; then
+    r=$(cat "$d/zfs.reason" 2>/dev/null) || r=zfs.fail
+    echo "filesystem '$n' cannot be mounted: $r" >&2
+    exit 1
+fi
+case $p in /mnt | /mnt/*) echo "mount stand-in: $p is under /mnt" >&2; exit 1 ;; esac
+[ -d "$p" ] && [ -z "$(find "$p" -mindepth 1 -print -quit)" ] || { echo "mount stand-in: $p is not an empty folder" >&2; exit 1; }
+if [ ! -d "$d/zfs.store/$n" ] || [ -n "$(awk -F'\t' -v n="$n" '$2 == n' "$d/zfs.private" 2>/dev/null)" ] ||
+    [ -n "$(awk -F'\t' -v n="$n" '(NF > 1 ? $2 : substr($1, 6)) == n' "$d/zfs" 2>/dev/null)" ]; then
+    echo "filesystem '$n' is already mounted" >&2
+    exit 1
+fi
+find "$d/zfs.store/$n" -mindepth 1 -maxdepth 1 -exec mv -t "$p" {} +
+printf '%s\t%s\n' "$p" "$n" >>"$d/zfs.private"
+EOF
+cat >"$T/bin/umount" <<'EOF'
+#!/bin/bash
+d=${0%/bin/umount}
+p=$1
+l=$(awk -F'\t' -v p="$p" '$1 == p' "$d/zfs.private" 2>/dev/null)
+[ -n "$l" ] && shown=PRIVATE || shown=$p
+echo "umount $shown" >>"$d/zfs.calls"
+[ ! -f "$d/zfs.on_umount" ] || bash "$d/zfs.on_umount"
+[ $# = 1 ] || { echo "umount stand-in has no answer for: umount $*" >&2; exit 1; }
+if grep -qxF umount "$d/zfs.fail" 2>/dev/null; then
+    r=$(cat "$d/zfs.reason" 2>/dev/null) || r=zfs.fail
+    echo "umount: $p: $r" >&2
+    exit 32
+fi
+[ -n "$l" ] || { echo "umount: $p: not mounted." >&2; exit 32; }
+find "$p" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.store/${l#*$'\t'}" {} +
+grep -vxF -- "$l" "$d/zfs.private" >"$d/zfs.new"
+mv "$d/zfs.new" "$d/zfs.private"
+EOF
+chmod 755 "$T/bin/findmnt" "$T/bin/zfs" "$T/bin/mount" "$T/bin/umount"
 PATH=$T/bin:$PATH
+export NOTIFY_LOG=$T/notify
 
 # age_mover runs its command on load, so only its functions and its top-level start values are taken
 awk '/^[A-Za-z_][A-Za-z0-9_]*\(\) \{/,/^\}/' "$AM" >"$T/funcs.sh"
@@ -136,7 +199,7 @@ begin() {
     CASE=$1
     shift
     rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs".* "$T/after_rsync" "$T/bin/rsync" \
-        "$MOVER_LOG"
+        "$MOVER_LOG" "$NOTIFY_LOG" "${TMPDIR:-/tmp}"/ca.mover.tuning.*
     mkdir -p /mnt/cache /mnt/user0
     fresh "$@"
 }

@@ -2577,7 +2577,65 @@ dataset_loses() {
     [ -n "$entry" ] && printf '%s' "$src/${entry#./}"
 }
 
-# Destroys dataset $1/$2 if it is mounted at /mnt/$1/$2, has no children or snapshots, and dataset_loses against $3/$2 is empty
+# Mounts the unmounted dataset $1 read-only at a private folder and prints dataset_loses there against $3, with that
+# folder shown as $2; prints why and fails when it cannot make the folder, mount or unmount
+dataset_loses_unmounted() {
+    local private err lost
+    if ! private=$(mktemp -d -t ca.mover.tuning.XXXXXX 2>&1); then
+        printf 'mktemp: %s' "$(zfs_reason "${private#mktemp: }")"
+        return 1
+    fi
+    if ! err=$(mount -t zfs -o ro,zfsutil "$1" "$private" 2>&1); then
+        rmdir "$private"
+        printf 'mount: %s' "$(zfs_reason "${err#mount: }")"
+        return 1
+    fi
+    lost=$(dataset_loses "$private" "$3")
+    # the folder stays while the dataset is still mounted on it
+    if ! err=$(umount "$private" 2>&1); then
+        printf 'umount: %s' "$(zfs_reason "${err#umount: }")"
+        return 1
+    fi
+    rmdir "$private"
+    [ -z "$lost" ] || printf '%s' "$2${lost#"$private"}"
+}
+
+# Logs lines $3... and notes dataset $2 for dataset_problems_notice at severity $1 (failure outranks warning); fills
+# processTheMoves' DATASET_PROBLEM and DATASET_PROBLEM_LEVEL
+dataset_problem() {
+    DATASET_PROBLEM[$2]=1
+    [ "$DATASET_PROBLEM_LEVEL" = failure ] || DATASET_PROBLEM_LEVEL=$1
+    local line
+    for line in "${@:3}"; do mvlogger "$line"; done
+}
+
+# One notice for the run's dataset problems, which the log details: a problem that repeats notifies once a run
+dataset_problems_notice() {
+    local ds names=""
+    for ds in "${SHARE_DATASETS[@]}"; do [ -z "${DATASET_PROBLEM[$ds]}" ] || names+="${names:+ }[$ds]"; done
+    [ -z "$names" ] || mvlogger_t "Clean ZFS datasets did not finish for %s: see the mover log." "$DATASET_PROBLEM_LEVEL" "$names"
+}
+
+# Mounts dataset $1 again at its folder $2, unless the folder gained files that a mount would hide
+remount_dataset() {
+    local err
+    # a write through /mnt/user while it was unmounted lands in the bare folder
+    if [ -n "$(find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+        dataset_problem warning "$1" "Failed to remount dataset [$1]" \
+            "Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
+    elif ! err=$(zfs mount "$1" 2>&1); then
+        dataset_problem warning "$1" "Failed to remount dataset [$1]" "zfs: $(zfs_reason "$err")"
+    fi
+}
+
+# Logs at debug level why dataset $1 is kept: entry $2 that a destroy could lose
+dataset_kept() {
+    # the planner never saw this name: a newline in it would end the debug line before debug_mover's mangling
+    mvDebuglogger "Keeping ZFS dataset [$1]: a destroy could lose $(qp "${2//$'\n'/\\n}")" "Clean Dataset"
+}
+
+# Destroys dataset $1/$2 if it is mounted at /mnt/$1/$2, has no children or snapshots, and dataset_loses against $3/$2
+# is empty both before the unmount and after it; else keeps it mounted
 cleanShareDataset() {
     local folder="/mnt/$1/$2" dataset="$1/$2" mounted names lost err
     mounted=$(zfs_dataset_at "$folder")
@@ -2593,8 +2651,7 @@ cleanShareDataset() {
     fi
     lost=$(dataset_loses "$folder" "$3/$2")
     if [ -n "$lost" ]; then
-        # the planner never saw this name: a newline in it would end the debug line before debug_mover's mangling
-        mvDebuglogger "Keeping ZFS dataset [${dataset}]: a destroy could lose $(qp "${lost//$'\n'/\\n}")" "Clean Dataset"
+        dataset_kept "$dataset" "$lost"
         return 0
     fi
     if [[ $names == *$'\n'* ]]; then
@@ -2604,29 +2661,25 @@ cleanShareDataset() {
     mvlogger "ZFS dataset [${dataset}] holds only folders the destination also has, attempting to unmount and delete..."
     # stderr is discarded on both launch paths, so zfs's reason goes to the log
     if ! err=$(zfs unmount "$dataset" 2>&1); then
-        zfs_busy "$dataset" "$err" || {
-            mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "$dataset"
-            mvlogger "zfs: $(zfs_reason "$err")"
-        }
+        zfs_busy "$dataset" "$err" ||
+            dataset_problem failure "$dataset" "Failed to unmount ZFS dataset [${dataset}]" "zfs: $(zfs_reason "$err")"
         return 0
     fi
     mvlogger "ZFS dataset [${dataset}] successfully unmounted."
-    if ! err=$(zfs destroy "$dataset" 2>&1); then
-        zfs_busy "$dataset" "$err" || {
-            mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "$dataset"
-            mvlogger "zfs: $(zfs_reason "$err")"
-        }
-        # a write through /mnt/user while it was unmounted lands in the bare folder, and a mount over it would hide it
-        if [ -n "$(find "$folder" -mindepth 1 -print -quit 2>/dev/null)" ]; then
-            mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
-            mvlogger "Not remounting ZFS dataset [${dataset}]: its folder ${folder} holds files that a mount would hide"
-        elif ! err=$(zfs mount "$dataset" 2>&1); then
-            mvlogger_t "Failed to remount dataset [%s]" "warning" "$dataset"
-            mvlogger "zfs: $(zfs_reason "$err")"
-        fi
+    # a file written between the check above and the unmount is in the dataset: checked again where nothing can write
+    if ! lost=$(dataset_loses_unmounted "$dataset" "$folder" "$3/$2"); then
+        dataset_problem warning "$dataset" "ZFS dataset [${dataset}] could not be checked once unmounted, will not delete: $lost"
+    elif [ -n "$lost" ]; then
+        mvlogger "Keeping ZFS dataset [${dataset}]: the check after the unmount found something a destroy could lose."
+        dataset_kept "$dataset" "$lost"
+    elif ! err=$(zfs destroy "$dataset" 2>&1); then
+        zfs_busy "$dataset" "$err" || dataset_problem failure "$dataset" \
+            "Failed to destroy ZFS dataset [${dataset}] — attempting to remount." "zfs: $(zfs_reason "$err")"
+    else
+        mvlogger "ZFS dataset [${dataset}] successfully destroyed."
         return 0
     fi
-    mvlogger "ZFS dataset [${dataset}] successfully destroyed."
+    remount_dataset "$dataset" "$folder"
 }
 
 # Internal move engine
@@ -2666,6 +2719,8 @@ processTheMoves() {
     local -a TOP_FOLDERS=()
     local -A DATASET_DEST=()
     local -a SHARE_DATASETS=()
+    local -A DATASET_PROBLEM=()
+    local DATASET_PROBLEM_LEVEL=""
     local top ds
     # without fuser an open file cannot be told apart, so none is moved while moveInUse is no
     local fuser_missing=0
@@ -3141,6 +3196,7 @@ processTheMoves() {
     moverStep "Cleaning up"
     # once per noted share, after the pass: a soft stop's break 2 lands here too
     for ds in "${SHARE_DATASETS[@]}"; do cleanShareDataset "${ds%%/*}" "${ds#*/}" "${DATASET_DEST[$ds]}"; done
+    dataset_problems_notice
     for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&

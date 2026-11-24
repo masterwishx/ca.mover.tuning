@@ -16,6 +16,12 @@ if [ "${1:-}" = --as-tester ]; then
 fi
 
 LS='list -r -H -t filesystem,volume,snapshot -o name'
+# a destroy's calls: list, unmount, the check at a private read-only mount, destroy
+DESTROYED=$(printf '%s\n' "zfs $LS cache/sh" 'zfs unmount cache/sh' 'mount -t zfs -o ro,zfsutil cache/sh PRIVATE' 'umount PRIVATE' \
+    'zfs destroy cache/sh')
+NOTICE='warning|Clean ZFS datasets did not finish for [cache/sh]: see the mover log.'
+no_private() { check "no private mount folder left" "" "$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'ca.mover.tuning.*')"; }
+notices() { check "notices" "$1" "$(cat "$NOTIFY_LOG" 2>/dev/null)"; }
 # the destroy goes ahead only when it loses nothing: each entry left is a folder the array also has
 for left in nothing 'a middle folder the array has' '.zfs, as snapdir=visible shows it,' 'a file' 'a file beside it' 'a symlink' \
     'an empty folder the array lacks' 'a nested .zfs folder the array lacks'; do
@@ -37,9 +43,10 @@ for left in nothing 'a middle folder the array has' '.zfs, as snapdir=visible sh
     if [ "$f" = sh/a/b/f.txt ]; then array_is sh sh/a sh/a/b "$f"; else array_is sh sh/only "$f"; fi
     case $left in
     nothing | 'a middle'* | .zfs*)
-        check "zfs calls" "$(printf 'zfs %s cache/sh\n' "$LS" unmount destroy)" "$(cat "$T/zfs.calls")"
+        check "zfs calls" "$DESTROYED" "$(cat "$T/zfs.calls")"
         log_has 'ZFS dataset [cache/sh] successfully destroyed.'
         cache_is
+        no_private
         log_lacks 'top-level'
         ;;
     *)
@@ -70,6 +77,54 @@ check "zfs calls" "zfs $LS cache/sh" "$(cat "$T/zfs.calls")"
 cache_is sh sh/new.txt
 [ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'Keeping ZFS dataset [cache/sh]: a destroy could lose "/mnt/cache/sh/new.txt"'
 
+# a file written after the content check, as zfs unmounts, is in the dataset: the check at the private mount keeps it
+begin "Clean ZFS datasets, a file lands in the share while zfs unmounts it" cleanFolders topFolder cleanDatasets yes
+mk cache sh/only/f.txt
+printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "zfs calls" "$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')" "$(cat "$T/zfs.calls")"
+log_has 'Keeping ZFS dataset [cache/sh]: the check after the unmount found something a destroy could lose.'
+log_lacks 'successfully destroyed'
+log_lacks 'Failed to'
+cache_is sh sh/new.txt
+no_private
+notices ''
+[ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'Keeping ZFS dataset [cache/sh]: a destroy could lose "/mnt/cache/sh/new.txt"'
+
+# the same, and a write through /mnt/user lands in the bare folder while the dataset is away: kept, not mounted over it
+begin "Clean ZFS datasets, files land in the dataset and in its bare folder while it is unmounted" cleanFolders topFolder \
+    cleanDatasets yes
+mk cache sh/only/f.txt
+printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
+echo 'echo y >/mnt/cache/sh/bare.txt' >"$T/zfs.on_mount.zfs"
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "zfs calls" "$(sed '$d' <<<"$DESTROYED")" "$(cat "$T/zfs.calls")"
+log_has 'Keeping ZFS dataset [cache/sh]: the check after the unmount found something a destroy could lose.'
+log_has 'Not remounting ZFS dataset [cache/sh]: its folder /mnt/cache/sh holds files that a mount would hide'
+cache_is sh sh/bare.txt
+check "the unmounted dataset keeps its file" new.txt "$(ls "$T/zfs.store/cache/sh")"
+no_private
+notices "$NOTICE"
+
+# one notice for the run at its worst level: an unmount that fails, then a check that fails, still reach errorsOnly
+begin "Clean ZFS datasets, two datasets fail" cleanFolders topFolder cleanDatasets yes notify errorsOnly
+mk cache a/only/f.txt sh/only/g.txt
+printf '%s\n' /mnt/cache /mnt/cache/a /mnt/cache/sh >"$T/zfs"
+# cache/a leaves the mount table as zfs starts to unmount it; cache/sh unmounts, then its read-only mount fails
+printf "sed -i '\\|^/mnt/cache/a$|d' %q\n" "$T/zfs" >"$T/zfs.on_unmount"
+echo mount.zfs >"$T/zfs.fail"
+{ row 'move from primary' f a/only/f.txt; row 'move from primary' f sh/only/g.txt; } | list
+run_moves
+log_has 'Failed to unmount ZFS dataset [cache/a]'
+log_has 'zfs: not currently mounted'
+log_has "ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: mount: filesystem 'cache/sh' cannot be mounted: zfs.fail"
+notices 'warning|Clean ZFS datasets did not finish for [cache/a] [cache/sh]: see the mover log.'
+no_private
+
 # the kept name never passed the planner: a newline in it must not end the debug line before debug_mover mangles it
 begin "Clean ZFS datasets, a file named with a newline left in the share" cleanFolders topFolder cleanDatasets yes
 mk cache sh/only/f.txt
@@ -92,7 +147,7 @@ for clean in topFolder no; do
     row 'move from primary' d sh/new | list
     run_moves
     array_is sh sh/new
-    if [ $clean = no ]; then calls=; else calls=$(printf 'zfs %s cache/sh\n' "$LS" unmount destroy); fi
+    if [ $clean = no ]; then calls=; else calls=$DESTROYED; fi
     check "zfs calls" "$calls" "$(cat "$T/zfs.calls" 2>/dev/null)"
     if [ $clean = no ]; then cache_is sh; else cache_is; fi
 done
@@ -169,21 +224,33 @@ for pool in 'not ZFS' 'ZFS, the share a plain folder on it'; do
     [ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_lacks 'Keeping'
 done
 
-for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, busy,'; do
-    begin "Clean ZFS datasets, zfs $fail fails" cleanFolders topFolder cleanDatasets yes notify no
+# errorsOnly sends only a failure: a failed unmount or destroy notifies, a failed check or remount only warns
+for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, busy,' 'the read-only mount' \
+    'the read-only unmount' mktemp; do
+    what="zfs $fail"
+    [[ $fail != the* && $fail != mktemp ]] || what=$fail
+    begin "Clean ZFS datasets, $what fails" cleanFolders topFolder cleanDatasets yes notify errorsOnly
     mk cache sh/only/f.txt
     printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
     case $fail in
     'destroy and mount') printf '%s\n' destroy mount ;;
     'unmount, busy,') echo unmount; echo 'pool or dataset is busy' >"$T/zfs.reason" ;;
     'destroy, busy,') echo destroy; echo 'dataset is busy' >"$T/zfs.reason" ;;
+    'the read-only mount') echo mount.zfs ;;
+    'the read-only unmount') echo umount ;;
+    mktemp) ;;
     *) echo "$fail" ;;
     esac >"$T/zfs.fail"
     row 'move from primary' f sh/only/f.txt | list
     # age_mover's stderr is discarded in use, so zfs's reason goes to the log, without the child zfs names after it
-    run_moves
+    if [ "$fail" = mktemp ]; then TMPDIR=/nowhere run_moves; else run_moves; fi
+    private=$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'ca.mover.tuning.*')
+    unchecked="ZFS dataset [cache/sh] could not be checked once unmounted, will not delete:"
     case $fail in
     list) log_has "ZFS dataset [cache/sh] could not be listed, will not delete: zfs.fail" ;;
+    'the read-only mount') log_has "$unchecked mount: filesystem 'cache/sh' cannot be mounted: zfs.fail" ;;
+    'the read-only unmount') log_has "$unchecked umount: $private: zfs.fail" ;;
+    mktemp) log_has "$unchecked mktemp: No such file or directory" ;;
     # the failure notice goes out with the "Failed to" line
     *busy*)
         log_has "ZFS dataset [cache/sh] is busy, will not delete: a process or another mount, such as a container's, may hold it."
@@ -196,11 +263,21 @@ for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, 
     # the row still logs and counts what it moved
     log_has '0 files remaining from caches to array'
     counter REMAINING_CACHE_FILES 0
+    case $fail in unmount | destroy | 'destroy and mount') notices "$NOTICE" ;; *) notices '' ;; esac
     if [ "$fail" = 'destroy and mount' ]; then
         log_has 'Failed to remount dataset [cache/sh]'
         log_count 2 'zfs: zfs.fail'
+        no_private
         continue
     fi
+    # an unmount that fails leaves the dataset at the private folder, which zfs mount then refuses
+    if [ "$fail" = 'the read-only unmount' ]; then
+        check "the dataset stays at the private folder" "$private"$'\t'cache/sh "$(cat "$T/zfs.private")"
+        log_has 'Failed to remount dataset [cache/sh]'
+        log_has 'zfs: filesystem already mounted'
+        continue
+    fi
+    no_private
     # the dataset is mounted at the end, so its top folder stays
     cache_is sh
     log_lacks 'Failed to remount'
@@ -209,17 +286,19 @@ done
 
 # a write through /mnt/user while the dataset is unmounted lands in its bare folder, which a remount would hide
 begin "Clean ZFS datasets, a file lands in the unmounted share's folder before a failed destroy" cleanFolders topFolder \
-    cleanDatasets yes notify no
+    cleanDatasets yes
 mk cache sh/only/f.txt
 printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
 echo destroy >"$T/zfs.fail"
 echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_destroy"
 row 'move from primary' f sh/only/f.txt | list
 run_moves
-check "zfs calls" "$(printf 'zfs %s cache/sh\n' "$LS" unmount destroy)" "$(cat "$T/zfs.calls")"
+check "zfs calls" "$DESTROYED" "$(cat "$T/zfs.calls")"
 log_has 'Failed to remount dataset [cache/sh]'
 log_has 'Not remounting ZFS dataset [cache/sh]: its folder /mnt/cache/sh holds files that a mount would hide'
 cache_is sh sh/new.txt
+no_private
+notices "$NOTICE"
 
 id tester >/dev/null 2>&1 || useradd -M tester
 U=/tmp/age_mover_tester
