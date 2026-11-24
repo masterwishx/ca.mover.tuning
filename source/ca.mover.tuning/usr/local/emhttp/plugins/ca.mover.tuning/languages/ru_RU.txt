@@ -122,6 +122,7 @@ Mover Tuning thresholds=Пороги Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Файлы не были перемещены/синхронизированы плагином Mover Tuning. Затраченное время: %s
 No log files yet=Файлов журнала пока нет
 Not Applicable Share Does Not Exist Yet=Не применимо (шара ещё не существует)
+Not a valid cron schedule it is not applied=Некорректное расписание cron: оно не применяется.
 Notify Mover Tuning plugin actions=Уведомлять о действиях плагина Mover Tuning
 Oldest first=Сначала самые старые
 Only move files larger than this in MB=Перемещать только файлы больше указанного размера (в МБ)
@@ -232,6 +233,8 @@ Youre welcome 😊 Thanks for using=Пожалуйста! 😊 Спасибо, �
 > Запускает расписание <strong><code>age_mover</code></strong> плагина Mover Tuning с использованием вашей пользовательской записи cron (включает все фильтры плагина).
 >
 > Пример записи расписания Cron: <strong>0 */4 * * *</strong>.&nbsp; Для запуска <em>каждые</em><strong> 4 часа</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Что такое Cron</a>
+>
+> Расписание должно быть корректной записью cron: некорректное не применяется, а ошибка записывается в syslog.
 :end
 
 :mover_tune_testmode_plug:

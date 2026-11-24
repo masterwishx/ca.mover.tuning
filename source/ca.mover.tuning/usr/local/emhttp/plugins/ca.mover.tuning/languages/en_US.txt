@@ -124,6 +124,7 @@ Mover Tuning thresholds=
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=No files were moved/synced by Mover Tuning plugin. Elapsed time: %s
 No log files yet=
 Not Applicable Share Does Not Exist Yet=Not Applicable (Share Does Not Exist Yet)
+Not a valid cron schedule it is not applied=Not a valid cron schedule: it is not applied.
 Notify Mover Tuning plugin actions=
 Oldest first=
 Only move files larger than this in MB=Only move files larger than this (in MB)
@@ -235,6 +236,8 @@ Youre welcome 😊 Thanks for using=You're welcome! 😊 Thanks for using!
 > Runs the <strong><code>age_mover</code></strong> schedule from the Mover Tuning plugin using your custom cron entry (includes all plugin filters).
 >
 > Cron Schedule entry example <strong>0 */4 * * *</strong>.&nbsp; To run at <em>every</em><strong> 4 hours</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> What Is Cron</a>
+>
+> The schedule must be a valid cron entry: an invalid one is not applied, and the error is written to the syslog.
 :end
 
 :mover_tune_testmode_plug:
