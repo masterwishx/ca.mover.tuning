@@ -1,4 +1,5 @@
 #!/bin/bash
+# shellcheck disable=SC2034 # the settings set here are read by age_mover's functions, sourced from funcs.sh
 # Sourced by test_*.sh: each case runs the real processTheMoves with real rsync and the shipped default.cfg read by the real
 # getMoverSettings; Unraid's move is a stand-in. It deletes the folders in ROOTS.
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -129,7 +130,7 @@ run_moves() {
     (
         cd "$T/cwd" || exit
         processTheMoves
-        while IFS== read -r v _; do printf '%s=%q\n' "$v" "${!v}"; done <"$T/globals.sh" >"$T/counters"
+        while IFS='=' read -r v _; do printf '%s=%q\n' "$v" "${!v}"; done <"$T/globals.sh" >"$T/counters"
     ) >"$T/out" 2>"$T/err"
     check "the rows were built and processTheMoves returned with nothing on stderr" "" \
         "$(cat "$T/row_error" "$T/err" 2>/dev/null; [ -f "$T/counters" ] || echo "processTheMoves did not return")"
