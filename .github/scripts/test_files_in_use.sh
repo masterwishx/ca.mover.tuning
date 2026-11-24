@@ -33,9 +33,9 @@ hold_file() {
     local mode=$1 file=$2 ready="$TMP/ready"
     rm -f -- "$ready"
     if [ "$mode" = read ]; then
-        ( exec 9<"$file"; : >"$ready"; sleep 30 ) &
+        ( exec 9<"$file"; : >"$ready"; exec sleep 30 ) &
     else
-        ( exec 9<>"$file"; : >"$ready"; sleep 30 ) &
+        ( exec 9<>"$file"; : >"$ready"; exec sleep 30 ) &
     fi
     HOLDER=$!
     for _ in {1..100}; do
@@ -213,6 +213,13 @@ no_fuser_run() {
 LOG_COUNT=0
 no_fuser_run
 [ "$LOG_COUNT" -eq 2 ]
+# A helper that does not compile would fail closed on every file, so fuser checks them, said once per run.
+FILES_IN_USE_HELPER=$TMP/missing-helper
+LOG_COUNT=0
+chooseFilesInUseCheck
+[ "${FILES_IN_USE_CMD[*]}" = "fuser -s" ]
+[ "$LOG_COUNT" -eq 1 ]
+FILES_IN_USE_HELPER=$fake_helper
 # With "Move files that are in use" on, nothing is checked, so the fuser note is not logged.
 # shellcheck disable=SC2034 # read by the sourced chooseFilesInUseCheck
 MOVE_IN_USE=yes

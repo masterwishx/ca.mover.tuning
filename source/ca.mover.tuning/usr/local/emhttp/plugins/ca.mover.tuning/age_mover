@@ -2517,23 +2517,24 @@ move_tool_said() {
     done <<<"$MOVE_OUT"
 }
 
-# files_in_use is Perl, which is part of Unraid's base distribution from 6.11.0; older releases have it only if the user
-# installed it. Without Perl, files are checked with fuser -s, as before the helper. The helper runs through the perl in
-# PATH, so one installed outside /usr/bin works too. Sets processTheMoves' FILES_IN_USE_CMD.
+# Sets processTheMoves' FILES_IN_USE_CMD: the files_in_use helper through the perl in PATH (Unraid 6.11.0 and newer have
+# Perl), else fuser -s as before the helper. A helper that does not compile would fail closed on every file
 chooseFilesInUseCheck() {
-    if command -v perl >/dev/null; then
+    if command -v perl >/dev/null && perl -c "$FILES_IN_USE_HELPER" >/dev/null 2>&1; then
         FILES_IN_USE_CMD=(perl "$FILES_IN_USE_HELPER")
         return
     fi
     FILES_IN_USE_CMD=(fuser -s)
-    [ "$MOVE_IN_USE" = yes ] ||
+    [ "$MOVE_IN_USE" = yes ] && return
+    if command -v perl >/dev/null; then
+        mvlogger "The file lease helper could not start, so files are checked for use with fuser, which is slower on busy servers."
+    else
         mvlogger "Perl not found, so files are checked for use with fuser, which is slower on busy servers. Perl is part of Unraid 6.11.0 and newer."
+    fi
 }
 
-# Returns success when at least one path is in use, or when no reliable answer is
-# available. The helper owns both the lease check and its fuser fallback.
-# FILE_IN_USE_FAILURE_LOGGED and FILES_IN_USE_CMD are locals of processTheMoves, so the warning appears at most once
-# per run.
+# Succeeds when a path is in use or when FILES_IN_USE_CMD gives no answer, which it logs once per run through
+# processTheMoves' FILE_IN_USE_FAILURE_LOGGED
 filesInUse() {
     local rc
     if "${FILES_IN_USE_CMD[@]}" "$@" 2>/dev/null; then rc=0; else rc=$?; fi
@@ -2542,7 +2543,7 @@ filesInUse() {
     1) return 1 ;;
     esac
     if [ "$FILE_IN_USE_FAILURE_LOGGED" != yes ]; then
-        mvlogger "A file could not be checked with either a lease or fuser, so it stays where it is until a later run. Set 'Move files that are in use' to Yes to move such files anyway."
+        mvlogger "A file could not be checked for use, so it stays where it is until a later run. Set 'Move files that are in use' to Yes to move such files anyway."
         FILE_IN_USE_FAILURE_LOGGED=yes
     fi
     return 0
