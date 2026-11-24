@@ -1,11 +1,11 @@
 #!/bin/bash
 # shellcheck disable=SC2034 # the settings set here are read by age_mover's functions, sourced from funcs.sh
 # Sourced by test_*.sh: each case runs the real processTheMoves with real rsync and the shipped default.cfg read by the real
-# getMoverSettings; Unraid's move is a stand-in. It deletes the folders in ROOTS.
+# getMoverSettings; Unraid's move, findmnt and zfs are stand-ins. It deletes the folders in ROOTS.
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 PLUGIN=$HERE/../../source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning
 AM=${AM:-$PLUGIN/age_mover}
-T=/tmp/age_mover_test
+T=${T:-/tmp/age_mover_test} # test_folders.sh runs its plain-user half with its own T
 ROOTS=(/mnt/cache /mnt/user0 /mnt/disk1 /mnt/disk2 /mnt/other)
 
 # a mount at or under /mnt would put the host's files under the wipe; an unreadable mount table refuses too
@@ -15,8 +15,11 @@ if [ "${AGE_MOVER_TEST:-}" != 1 ] || [ ! -e /.dockerenv ] || ! no_mount_under_mn
     exit 2
 fi
 
-mkdir -p "$T/cwd" /usr/libexec/unraid
-cat >/usr/libexec/unraid/move <<'EOF'
+mkdir -p "$T/cwd" "$T/bin"
+# root installs the move stand-in; the plain-user run uses the one root installed before it
+if [ "$(id -u)" = 0 ]; then
+    mkdir -p /usr/libexec/unraid
+    cat >/usr/libexec/unraid/move <<'EOF'
 #!/bin/bash
 # stand-in for Unraid's move: a name on the cache goes to the array (/mnt/user0), a name anywhere else to the cache.
 # A file is copied, as across disks, so names of one inode stay linked only when they come in the same run.
@@ -35,7 +38,27 @@ while IFS= read -r p; do
     fi && echo "move: $p Success"
 done
 EOF
-chmod 755 /usr/libexec/unraid/move
+    chmod 755 /usr/libexec/unraid/move
+fi
+# a path listed in $T/zfs is a ZFS mountpoint whose dataset has no children; zfs records each call and fails on any it
+# has no answer for
+cat >"$T/bin/findmnt" <<'EOF'
+#!/bin/bash
+grep -qxF -- "${@: -1}" "${0%/bin/findmnt}/zfs" 2>/dev/null && echo zfs
+exit 0
+EOF
+cat >"$T/bin/zfs" <<'EOF'
+#!/bin/bash
+echo "zfs $*" >>"${0%/bin/zfs}/zfs.calls"
+case "$*" in
+"list -Hpo usedbychildren "*) echo 0 ;;
+"list -r -H -o name "*) echo "${@: -1}" ;;
+"unmount "* | "destroy "*) ;;
+*) echo "zfs stand-in has no answer for: zfs $*" >&2; exit 1 ;;
+esac
+EOF
+chmod 755 "$T/bin/findmnt" "$T/bin/zfs"
+PATH=$T/bin:$PATH
 
 # age_mover runs its command on load, so only its functions and its top-level start values are taken
 awk '/^[A-Za-z_][A-Za-z0-9_]*\(\) \{/,/^\}/' "$AM" >"$T/funcs.sh"
@@ -67,15 +90,20 @@ setting() {
     MOVER_PROGRESS=yes
 }
 
-# begin <case> [key value]...: empty pools and disks, age_mover's start values and the case's settings
-begin() {
-    CASE=$1
-    shift
-    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error"
-    mkdir -p /mnt/cache /mnt/user0
+# fresh [key value]...: age_mover's start values and the case's settings, on the folders as they are
+fresh() {
     . "$T/globals.sh"
     IS_CRON=1 # after the start values: as under cron, nothing goes to syslog
     setting debuglogging "$DEBUGLOGGING" "$@"
+}
+
+# begin <case> [key value]...: empty pools and disks, then fresh
+begin() {
+    CASE=$1
+    shift
+    rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs.calls"
+    mkdir -p /mnt/cache /mnt/user0
+    fresh "$@"
 }
 
 # mk <root> <share/path>...: a 2-byte file at /mnt/<root>/<path>
@@ -107,7 +135,8 @@ row() {
 # list: the rows on stdin as the action list; as in the planner, a hardlink group's size counts on its first name only
 list() { { echo "$HDR"; awk -F'|' -v OFS='|' '$9 > 1 && seen[$12 "|" $9 "|" $10 "|" $4]++ { $5 = 0 } 1'; } >"$MOVER_ACTIONLIST"; }
 
-# the totals the planner counts per direction; a staged move to the primary is counted by its sync row
+# run_moves [stderr]: processTheMoves after the totals the planner counts per direction (a staged move to the primary is
+# counted by its sync row); stderr must be exactly the given text, nothing by default
 run_moves() {
     read -r TOTALPRIMARYFILES TOTALPRIMARYFOLDERS TOTALPRIMARYSIZE TOTALSECONDARYFILES TOTALSECONDARYFOLDERS TOTALSECONDARYSIZE \
         TOTALUNATTENDEDFILES TOTALUNATTENDEDFOLDERS TOTALUNATTENDEDSIZE < <(awk -F'|' '
@@ -132,7 +161,7 @@ run_moves() {
         processTheMoves
         while IFS='=' read -r v _; do printf '%s=%q\n' "$v" "${!v}"; done <"$T/globals.sh" >"$T/counters"
     ) >"$T/out" 2>"$T/err"
-    check "the rows were built and processTheMoves returned with nothing on stderr" "" \
+    check "the rows were built and processTheMoves returned with $([ -n "${1:-}" ] && echo the expected text || echo nothing) on stderr" "${1:-}" \
         "$(cat "$T/row_error" "$T/err" 2>/dev/null; [ -f "$T/counters" ] || echo "processTheMoves did not return")"
     [ ! -f "$T/counters" ] || . "$T/counters"
 }
@@ -158,6 +187,7 @@ log() { sed -E 's/^[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3} //' "$MOVER_LOG"; }
 log_has() { check "log has: $1" 1 "$(log | grep -cF -- "$1" | sed 's/^[1-9][0-9]*$/1/')"; }
 log_lacks() { check "log lacks: $1" 0 "$(log | grep -cF -- "$1")"; }
 log_count() { check "log has $1 lines with: $2" "$1" "$(log | grep -cF -- "$2")"; }
+dlog_has() { check "debug log has: $1" 1 "$(grep -cF -- "$1" "$MOVER_DEBUG_LOG" | sed 's/^[1-9][0-9]*$/1/')"; }
 
 finish() {
     echo "# $(basename "$0"): $((CHECKS - FAILS)) of $CHECKS checks passed"

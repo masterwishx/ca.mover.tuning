@@ -8,9 +8,9 @@ if [ "${AGE_MOVER_TEST:-}" != 1 ]; then
 fi
 # packages go in only inside a container: AGE_MOVER_TEST=1 on a host must not change its packages
 [ -e /.dockerenv ] || { echo "run.sh: AGE_MOVER_TEST=1 is set outside a container" >&2; exit 2; }
-for c in rsync fuser pgrep gawk; do
+for c in rsync fuser pgrep gawk runuser useradd; do
     command -v "$c" >/dev/null && continue
-    apt-get update -qq && apt-get install -y -qq --no-install-recommends rsync gawk psmisc procps util-linux >/dev/null || exit 2
+    apt-get update -qq && apt-get install -y -qq --no-install-recommends rsync gawk psmisc procps util-linux passwd >/dev/null || exit 2
     break
 done
 # Unraid's awk is gawk; Debian's default mawk would test other awk behaviour
