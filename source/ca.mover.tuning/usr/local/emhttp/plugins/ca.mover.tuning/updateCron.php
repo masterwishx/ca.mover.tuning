@@ -134,6 +134,7 @@ function sync_cron_files()
 	sync_forced_cron();
 	sync_tune_cron();
 	sync_watchdog_cron();
+	retire_unraid_cron();
 	return true;
 }
 
@@ -181,6 +182,32 @@ function sync_watchdog_cron()
 		remove_cron_file($watchdogFile, "the cache watchdog is off");
 	} else {
 		make_watchdog_cron();
+	}
+}
+
+/** From Unraid 7.2.1, after the install migrated Unraid's schedule: renames Unraid's mover.cron to mover.cron.old once mover.tuning.cron exists or the schedule is disabled */
+function retire_unraid_cron()
+{
+	global $vars, $cfg_moverDisabled;
+
+	$mark = "/boot/config/plugins/ca.mover.tuning/retire.unraid.schedule";
+	$unraidFile = "/boot/config/plugins/dynamix/mover.cron";
+	if (is_file($mark) === false || $vars['version'] === '' || version_compare($vars['version'], '7.2.1', '<') === true) {
+		return;
+	}
+	if ($cfg_moverDisabled !== 'yes' && is_file("/boot/config/plugins/ca.mover.tuning/mover.tuning.cron") === false) {
+		logger("Unraid's mover schedule in $unraidFile is kept: mover.tuning.cron is not written yet.");
+		return;
+	}
+	if (is_file($unraidFile) === true) {
+		if (@rename($unraidFile, "$unraidFile.old") === false) {
+			logger("Error: Failed to rename $unraidFile to mover.cron.old.");
+			return;
+		}
+		logger("Retired Unraid's mover schedule: $unraidFile is now mover.cron.old.");
+	}
+	if (@unlink($mark) === false) {
+		logger("Error: Failed to remove $mark.");
 	}
 }
 

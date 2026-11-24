@@ -825,7 +825,6 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
 
     TUNING_CRON_FILE="/boot/config/plugins/&name;/mover.tuning.cron"
     DYNAMIX_CRON_FILE="/boot/config/plugins/dynamix/mover.cron"
-    DYNAMIX_CRON_OLD="/boot/config/plugins/dynamix/mover.cron.old"
 
     # Only perform migration if mover.tuning.cron does NOT exist
     # AND old dynamix/mover.cron exists
@@ -842,12 +841,11 @@ if version_ge "$UNRAID_VERSION" "7.2.1"; then
             echo "Setting moverTuneCron to: [$SHARE_MOV_SCHED]"
             echo "moverTuneCron=\"$SHARE_MOV_SCHED\"" >> "$config_file"
 
-            # the old schedule goes once the sync has written its replacement or found the Mover Tuning schedule disabled
-            if /usr/bin/php -q /usr/local/emhttp/plugins/&name;/updateCron.php sync || [[ -f "$TUNING_CRON_FILE" ]]; then
-                echo "Renaming old schedule: mover.cron → mover.cron.old"
-                mv "$DYNAMIX_CRON_FILE" "$DYNAMIX_CRON_OLD"
+            # updateCron.php retires mover.cron at the first sync or apply that finds this marker and the schedule replaced or disabled
+            if touch /boot/config/plugins/&name;/retire.unraid.schedule; then
+                echo "mover.cron becomes mover.cron.old once mover.tuning.cron is written or the schedule is disabled."
             else
-                echo "mover.tuning.cron was not written (the reason is in the syslog), so the old schedule stays in mover.cron."
+                echo "The retirement marker could not be written, so mover.cron stays: rename it to mover.cron.old by hand."
             fi
         else
             echo "shareMoverSchedule is empty — nothing to migrate."
