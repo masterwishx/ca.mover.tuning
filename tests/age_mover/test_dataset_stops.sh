@@ -91,6 +91,40 @@ cache_is sh sh/bare.txt
 no_private
 notices "$NOT_MOUNTED"
 
+# a second stop, at the read of var.ini that puts the write method back, waits for it
+begin "Clean ZFS datasets, a second stop as the stopped run puts the write method back" cleanFolders topFolder \
+    cleanDatasets yes enableTurbo yes
+one_share
+mkdir -p /usr/local/sbin /var/local/emhttp
+echo 'md_write_method="0"' >/var/local/emhttp/var.ini
+printf '#!/bin/bash\necho "mdcmd $*" >>%q\n' "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
+chmod 755 /usr/local/sbin/mdcmd
+echo $$ >"$T/pid"
+cat >"$T/bin/grep" <<EOF
+#!/bin/bash
+if [ "\$1" = md_write_method= ] && [ -e $T/stop2 ]; then
+    rm -f $T/stop2
+    p=\$PPID
+    while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); done
+    kill -TERM "\$p"
+fi
+exec /usr/bin/grep "\$@"
+EOF
+chmod 755 "$T/bin/grep"
+# the run is a subshell of this script: it would keep the grep this script found before
+hash -r
+{ stop_hook run; echo "touch $T/stop2"; } >"$T/zfs.on_mount.zfs"
+run_moves 'processTheMoves did not return'
+rm -f "$T/bin/grep"
+hash -r
+check "the second stop came" "" "$(ls "$T/stop2" 2>/dev/null)"
+check "turbo write forced, then put back" "$(printf '%s\n' 'mdcmd set md_write_method 1' 'mdcmd set md_write_method 0')" \
+    "$(cat "$T/mdcmd.calls")"
+check "the run removed its pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+log_lacks 'successfully destroyed'
+no_private
+
 # the plugin's stop as each step runs: the step finishes, a destroy that finished stays done, else the dataset goes back
 for step in 'zfs list' 'zfs unmount' 'the read-only umount' 'zfs destroy' 'the remount'; do
     begin "Clean ZFS datasets, the plugin's mover stop during $step" cleanFolders topFolder cleanDatasets yes

@@ -3333,13 +3333,15 @@ processTheMoves() {
     # the notice's log lines come back out of the $( )
     notice_lines=$(finish_on_stop dataset_problems_notice)
     [ -z "$notice_lines" ] || printf '%s\n' "$notice_lines"
-    trap - TERM HUP INT
     if [ -n "$stopped" ]; then
+        # a second stop must not end the run, or its mdcmd, before the write method is back
+        trap '' TERM HUP INT
         restore_turbo
         # the plugin's stop removes these once the run has ended; a stop that signals the run alone leaves them
         [ "$(cat "$PIDFILE" 2>/dev/null)" != "$$" ] || rm -f "$PIDFILE" "$MOVER_STATUS" "$PAUSEFILE" "$MOVINGFILE"
         exit 0
     fi
+    trap - TERM HUP INT
     for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
