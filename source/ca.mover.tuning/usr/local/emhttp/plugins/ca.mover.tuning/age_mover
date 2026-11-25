@@ -2720,6 +2720,9 @@ dataset_kept() {
     mvDebuglogger "Keeping ZFS dataset [$1]: a destroy could lose $(qp "${2//$'\n'/\\n}")" "Clean Dataset"
 }
 
+# Succeeds if dataset $1 is mounted at folder $2; a stop does not cut the read short
+mounted_at() { [ "$(finish_on_stop findmnt -no source --mountpoint "$2")" = "$1" ]; }
+
 # Unmounts dataset $1 from folder $2 and destroys it if dataset_loses_unmounted at private folder $4 against $3 is empty;
 # else tries to mount it back. processTheMoves' stopped, set by a stop, skips the destroy
 unmount_check_destroy() {
@@ -2738,10 +2741,10 @@ unmount_check_destroy() {
     # umount after unmounting, so the mount table decides
     if [ "$rc" != 0 ]; then
         [ "$rc" = 1 ] || [ "$rc" = 2 ] || lost="the check was cut short"
-        if [ "$(finish_on_stop findmnt -no source --mountpoint "$private")" != "$dataset" ]; then
+        if ! mounted_at "$dataset" "$private"; then
             # unmounted after all, but what the check found was not kept
             [ "$rc" != 2 ] || { lost="umount: $lost"; rc=1; }
-        elif [ "$rc" != 2 ] && ! err=$(finish_on_stop umount "$private" 2>&1); then
+        elif [ "$rc" != 2 ] && ! err=$(finish_on_stop umount "$private" 2>&1) && mounted_at "$dataset" "$private"; then
             lost=$(zfs_reason "${err#umount: }")
             rc=2
         fi

@@ -193,19 +193,24 @@ no_private
 notices "$NOT_MOUNTED"
 rm -f /mnt/cache/sh
 
-# mount.zfs can make the read-only mount and still fail: the run finds the dataset there and unmounts it before the remount
-begin "Clean ZFS datasets, the read-only mount is made but reported as failed" cleanFolders topFolder cleanDatasets yes
-mk cache sh/only/f.txt
-printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
-echo mount.zfs.late >"$T/zfs.fail"
-row 'move from primary' f sh/only/f.txt | list
-run_moves
-check "zfs calls" "$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')" "$(cat "$T/zfs.calls")"
-log_has "ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: mount: filesystem 'cache/sh' was mounted, but /etc/mtab could not be updated"
-log_lacks 'Failed to remount'
-check "the dataset is mounted at its folder again" /mnt/cache/sh "$(grep -x /mnt/cache/sh "$T/zfs")"
-no_private
-notices "$NOTICE"
+# mount.zfs can make the read-only mount and still fail, and umount can take it off and still fail: the mount table
+# decides, so the run unmounts the dataset from the private folder if it is there and mounts it back
+for late in '' ', and so is its unmount'; do
+    begin "Clean ZFS datasets, the read-only mount is made but reported as failed$late" cleanFolders topFolder cleanDatasets yes
+    mk cache sh/only/f.txt
+    printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+    echo mount.zfs.late >"$T/zfs.fail"
+    [ -z "$late" ] || echo umount.late >>"$T/zfs.fail"
+    row 'move from primary' f sh/only/f.txt | list
+    run_moves
+    check "zfs calls" "$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')" "$(cat "$T/zfs.calls")"
+    log_has "ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: mount: filesystem 'cache/sh' was mounted, but /etc/mtab could not be updated"
+    log_lacks 'still mounted read-only'
+    log_lacks 'Failed to remount'
+    check "the dataset is mounted at its folder again" /mnt/cache/sh "$(grep -x /mnt/cache/sh "$T/zfs")"
+    no_private
+    notices "$NOTICE"
+done
 
 # one notice for the run at its worst level: an unmount that fails, then a check that fails, still reach errorsOnly
 begin "Clean ZFS datasets, two datasets fail" cleanFolders topFolder cleanDatasets yes notify errorsOnly
