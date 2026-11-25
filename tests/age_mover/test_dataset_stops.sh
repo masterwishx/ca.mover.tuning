@@ -252,6 +252,7 @@ one_share
 { stop_hook plugin; echo "echo 1 >\"$T/pid\""; } >"$T/zfs.on_unmount"
 run_moves 'processTheMoves did not return'
 for _ in $(seq 100); do grep -qs 'mover: stopped' "$T/stop.out" && break; sleep 0.1; done
+check "the plugin's stop ended" 1 "$(grep -cs 'mover: stopped' "$T/stop.out")"
 check "the other run's pid file stays" 1 "$(cat "$T/pid" 2>/dev/null)"
 rm -f "$T/stop.out" "$T/pid"
 mounted_again

@@ -324,7 +324,7 @@ done
 # errorsOnly sends only a failure: a failed unmount, destroy or remount, or a dataset left at the private folder, notifies;
 # a check that cannot run only warns
 for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, busy,' 'the read-only mount' \
-    'the read-only mount, busy,' 'the read-only unmount' mktemp; do
+    'the read-only mount, busy,' 'the read-only unmount' 'the read-only unmount, after unmounting,' mktemp; do
     what="zfs $fail"
     [[ $fail != the* && $fail != mktemp ]] || what=$fail
     begin "Clean ZFS datasets, $what fails" cleanFolders topFolder cleanDatasets yes notify errorsOnly
@@ -338,6 +338,7 @@ for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, 
     # as OpenZFS says it while a container's mount holds the dataset
     'the read-only mount, busy,') echo mount.zfs; echo 'zfs_mount_at() failed: mountpoint or dataset is busy' >"$T/zfs.reason" ;;
     'the read-only unmount') echo umount ;;
+    'the read-only unmount, after unmounting,') echo umount.late ;;
     mktemp) ;;
     *) echo "$fail" ;;
     esac >"$T/zfs.fail"
@@ -352,6 +353,11 @@ for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, 
     'the read-only unmount')
         log_has "ZFS dataset [cache/sh] is still mounted read-only at $private, not at /mnt/cache/sh: umount: $private: zfs.fail"
         log_has "ZFS dataset [cache/sh]: mounted read-only at $private: stop writes to the share, umount $private, $BACK"
+        ;;
+    # unmounted after all: what the check found was lost with umount's answer, so the dataset is mounted back
+    *after\ unmounting*)
+        check "the late umount's reason" 1 "$(log | grep -F -- "$unchecked umount: ${TMPDIR:-/tmp}/ca.mover.tuning." |
+            grep -cF ': filesystem was unmounted, but failed to update userspace mount table')"
         ;;
     mktemp) log_has "$unchecked mktemp: No such file or directory"; log_lacks 'attempting to unmount' ;;
     # the failure notice goes out with the "Failed to" line

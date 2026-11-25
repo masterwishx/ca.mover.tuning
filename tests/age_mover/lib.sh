@@ -11,11 +11,11 @@ ROOTS=(/mnt/cache /mnt/user0 /mnt/disk1 /mnt/disk2 /mnt/other)
 # a mount at or under /mnt would put the host's files under the wipe, and one at a stand-in's path or above it the
 # host's own under the stand-in; an unreadable mount table refuses too
 no_host_mount() {
-    awk '$5 == "/mnt" || index($5, "/mnt/") == 1 || $5 ~ "^/usr(/libexec(/unraid(/move)?)?)?$" ||
+    awk '$5 == "/mnt" || index($5, "/mnt/") == 1 || $5 ~ "^/usr(/bin(/php)?|/libexec(/unraid(/move)?)?)?$" ||
         $5 ~ "^/usr/local(/emhttp(/webGui(/scripts(/notify)?)?)?)?$" { exit 1 }' /proc/self/mountinfo
 }
 if [ "${AGE_MOVER_TEST:-}" != 1 ] || [ ! -e /.dockerenv ] || ! no_host_mount; then
-    echo "lib.sh deletes ${ROOTS[*]} and writes /usr/libexec/unraid/move and /usr/local/emhttp/webGui/scripts/notify: start" \
+    echo "lib.sh deletes ${ROOTS[*]} and writes /usr/bin/php, /usr/libexec/unraid/move and /usr/local/emhttp/webGui/scripts/notify: start" \
         "the tests with tests/age_mover/run.sh" >&2
     exit 2
 fi
@@ -115,7 +115,7 @@ esac
 EOF
 # mount -t zfs -o ro,zfsutil DATASET DIR moves an unmounted dataset's files into an empty DIR outside /mnt, umount back. Both log
 # to zfs.calls (a mktemp DIR as PRIVATE), run zfs.on_mount.zfs or zfs.on_umount, fail on mount.zfs (zfs.reason: all it says) or umount;
-# mount.zfs.late mounts, then fails, as mount.zfs does when it cannot update /etc/mtab
+# mount.zfs.late mounts, then fails, as mount.zfs does when it cannot update /etc/mtab; umount.late, as umount does
 cat >"$T/bin/mount" <<'EOF'
 #!/bin/bash
 d=${0%/bin/mount}
@@ -161,6 +161,10 @@ fi
 find "$p" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.store/${l#*$'\t'}" {} +
 grep -vxF -- "$l" "$d/zfs.private" >"$d/zfs.new"
 mv "$d/zfs.new" "$d/zfs.private"
+if grep -qxF umount.late "$d/zfs.fail" 2>/dev/null; then
+    echo "umount: $p: filesystem was unmounted, but failed to update userspace mount table" >&2
+    exit 16
+fi
 EOF
 # as Linux does, rmdir refuses a folder something is mounted on
 cat >"$T/bin/rmdir" <<'EOF'

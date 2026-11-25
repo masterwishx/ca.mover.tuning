@@ -2613,7 +2613,7 @@ dataset_loses() {
 }
 
 # Mounts the unmounted dataset $1 read-only at empty folder $2 and prints dataset_loses there against $4, with $2 shown
-# as $3; prints why and fails when it cannot mount or read it, and returns 2, still mounted, with umount's reason
+# as $3; prints why and fails when it cannot mount or read it, and returns 2 with umount's reason when umount fails
 dataset_loses_unmounted() {
     local err lost
     if ! err=$(mount -t zfs -o ro,zfsutil "$1" "$2" 2>&1); then
@@ -2711,11 +2711,14 @@ unmount_check_destroy() {
     # a file written between the first check and the unmount is in the dataset: checked again where nothing can write
     lost=$(finish_on_stop dataset_loses_unmounted "$dataset" "$private" "$folder" "$3")
     rc=$?
-    # a failed or killed check may leave the dataset at the private folder: mount.zfs can fail after mounting
-    if [ "$rc" != 0 ] && [ "$rc" != 2 ]; then
-        [ "$rc" = 1 ] || lost="the check was cut short"
-        if [ "$(finish_on_stop findmnt -no source --mountpoint "$private")" = "$dataset" ] &&
-            ! err=$(finish_on_stop umount "$private" 2>&1); then
+    # a failed or killed check may leave the dataset at the private folder: mount.zfs can fail after mounting, and
+    # umount after unmounting, so the mount table decides
+    if [ "$rc" != 0 ]; then
+        [ "$rc" = 1 ] || [ "$rc" = 2 ] || lost="the check was cut short"
+        if [ "$(finish_on_stop findmnt -no source --mountpoint "$private")" != "$dataset" ]; then
+            # unmounted after all, but what the check found was not kept
+            [ "$rc" != 2 ] || { lost="umount: $lost"; rc=1; }
+        elif [ "$rc" != 2 ] && ! err=$(finish_on_stop umount "$private" 2>&1); then
             lost=$(zfs_reason "${err#umount: }")
             rc=2
         fi
