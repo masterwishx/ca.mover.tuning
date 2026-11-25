@@ -2665,14 +2665,15 @@ dataset_problems_notice() {
 }
 
 # Mounts dataset $1 at its folder $2 from inside the folder and prints the first entry the mount hides, seen through .;
-# prints why and fails when the folder cannot be entered or the mount fails
+# prints why and fails when the folder cannot be entered or the mount fails; fails with 2 when the look is cut short
 mount_back() {
-    local err
+    local err entry
     # made if gone: a write through /mnt/user can make it again, with a file in it, before the mount
     { mkdir -p "$2" && cd "$2"; } 2>/dev/null || { printf 'cannot enter its folder %s' "$2"; return 1; }
     err=$(zfs mount "$1" 2>&1) || { printf 'zfs: %s' "$(zfs_reason "$err")"; return 1; }
-    find . -mindepth 1 -print -quit 2>/dev/null
-    return 0
+    # a look cut short can print nothing, as a clean one does: only its status tells them apart
+    entry=$(find . -mindepth 1 -print -quit 2>/dev/null) || return 2
+    printf '%s' "$entry"
 }
 
 # Mounts dataset $1 again at its folder $2, unless the folder gained files that a mount would hide
@@ -2681,12 +2682,27 @@ remount_dataset() {
     # a write through /mnt/user while it was unmounted lands in the bare folder
     if [ -n "$(finish_on_stop find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
         out="Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
-    elif out=$(finish_on_stop mount_back "$1" "$2"); then
-        [ -n "$out" ] || return 0
-        dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it"
-        dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
-            "$1" "$1" "$2" "$1" "$2"
-        return 0
+    else
+        out=$(finish_on_stop mount_back "$1" "$2")
+        case $? in
+        0)
+            [ -n "$out" ] || return 0
+            dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it"
+            dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+                "$1" "$1" "$2" "$1" "$2"
+            return 0
+            ;;
+        1) ;;
+        2)
+            dataset_problem warning "$1" "ZFS dataset [$1] is mounted again, but the look for a file written to $2 as it was mounted was cut short: one may be hidden under it"
+            return 0
+            ;;
+        *)
+            # killed outright, it may have mounted it or not
+            dataset_problem failure "$1" "Remounting ZFS dataset [$1] was cut short: if zfs mount does not list it at $2, stop writes to the share, move anything in $2 aside, zfs mount $1, then move it back into $2"
+            return 0
+            ;;
+        esac
     fi
     dataset_problem failure "$1" "Failed to remount dataset [$1]" "$out"
     dataset_out_of_view "not mounted: stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s" \

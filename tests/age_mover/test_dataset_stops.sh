@@ -335,4 +335,34 @@ for which in 'first check' 'check at the private mount'; do
     no_private
 done
 
+# a file lands in the folder as the dataset is mounted back. The look after the mount killed printed nothing because it
+# never looked; the whole remount killed leaves the run unable to tell whether the mount happened
+for what in look remount; do
+    begin "Clean ZFS datasets, the $what at the mount back is killed" cleanFolders topFolder cleanDatasets yes
+    one_share
+    echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
+    echo 'echo y >/mnt/cache/sh/late.txt' >"$T/zfs.on_mount"
+    wrap_hook find ". -mindepth 1 -print -quit"
+    if [ "$what" = look ]; then
+        cat >"$T/find.hook" <<'EOF'
+rm -f "$0"
+kill -KILL "$PPID"
+EOF
+    else
+        kill_hook KILL : >"$T/find.hook"
+    fi
+    PATH=$T/wrap:$PATH run_moves
+    check "zfs calls" "$REMOUNTED" "$(cat "$T/zfs.calls")"
+    if [ "$what" = look ]; then
+        log_has 'ZFS dataset [cache/sh] is mounted again, but the look for a file written to /mnt/cache/sh as it was mounted was cut short: one may be hidden under it'
+    else
+        log_has 'Remounting ZFS dataset [cache/sh] was cut short: if zfs mount does not list it at /mnt/cache/sh, stop writes to the share, move anything in /mnt/cache/sh aside, zfs mount cache/sh, then move it back into /mnt/cache/sh'
+    fi
+    log_lacks 'Failed to remount'
+    notices "$NOTICE"
+    mounted_again
+    cache_is sh sh/new.txt
+    no_private
+done
+
 finish
