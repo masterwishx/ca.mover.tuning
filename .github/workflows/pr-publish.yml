@@ -153,9 +153,10 @@ jobs:
       env:
         TAG: ${{ steps.meta.outputs.tag }}
       run: |
-        # PR cleanup may have removed it already: "release not found" is that outcome, anything else is not
+        # PR cleanup may remove it first: "release not found", or a 404 when it does so between gh's lookup and its
+        # delete, is that outcome, anything else is not
         out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$TAG" --cleanup-tag --yes 2>&1) \
-          || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }
+          || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; exit 1; }
 
     - name: Remove older builds of this pull request
       if: steps.pr.outputs.number != ''
@@ -168,7 +169,7 @@ jobs:
           --jq ".[] | select(.prerelease and .tag_name != \"$TAG\" and (.tag_name | startswith(\"pr-$PR-\"))) | .tag_name" \
           | while read -r old; do
               out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$old" --cleanup-tag --yes 2>&1) \
-                || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }
+                || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; exit 1; }
               echo "removed $old"
             done
 
@@ -180,11 +181,13 @@ jobs:
         TAG: ${{ steps.meta.outputs.tag }}
       run: |
         set -euo pipefail
-        # PR cleanup's hourly sweep may get there first: "release not found" here means it did, and the build is gone
-        # either way
-        if [ "$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)" != "open" ]; then
+        # its own line, so set -e stops on an unreadable pull request instead of removing an open one's build
+        state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)
+        # PR cleanup's hourly sweep may get there first: "release not found", or a 404 when it removes it between
+        # gh's lookup and its delete, means it did, and the build is gone either way
+        if [ "$state" != "open" ]; then
           out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$TAG" --cleanup-tag --yes 2>&1) \
-            || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }
+            || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; exit 1; }
           echo "closed=true" >> "$GITHUB_OUTPUT"
           echo "Pull request #$PR closed while publishing; the release was removed again."
         fi
@@ -199,10 +202,12 @@ jobs:
         BUILD_LOG: ${{ github.event.workflow_run.html_url }}
         VERIFIED: ${{ steps.verify.outcome == 'success' }}
         CLOSED: ${{ steps.closed.outputs.closed == 'true' }}
+        TAG: ${{ steps.meta.outputs.tag }}
       run: |
         set -euo pipefail
+        removed=$(printf '%s\n' "$MARKER" "The test build for this pull request has been removed.")
         if [ "$CLOSED" = true ]; then
-          body=$(printf '%s\n' "$MARKER" "The test build for this pull request has been removed.")
+          body=$removed
         elif [ "$VERIFIED" = true ]; then
           body=$(printf '%s\n' "$MARKER" "Test build \`$VERSION\` of ${HEAD_SHA::7} ([build log]($BUILD_LOG)). Install from Plugins, Install Plugin, with this URL:" "" '```' "$INSTALL_URL" '```' "" "It installs over the current release and the next real release supersedes it. Add the \`$LABEL\` label again for a new build.")
         else
@@ -213,8 +218,14 @@ jobs:
         if [ -n "$id" ]; then
           gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$body" >/dev/null
         else
-          gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -X POST -f body="$body" >/dev/null
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -X POST -f body="$body" --jq .id)
         fi
+        # checked after the write: PR cleanup may have removed the build since the closed check, and it notes after
+        # its deletes, so whichever note lands last says what is there
+        [ "$VERIFIED" = true ] && [ "$CLOSED" != true ] || exit 0
+        out=$(gh release view --repo "$GITHUB_REPOSITORY" "$TAG" 2>&1 >/dev/null) && exit 0
+        [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }
+        gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$removed" >/dev/null
 
     - name: Take the label off so the next build needs a new go
       if: always() && steps.pr.outputs.number != ''

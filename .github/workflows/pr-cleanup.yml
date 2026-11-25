@@ -23,10 +23,11 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-    - name: Remove closed pull requests' releases, their tags and the note
+    - name: Remove closed pull requests' releases and tags, and mark their notes removed
       run: |
         set -euo pipefail
         marker="<!-- pr-build -->"
+        note() { [ -z "$1" ] || gh api "repos/$GITHUB_REPOSITORY/issues/comments/$1" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null; }
         # set -e does not reach into a function called with ||, so every failure returns 1 itself
         clean() {  # $1 pull request, $2 its tags, $3 closed or gone (deleted, so no note to update)
           local id="" tag out
@@ -34,19 +35,31 @@ jobs:
             id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || return 1
             id=${id%%$'\n'*}
           fi
-          # the note first: once the builds are gone, this pull request is not visited again
-          if [ -n "$id" ] && [ "$id" != "null" ]; then
-            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null || return 1
-          fi
+          [ "$id" != null ] || id=""
+          # the note before the deletes, as this pull request is not visited again once they are done, and after
+          # them, as a publish run may have written its own note in between
+          note "$id" || return 1
           while read -r tag; do
-            # a publish run that saw the close may have removed it already: "release not found" is that outcome
-            out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes --cleanup-tag 2>&1) \
-              || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; return 1; }
+            if grep -qxF -- "$tag" <<< "$builds"; then
+              # a publish run that saw the close may remove it first: "release not found", or a 404 when it does so
+              # between gh's lookup and its delete, is that outcome
+              out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes --cleanup-tag 2>&1) \
+                || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
+            else
+              gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" >/dev/null || return 1
+            fi
             echo "removed $tag"
           done <<< "$2"
+          note "$id" || return 1
         }
-        # listed first: a failing call inside a process substitution would read as "nothing to remove"
-        tags=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.prerelease and (.tag_name | test("^pr-[0-9]+-"))) | .tag_name')
+        # listed first: a failing call inside a process substitution would read as "nothing to remove". Tags before
+        # releases, so a release published between the two lists is never taken for a tag without one
+        refs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/pr-" --jq '.[].ref | ltrimstr("refs/tags/") | select(test("^pr-[0-9]+-"))')
+        listed=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.tag_name | test("^pr-[0-9]+-")) | "\(.prerelease) \(.tag_name)"')
+        builds=$(sed -n 's/^true //p' <<< "$listed")
+        # a tag no release has: gh deletes the release first, so a failed tag delete leaves the tag behind
+        orphans=$(grep -vxF -f <(sed 's/^[a-z]* //' <<< "$listed") <<< "$refs") || [ $? = 1 ]
+        tags=$(printf '%s\n' "$builds" "$orphans" | sed '/^$/d' | sort -u)
         [ -n "$tags" ] || { echo "No test builds."; exit 0; }
         rc=0
         while read -r -u 3 pr; do
