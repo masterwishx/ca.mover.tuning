@@ -2694,12 +2694,17 @@ remount_dataset() {
             ;;
         1) ;;
         2)
-            dataset_problem warning "$1" "ZFS dataset [$1] is mounted again, but the look for a file written to $2 as it was mounted was cut short: one may be hidden under it"
+            # a failure, as a found file is: Notify errors only must still say a file may be out of view
+            dataset_problem failure "$1"
+            dataset_out_of_view "mounted again, but the look for a file written to %s as it was mounted was cut short, so one may be hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+                "$1" "$2" "$1" "$2" "$1" "$2"
             return 0
             ;;
         *)
             # killed outright, it may have mounted it or not
-            dataset_problem failure "$1" "Remounting ZFS dataset [$1] was cut short: if zfs mount does not list it at $2, stop writes to the share, move anything in $2 aside, zfs mount $1, then move it back into $2"
+            dataset_problem failure "$1"
+            dataset_out_of_view "the remount was cut short, so it may not be mounted or may hide a file: stop writes to the share, if zfs mount lists it at %s run zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+                "$1" "$2" "$1" "$2" "$1" "$2"
             return 0
             ;;
         esac

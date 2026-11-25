@@ -337,8 +337,9 @@ done
 
 # a file lands in the folder as the dataset is mounted back. The look after the mount killed printed nothing because it
 # never looked; the whole remount killed leaves the run unable to tell whether the mount happened
+# Notify errors only: a failure still sends the notice, which alone carries the steps when action logging is off
 for what in look remount; do
-    begin "Clean ZFS datasets, the $what at the mount back is killed" cleanFolders topFolder cleanDatasets yes
+    begin "Clean ZFS datasets, the $what at the mount back is killed" cleanFolders topFolder cleanDatasets yes notify errorsOnly
     one_share
     echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
     echo 'echo y >/mnt/cache/sh/late.txt' >"$T/zfs.on_mount"
@@ -354,12 +355,13 @@ EOF
     PATH=$T/wrap:$PATH run_moves
     check "zfs calls" "$REMOUNTED" "$(cat "$T/zfs.calls")"
     if [ "$what" = look ]; then
-        log_has 'ZFS dataset [cache/sh] is mounted again, but the look for a file written to /mnt/cache/sh as it was mounted was cut short: one may be hidden under it'
+        why="mounted again, but the look for a file written to /mnt/cache/sh as it was mounted was cut short, so one may be hidden under it: stop writes to the share, zfs unmount cache/sh, $BACK"
     else
-        log_has 'Remounting ZFS dataset [cache/sh] was cut short: if zfs mount does not list it at /mnt/cache/sh, stop writes to the share, move anything in /mnt/cache/sh aside, zfs mount cache/sh, then move it back into /mnt/cache/sh'
+        why="the remount was cut short, so it may not be mounted or may hide a file: stop writes to the share, if zfs mount lists it at /mnt/cache/sh run zfs unmount cache/sh, $BACK"
     fi
+    log_has "ZFS dataset [cache/sh]: $why"
     log_lacks 'Failed to remount'
-    notices "$NOTICE"
+    notices "$(notice_for "[cache/sh] ($why)")"
     mounted_again
     cache_is sh sh/new.txt
     no_private
