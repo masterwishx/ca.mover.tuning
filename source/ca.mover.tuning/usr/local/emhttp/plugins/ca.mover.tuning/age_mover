@@ -2620,7 +2620,7 @@ dataset_loses_unmounted() {
         printf 'mount: %s' "$(zfs_reason "${err#mount: }")"
         return 1
     fi
-    # a scan cut short prints nothing, as a clean one does: only its status tells them apart
+    # a scan cut short can print nothing, as a clean one does: only its status tells them apart
     lost=$(dataset_loses "$2" "$4") || scanned=
     if ! err=$(umount "$2" 2>&1); then
         printf '%s' "$(zfs_reason "${err#umount: }")"
