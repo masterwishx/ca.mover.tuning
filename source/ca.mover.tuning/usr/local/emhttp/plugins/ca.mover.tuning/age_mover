@@ -2796,6 +2796,8 @@ processTheMoves() {
     echo "$$ 0" >"$MOVINGFILE"
     mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
     if [ "$ENABLETURBO" = "yes" ]; then
+        # set first: a stop that ends the run from here on puts the write method back on its way out; a KILL cannot
+        trap restore_turbo EXIT
         mvlogger "Forcing turbo write on"
         [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
     fi
@@ -3308,6 +3310,7 @@ processTheMoves() {
     [ -z "$notice_lines" ] || printf '%s\n' "$notice_lines"
     trap - TERM HUP INT
     if [ -n "$stopped" ]; then
+        # before the pid file goes: a run that starts once it has gone may force turbo write again
         restore_turbo
         # the plugin's stop removes these once the run has ended; a stop that signals the run alone leaves them
         [ "$(cat "$PIDFILE" 2>/dev/null)" != "$$" ] || rm -f "$PIDFILE" "$MOVER_STATUS" "$PAUSEFILE" "$MOVINGFILE"
@@ -3342,12 +3345,14 @@ processTheMoves() {
     restore_turbo
 }
 
-# Sets the write method back from the turbo write that processTheMoves forced on
+# Sets the write method back from the turbo write that processTheMoves forced on, where the run ends or from the EXIT
+# trap of a run a signal ends sooner; it clears the trap
 restore_turbo() {
     [ "$ENABLETURBO" = "yes" ] || return 0
     turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
-    mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
-    [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
+    mvlogger "Restoring original turbo write mode $( ([ "$turbo_write_mode" = "auto" ] && echo "Auto (read/modify/write)") || ([ "$turbo_write_mode" -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
+    [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method "$turbo_write_mode"
+    trap - EXIT
 }
 
 # The settings pages cannot offer this combination, so it only arrives by saving a

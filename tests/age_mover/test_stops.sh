@@ -1,6 +1,11 @@
 #!/bin/bash
-# What processTheMoves does today when a soft stop or a pause comes before or between its rows.
+# What processTheMoves does today when a stop, a soft stop or a pause comes before or between its rows.
 . "$(dirname "$0")/lib.sh"
+# a case writes under /usr/local and /var/local: a mount at either refuses
+if ! awk '$5 ~ "^/(usr|var)/local(/|$)" || $5 ~ "^/(usr|var)$" { exit 1 }' /proc/self/mountinfo; then
+    echo "test_stops.sh writes Unraid's paths and one is a mount here: start it with tests/age_mover/run.sh" >&2
+    exit 2
+fi
 
 HELPERS=()
 # after_pause <s> <command>...: in the background, runs the command <s> s after the run logs its pause; begin removed
@@ -79,5 +84,46 @@ cache_is sh sh/s sh/s/1.txt
 check "the order of the moves, the pause and the soft stop" "$(printf '%s\n' 'Paused: no file moves until Resume' 'Resumed after' \
     'Soft Stopping requested')" "$(order)"
 check "the pause held under 10 s: the soft stop ended it, not the 20 s lift" yes "$([ "$(held)" -lt 10 ] 2>/dev/null && echo yes || echo no)"
+
+# Unraid's write method, read/modify/write, and an mdcmd that notes its calls
+turbo_standin() {
+    mkdir -p /usr/local/sbin /var/local/emhttp
+    echo 'md_write_method="0"' >/var/local/emhttp/var.ini
+    printf '#!/bin/bash\necho "mdcmd $*" >>%q\n' "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
+    chmod 755 /usr/local/sbin/mdcmd
+}
+put_back_once() {
+    check "turbo write forced, then put back once" "$(printf '%s\n' 'mdcmd set md_write_method 1' 'mdcmd set md_write_method 0')" \
+        "$(cat "$T/mdcmd.calls")"
+    log_count 1 'Restoring original turbo write mode Read/modify/write'
+    rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+}
+
+begin "turbo write on, no stop" enableTurbo yes
+mk cache sh/s/1.txt
+row 'move from primary' f sh/s/1.txt | list
+turbo_standin
+run_moves
+put_back_once
+array_is sh sh/s sh/s/1.txt
+
+# a stop that ends the run during the moves: the run puts back the write method it forced. The plugin's stop also
+# signals the hook, which ignores it, so the rsync wrapper ends by the signal and not by reporting a failed hook
+for who in plugin run; do
+    begin "turbo write on, a stop ($who) after the first file" enableTurbo yes
+    mk cache sh/s/1.txt sh/s/2.txt
+    for n in 1 2; do row 'move from primary' f "sh/s/$n.txt"; done | list
+    turbo_standin
+    if [ "$who" = plugin ]; then after_first_rsync "trap '' TERM; $(stop_hook plugin)"; else after_first_rsync "$(stop_hook run)"; fi
+    run_moves 'processTheMoves did not return'
+    if [ "$who" = plugin ]; then
+        for _ in $(seq 100); do grep -qs 'mover: stopped' "$T/stop.out" && break; sleep 0.1; done
+        check "the plugin's stop ended" 1 "$(grep -cs 'mover: stopped' "$T/stop.out")"
+        rm -f "$T/stop.out"
+    fi
+    put_back_once
+    array_is sh sh/s sh/s/1.txt
+    cache_is sh sh/s sh/s/2.txt
+done
 
 finish
