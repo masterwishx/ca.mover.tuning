@@ -141,7 +141,7 @@ cache_is sh sh/new.txt
 no_private
 notices "$NOTICE"
 
-# a folder gone by the remount holds nothing a mount could hide: zfs mount makes it, and the run looks nowhere else
+# a folder gone by the remount is made again before the mount and looked in; the run looks nowhere else
 begin "Clean ZFS datasets, a file lands in the dataset as zfs unmounts it, and its folder is gone by the remount" \
     cleanFolders topFolder cleanDatasets yes
 mk cache sh/only/f.txt
@@ -158,6 +158,39 @@ log_lacks 'Failed to'
 cache_is sh sh/new.txt
 no_private
 notices ''
+
+# a write through /mnt/user makes the gone folder again as zfs mounts the dataset: the mount hides it, and the run says so
+begin "Clean ZFS datasets, its folder is gone by the remount, and a file lands in it again as zfs mounts it back" \
+    cleanFolders topFolder cleanDatasets yes notify errorsOnly
+mk cache sh/only/f.txt
+printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
+echo 'rmdir /mnt/cache/sh' >"$T/zfs.on_umount"
+echo 'mkdir -p /mnt/cache/sh && echo y >/mnt/cache/sh/late.txt' >"$T/zfs.on_mount"
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "zfs calls" "$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')" "$(cat "$T/zfs.calls")"
+log_has 'ZFS dataset [cache/sh] is mounted again, but /mnt/cache/sh/late.txt, written as it was mounted, is hidden under it'
+cache_is sh sh/new.txt
+no_private
+notices "$NOTICE"
+
+# a file where the gone folder was: no folder to look in, so no mount
+begin "Clean ZFS datasets, its folder is gone by the remount and a file has its name" \
+    cleanFolders topFolder cleanDatasets yes notify errorsOnly
+mk cache sh/only/f.txt
+printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
+echo 'rmdir /mnt/cache/sh && touch /mnt/cache/sh' >"$T/zfs.on_umount"
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "zfs calls" "$(sed '$d' <<<"$DESTROYED")" "$(cat "$T/zfs.calls")"
+log_has 'Failed to remount dataset [cache/sh]'
+log_has 'cannot enter its folder /mnt/cache/sh'
+check "the unmounted dataset keeps its file" new.txt "$(ls "$T/zfs.store/cache/sh")"
+no_private
+notices "$NOTICE"
+rm -f /mnt/cache/sh
 
 # mount.zfs can make the read-only mount and still fail: the run finds the dataset there and unmounts it before the remount
 begin "Clean ZFS datasets, the read-only mount is made but reported as failed" cleanFolders topFolder cleanDatasets yes

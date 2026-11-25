@@ -2653,13 +2653,14 @@ dataset_problems_notice() {
         "$DATASET_PROBLEM_LEVEL" "$names"
 }
 
-# Mounts dataset $1 at its folder $2 and prints the first entry the mount hides, seen through . from inside the folder
-# (none when there is no folder); prints zfs's message and fails when the mount fails
+# Mounts dataset $1 at its folder $2 from inside the folder and prints the first entry the mount hides, seen through .;
+# prints why and fails when the folder cannot be entered or the mount fails
 mount_back() {
-    local err inside=""
-    cd "$2" 2>/dev/null && inside=1
-    err=$(zfs mount "$1" 2>&1) || { printf '%s' "$err"; return 1; }
-    [ -z "$inside" ] || find . -mindepth 1 -print -quit 2>/dev/null
+    local err
+    # made if gone: a write through /mnt/user can make it again, with a file in it, before the mount
+    { mkdir -p "$2" && cd "$2"; } 2>/dev/null || { printf 'cannot enter its folder %s' "$2"; return 1; }
+    err=$(zfs mount "$1" 2>&1) || { printf 'zfs: %s' "$(zfs_reason "$err")"; return 1; }
+    find . -mindepth 1 -print -quit 2>/dev/null
     return 0
 }
 
@@ -2671,7 +2672,7 @@ remount_dataset() {
         dataset_problem failure "$1" "Failed to remount dataset [$1]" \
             "Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
     elif ! out=$(finish_on_stop mount_back "$1" "$2"); then
-        dataset_problem failure "$1" "Failed to remount dataset [$1]" "zfs: $(zfs_reason "$out")"
+        dataset_problem failure "$1" "Failed to remount dataset [$1]" "$out"
     elif [ -n "$out" ]; then
         dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it" \
             "To reach it: stop writes to the share, zfs unmount $1, move anything in $2 aside, zfs mount $1, then move it back into $2"
