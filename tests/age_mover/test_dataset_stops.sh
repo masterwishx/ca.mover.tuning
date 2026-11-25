@@ -2,9 +2,15 @@
 # Clean ZFS datasets: a stop lets the step in hand finish, mounts the dataset back where it can and ends the run after the
 # notice.
 . "$(dirname "$0")/lib.sh"
+# a case writes under /usr/local and /var/local: a mount at either refuses
+if ! awk '$5 ~ "^/(usr|var)/local(/|$)" || $5 ~ "^/(usr|var)$" { exit 1 }' /proc/self/mountinfo; then
+    echo "test_dataset_stops.sh writes Unraid's paths and one is a mount here: start it with tests/age_mover/run.sh" >&2
+    exit 2
+fi
 
-# a hook, run once, that stops the mover: Unraid's stop signals the run alone; the plugin's is age_mover stop, run outside
-# the run, which signals every process of it. The hook waits for that stop to end
+# a hook, run once, that stops the mover: one stop signals the run alone, as a kill of its pid does; the plugin's is
+# age_mover stop, run outside the run, which signals every process of it. The hook waits until that stop says it waits
+# for the run or has ended, and notes whether the run's pid file is still there
 stop_hook() {
     cat <<EOF
 rm -f "\$0"
@@ -17,15 +23,19 @@ EOF
 echo "\$p" >"$T/pid"
 ( setsid bash -c '. "$T/funcs.sh"; PIDFILE="$T/pid" MOVER_STATUS="$T/mover.ini" PAUSEFILE="$T/pause" MOVINGFILE="$T/moving"; stop' \\
     </dev/null >"$T/stop.out" 2>&1 & )
-for _ in \$(seq 100); do grep -qs 'mover: stopped' "$T/stop.out" && break; sleep 0.1; done
+for _ in \$(seq 100); do grep -qs -e 'mover: stopped' -e 'mover: waiting' "$T/stop.out" && break; sleep 0.1; done
+[ ! -f "$T/pid" ] || echo kept >"$T/pid.kept"
 EOF
 }
-# the plugin's stop ends with a sleep, then removes the pid and status files: it must end before the next case
+# the plugin's stop waits for the run to end, then removes the pid and status files: it must end before the next case
 stop_done() {
     local _
     for _ in $(seq 100); do grep -qs 'mover: stopped' "$T/stop.out" && break; sleep 0.1; done
-    check "the plugin's stop ended" 'mover: stopped' "$(cat "$T/stop.out" 2>/dev/null)"
-    rm -f "$T/stop.out"
+    check "the plugin's stop waited for the run, then ended" \
+        "mover: waiting for the run to end"$'\n''mover: stopped' "$(cat "$T/stop.out" 2>/dev/null)"
+    check "the pid file stayed while the run finished" kept "$(cat "$T/pid.kept" 2>/dev/null)"
+    check "the plugin's stop removed the pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+    rm -f "$T/stop.out" "$T/pid.kept"
 }
 # a hook, run once after command $2, that sends signal $1 to every process from its caller up to, not including, the run
 kill_hook() {
@@ -56,12 +66,22 @@ one_share() {
 mounted_again() { check "the dataset is mounted at its folder again" /mnt/cache/sh "$(grep -x /mnt/cache/sh "$T/zfs")"; }
 REMOUNTED=$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')
 
-# Unraid's stop during the check after the unmount, and a write through /mnt/user meanwhile, which keeps it unmounted
-begin "Clean ZFS datasets, Unraid's mover stop during the check after the unmount" cleanFolders topFolder cleanDatasets yes \
-    notify errorsOnly
+# a stop of the run alone during the check after the unmount, and a write through /mnt/user meanwhile, which keeps it
+# unmounted. The run puts back the write method it forced and removes its pid file
+begin "Clean ZFS datasets, a stop of the run alone during the check after the unmount" cleanFolders topFolder \
+    cleanDatasets yes notify errorsOnly enableTurbo yes
 one_share
+mkdir -p /usr/local/sbin /var/local/emhttp
+echo 'md_write_method="0"' >/var/local/emhttp/var.ini
+printf '#!/bin/bash\necho "mdcmd $*" >>%q\n' "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
+chmod 755 /usr/local/sbin/mdcmd
+echo $$ >"$T/pid"
 { stop_hook run; echo 'echo y >/mnt/cache/sh/bare.txt'; } >"$T/zfs.on_mount.zfs"
 run_moves 'processTheMoves did not return'
+check "turbo write forced, then put back" "$(printf '%s\n' 'mdcmd set md_write_method 1' 'mdcmd set md_write_method 0')" \
+    "$(cat "$T/mdcmd.calls")"
+check "the run removed its pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
 check "zfs calls" "$(sed '$d' <<<"$DESTROYED")" "$(cat "$T/zfs.calls")"
 log_has 'Mover stopped while ZFS dataset [cache/sh] was unmounted: not deleting it, attempting to remount'
 log_has 'Not remounting ZFS dataset [cache/sh]: its folder /mnt/cache/sh holds files that a mount would hide'
@@ -161,8 +181,10 @@ notices ''
 
 # a stop during the next share's checks ends the run before its unmount and before the share after it, and still sends
 # the notice for the earlier one
-begin "Clean ZFS datasets, Unraid's mover stop during the next share's checks" cleanFolders topFolder cleanDatasets yes
+begin "Clean ZFS datasets, a stop of the run alone during the next share's checks" cleanFolders topFolder cleanDatasets yes
 mk cache a/only/f.txt sh/only/g.txt z/only/h.txt
+# the pid file names another run, as after Unraid's mover stop removes it and a new run starts: it stays
+echo 1 >"$T/pid"
 printf '%s\n' /mnt/cache /mnt/cache/a /mnt/cache/sh /mnt/cache/z >"$T/zfs"
 # cache/a is kept, as a file lands in it as it unmounts, and cannot be mounted again
 echo 'echo x >/mnt/cache/a/new.txt' >"$T/zfs.on_unmount"
@@ -176,6 +198,44 @@ check "cache/sh is still mounted" /mnt/cache/sh "$(grep -x /mnt/cache/sh "$T/zfs
 check "the share after it is not looked at" "" "$(grep -F cache/z "$T/zfs.calls")"
 notices "$(notice_for '[cache/a]')"
 no_private
+check "another run's pid file stays" 1 "$(cat "$T/pid" 2>/dev/null)"
+rm -f "$T/pid"
+
+# a check that fails as a stop comes is still reported
+begin "Clean ZFS datasets, a stop of the run alone as the check after the unmount fails" cleanFolders topFolder \
+    cleanDatasets yes
+one_share
+stop_hook run >"$T/zfs.on_mount.zfs"
+echo mount.zfs >"$T/zfs.fail"
+run_moves 'processTheMoves did not return'
+check "zfs calls" "$(grep -vx 'umount PRIVATE' <<<"$REMOUNTED")" "$(cat "$T/zfs.calls")"
+log_has "ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: mount: filesystem 'cache/sh' cannot be mounted, zfs.fail"
+log_lacks 'Mover stopped while'
+mounted_again
+no_private
+notices "$NOTICE"
+
+# the plugin's stop as the notice goes out: the notice is still sent, then the run ends
+begin "Clean ZFS datasets, the plugin's mover stop as the notice goes out" cleanFolders topFolder cleanDatasets yes
+one_share
+echo unmount >"$T/zfs.fail"
+stop_hook plugin >"$NOTIFY_LOG.hook"
+run_moves 'processTheMoves did not return'
+stop_done
+log_has 'Failed to unmount ZFS dataset [cache/sh]'
+log_lacks 'top-level'
+notices "$NOTICE"
+
+# a run that starts as the stopped one ends writes its own pid file, which the plugin's stop then leaves
+begin "Clean ZFS datasets, the plugin's mover stop, and another run starts as the stopped one ends" cleanFolders topFolder \
+    cleanDatasets yes
+one_share
+{ stop_hook plugin; echo "echo 1 >\"$T/pid\""; } >"$T/zfs.on_unmount"
+run_moves 'processTheMoves did not return'
+for _ in $(seq 100); do grep -qs 'mover: stopped' "$T/stop.out" && break; sleep 0.1; done
+check "the other run's pid file stays" 1 "$(cat "$T/pid" 2>/dev/null)"
+rm -f "$T/stop.out" "$T/pid"
+mounted_again
 
 # a check killed outright, not by a stop: the run unmounts the private folder if the dataset is there, then mounts it back,
 # or says where it is and how to mount it back when that umount fails
@@ -211,21 +271,16 @@ for when in 'before the read-only mount' 'while it is mounted' 'while it is moun
     esac
     check "zfs calls" "$calls" "$(cat "$T/zfs.calls")"
     log_lacks 'successfully destroyed'
-    if [[ $when == *mover* ]]; then
-        log_has 'Mover stopped while ZFS dataset [cache/sh] was unmounted: not deleting it, attempting to remount'
-        log_lacks 'still mounted read-only'
-        notices ''
-        mounted_again
-        no_private
-        continue
-    fi
-    notices "$NOTICE"
+    # a stop after the kill ends the run once the dataset is back; the cut-short check is still reported
+    [[ $when != *mover* ]] || log_lacks 'top-level'
     if [[ $when == *fails ]]; then
+        notices "$(notice_for "[cache/sh] (mounted read-only at $private)")"
         log_has "ZFS dataset [cache/sh] is still mounted read-only at $private, not at /mnt/cache/sh: umount: $private: zfs.fail"
-        log_has "To mount it back: umount $private, then zfs mount cache/sh"
+        log_has "To mount it back: stop writes to the share, umount $private, move anything in /mnt/cache/sh aside, zfs mount cache/sh, then move it back into /mnt/cache/sh"
         check "the dataset stays at the private folder" "$private"$'\t'cache/sh "$(cat "$T/zfs.private")"
         continue
     fi
+    notices "$NOTICE"
     log_has 'ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: the check was cut short'
     mounted_again
     no_private

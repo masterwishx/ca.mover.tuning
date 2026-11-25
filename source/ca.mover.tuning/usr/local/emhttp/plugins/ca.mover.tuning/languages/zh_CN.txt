@@ -78,6 +78,7 @@ Logs parent folder for Mover Tuning plugin=日志文件保存路径
 Low=低
 Maintainers=维护者
 make those plugins with ❤️ and a lot of ☕=用 ❤️（和很多 ☕）制作了这些插件。
+mounted read-only at %s=以只读方式挂载于 %s
 Move ALL files from current pool ignores filters and thresholds=从当前存储池移出**所有**文件（无视过滤条件和阈值）
 Move ALL files to current pool ignores filters and thresholds=将**所有**文件移入当前存储池（无视过滤条件和阈值）
 Move All from Primary->Secondary cacheyes shares pool percentage=主存储->次存储（cache:yes）共享全部移动的存储池百分比

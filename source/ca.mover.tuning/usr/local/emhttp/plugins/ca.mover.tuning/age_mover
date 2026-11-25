@@ -2637,9 +2637,9 @@ finish_on_stop() {
 }
 
 # Logs lines $3... and notes dataset $2 for dataset_problems_notice at severity $1 (failure outranks warning); fills
-# processTheMoves' DATASET_PROBLEM and DATASET_PROBLEM_LEVEL
+# processTheMoves' DATASET_PROBLEM (the dataset's entry in the notice) and DATASET_PROBLEM_LEVEL
 dataset_problem() {
-    DATASET_PROBLEM[$2]=1
+    DATASET_PROBLEM[$2]=${DATASET_PROBLEM[$2]:-[$2]}
     [ "$DATASET_PROBLEM_LEVEL" = failure ] || DATASET_PROBLEM_LEVEL=$1
     local line
     for line in "${@:3}"; do mvlogger "$line"; done
@@ -2648,20 +2648,33 @@ dataset_problem() {
 # One notice naming the run's datasets with a problem: a problem that repeats notifies once a run
 dataset_problems_notice() {
     local ds names=""
-    for ds in "${SHARE_DATASETS[@]}"; do [ -z "${DATASET_PROBLEM[$ds]}" ] || names+="${names:+ }[$ds]"; done
+    for ds in "${SHARE_DATASETS[@]}"; do [ -z "${DATASET_PROBLEM[$ds]}" ] || names+="${names:+ }${DATASET_PROBLEM[$ds]}"; done
     [ -z "$names" ] || mvlogger_t "Clean empty ZFS datasets did not finish for %s. The mover log has the details unless Log Mover Tuning plugin actions is set to No." \
         "$DATASET_PROBLEM_LEVEL" "$names"
 }
 
+# Mounts dataset $1 at its folder $2 and prints the first entry the mount hides, seen through . from inside the folder
+# (none when there is no folder); prints zfs's message and fails when the mount fails
+mount_back() {
+    local err inside=""
+    cd "$2" 2>/dev/null && inside=1
+    err=$(zfs mount "$1" 2>&1) || { printf '%s' "$err"; return 1; }
+    [ -z "$inside" ] || find . -mindepth 1 -print -quit 2>/dev/null
+    return 0
+}
+
 # Mounts dataset $1 again at its folder $2, unless the folder gained files that a mount would hide
 remount_dataset() {
-    local err
+    local out
     # a write through /mnt/user while it was unmounted lands in the bare folder
     if [ -n "$(finish_on_stop find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
         dataset_problem failure "$1" "Failed to remount dataset [$1]" \
             "Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
-    elif ! err=$(finish_on_stop zfs mount "$1" 2>&1); then
-        dataset_problem failure "$1" "Failed to remount dataset [$1]" "zfs: $(zfs_reason "$err")"
+    elif ! out=$(finish_on_stop mount_back "$1" "$2"); then
+        dataset_problem failure "$1" "Failed to remount dataset [$1]" "zfs: $(zfs_reason "$out")"
+    elif [ -n "$out" ]; then
+        dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it" \
+            "To reach it: stop writes to the share, zfs unmount $1, move anything in $2 aside, zfs mount $1, then move it back into $2"
     fi
 }
 
@@ -2685,25 +2698,28 @@ unmount_check_destroy() {
     # a file written between the first check and the unmount is in the dataset: checked again where nothing can write
     lost=$(finish_on_stop dataset_loses_unmounted "$dataset" "$private" "$folder" "$3")
     rc=$?
-    # a check killed outright may leave the dataset at the private folder
-    if [ "$rc" -gt 2 ]; then
-        lost="the check was cut short"
-        if [ -n "$(finish_on_stop findmnt -no source --mountpoint "$private")" ] && ! err=$(finish_on_stop umount "$private" 2>&1); then
+    # a failed or killed check may leave the dataset at the private folder: mount.zfs can fail after mounting
+    if [ "$rc" != 0 ] && [ "$rc" != 2 ]; then
+        [ "$rc" = 1 ] || lost="the check was cut short"
+        if [ "$(finish_on_stop findmnt -no source --mountpoint "$private")" = "$dataset" ] &&
+            ! err=$(finish_on_stop umount "$private" 2>&1); then
             lost=$(zfs_reason "${err#umount: }")
             rc=2
         fi
     fi
     if [ "$rc" = 2 ]; then
+        # with action logging off the notice is all there is, so it says where the dataset is
+        DATASET_PROBLEM[$dataset]="[$dataset] ($(translate_text "mounted read-only at %s" "$private"))"
         dataset_problem failure "$dataset" \
             "ZFS dataset [${dataset}] is still mounted read-only at ${private}, not at ${folder}: umount: $lost" \
-            "To mount it back: umount ${private}, then zfs mount ${dataset}"
+            "To mount it back: stop writes to the share, umount ${private}, move anything in ${folder} aside, zfs mount ${dataset}, then move it back into ${folder}"
         return 0
-    elif [ -n "$stopped" ]; then
-        mvlogger "Mover stopped while ZFS dataset [${dataset}] was unmounted: not deleting it, attempting to remount"
     elif [ "$rc" != 0 ]; then
         # a hold by something else, such as a container's mount, makes the read-only mount busy
         zfs_busy "$dataset" "$lost" ||
             dataset_problem warning "$dataset" "ZFS dataset [${dataset}] could not be checked once unmounted, will not delete: $lost"
+    elif [ -n "$stopped" ]; then
+        mvlogger "Mover stopped while ZFS dataset [${dataset}] was unmounted: not deleting it, attempting to remount"
     elif [ -n "$lost" ]; then
         mvlogger "Keeping ZFS dataset [${dataset}]: the check after the unmount found something a destroy could lose."
         dataset_kept "$dataset" "$lost"
@@ -2793,7 +2809,7 @@ processTheMoves() {
     local -a SHARE_DATASETS=()
     local -A DATASET_PROBLEM=()
     local DATASET_PROBLEM_LEVEL=""
-    local top ds stopped=""
+    local top ds notice_lines stopped=""
     # set by filesInUse the first time a file cannot be checked
     local FILE_IN_USE_FAILURE_LOGGED=no
     local -a FILES_IN_USE_CMD=()
@@ -3264,16 +3280,24 @@ processTheMoves() {
     mvlogger "$(titleLine "Cleaning up" '-')"
     movesEnd
     moverStep "Cleaning up"
-    # once per noted share, after the pass: a soft stop's break 2 lands here too. A stop lets the step in hand finish
-    # (Unraid's mover stop signals the run, the plugin's every process), tries the remount if one is due, then ends the run
+    # once per noted share, after the pass: a soft stop's break 2 lands here too. A stop, whether it signals the run alone
+    # or every process (the plugin's), lets the step in hand finish, then the remount if one is due and the notice, and
+    # ends the run
     trap 'stopped=1' TERM HUP INT
     for ds in "${SHARE_DATASETS[@]}"; do
         [ -z "$stopped" ] || break
         cleanShareDataset "${ds%%/*}" "${ds#*/}" "${DATASET_DEST[$ds]}"
     done
+    # the notice's log lines come back out of the $( )
+    notice_lines=$(finish_on_stop dataset_problems_notice)
+    [ -z "$notice_lines" ] || printf '%s\n' "$notice_lines"
     trap - TERM HUP INT
-    dataset_problems_notice
-    [ -z "$stopped" ] || exit 0
+    if [ -n "$stopped" ]; then
+        restore_turbo
+        # the plugin's stop removes these once the run has ended; a stop that signals the run alone leaves them
+        [ "$(cat "$PIDFILE" 2>/dev/null)" != "$$" ] || rm -f "$PIDFILE" "$MOVER_STATUS" "$PAUSEFILE" "$MOVINGFILE"
+        exit 0
+    fi
     for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
@@ -3300,11 +3324,15 @@ processTheMoves() {
         done
     fi
 
-    if [ $ENABLETURBO = "yes" ]; then
-        turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
-        mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
-        [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
-    fi
+    restore_turbo
+}
+
+# Sets the write method back from the turbo write that processTheMoves forced on
+restore_turbo() {
+    [ "$ENABLETURBO" = "yes" ] || return 0
+    turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
+    mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
+    [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
 }
 
 # The settings pages cannot offer this combination, so it only arrives by saving a
@@ -3598,13 +3626,25 @@ killtree() {
 # Caution: stopping mover like this can lead to partial files on the destination
 # and possible incomplete hard link transfer.  Not recommended to do this.
 stop() {
+    local pid waited=0
     if [ ! -f $PIDFILE ]; then
         echo "mover: not running"
         exit 0
     fi
-    killtree $(cat $PIDFILE)
+    pid=$(cat $PIDFILE)
+    killtree $pid
     sleep 2
-    rm -f $PIDFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE
+    # a run cleaning ZFS datasets first finishes the step in hand and mounts the dataset back; its pid file keeps another
+    # run from starting meanwhile
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "mover: waiting for the run to end"
+        while kill -0 "$pid" 2>/dev/null; do
+            [ $((waited += 1)) -le 60 ] || { echo "mover: the run (pid $pid) has not ended after a minute"; exit 1; }
+            sleep 1
+        done
+    fi
+    # a run started since this one ended owns them now; a run stopped while cleaning datasets has removed its own
+    [ "$(cat $PIDFILE 2>/dev/null)" != "$pid" ] || rm -f $PIDFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE
     echo "mover: stopped"
     exit
 }

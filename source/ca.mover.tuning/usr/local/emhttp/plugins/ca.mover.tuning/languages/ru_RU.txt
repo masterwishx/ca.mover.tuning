@@ -79,6 +79,7 @@ Logs parent folder for Mover Tuning plugin=Родительская папка �
 Low=Низкий
 Maintainers=Сопровождающие
 make those plugins with ❤️ and a lot of ☕=создаём эти плагины с ❤️ (и большим количеством ☕).
+mounted read-only at %s=смонтирован только для чтения в %s
 Move ALL files from current pool ignores filters and thresholds=Переместить **ВСЕ** файлы из текущего пула (независимо от фильтров и порогов)
 Move ALL files to current pool ignores filters and thresholds=Переместить **ВСЕ** файлы в текущий пул (независимо от фильтров и порогов)
 Move All from Primary->Secondary cacheyes shares pool percentage=Переместить всё из Основного->Вторичного (cache:yes) — процент заполнения пула шар

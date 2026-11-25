@@ -79,6 +79,7 @@ Logs parent folder for Mover Tuning plugin=Übergeordneter Ordner für Protokoll
 Low=Niedrig
 Maintainers=Betreuer
 make those plugins with ❤️ and a lot of ☕=machen diese Plugins mit ❤️ und viel ☕
+mounted read-only at %s=schreibgeschützt eingehängt unter %s
 Move ALL files from current pool ignores filters and thresholds=ALLE Dateien aus dem aktuellen Pool verschieben (ohne Filter und Schwellenwerte)
 Move ALL files to current pool ignores filters and thresholds=ALLE Dateien in den aktuellen Pool verschieben (ohne Filter und Schwellenwerte)
 Move All from Primary->Secondary cacheyes shares pool percentage=Alles vom Primärspeicher → Sekundärspeicher verschieben (cache:yes) – Pool‑Prozent

@@ -49,7 +49,9 @@ EOF
     mkdir -p /usr/local/emhttp/webGui/scripts
     cat >/usr/local/emhttp/webGui/scripts/notify <<'EOF'
 #!/bin/bash
-# stand-in for Unraid's notify: each notice's importance and description, as one line in $NOTIFY_LOG
+# stand-in for Unraid's notify: each notice's importance and description, as one line in $NOTIFY_LOG, after the
+# $NOTIFY_LOG.hook a case puts there
+[ ! -f "${NOTIFY_LOG:?}.hook" ] || bash "$NOTIFY_LOG.hook"
 while getopts 's:d:i:l:' o; do
     case $o in d) desc=$OPTARG ;; i) imp=$OPTARG ;; s | l) ;; *) exit 1 ;; esac
 done
@@ -89,7 +91,8 @@ case "$*" in
     echo "$n"; cat "$d/zfs.children" 2>/dev/null || :
     ;;
 # unmount unlists the dataset and hides its files, keeping its folder; mount lists it and brings them back, hiding,
-# as an overlay mount does, what the folder gained meanwhile, and fails while mount has it at a private folder
+# as an overlay mount does, what the folder gained meanwhile, and fails while mount has it at a private folder. The
+# hidden folder is the old one, moved away, so a process inside it sees, as on Linux, what the mount hides
 "unmount "*)
     l=$(entry "$d/zfs")
     [ -n "$l" ] || { echo "cannot unmount '$n': not currently mounted" >&2; exit 1; }
@@ -101,7 +104,7 @@ case "$*" in
     [ -z "$(awk -F'\t' -v n="$n" '$2 == n' "$d/zfs.private" 2>/dev/null)" ] ||
         { echo "cannot mount '$n': filesystem already mounted" >&2; exit 1; }
     l=$(entry "$d/zfs.off" | tail -n 1) && f=${l%%$'\t'*}
-    mkdir -p "$d/zfs.hidden" "$f" && find "$f" -mindepth 1 -maxdepth 1 -exec mv -t "$d/zfs.hidden" {} +
+    mkdir -p "$d/zfs.hidden" && { [ ! -d "$f" ] || mv -- "$f" "$(mktemp -u "$d/zfs.hidden/XXXXXX")"; } && mkdir -- "$f"
     find "$d/zfs.store/$n" -mindepth 1 -maxdepth 1 -exec mv -t "$f" {} +
     echo "$l" >>"$d/zfs"
     ;;
@@ -111,7 +114,8 @@ case "$*" in
 esac
 EOF
 # mount -t zfs -o ro,zfsutil DATASET DIR moves an unmounted dataset's files into an empty DIR outside /mnt, umount back. Both log
-# to zfs.calls (a mktemp DIR as PRIVATE), run zfs.on_mount.zfs or zfs.on_umount, fail on mount.zfs (zfs.reason: all it says) or umount
+# to zfs.calls (a mktemp DIR as PRIVATE), run zfs.on_mount.zfs or zfs.on_umount, fail on mount.zfs (zfs.reason: all it says) or umount;
+# mount.zfs.late mounts, then fails, as mount.zfs does when it cannot update /etc/mtab
 cat >"$T/bin/mount" <<'EOF'
 #!/bin/bash
 d=${0%/bin/mount}
@@ -134,6 +138,10 @@ if [ ! -d "$d/zfs.store/$n" ] || [ -n "$(awk -F'\t' -v n="$n" '$2 == n' "$d/zfs.
 fi
 find "$d/zfs.store/$n" -mindepth 1 -maxdepth 1 -exec mv -t "$p" {} +
 printf '%s\t%s\n' "$p" "$n" >>"$d/zfs.private"
+if grep -qxF mount.zfs.late "$d/zfs.fail" 2>/dev/null; then
+    echo "filesystem '$n' was mounted, but /etc/mtab could not be updated" >&2
+    exit 1
+fi
 EOF
 cat >"$T/bin/umount" <<'EOF'
 #!/bin/bash
@@ -218,7 +226,7 @@ begin() {
     CASE=$1
     shift
     rm -rf "${ROOTS[@]}" "$SOFTSTOPFILE" "$PAUSEFILE" "$T/row_error" "$T/zfs" "$T/zfs".* "$T/after_rsync" "$T/bin/rsync" \
-        "$MOVER_LOG" "$NOTIFY_LOG" "$TMPDIR"/ca.mover.tuning.*
+        "$MOVER_LOG" "$NOTIFY_LOG" "$NOTIFY_LOG.hook" "$T/pid.kept" "$TMPDIR"/ca.mover.tuning.*
     mkdir -p /mnt/cache /mnt/user0
     fresh "$@"
 }

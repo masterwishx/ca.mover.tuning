@@ -79,6 +79,7 @@ Logs parent folder for Mover Tuning plugin=Dossier parent des journaux du plugin
 Low=Faible
 Maintainers=Mainteneurs
 make those plugins with ❤️ and a lot of ☕=créent ces plugins avec ❤️ et beaucoup de ☕
+mounted read-only at %s=monté en lecture seule sur %s
 Move ALL files from current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers du pool actuel (en ignorant les filtres et les seuils)
 Move ALL files to current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers vers le pool actuel (en ignorant les filtres et les seuils)
 Move All from Primary->Secondary cacheyes shares pool percentage=Déplacer tout depuis Primaire→Secondaire (cache:yes) selon le pourcentage du pool
