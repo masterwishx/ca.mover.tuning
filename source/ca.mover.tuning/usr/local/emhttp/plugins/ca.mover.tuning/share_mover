@@ -158,8 +158,7 @@ write_method() {
     case $m in 0 | 1 | auto) echo "$m" ;; *) return 1 ;; esac
 }
 
-# With Turbo Mode on, forces turbo write for the moves, only when the write method can be set back after; mirrors
-# age_mover's force_turbo
+# With Turbo Mode on, forces turbo write for the moves, only when the write method can be set back after
 force_turbo() {
     TURBO_WAS=""
     [ "$ENABLETURBO" = "yes" ] || return 0
@@ -171,8 +170,9 @@ force_turbo() {
         mvlogger "TEST MODE: Would force turbo write on"
         return 0
     fi
-    # set first: a stop that ends the run from here on puts the write method back before the pid file goes; a KILL cannot
-    trap 'restore_turbo; pid_cleanup' EXIT
+    # set first: a stop that ends the run from here on puts the write method back before the pid file goes, and a second
+    # stop waits for it; a KILL cannot
+    trap 'trap "" HUP INT TERM; restore_turbo; pid_cleanup' EXIT
     mvlogger "Forcing turbo write on"
     /usr/local/sbin/mdcmd set md_write_method 1
 }
@@ -251,38 +251,43 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
         mvlogger "=> Skipping"
     else
         mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
-        force_turbo
 
         # the share name reaches find only as an argument, never parsed as shell
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            # "cache=prefer": the share's folder on every other disk and pool, for the move to the primary
+            # "cache=prefer": the share's folder on each array disk and each other pool, never on a mount such as
+            # Unassigned Devices' that only shares its name, for the move to the primary
             paths=()
-            for dir in /mnt/*; do
+            for dir in /mnt/disk[0-9] /mnt/disk[1-9][0-9] "${POOLCFGS[@]}"; do
+                dir=/mnt/${dir##*/}
+                dir=${dir%.cfg}
                 if [ -d "$dir/$SHARENAME" ] && [ "$dir/$SHARENAME" != "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" ]; then
                     paths+=("$dir/$SHARENAME")
                 fi
             done
-            opts=(-type f -not -path '/mnt/user*' -depth)
         else
             paths=("$SHAREPATH")
-            opts=(-type f -depth)
         fi
-        # the log shows each path in qp's quotes, for the debug package's redaction
         FINDSTR="find"
         for p in "${paths[@]}"; do FINDSTR+=" $(qp "$p")"; done
-        FINDSTR+=$(printf ' %q' "${opts[@]}")
+        FINDSTR+=" -type f -depth"
 
-        if [ "$TESTMODE" = "yes" ]; then
+        # find given no folder would list the one it runs in
+        if [ ${#paths[@]} -eq 0 ]; then
+            mvlogger "No array disk or other pool holds a folder of the share: nothing to move"
+            mvlogger "=> Skipping"
+        elif [ "$TESTMODE" = "yes" ]; then
+            force_turbo
             mvlogger "Running in Test Mode: $FINDSTR"
-            find "${paths[@]}" "${opts[@]}"
+            find "${paths[@]}" -type f -depth
+            restore_turbo
         else
             MOVE=/usr/libexec/unraid/move
             [ -f "$MOVE" ] || MOVE=$(which move)
+            force_turbo
             mvlogger "Complete Mover Command: $FINDSTR | $MOVE -d $LOGLEVEL"
-            find "${paths[@]}" "${opts[@]}" | "$MOVE" -d "$LOGLEVEL"
+            find "${paths[@]}" -type f -depth | "$MOVE" -d "$LOGLEVEL"
+            restore_turbo
         fi
-
-        restore_turbo
 
     fi
 fi

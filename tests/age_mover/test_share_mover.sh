@@ -108,14 +108,41 @@ rm "$T/bin/move"
 log_has "Complete Mover Command: find \"/mnt/cache/sh\" -type f -depth | $T/bin/move -d 1"
 array_is sh sh/a.txt
 
+# /mnt/other is no array disk or pool, as Unassigned Devices' mounts: a folder there that only shares the name stays
 share 'a prefer share' prefer
 mk disk1 sh/c.txt
+mk disk2 sh/d.txt
 mk user0 sh/u.txt
+mk other sh/o.txt
 run 0
-log_has 'Complete Mover Command: find "/mnt/disk1/sh" "/mnt/user0/sh" -type f -not -path /mnt/user\* -depth | /usr/libexec/unraid/move -d 1'
-cache_is sh sh/c.txt
+log_has 'Complete Mover Command: find "/mnt/disk1/sh" "/mnt/disk2/sh" -type f -depth | /usr/libexec/unraid/move -d 1'
+cache_is sh sh/c.txt sh/d.txt
 holds disk1 sh
+holds disk2 sh
 array_is sh sh/u.txt
+holds other sh sh/o.txt
+
+share 'a prefer share, from a second pool' prefer
+: >/boot/config/pools/other.cfg
+echo 'shareCachePool2="other"' >>/boot/config/shares/sh.cfg
+mk other sh/o.txt
+run 0
+log_has 'Complete Mover Command: find "/mnt/other/sh" -type f -depth | /usr/libexec/unraid/move -d 1'
+cache_is sh sh/o.txt
+holds other sh
+
+# find given no folder lists the one it runs in: the run must not reach it
+share 'a prefer share, no array disk or other pool holds its folder' prefer enableTurbo yes
+mk cache sh/a.txt
+mkdir -p /mnt/user0/sh
+touch "$T/cwd/stray.txt"
+run 0
+log_has 'No array disk or other pool holds a folder of the share: nothing to move'
+log_lacks 'Complete Mover Command'
+mdcmd_calls
+cache_is sh sh/a.txt
+check 'the folder the run starts in keeps its file' stray.txt "$(ls "$T/cwd")"
+rm -f "$T/cwd/stray.txt"
 
 for wm in 'auto Auto (read/modify/write)' '1 Turbo writes (Reconstruct)' '0 Read/modify/write'; do
     share "turbo on, md_write_method ${wm%% *}" yes enableTurbo yes
@@ -161,22 +188,34 @@ for now in '0 Read/modify/write' ' Auto (read/modify/write)'; do
     array_is sh sh/a.txt
 done
 
-# a stop of the run during the moves: it ends once the move does, and sets the write method back before its pid file goes
-share 'turbo on, a stop during the moves' yes enableTurbo yes
-mk cache sh/a.txt
-# shellcheck disable=SC2016 # the hook expands it
-move_hook 'kill -TERM "$(cat /var/run/mover.pid)"'
+# a stop of the run during the moves: it ends once the move does, and sets the write method back before its pid file goes.
+# A second stop, at the read of var.ini for that, waits for it
 cat >/usr/local/sbin/mdcmd <<EOF
 #!/bin/bash
 w=\$(cat /var/run/mover.pid 2>/dev/null)
 echo "mdcmd \$*\${w:+ (pid file there)}" >>$T/mdcmd.calls
 EOF
-run 143
-move_unhook
-mdcmd_calls 'set md_write_method 1 (pid file there)' 'set md_write_method auto (pid file there)'
-log_count 1 'Restoring original turbo write mode Auto (read/modify/write)'
-check 'the run removed its pid file' '' "$(ls /var/run/mover.pid 2>/dev/null)"
-array_is sh sh/a.txt
+mkdir -p "$T/wrap"
+cat >"$T/wrap/grep" <<EOF
+#!/bin/bash
+if [ "\$2" = '^md_write_method=' ] && [ -e $T/stop2 ]; then rm -f $T/stop2; kill -TERM "\$(cat /var/run/mover.pid)"; fi
+exec /usr/bin/grep "\$@"
+EOF
+chmod 755 "$T/wrap/grep"
+for stops in one two; do
+    share "turbo on, $stops stops during the moves" yes enableTurbo yes
+    mk cache sh/a.txt
+    # shellcheck disable=SC2016 # the hook expands it
+    move_hook "$([ "$stops" = one ] || echo "touch $T/stop2;")"' kill -TERM "$(cat /var/run/mover.pid)"'
+    PATH=$T/wrap:$PATH run 143
+    move_unhook
+    check 'the second stop came' '' "$(ls "$T/stop2" 2>/dev/null)"
+    mdcmd_calls 'set md_write_method 1 (pid file there)' 'set md_write_method auto (pid file there)'
+    log_count 1 'Restoring original turbo write mode Auto (read/modify/write)'
+    check 'the run removed its pid file' '' "$(ls /var/run/mover.pid 2>/dev/null)"
+    array_is sh sh/a.txt
+done
+rm -rf "$T/wrap"
 cat >/usr/local/sbin/mdcmd <<EOF
 #!/bin/bash
 echo "mdcmd \$*" >>$T/mdcmd.calls
