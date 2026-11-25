@@ -182,7 +182,7 @@ jobs:
           BASE: ${{ env.BETA_BRANCH }}
         run: bash "$SCRIPTS/plg_release_pr.sh"
 
-  # discord-notify.yml announces each published release; a failed run is announced only here
+  # discord-notify.yml announces each published release; a failed release job only here, a run that cannot start not at all
   notify-failure:
     name: Tell Discord the release failed
     needs: release

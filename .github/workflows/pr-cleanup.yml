@@ -1,7 +1,8 @@
 name: PR cleanup
 
 # Every hour, removes the pr-<number>-<version> test builds of closed pull requests and says so in their build
-# comment. Checks out nothing. A schedule runs the default branch's copy of this file.
+# comment. Checks out nothing. A schedule runs the default branch's copy of this file, and GitHub turns it off after
+# 60 days without repository activity: turn it back on from the Actions tab.
 on:
   schedule:
     - cron: '17 * * * *'
@@ -27,10 +28,12 @@ jobs:
         set -euo pipefail
         marker="<!-- pr-build -->"
         # set -e does not reach into a function called with ||, so every failure returns 1 itself
-        clean() {  # $1 pull request, $2 its tags
-          local id tag out
-          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || return 1
-          id=${id%%$'\n'*}
+        clean() {  # $1 pull request, $2 its tags, $3 closed or gone (deleted, so no note to update)
+          local id="" tag out
+          if [ "$3" = closed ]; then
+            id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || return 1
+            id=${id%%$'\n'*}
+          fi
           # the note first: once the builds are gone, this pull request is not visited again
           if [ -n "$id" ] && [ "$id" != "null" ]; then
             gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null || return 1
@@ -47,8 +50,12 @@ jobs:
         [ -n "$tags" ] || { echo "No test builds."; exit 0; }
         rc=0
         while read -r -u 3 pr; do
-          state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr" --jq .state) || { echo "::error::cannot read #$pr"; rc=1; continue; }
-          [ "$state" = closed ] || continue
-          clean "$pr" "$(grep "^pr-$pr-" <<< "$tags")" || { echo "::error::could not clean up #$pr"; rc=1; }
+          if ! state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr" --jq .state 2>&1); then
+            # a deleted pull request answers 404: its builds go too, else every sweep would fail on it
+            [[ "$state" == *"(HTTP 404)"* ]] || { echo "::error::cannot read #$pr: $state"; rc=1; continue; }
+            state=gone
+          fi
+          case $state in closed | gone) ;; *) continue ;; esac
+          clean "$pr" "$(grep "^pr-$pr-" <<< "$tags")" "$state" || { echo "::error::could not clean up #$pr"; rc=1; }
         done 3<<< "$(sed -E 's/^pr-([0-9]+)-.*/\1/' <<< "$tags" | sort -un)"
         exit $rc

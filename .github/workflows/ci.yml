@@ -124,5 +124,7 @@ jobs:
       - name: Merge
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          # the head this run tested: a newer push merges only after its own run passes
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GH_TOKEN: ${{ github.token }}
-        run: gh pr merge --merge "$PR_URL"
+        run: gh pr merge --merge --match-head-commit "$HEAD_SHA" "$PR_URL"

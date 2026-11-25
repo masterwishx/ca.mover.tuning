@@ -113,7 +113,7 @@ jobs:
         set -euo pipefail
         notes=$(mktemp)
         {
-          echo "Test build of pull request #$PR at ${HEAD_SHA::7}. Not a release: the next build of this pull request replaces it, PR cleanup removes it within an hour of the pull request closing, and the next real release supersedes it on installed servers."
+          echo "Test build of pull request #$PR at ${HEAD_SHA::7}. Not a release: the next build of this pull request replaces it, PR cleanup's hourly sweep removes it after the pull request closes, and the next real release supersedes it on installed servers."
           echo
           echo "Install: Plugins > Install Plugin > paste \`$INSTALL_URL\`"
         } > "$notes"
