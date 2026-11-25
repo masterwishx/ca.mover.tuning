@@ -180,4 +180,4 @@ This was originally created by [Squid](https://github.com/Squidly271).
 
 @2025 – Updated by [masterwishx](https://github.com/masterwishx/ca.mover.tuning).
 
-@2026 – Updated by [masterwishx](https://github.com/masterwishx/ca.mover.tuning) and [chodeus](https://github.com/chodeus), with contributions by [Joly0](https://github.com/Joly0).
+@2026 – Updated by [masterwishx](https://github.com/masterwishx/ca.mover.tuning) and [chodeus](https://github.com/chodeus), with contributions by [Joly0](https://github.com/Joly0), [coppit](https://github.com/coppit).
