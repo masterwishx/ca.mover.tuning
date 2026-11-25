@@ -2688,7 +2688,7 @@ remount_dataset() {
         0)
             [ -n "$out" ] || return 0
             dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it"
-            dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+            dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
                 "$1" "$1" "$2" "$1" "$2"
             return 0
             ;;
@@ -2696,21 +2696,21 @@ remount_dataset() {
         2)
             # a failure, as a found file is: Notify errors only must still say a file may be out of view
             dataset_problem failure "$1"
-            dataset_out_of_view "mounted again, but the look for a file written to %s as it was mounted was cut short, so one may be hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+            dataset_out_of_view "mounted again, but the look for a file written to %s as it was mounted was cut short, so one may be hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
                 "$1" "$2" "$1" "$2" "$1" "$2"
             return 0
             ;;
         *)
             # killed outright, it may have mounted it or not
             dataset_problem failure "$1"
-            dataset_out_of_view "the remount was cut short, so it may not be mounted or may hide a file: stop writes to the share, if zfs mount lists it at %s run zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+            dataset_out_of_view "the remount was cut short, so it may not be mounted or may hide a file: stop writes to the share, if zfs mount lists it at %s run zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
                 "$1" "$2" "$1" "$2" "$1" "$2"
             return 0
             ;;
         esac
     fi
     dataset_problem failure "$1" "Failed to remount dataset [$1]" "$out"
-    dataset_out_of_view "not mounted: stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s" \
+    dataset_out_of_view "not mounted: stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
         "$1" "$2" "$1" "$2"
 }
 
@@ -2752,7 +2752,7 @@ unmount_check_destroy() {
     if [ "$rc" = 2 ]; then
         dataset_problem failure "$dataset" \
             "ZFS dataset [${dataset}] is still mounted read-only at ${private}, not at ${folder}: umount: $lost"
-        dataset_out_of_view "mounted read-only at %s: stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+        dataset_out_of_view "mounted read-only at %s: stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
             "$dataset" "$private" "$private" "$folder" "$dataset" "$folder"
         return 0
     elif [ "$rc" != 0 ]; then

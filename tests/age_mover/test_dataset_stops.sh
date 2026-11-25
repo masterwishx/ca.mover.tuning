@@ -196,7 +196,7 @@ log_has 'Failed to remount dataset [cache/a]'
 log_lacks 'ZFS dataset [cache/sh] holds only folders'
 check "cache/sh is still mounted" /mnt/cache/sh "$(grep -x /mnt/cache/sh "$T/zfs")"
 check "the share after it is not looked at" "" "$(grep -F cache/z "$T/zfs.calls")"
-notices "$(notice_for '[cache/a] (not mounted: stop writes to the share, move anything in /mnt/cache/a aside, zfs mount cache/a, then move it back into /mnt/cache/a)')"
+notices "$(notice_for '[cache/a] (not mounted: stop writes to the share, move anything in /mnt/cache/a aside, zfs mount cache/a, then move it back into /mnt/cache/a without replacing a file already there: keep both copies and compare them)')"
 no_private
 check "another run's pid file stays" 1 "$(cat "$T/pid" 2>/dev/null)"
 rm -f "$T/pid"
