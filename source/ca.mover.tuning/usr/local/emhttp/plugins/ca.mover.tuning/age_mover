@@ -2576,20 +2576,30 @@ note_emptied_share() { note_top_folder; note_share_dataset; }
 
 # Deletes share top folder $1 if it is empty, unless it is a ZFS dataset mountpoint or test mode is on
 cleanTopFolder() {
-    local top_folder=$1 file_count dir_count
+    local top_folder=$1 file_count dir_count dataset=no pat skip=()
     [ -d "$top_folder" ] || return 0
     if [ -e "${top_folder}/.placeholder" ]; then
         mvlogger "Not deleting top-level folder: contains .placeholder: ${top_folder}"
         return 0
     fi
-    file_count=$(find "$top_folder" -type f | wc -l)
-    dir_count=$(find "$top_folder" -mindepth 1 -type d | wc -l)
+    # a dataset's .zfs holds the snapshots snapdir=visible shows, and a walk would mount each one. -path is a glob, so
+    # the folder's own \ * ? [ are escaped
+    if is_zfs_dataset_mountpoint "$top_folder"; then
+        dataset=yes
+        pat=${top_folder//\\/\\\\}
+        pat=${pat//\*/\\*}
+        pat=${pat//\?/\\?}
+        skip=(-path "${pat//\[/\\[}/.zfs" -prune -o)
+    fi
+    # -xdev: a mount inside, such as a child dataset, is counted but not walked
+    file_count=$(find "$top_folder" -xdev "${skip[@]}" -type f -print | wc -l)
+    dir_count=$(find "$top_folder" -xdev -mindepth 1 "${skip[@]}" -type d -print | wc -l)
     mvDebuglogger "Top folder: $(qp "$top_folder"), share file(s): $file_count, share folder(s): $dir_count" "Clean Top Folder"
     if [ "$file_count" -ne 0 ] || [ "$dir_count" -ne 0 ]; then
         mvlogger "Not deleting top-level folder: contains $file_count file(s), $dir_count subfolder(s): ${top_folder}"
     elif [ "$TESTMODE" != "no" ]; then
         mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
-    elif is_zfs_dataset_mountpoint "$top_folder"; then
+    elif [ "$dataset" = yes ]; then
         mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
     elif rmdir "$top_folder" 2>/dev/null; then
         mvlogger "Deleted empty top-level folder: $top_folder"
@@ -2997,6 +3007,7 @@ processTheMoves() {
                 # Define a function to handle the directory cleanup logic.
                 # Iterate the array directly (was: echo "$SYNCED_FILES" | xargs),
                 # so filenames with quotes/spaces/special chars are handled safely.
+                counted_in_row=0
                 for FILE in "${SYNCED_FILES_ARR[@]}"; do
                     # Collapse the rsync --relative marker ("/./" -> "/")
                     FILE="${FILE//\/.\//\/}"
@@ -3005,24 +3016,15 @@ processTheMoves() {
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
+                    elif [ "${LAST_DIR}" != "${DIR}" ]; then
+                        LAST_COUNT=$(find "$DIR" -maxdepth 1 -type f | wc -l)
+                        LAST_DIR=$DIR
+                        counted_in_row=1
+                        count=$LAST_COUNT
                     else
-                        # Check if the current directory is same as the previous one
-                        if [ "${LAST_DIR}" == "${DIR}" ]; then
-                            # Check if the counter is greater than 0 to avoid counting files in the folder using wc -l
-                            if [ "$LAST_COUNT" -gt 0 ]; then
-                                count=$((LAST_COUNT - 1))
-                                # Save current counter
-                                LAST_COUNT="$count"
-                            fi
-                        else
-                            #count=$(ls -A "$DIR" | wc -l)
-                            count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
-                            # Save current counter
-                            LAST_COUNT="$count"
-                            # Save current Folder
-                            LAST_DIR="$DIR"
-                            # echo "Directory changed to: ${DIR}, Count of files: $count"
-                        fi
+                        # a count taken in this row already left out its moved names; a later row's name lowers it once it left
+                        [ "$counted_in_row" = 1 ] || [ -e "$FILE" ] || [ "$LAST_COUNT" = 0 ] || LAST_COUNT=$((LAST_COUNT - 1))
+                        count=$LAST_COUNT
                     fi
                     mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of file(s): $count" "Clean Folder - End Loop"
 
@@ -3030,7 +3032,8 @@ processTheMoves() {
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
                         note_emptied_share
-                        if [ "$TESTMODE" = "no" ]; then
+                        # the share's top folder is cleanTopFolder's, after the pass and in topFolder mode only
+                        if [ "$TESTMODE" = "no" ] && [ "$DIR" != "${SOURCE}/${SHARENAME}" ]; then
                             # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
                             if [ -d "${DIR}" ]; then
                                 if ! is_zfs_dataset_mountpoint "${DIR}"; then
@@ -3048,21 +3051,16 @@ processTheMoves() {
                 done
             fi
 
-            # Clean moved empty folders
-            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ]; then
+            # Clean moved empty folders, once the folder arrived: a failed move's would exist nowhere
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ] && [ "$arrived" -gt 0 ]; then
                 START_DIR="${SOURCE}/${FILEPATH}"
 
                 LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
 
-                # If Unraid already deleted the folder (move mode) using upper folder, skip cleanup
+                # Unraid's move deletes the folder itself; a parent gone too leaves the walk below nothing to do
                 if [ ! -d "$START_DIR" ]; then
-                    START_DIR="$(dirname "${START_DIR}")"
-                    if [ -d "$START_DIR" ]; then
-                        [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists, using upper folder: $(qp "$(dirname "${START_DIR}")")" "Clean Empty Moved Folder"
-                    else
-                        [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists" "Clean Empty Moved Folder"
-                        continue
-                    fi
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "$(qp "$START_DIR") is gone from the source: cleaning from $(qp "$(dirname "$START_DIR")")" "Clean Empty Moved Folder"
+                    START_DIR=$(dirname "$START_DIR")
                 fi
 
                 # Build list of parent directories
