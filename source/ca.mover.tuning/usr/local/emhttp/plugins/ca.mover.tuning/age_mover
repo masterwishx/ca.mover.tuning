@@ -303,7 +303,8 @@ zfs_reason() { local r=${1%%$'\n'*}; printf '%s' "${r#*\': }"; }
 
 # When zfs message $2 says dataset $1 is busy, logs one plain line and succeeds: something else holds it, so no notice
 zfs_busy() {
-    [[ $(zfs_reason "$2") == *busy* ]] || return 1
+    # at the end: mount.zfs's messages keep the dataset's name, which may hold the word
+    [[ $(zfs_reason "$2") == *busy ]] || return 1
     mvlogger "ZFS dataset [$1] is busy, will not delete: a process or another mount, such as a container's, may hold it."
 }
 
@@ -2629,6 +2630,12 @@ dataset_loses_unmounted() {
     [ -z "$lost" ] || printf '%s' "$3${lost#"$2"}"
 }
 
+# Run only inside $( ): ignores the stop signals there, so a stop that signals every process cannot end step $@ part-way
+finish_on_stop() {
+    trap '' TERM HUP INT
+    "$@"
+}
+
 # Logs lines $3... and notes dataset $2 for dataset_problems_notice at severity $1 (failure outranks warning); fills
 # processTheMoves' DATASET_PROBLEM and DATASET_PROBLEM_LEVEL
 dataset_problem() {
@@ -2638,21 +2645,22 @@ dataset_problem() {
     for line in "${@:3}"; do mvlogger "$line"; done
 }
 
-# One notice for the run's dataset problems, which the log details: a problem that repeats notifies once a run
+# One notice naming the run's datasets with a problem: a problem that repeats notifies once a run
 dataset_problems_notice() {
     local ds names=""
     for ds in "${SHARE_DATASETS[@]}"; do [ -z "${DATASET_PROBLEM[$ds]}" ] || names+="${names:+ }[$ds]"; done
-    [ -z "$names" ] || mvlogger_t "Clean empty ZFS datasets did not finish for %s: see the mover log." "$DATASET_PROBLEM_LEVEL" "$names"
+    [ -z "$names" ] || mvlogger_t "Clean empty ZFS datasets did not finish for %s. The mover log has the details unless Log Mover Tuning plugin actions is set to No." \
+        "$DATASET_PROBLEM_LEVEL" "$names"
 }
 
 # Mounts dataset $1 again at its folder $2, unless the folder gained files that a mount would hide
 remount_dataset() {
     local err
     # a write through /mnt/user while it was unmounted lands in the bare folder
-    if [ -n "$(find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+    if [ -n "$(finish_on_stop find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
         dataset_problem failure "$1" "Failed to remount dataset [$1]" \
             "Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
-    elif ! err=$(zfs mount "$1" 2>&1); then
+    elif ! err=$(finish_on_stop zfs mount "$1" 2>&1); then
         dataset_problem failure "$1" "Failed to remount dataset [$1]" "zfs: $(zfs_reason "$err")"
     fi
 }
@@ -2664,21 +2672,27 @@ dataset_kept() {
 }
 
 # Unmounts dataset $1 from folder $2 and destroys it if dataset_loses_unmounted at private folder $4 against $3 is empty;
-# else mounts it back. cleanShareDataset's stopped, set by a stop, skips the destroy
+# else tries to mount it back. processTheMoves' stopped, set by a stop, skips the destroy
 unmount_check_destroy() {
     local dataset=$1 folder=$2 private=$4 err lost rc
     # stderr is discarded on both launch paths, so zfs's reason goes to the log
-    if ! err=$(zfs unmount "$dataset" 2>&1); then
+    if ! err=$(finish_on_stop zfs unmount "$dataset" 2>&1); then
         zfs_busy "$dataset" "$err" ||
             dataset_problem failure "$dataset" "Failed to unmount ZFS dataset [${dataset}]" "zfs: $(zfs_reason "$err")"
         return 0
     fi
     mvlogger "ZFS dataset [${dataset}] successfully unmounted."
     # a file written between the first check and the unmount is in the dataset: checked again where nothing can write
-    lost=$(dataset_loses_unmounted "$dataset" "$private" "$folder" "$3")
+    lost=$(finish_on_stop dataset_loses_unmounted "$dataset" "$private" "$folder" "$3")
     rc=$?
-    # the plugin's mover stop ends the check too, maybe while mounted
-    [ "$rc" -le 2 ] || { umount "$private" 2>/dev/null; lost="the check was cut short"; }
+    # a check killed outright may leave the dataset at the private folder
+    if [ "$rc" -gt 2 ]; then
+        lost="the check was cut short"
+        if [ -n "$(finish_on_stop findmnt -no source --mountpoint "$private")" ] && ! err=$(finish_on_stop umount "$private" 2>&1); then
+            lost=$(zfs_reason "${err#umount: }")
+            rc=2
+        fi
+    fi
     if [ "$rc" = 2 ]; then
         dataset_problem failure "$dataset" \
             "ZFS dataset [${dataset}] is still mounted read-only at ${private}, not at ${folder}: umount: $lost" \
@@ -2687,11 +2701,13 @@ unmount_check_destroy() {
     elif [ -n "$stopped" ]; then
         mvlogger "Mover stopped while ZFS dataset [${dataset}] was unmounted: not deleting it, attempting to remount"
     elif [ "$rc" != 0 ]; then
-        dataset_problem warning "$dataset" "ZFS dataset [${dataset}] could not be checked once unmounted, will not delete: $lost"
+        # a hold by something else, such as a container's mount, makes the read-only mount busy
+        zfs_busy "$dataset" "$lost" ||
+            dataset_problem warning "$dataset" "ZFS dataset [${dataset}] could not be checked once unmounted, will not delete: $lost"
     elif [ -n "$lost" ]; then
         mvlogger "Keeping ZFS dataset [${dataset}]: the check after the unmount found something a destroy could lose."
         dataset_kept "$dataset" "$lost"
-    elif ! err=$(zfs destroy "$dataset" 2>&1); then
+    elif ! err=$(finish_on_stop zfs destroy "$dataset" 2>&1); then
         zfs_busy "$dataset" "$err" || dataset_problem failure "$dataset" \
             "Failed to destroy ZFS dataset [${dataset}] — attempting to remount." "zfs: $(zfs_reason "$err")"
     else
@@ -2702,9 +2718,9 @@ unmount_check_destroy() {
 }
 
 # Destroys dataset $1/$2 if it is mounted at /mnt/$1/$2, has no children or snapshots, and dataset_loses against $3/$2
-# is empty both before the unmount and after it; else keeps it mounted
+# is empty both before the unmount and after it; else keeps it, and the log says when it stays unmounted
 cleanShareDataset() {
-    local folder="/mnt/$1/$2" dataset="$1/$2" mounted names lost private stopped=""
+    local folder="/mnt/$1/$2" dataset="$1/$2" mounted names lost private
     mounted=$(zfs_dataset_at "$folder")
     [ -n "$mounted" ] || return 0
     if [ "$mounted" != "$dataset" ]; then
@@ -2712,11 +2728,11 @@ cleanShareDataset() {
         return 0
     fi
     # listed first, so between the content check and the unmount only a log line is written
-    if ! names=$(zfs list -r -H -t filesystem,volume,snapshot -o name "$dataset" 2>&1); then
+    if ! names=$(finish_on_stop zfs list -r -H -t filesystem,volume,snapshot -o name "$dataset" 2>&1); then
         mvlogger "ZFS dataset [${dataset}] could not be listed, will not delete: $(zfs_reason "$names")"
         return 0
     fi
-    lost=$(dataset_loses "$folder" "$3/$2")
+    lost=$(finish_on_stop dataset_loses "$folder" "$3/$2")
     if [ -n "$lost" ]; then
         dataset_kept "$dataset" "$lost"
         return 0
@@ -2725,19 +2741,17 @@ cleanShareDataset() {
         mvlogger "ZFS dataset [${dataset}] has child datasets or snapshots, will not delete..."
         return 0
     fi
-    if ! private=$(mktemp -d -t ca.mover.tuning.XXXXXX 2>&1); then
+    # a stop during the checks above ends the run before the unmount
+    [ -z "$stopped" ] || return 0
+    if ! private=$(finish_on_stop mktemp -d -t ca.mover.tuning.XXXXXX 2>&1); then
         dataset_problem warning "$dataset" \
             "ZFS dataset [${dataset}] could not be checked once unmounted, will not delete: mktemp: $(zfs_reason "${private#mktemp: }")"
         return 0
     fi
     mvlogger "ZFS dataset [${dataset}] holds only folders the destination also has, attempting to unmount and delete..."
-    # a stop lets the step in hand finish and the dataset go back: Unraid's mover stop signals the run, the plugin's all
-    trap 'stopped=1' TERM HUP INT
     unmount_check_destroy "$dataset" "$folder" "$3/$2" "$private"
-    trap - TERM HUP INT
     # a folder the dataset is still mounted on stays
     rmdir "$private" 2>/dev/null
-    [ -z "$stopped" ] || { dataset_problems_notice; exit 0; }
 }
 
 # Internal move engine
@@ -2779,7 +2793,7 @@ processTheMoves() {
     local -a SHARE_DATASETS=()
     local -A DATASET_PROBLEM=()
     local DATASET_PROBLEM_LEVEL=""
-    local top ds
+    local top ds stopped=""
     # set by filesInUse the first time a file cannot be checked
     local FILE_IN_USE_FAILURE_LOGGED=no
     local -a FILES_IN_USE_CMD=()
@@ -3250,9 +3264,16 @@ processTheMoves() {
     mvlogger "$(titleLine "Cleaning up" '-')"
     movesEnd
     moverStep "Cleaning up"
-    # once per noted share, after the pass: a soft stop's break 2 lands here too
-    for ds in "${SHARE_DATASETS[@]}"; do cleanShareDataset "${ds%%/*}" "${ds#*/}" "${DATASET_DEST[$ds]}"; done
+    # once per noted share, after the pass: a soft stop's break 2 lands here too. A stop lets the step in hand finish
+    # (Unraid's mover stop signals the run, the plugin's every process), tries the remount if one is due, then ends the run
+    trap 'stopped=1' TERM HUP INT
+    for ds in "${SHARE_DATASETS[@]}"; do
+        [ -z "$stopped" ] || break
+        cleanShareDataset "${ds%%/*}" "${ds#*/}" "${DATASET_DEST[$ds]}"
+    done
+    trap - TERM HUP INT
     dataset_problems_notice
+    [ -z "$stopped" ] || exit 0
     for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
