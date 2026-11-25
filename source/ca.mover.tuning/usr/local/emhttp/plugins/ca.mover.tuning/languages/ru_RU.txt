@@ -8,6 +8,7 @@
 
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=Плагину Mover Tuning не удалось переместить/синхронизировать %s файлов и %s папок общим объёмом %s.
 Action=Действие
+a file is hidden under it stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s=под ним скрыт файл: остановите запись в общий ресурс, выполните zfs unmount %s, переместите всё из %s в другое место, выполните zfs mount %s, затем верните всё обратно в %s
 All community developers=Все разработчики сообщества
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s файлов и %s папок были перемещены/синхронизированы, но rsync сообщил об ошибках при их обработке. Проверьте журнал Mover Tuning.
 Allow force mover schedule to run during a parity checkrebuild=Разрешить запуск расписания принудительного перемещения во время проверки/восстановления четности
@@ -79,7 +80,7 @@ Logs parent folder for Mover Tuning plugin=Родительская папка �
 Low=Низкий
 Maintainers=Сопровождающие
 make those plugins with ❤️ and a lot of ☕=создаём эти плагины с ❤️ (и большим количеством ☕).
-mounted read-only at %s=смонтирован только для чтения в %s
+mounted read-only at %s stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s=смонтирован только для чтения в %s: остановите запись в общий ресурс, выполните umount %s, переместите всё из %s в другое место, выполните zfs mount %s, затем верните всё обратно в %s
 Move ALL files from current pool ignores filters and thresholds=Переместить **ВСЕ** файлы из текущего пула (независимо от фильтров и порогов)
 Move ALL files to current pool ignores filters and thresholds=Переместить **ВСЕ** файлы в текущий пул (независимо от фильтров и порогов)
 Move All from Primary->Secondary cacheyes shares pool percentage=Переместить всё из Основного->Вторичного (cache:yes) — процент заполнения пула шар
@@ -123,6 +124,7 @@ No log files yet=Файлов журнала пока нет
 Not Applicable Share Does Not Exist Yet=Не применимо (шара ещё не существует)
 Not a valid cron schedule it is not applied=Некорректное расписание cron: оно не применяется.
 Notify Mover Tuning plugin actions=Уведомлять о действиях плагина Mover Tuning
+not mounted stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s=не смонтирован: остановите запись в общий ресурс, переместите всё из %s в другое место, выполните zfs mount %s, затем верните всё обратно в %s
 Oldest first=Сначала самые старые
 Only move files larger than this in MB=Перемещать только файлы больше указанного размера (в МБ)
 Only move files that are older than this in days=Перемещать только файлы старше указанного количества дней

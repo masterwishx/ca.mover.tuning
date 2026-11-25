@@ -112,9 +112,10 @@ for after in 'a file lands in its bare folder' 'zfs mount fails'; do
     run_moves
     log_has 'Keeping ZFS dataset [cache/sh]: the check after the unmount found something a destroy could lose.'
     log_has 'Failed to remount dataset [cache/sh]'
+    log_has "ZFS dataset [cache/sh]: not mounted: stop writes to the share, $BACK"
     check "the unmounted dataset keeps its file" new.txt "$(ls "$T/zfs.store/cache/sh")"
     no_private
-    notices "$NOTICE"
+    notices "$NOT_MOUNTED"
     if [ "$after" = 'zfs mount fails' ]; then
         check "zfs calls" "$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')" "$(cat "$T/zfs.calls")"
         log_has 'zfs: zfs.fail'
@@ -136,10 +137,10 @@ row 'move from primary' f sh/only/f.txt | list
 run_moves
 check "zfs calls" "$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')" "$(cat "$T/zfs.calls")"
 log_has 'ZFS dataset [cache/sh] is mounted again, but /mnt/cache/sh/late.txt, written as it was mounted, is hidden under it'
-log_has 'To reach it: stop writes to the share, zfs unmount cache/sh, move anything in /mnt/cache/sh aside, zfs mount cache/sh, then move it back into /mnt/cache/sh'
+log_has "ZFS dataset [cache/sh]: a file is hidden under it: stop writes to the share, zfs unmount cache/sh, $BACK"
 cache_is sh sh/new.txt
 no_private
-notices "$NOTICE"
+notices "$HIDDEN"
 
 # a folder gone by the remount is made again before the mount and looked in; the run looks nowhere else
 begin "Clean ZFS datasets, a file lands in the dataset as zfs unmounts it, and its folder is gone by the remount" \
@@ -173,7 +174,7 @@ check "zfs calls" "$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')" "$(ca
 log_has 'ZFS dataset [cache/sh] is mounted again, but /mnt/cache/sh/late.txt, written as it was mounted, is hidden under it'
 cache_is sh sh/new.txt
 no_private
-notices "$NOTICE"
+notices "$HIDDEN"
 
 # a file where the gone folder was: no folder to look in, so no mount
 begin "Clean ZFS datasets, its folder is gone by the remount and a file has its name" \
@@ -189,7 +190,7 @@ log_has 'Failed to remount dataset [cache/sh]'
 log_has 'cannot enter its folder /mnt/cache/sh'
 check "the unmounted dataset keeps its file" new.txt "$(ls "$T/zfs.store/cache/sh")"
 no_private
-notices "$NOTICE"
+notices "$NOT_MOUNTED"
 rm -f /mnt/cache/sh
 
 # mount.zfs can make the read-only mount and still fail: the run finds the dataset there and unmounts it before the remount
@@ -350,7 +351,7 @@ for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, 
     'the read-only mount') log_has "$unchecked mount: filesystem 'cache/sh' cannot be mounted, zfs.fail" ;;
     'the read-only unmount')
         log_has "ZFS dataset [cache/sh] is still mounted read-only at $private, not at /mnt/cache/sh: umount: $private: zfs.fail"
-        log_has "To mount it back: stop writes to the share, umount $private, move anything in /mnt/cache/sh aside, zfs mount cache/sh, then move it back into /mnt/cache/sh"
+        log_has "ZFS dataset [cache/sh]: mounted read-only at $private: stop writes to the share, umount $private, $BACK"
         ;;
     mktemp) log_has "$unchecked mktemp: No such file or directory"; log_lacks 'attempting to unmount' ;;
     # the failure notice goes out with the "Failed to" line
@@ -366,10 +367,11 @@ for fail in list unmount 'unmount, busy,' destroy 'destroy and mount' 'destroy, 
     # the row still logs and counts what it moved
     log_has '0 files remaining from caches to array'
     counter REMAINING_CACHE_FILES 0
-    # with action logging off the notice is all there is, so it says where a dataset left at the private folder is
+    # with action logging off the notice is all there is, so it says why a dataset is out of view and how to mount it back
     case $fail in
-    unmount | destroy | 'destroy and mount') notices "$NOTICE" ;;
-    'the read-only unmount') notices "$(notice_for "[cache/sh] (mounted read-only at $private)")" ;;
+    unmount | destroy) notices "$NOTICE" ;;
+    'destroy and mount') notices "$NOT_MOUNTED" ;;
+    'the read-only unmount') notices "$(read_only_notice "$private")" ;;
     *) notices '' ;;
     esac
     if [ "$fail" = 'destroy and mount' ]; then
@@ -406,7 +408,7 @@ log_has 'Failed to remount dataset [cache/sh]'
 log_has 'Not remounting ZFS dataset [cache/sh]: its folder /mnt/cache/sh holds files that a mount would hide'
 cache_is sh sh/new.txt
 no_private
-notices "$NOTICE"
+notices "$NOT_MOUNTED"
 
 # a write through /mnt/user during the check lands in the bare folder: the destroy goes ahead, and OpenZFS keeps a folder
 # that is not empty

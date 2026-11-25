@@ -2645,6 +2645,15 @@ dataset_problem() {
     for line in "${@:3}"; do mvlogger "$line"; done
 }
 
+# Logs why dataset $2's files are out of view and how to mount it back (template $1 filled with $3...), and puts the
+# translation in its notice entry: with action logging off the notice is all the user gets
+dataset_out_of_view() {
+    local template=$1 dataset=$2
+    shift 2
+    mvlogger "ZFS dataset [$dataset]: $(fill_template "$template" "$@")"
+    DATASET_PROBLEM[$dataset]="[$dataset] ($(finish_on_stop translate_text "$template" "$@"))"
+}
+
 # One notice naming the run's datasets with a problem: a problem that repeats notifies once a run
 dataset_problems_notice() {
     local ds names=""
@@ -2669,14 +2678,17 @@ remount_dataset() {
     local out
     # a write through /mnt/user while it was unmounted lands in the bare folder
     if [ -n "$(finish_on_stop find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
-        dataset_problem failure "$1" "Failed to remount dataset [$1]" \
-            "Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
-    elif ! out=$(finish_on_stop mount_back "$1" "$2"); then
-        dataset_problem failure "$1" "Failed to remount dataset [$1]" "$out"
-    elif [ -n "$out" ]; then
-        dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it" \
-            "To reach it: stop writes to the share, zfs unmount $1, move anything in $2 aside, zfs mount $1, then move it back into $2"
+        out="Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
+    elif out=$(finish_on_stop mount_back "$1" "$2"); then
+        [ -n "$out" ] || return 0
+        dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it"
+        dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+            "$1" "$1" "$2" "$1" "$2"
+        return 0
     fi
+    dataset_problem failure "$1" "Failed to remount dataset [$1]" "$out"
+    dataset_out_of_view "not mounted: stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s" \
+        "$1" "$2" "$1" "$2"
 }
 
 # Logs at debug level why dataset $1 is kept: entry $2 that a destroy could lose
@@ -2709,11 +2721,10 @@ unmount_check_destroy() {
         fi
     fi
     if [ "$rc" = 2 ]; then
-        # with action logging off the notice is all there is, so it says where the dataset is
-        DATASET_PROBLEM[$dataset]="[$dataset] ($(translate_text "mounted read-only at %s" "$private"))"
         dataset_problem failure "$dataset" \
-            "ZFS dataset [${dataset}] is still mounted read-only at ${private}, not at ${folder}: umount: $lost" \
-            "To mount it back: stop writes to the share, umount ${private}, move anything in ${folder} aside, zfs mount ${dataset}, then move it back into ${folder}"
+            "ZFS dataset [${dataset}] is still mounted read-only at ${private}, not at ${folder}: umount: $lost"
+        dataset_out_of_view "mounted read-only at %s: stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+            "$dataset" "$private" "$private" "$folder" "$dataset" "$folder"
         return 0
     elif [ "$rc" != 0 ]; then
         # a hold by something else, such as a container's mount, makes the read-only mount busy

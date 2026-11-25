@@ -181,6 +181,11 @@ DESTROYED=$(printf '%s\n' "zfs $LS cache/sh" 'zfs unmount cache/sh' 'mount -t zf
     'zfs destroy cache/sh')
 notice_for() { echo "warning|Clean empty ZFS datasets did not finish for $1. The mover log has the details unless Log Mover Tuning plugin actions is set to No."; }
 NOTICE=$(notice_for '[cache/sh]')
+# the notice of a cache/sh left out of view: why, and how to mount it back
+BACK='move anything in /mnt/cache/sh aside, zfs mount cache/sh, then move it back into /mnt/cache/sh'
+NOT_MOUNTED=$(notice_for "[cache/sh] (not mounted: stop writes to the share, $BACK)")
+HIDDEN=$(notice_for "[cache/sh] (a file is hidden under it: stop writes to the share, zfs unmount cache/sh, $BACK)")
+read_only_notice() { notice_for "[cache/sh] (mounted read-only at $1: stop writes to the share, umount $1, $BACK)"; }
 no_private() { check "no private mount folder left" "" "$(find "$TMPDIR" -maxdepth 1 -name 'ca.mover.tuning.*')"; }
 notices() { check "notices" "$1" "$(cat "$NOTIFY_LOG" 2>/dev/null)"; }
 

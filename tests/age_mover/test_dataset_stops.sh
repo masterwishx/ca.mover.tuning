@@ -89,7 +89,7 @@ log_lacks 'successfully destroyed'
 check "the dataset is kept, unmounted" yes "$([ -d "$T/zfs.store/cache/sh" ] && echo yes)"
 cache_is sh sh/bare.txt
 no_private
-notices "$NOTICE"
+notices "$NOT_MOUNTED"
 
 # the plugin's stop as each step runs: the step finishes, a destroy that finished stays done, else the dataset goes back
 for step in 'zfs list' 'zfs unmount' 'the read-only umount' 'zfs destroy' 'the remount'; do
@@ -149,7 +149,7 @@ check "zfs calls" "$(sed '$d' <<<"$DESTROYED")" "$(cat "$T/zfs.calls")"
 log_has 'Not remounting ZFS dataset [cache/sh]: its folder /mnt/cache/sh holds files that a mount would hide'
 cache_is sh sh/bare.txt
 no_private
-notices "$NOTICE"
+notices "$NOT_MOUNTED"
 
 # the plugin's stop as mktemp makes the private folder: it is made, so the unmount goes ahead and the dataset goes back
 begin "Clean ZFS datasets, the plugin's mover stop as the private folder is made" cleanFolders topFolder cleanDatasets yes
@@ -196,7 +196,7 @@ log_has 'Failed to remount dataset [cache/a]'
 log_lacks 'ZFS dataset [cache/sh] holds only folders'
 check "cache/sh is still mounted" /mnt/cache/sh "$(grep -x /mnt/cache/sh "$T/zfs")"
 check "the share after it is not looked at" "" "$(grep -F cache/z "$T/zfs.calls")"
-notices "$(notice_for '[cache/a]')"
+notices "$(notice_for '[cache/a] (not mounted: stop writes to the share, move anything in /mnt/cache/a aside, zfs mount cache/a, then move it back into /mnt/cache/a)')"
 no_private
 check "another run's pid file stays" 1 "$(cat "$T/pid" 2>/dev/null)"
 rm -f "$T/pid"
@@ -225,6 +225,25 @@ stop_done
 log_has 'Failed to unmount ZFS dataset [cache/sh]'
 log_lacks 'top-level'
 notices "$NOTICE"
+
+# the plugin's stop as a dataset's notice entry is translated: the translation finishes, so the entry keeps its reason
+begin "Clean ZFS datasets, the plugin's mover stop as a dataset's notice entry is translated" cleanFolders topFolder \
+    cleanDatasets yes
+one_share
+echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
+echo mount >"$T/zfs.fail"
+stop_hook plugin >"$T/php.hook"
+# translate_text runs /usr/bin/php -q translate.php TEMPLATE; this one prints the template back
+# shellcheck disable=SC2016 # the stand-in expands its own $3
+printf '#!/bin/bash\ncase $3 in "not mounted:"*) [ ! -f %q ] || bash %q ;; esac\nprintf %%s "$3"\n' "$T/php.hook" "$T/php.hook" \
+    >/usr/bin/php
+chmod 755 /usr/bin/php
+run_moves 'processTheMoves did not return'
+rm -f /usr/bin/php
+stop_done
+check "the stop came during the translation" "" "$(ls "$T/php.hook" 2>/dev/null)"
+log_has 'Failed to remount dataset [cache/sh]'
+notices "$NOT_MOUNTED"
 
 # a run that starts as the stopped one ends writes its own pid file, which the plugin's stop then leaves
 begin "Clean ZFS datasets, the plugin's mover stop, and another run starts as the stopped one ends" cleanFolders topFolder \
@@ -274,9 +293,9 @@ for when in 'before the read-only mount' 'while it is mounted' 'while it is moun
     # a stop after the kill ends the run once the dataset is back; the cut-short check is still reported
     [[ $when != *mover* ]] || log_lacks 'top-level'
     if [[ $when == *fails ]]; then
-        notices "$(notice_for "[cache/sh] (mounted read-only at $private)")"
+        notices "$(read_only_notice "$private")"
         log_has "ZFS dataset [cache/sh] is still mounted read-only at $private, not at /mnt/cache/sh: umount: $private: zfs.fail"
-        log_has "To mount it back: stop writes to the share, umount $private, move anything in /mnt/cache/sh aside, zfs mount cache/sh, then move it back into /mnt/cache/sh"
+        log_has "ZFS dataset [cache/sh]: mounted read-only at $private: stop writes to the share, umount $private, $BACK"
         check "the dataset stays at the private folder" "$private"$'\t'cache/sh "$(cat "$T/zfs.private")"
         continue
     fi
