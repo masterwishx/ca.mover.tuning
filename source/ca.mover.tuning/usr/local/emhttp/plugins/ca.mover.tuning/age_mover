@@ -3008,22 +3008,24 @@ processTheMoves() {
                 # Iterate the array directly (was: echo "$SYNCED_FILES" | xargs),
                 # so filenames with quotes/spaces/special chars are handled safely.
                 counted_in_row=0
-                for FILE in "${SYNCED_FILES_ARR[@]}"; do
+                for key in "${SYNCED_FILES_ARR[@]}"; do
                     # Collapse the rsync --relative marker ("/./" -> "/")
-                    FILE="${FILE//\/.\//\/}"
+                    FILE="${key//\/.\//\/}"
                     DIR=$(dirname "$FILE")
                     [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Current file: $(qp "$FILE"), Current folder: $(qp "$DIR"), Previous folder: $(qp "$LAST_DIR"), Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
-                    elif [ "${LAST_DIR}" != "${DIR}" ]; then
+                    # a name gone before its turn may have left before an earlier row's count: its folder is counted again
+                    elif [ "${LAST_DIR}" != "${DIR}" ] || [ -n "${GONE_BEFORE[$key]}" ]; then
                         LAST_COUNT=$(find "$DIR" -maxdepth 1 -type f | wc -l)
                         LAST_DIR=$DIR
                         counted_in_row=1
                         count=$LAST_COUNT
                     else
-                        # a count taken in this row already left out its moved names; a later row's name lowers it once it left
-                        [ "$counted_in_row" = 1 ] || [ -e "$FILE" ] || [ "$LAST_COUNT" = 0 ] || LAST_COUNT=$((LAST_COUNT - 1))
+                        # a count taken in this row already left out its moved names; a later row's name lowers it once it
+                        # left. Test mode moves nothing: each later name lowers it
+                        [ "$LAST_COUNT" = 0 ] || { [ "$TESTMODE" = no ] && { [ "$counted_in_row" = 1 ] || [ -e "$FILE" ]; }; } || LAST_COUNT=$((LAST_COUNT - 1))
                         count=$LAST_COUNT
                     fi
                     mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of file(s): $count" "Clean Folder - End Loop"
@@ -3059,7 +3061,7 @@ processTheMoves() {
 
                 # Unraid's move deletes the folder itself; a parent gone too leaves the walk below nothing to do
                 if [ ! -d "$START_DIR" ]; then
-                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "$(qp "$START_DIR") is gone from the source: cleaning from $(qp "$(dirname "$START_DIR")")" "Clean Empty Moved Folder"
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "$(qp "$START_DIR") is gone from the source: the walk starts at its parent $(qp "$(dirname "$START_DIR")")" "Clean Empty Moved Folder"
                     START_DIR=$(dirname "$START_DIR")
                 fi
 

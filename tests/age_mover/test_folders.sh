@@ -72,6 +72,25 @@ log_count 2 'Not deleting folder containing 2 files: /mnt/cache/sh/d'
 log_has 'Not deleting folder containing 1 files: /mnt/cache/sh/d'
 log_lacks 'top-level'
 
+# a name gone before its turn may have left before the count: its folder is counted again
+begin "topFolder, a row's file gone before the run, beside a file that stays" cleanFolders topFolder
+mk cache sh/d/x.txt sh/d/y.txt sh/d/z.txt
+{ row 'move from primary' f sh/d/x.txt; row 'move from primary' f sh/d/y.txt; } | list
+rm /mnt/cache/sh/d/y.txt
+run_moves
+cache_is sh sh/d sh/d/z.txt
+log_has 'Gone from the source before its turn: "/mnt/cache/sh/d/y.txt"'
+log_count 2 'Not deleting folder containing 1 files: /mnt/cache/sh/d'
+
+# test mode moves nothing, so each later row lowers the count by one
+begin "Clean Folders yes in test mode, three rows in one folder" cleanFolders yes testmode yes
+mk cache sh/d/a.txt sh/d/b.txt sh/d/c.txt
+for f in a b c; do row 'move from primary' f "sh/d/$f.txt"; done | list
+run_moves
+cache_is sh sh/d sh/d/a.txt sh/d/b.txt sh/d/c.txt
+check "the folder's counts, one a row" "$(printf '%s\n' 3 2 1)" \
+    "$(log | grep -oE 'Not deleting folder containing [0-9]+ files: /mnt/cache/sh/d' | grep -oE '[0-9]+')"
+
 # both names leave in one row, so the count taken after it already lacks the second
 begin "topFolder, a hardlink group in one folder beside another file" cleanFolders topFolder
 mk cache sh/h/a.txt sh/h/k.txt
@@ -230,7 +249,7 @@ cache_is sh
 array_is sh sh/p sh/p/e
 counter REMAINING_CACHE_FOLDERS 0
 log_has '0 folders remaining from caches to array'
-[ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has '"/mnt/cache/sh/p/e" is gone from the source: cleaning from "/mnt/cache/sh/p"'
+[ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has '"/mnt/cache/sh/p/e" is gone from the source: the walk starts at its parent "/mnt/cache/sh/p"'
 
 # the reporter's shape: one top-folder check for the share, whichever row empties a folder first
 for order in file-first folders-first; do
