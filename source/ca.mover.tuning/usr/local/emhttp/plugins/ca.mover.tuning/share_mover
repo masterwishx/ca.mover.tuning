@@ -98,7 +98,7 @@ if [ -f $UNRAIDCFGFILE ]; then
     fi
 fi
 
-mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
+[ ! -f "$MOVERTUNINGCFGFILE" ] || mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
 
 #Test input variables
 if [ -z "$1" ]; then
@@ -150,6 +150,55 @@ fi
 pid_cleanup() {
     [ "$(cat "$PIDFILE" 2>/dev/null)" = "$$" ] && rm -f "$PIDFILE"
 }
+
+# Prints the write method var.ini gives when it is one mdcmd can set back: 0, 1 or auto, as mover.php checks
+write_method() {
+    local m
+    m=$(grep -s '^md_write_method=' /var/local/emhttp/var.ini | cut -d'"' -f2)
+    case $m in 0 | 1 | auto) echo "$m" ;; *) return 1 ;; esac
+}
+
+# With Turbo Mode on, forces turbo write for the moves, only when the write method can be set back after; mirrors
+# age_mover's force_turbo
+force_turbo() {
+    TURBO_WAS=""
+    [ "$ENABLETURBO" = "yes" ] || return 0
+    if ! TURBO_WAS=$(write_method); then
+        mvlogger "Not forcing turbo write on: /var/local/emhttp/var.ini gives no write method (0, 1 or auto) to set back after"
+        return 0
+    fi
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would force turbo write on"
+        return 0
+    fi
+    # set first: a stop that ends the run from here on puts the write method back before the pid file goes; a KILL cannot
+    trap 'restore_turbo; pid_cleanup' EXIT
+    mvlogger "Forcing turbo write on"
+    /usr/local/sbin/mdcmd set md_write_method 1
+}
+
+# Sets the write method back after force_turbo, where the moves end or from the EXIT trap of a run a signal ends sooner;
+# the EXIT trap goes back to pid_cleanup alone
+restore_turbo() {
+    local m name
+    [ -n "$TURBO_WAS" ] || return 0
+    # var.ini's now, which Settings may have changed during the moves; the one read before when it gives none
+    m=$(write_method) || m=$TURBO_WAS
+    case $m in
+    auto) name="Auto (read/modify/write)" ;;
+    1) name="Turbo writes (Reconstruct)" ;;
+    *) name="Read/modify/write" ;;
+    esac
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would restore original turbo write mode $name"
+    else
+        mvlogger "Restoring original turbo write mode $name"
+        /usr/local/sbin/mdcmd set md_write_method "$m"
+    fi
+    TURBO_WAS=""
+    trap pid_cleanup EXIT
+}
+
 trap pid_cleanup EXIT
 trap 'exit 143' HUP INT TERM
 echo $$ >"$PIDFILE"
@@ -202,54 +251,41 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
         mvlogger "=> Skipping"
     else
         mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
-        if [ "$ENABLETURBO" = "yes" ]; then
-            mvlogger "Forcing turbo write on"
-            [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
-        fi
+        force_turbo
 
-        #Base Find String
-        # Alterate SHAREPATH on Cache=prefer
+        # the share name reaches find only as an argument, never parsed as shell
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-
-            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            # Initialize FINDSTR with the base find command
-            FINDSTR="find"
-            # Iterate over all directories in /mnt/*
+            # "cache=prefer": the share's folder on every other disk and pool, for the move to the primary
+            paths=()
             for dir in /mnt/*; do
-                # Check if the directory contains a subdirectory named $SHARENAME and not equal to "/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
                 if [ -d "$dir/$SHARENAME" ] && [ "$dir/$SHARENAME" != "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" ]; then
-                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                    FINDSTR+=" \"$dir/$SHARENAME\""
+                    paths+=("$dir/$SHARENAME")
                 fi
             done
-            # Add the depth option at the end
-            FINDSTR+=" -type f -not -path '/mnt/user*' -depth"
+            opts=(-type f -not -path '/mnt/user*' -depth)
         else
-            # Alterate SHAREPATH on Cache=yes
-            FINDSTR="find \"${SHAREPATH}\" -type f -depth"
+            paths=("$SHAREPATH")
+            opts=(-type f -depth)
         fi
+        # the log shows each path in qp's quotes, for the debug package's redaction
+        FINDSTR="find"
+        for p in "${paths[@]}"; do FINDSTR+=" $(qp "$p")"; done
+        FINDSTR+=$(printf ' %q' "${opts[@]}")
 
         if [ "$TESTMODE" = "yes" ]; then
             mvlogger "Running in Test Mode: $FINDSTR"
-            eval "${FINDSTR}"
+            find "${paths[@]}" "${opts[@]}"
         else
-            #Add Mover to find string
             MOVE=/usr/libexec/unraid/move
             [ -f "$MOVE" ] || MOVE=$(which move)
-            FINDSTR="${FINDSTR} | $MOVE -d $LOGLEVEL"
-            mvlogger "Complete Mover Command: $FINDSTR"
-            eval " ${FINDSTR}"
+            mvlogger "Complete Mover Command: $FINDSTR | $MOVE -d $LOGLEVEL"
+            find "${paths[@]}" "${opts[@]}" | "$MOVE" -d "$LOGLEVEL"
         fi
 
-        if [ "$ENABLETURBO" = "yes" ]; then
-            turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
-            mvlogger "Restoring original turbo write mode $( ([ "$turbo_write_mode" = "auto" ] && echo "Auto (read/modify/write)") || ([ "$turbo_write_mode" -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
-            [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method "$turbo_write_mode"
-        fi
+        restore_turbo
 
     fi
 fi
 
 mvlogger "$(titleLine 'WE ARE DONE !' '*')"
-[ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
+[ "$LOGLEVEL" = 1 ] || echo "Mover tuning plugin done!"
