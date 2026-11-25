@@ -38,14 +38,14 @@ stop_done() {
     rm -f "$T/stop.out" "$T/pid.kept"
 }
 # a hook, run once after command $2, that sends signal $1 to every process from its caller up to, not including, the run
+# and its $3 (default 0) nearest
 kill_hook() {
     cat <<EOF
 rm -f "\$0"
 $2
 p=\$PPID up=(\$PPID)
 while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); up+=("\$p"); done
-unset 'up[-1]'
-kill -$1 "\${up[@]}"
+kill -$1 "\${up[@]:0:\${#up[@]}-$((1 + ${3:-0}))}"
 EOF
 }
 # a $1 first on PATH, under $T/wrap, that runs $T/$1.hook when its arguments start with $2, then the real $1
@@ -303,6 +303,35 @@ for when in 'before the read-only mount' 'while it is mounted' 'while it is moun
     notices "$NOTICE"
     log_has 'ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: the check was cut short'
     mounted_again
+    no_private
+done
+
+# a scan's subshell killed outright, its caller not: it printed nothing because it never looked. The first check keeps
+# the dataset mounted; the one at the private mount, where a file landed as it unmounted, keeps it and mounts it back
+SCAN=". -mindepth 1 -path ./.zfs -prune -o ! -type d -print -quit"
+for which in 'first check' 'check at the private mount'; do
+    begin "Clean ZFS datasets, the scan of the $which is killed" cleanFolders topFolder cleanDatasets yes
+    one_share
+    wrap_hook find "$SCAN"
+    if [ "$which" = 'first check' ]; then
+        kill_hook KILL : >"$T/find.hook"
+    else
+        kill_hook KILL : 1 >"$T/kill.hook"
+        printf '%s\n' 'echo x >/mnt/cache/sh/new.txt' "cp \"$T/kill.hook\" \"$T/find.hook\"" >"$T/zfs.on_unmount"
+    fi
+    PATH=$T/wrap:$PATH run_moves
+    log_lacks 'successfully destroyed'
+    if [ "$which" = 'first check' ]; then
+        check "zfs calls" "zfs $LS cache/sh" "$(cat "$T/zfs.calls")"
+        log_lacks 'attempting to unmount'
+        notices ''
+        continue
+    fi
+    check "zfs calls" "$REMOUNTED" "$(cat "$T/zfs.calls")"
+    log_has 'ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: the check was cut short'
+    notices "$NOTICE"
+    mounted_again
+    cache_is sh sh/new.txt
     no_private
 done
 
