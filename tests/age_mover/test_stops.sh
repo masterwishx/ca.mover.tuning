@@ -126,4 +126,46 @@ for who in plugin run; do
     cache_is sh sh/s sh/s/2.txt
 done
 
+begin "turbo write on, var.ini gives no write method" enableTurbo yes
+mk cache sh/s/1.txt
+row 'move from primary' f sh/s/1.txt | list
+turbo_standin
+: >/var/local/emhttp/var.ini
+run_moves
+check "mdcmd was not called" "" "$(cat "$T/mdcmd.calls" 2>/dev/null)"
+log_has 'Not forcing turbo write on: /var/local/emhttp/var.ini gives no write method (0, 1 or auto) to set back after'
+log_lacks 'Restoring original turbo write mode'
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+array_is sh sh/s sh/s/1.txt
+
+begin "turbo write on, in test mode" enableTurbo yes testmode yes
+mk cache sh/s/1.txt
+row 'move from primary' f sh/s/1.txt | list
+turbo_standin
+run_moves
+check "mdcmd was not called" "" "$(cat "$T/mdcmd.calls" 2>/dev/null)"
+log_has 'TEST MODE: Would force turbo write on'
+log_has 'TEST MODE: Would restore original turbo write mode Read/modify/write'
+log_lacks 'Forcing turbo write on'
+log_lacks 'Restoring original turbo write mode'
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+cache_is sh sh/s sh/s/1.txt
+
+# a save in Settings during the moves changes var.ini's write method: that one is set back, or the one read before
+# when var.ini then gives none
+for now in 'auto Auto (read/modify/write)' ' Read/modify/write'; do
+    begin "turbo write on, var.ini gives \"${now%% *}\" during the moves" enableTurbo yes
+    mk cache sh/s/1.txt
+    row 'move from primary' f sh/s/1.txt | list
+    turbo_standin
+    after_first_rsync "echo 'md_write_method=\"${now%% *}\"' >/var/local/emhttp/var.ini"
+    run_moves
+    w=${now%% *}
+    check "turbo write forced, then set back to ${w:-0}" "$(printf '%s\n' 'mdcmd set md_write_method 1' \
+        "mdcmd set md_write_method ${w:-0}")" "$(cat "$T/mdcmd.calls")"
+    log_count 1 "Restoring original turbo write mode ${now#* }"
+    rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+    array_is sh sh/s sh/s/1.txt
+done
+
 finish
