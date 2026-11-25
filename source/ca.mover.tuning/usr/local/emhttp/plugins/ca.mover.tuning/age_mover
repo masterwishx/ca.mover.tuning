@@ -3359,8 +3359,9 @@ force_turbo() {
         mvlogger "TEST MODE: Would force turbo write on"
         return 0
     fi
-    # set first: a stop that ends the run from here on puts the write method back on its way out; a KILL cannot
-    trap restore_turbo EXIT
+    # set first: a stop that ends the run from here on puts the write method back on its way out, and a second stop
+    # waits for it; a KILL cannot
+    trap 'trap "" HUP INT TERM; restore_turbo' EXIT
     mvlogger "Forcing turbo write on"
     /usr/local/sbin/mdcmd set md_write_method 1
 }

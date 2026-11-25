@@ -126,6 +126,34 @@ for who in plugin run; do
     cache_is sh sh/s sh/s/2.txt
 done
 
+# a second stop, at the read of var.ini that puts the write method back, waits for it
+begin "turbo write on, a second stop as the run puts it back" enableTurbo yes
+mk cache sh/s/1.txt sh/s/2.txt
+for n in 1 2; do row 'move from primary' f "sh/s/$n.txt"; done | list
+turbo_standin
+cat >"$T/bin/grep" <<EOF
+#!/bin/bash
+if [ "\$2" = '^md_write_method=' ] && [ -e $T/stop2 ]; then
+    rm -f $T/stop2
+    p=\$PPID
+    while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); done
+    kill -TERM "\$p"
+fi
+exec /usr/bin/grep "\$@"
+EOF
+chmod 755 "$T/bin/grep"
+# the run is a subshell of this script: it would keep the grep this script found before
+hash -r
+after_first_rsync "touch $T/stop2
+$(stop_hook run)"
+run_moves 'processTheMoves did not return'
+rm -f "$T/bin/grep"
+hash -r
+check "the second stop came" "" "$(ls "$T/stop2" 2>/dev/null)"
+put_back_once
+array_is sh sh/s sh/s/1.txt
+cache_is sh sh/s sh/s/2.txt
+
 begin "turbo write on, var.ini gives no write method" enableTurbo yes
 mk cache sh/s/1.txt
 row 'move from primary' f sh/s/1.txt | list
