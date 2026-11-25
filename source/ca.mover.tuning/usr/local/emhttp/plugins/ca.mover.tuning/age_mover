@@ -3018,7 +3018,9 @@ processTheMoves() {
                         count=".placeholder"
                     # a name gone before its turn may have left before an earlier row's count: its folder is counted again
                     elif [ "${LAST_DIR}" != "${DIR}" ] || [ -n "${GONE_BEFORE[$key]}" ]; then
-                        LAST_COUNT=$(find "$DIR" -maxdepth 1 -type f | wc -l)
+                        # an earlier row may have emptied and deleted it
+                        LAST_COUNT=0
+                        [ ! -d "$DIR" ] || LAST_COUNT=$(find "$DIR" -maxdepth 1 -type f | wc -l)
                         LAST_DIR=$DIR
                         counted_in_row=1
                         count=$LAST_COUNT

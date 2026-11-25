@@ -91,6 +91,15 @@ cache_is sh sh/d sh/d/a.txt sh/d/b.txt sh/d/c.txt
 check "the folder's counts, one a row" "$(printf '%s\n' 3 2 1)" \
     "$(log | grep -oE 'Not deleting folder containing [0-9]+ files: /mnt/cache/sh/d' | grep -oE '[0-9]+')"
 
+# the earlier row deletes the folder, so the vanished name's recount finds no folder and counts nothing
+begin "topFolder, a row's file gone before the run, in a folder an earlier row empties" cleanFolders topFolder
+mk cache sh/d/a.txt sh/d/b.txt sh/keep.txt
+{ row 'move from primary' f sh/d/a.txt; row 'move from primary' f sh/d/b.txt; } | list
+rm /mnt/cache/sh/d/b.txt
+run_moves
+cache_is sh sh/keep.txt
+log_count 1 'Deleted empty folder: /mnt/cache/sh/d'
+
 # both names leave in one row, so the count taken after it already lacks the second
 begin "topFolder, a hardlink group in one folder beside another file" cleanFolders topFolder
 mk cache sh/h/a.txt sh/h/k.txt
