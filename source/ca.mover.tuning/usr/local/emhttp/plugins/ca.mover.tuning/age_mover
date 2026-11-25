@@ -3095,9 +3095,9 @@ processTheMoves() {
                         break
                     fi
 
-                    # Count files and subdirectories
+                    # the folder's own entries only: a walk below would mount each snapshot a child dataset shows
                     empty_file_count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
-                    empty_dir_count=$(find "$DIR" -mindepth 1 -type d | wc -l)
+                    empty_dir_count=$(find "$DIR" -mindepth 1 -maxdepth 1 -type d | wc -l)
 
                     # Folder is truly empty
                     if [ "$empty_file_count" -eq 0 ] && [ "$empty_dir_count" -eq 0 ]; then

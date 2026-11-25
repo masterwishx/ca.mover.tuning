@@ -225,6 +225,15 @@ cache_is sh sh/p sh/p/k.txt
 log_has 'Not deleting folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh/p'
 log_lacks 'top-level'
 
+# the parent's own subfolder counts once: the walk does not go below it
+begin "topFolder, a folder row whose parent keeps a nested subfolder" cleanFolders topFolder
+mkdir -p /mnt/cache/sh/p/e /mnt/cache/sh/p/k/a/b
+row 'move from primary' d sh/p/e | list
+run_moves
+cache_is sh sh/p sh/p/k sh/p/k/a sh/p/k/a/b
+log_has 'Not deleting folder: contains 0 file(s), 1 subfolder(s): /mnt/cache/sh/p'
+log_lacks 'top-level'
+
 # the folder stays, or it would exist nowhere. Unraid's move cannot make the share's folder over a file; rsync
 # replaces the file, so its copy is taken away instead
 for tool in rsync move; do
