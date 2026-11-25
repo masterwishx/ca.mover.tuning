@@ -155,7 +155,7 @@ rm /mnt/cache/sh/f.txt
 run_moves
 check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
 cache_is sh
-log_has 'TEST MODE: Would delete empty top-level folder: /mnt/cache/sh'
+log_has 'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh'
 
 for pool in 'not ZFS' 'ZFS, the share a plain folder on it'; do
     begin "Clean ZFS datasets, a share that empties on a pool that is $pool" cleanFolders topFolder cleanDatasets yes
