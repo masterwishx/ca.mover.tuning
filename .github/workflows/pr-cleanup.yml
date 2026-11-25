@@ -1,13 +1,19 @@
 name: PR cleanup
 
-# Removes the pr-<number>-<version> test builds when a pull request closes. Checks out nothing.
+# Every hour, removes the pr-<number>-<version> test builds of closed pull requests and says so in their build
+# comment. Checks out nothing. A schedule runs the default branch's copy of this file.
 on:
-  pull_request_target:
-    types: [closed]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
+
+concurrency:
+  group: pr-cleanup
+  cancel-in-progress: false
 
 env:
   GH_TOKEN: ${{ github.token }}
@@ -16,24 +22,33 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-    - name: Remove the pull request releases, their tags and the note
-      env:
-        PR: ${{ github.event.pull_request.number }}
+    - name: Remove closed pull requests' releases, their tags and the note
       run: |
         set -euo pipefail
-        # listed first: a failing call inside a process substitution would read as "nothing to remove"
-        tags=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq ".[] | select(.prerelease and (.tag_name | startswith(\"pr-$PR-\"))) | .tag_name")
-        [ -n "$tags" ] || echo "No test build for #$PR."
-        while read -r tag; do
-          [ -n "$tag" ] || continue
-          # a publish run that saw the close may have removed it already: "release not found" is that outcome
-          out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes --cleanup-tag 2>&1) \
-            || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }
-          echo "removed $tag"
-        done <<< "$tags"
-        # also when nothing was left: an earlier attempt may have removed the builds and failed before this
         marker="<!-- pr-build -->"
-        id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n 1)
-        if [ -n "$id" ] && [ "$id" != "null" ]; then
-          gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null
-        fi
+        # set -e does not reach into a function called with ||, so every failure returns 1 itself
+        clean() {  # $1 pull request, $2 its tags
+          local id tag out
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || return 1
+          id=${id%%$'\n'*}
+          # the note first: once the builds are gone, this pull request is not visited again
+          if [ -n "$id" ] && [ "$id" != "null" ]; then
+            gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null || return 1
+          fi
+          while read -r tag; do
+            # a publish run that saw the close may have removed it already: "release not found" is that outcome
+            out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes --cleanup-tag 2>&1) \
+              || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; return 1; }
+            echo "removed $tag"
+          done <<< "$2"
+        }
+        # listed first: a failing call inside a process substitution would read as "nothing to remove"
+        tags=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.prerelease and (.tag_name | test("^pr-[0-9]+-"))) | .tag_name')
+        [ -n "$tags" ] || { echo "No test builds."; exit 0; }
+        rc=0
+        while read -r -u 3 pr; do
+          state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr" --jq .state) || { echo "::error::cannot read #$pr"; rc=1; continue; }
+          [ "$state" = closed ] || continue
+          clean "$pr" "$(grep "^pr-$pr-" <<< "$tags")" || { echo "::error::could not clean up #$pr"; rc=1; }
+        done 3<<< "$(sed -E 's/^pr-([0-9]+)-.*/\1/' <<< "$tags" | sort -un)"
+        exit $rc

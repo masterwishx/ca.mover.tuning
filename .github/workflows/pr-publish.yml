@@ -4,7 +4,7 @@ name: PR publish
 # publishes it as the pr-<number>-<version> pre-release, verifies what a server will fetch and keeps one
 # comment on the pull request current. Never checks out or runs pull request code.
 on:
-  workflow_run:
+  workflow_run: # zizmor: ignore[dangerous-triggers] takes only the build artifact and never runs pull request code
     workflows: ["PR build"]
     types: [completed]
 
@@ -113,7 +113,7 @@ jobs:
         set -euo pipefail
         notes=$(mktemp)
         {
-          echo "Test build of pull request #$PR at ${HEAD_SHA::7}. Not a release: the next build of this pull request replaces it, closing the pull request removes it, and the next real release supersedes it on installed servers."
+          echo "Test build of pull request #$PR at ${HEAD_SHA::7}. Not a release: the next build of this pull request replaces it, PR cleanup removes it within an hour of the pull request closing, and the next real release supersedes it on installed servers."
           echo
           echo "Install: Plugins > Install Plugin > paste \`$INSTALL_URL\`"
         } > "$notes"
@@ -180,8 +180,8 @@ jobs:
         TAG: ${{ steps.meta.outputs.tag }}
       run: |
         set -euo pipefail
-        # PR cleanup also runs on close; whichever gets there first removes the build, so "release not found"
-        # here means cleanup did, and the build is gone either way
+        # PR cleanup's hourly sweep may get there first: "release not found" here means it did, and the build is gone
+        # either way
         if [ "$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)" != "open" ]; then
           out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$TAG" --cleanup-tag --yes 2>&1) \
             || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }

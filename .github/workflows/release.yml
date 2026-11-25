@@ -181,3 +181,29 @@ jobs:
           CHANNEL: beta
           BASE: ${{ env.BETA_BRANCH }}
         run: bash "$SCRIPTS/plg_release_pr.sh"
+
+  # discord-notify.yml announces each published release; a failed run is announced only here
+  notify-failure:
+    name: Tell Discord the release failed
+    needs: release
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Send the Discord notification
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ -z "$WEBHOOK" ]; then
+            echo "::warning::DISCORD_WEBHOOK is not set, skipping notification"
+            exit 0
+          fi
+          json=$(jq -n --arg title "Release on $GITHUB_REF_NAME" --arg url "$RUN_URL" --arg actor "$GITHUB_ACTOR" \
+            --arg repo "$GITHUB_REPOSITORY" --arg timestamp "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            '{content: "❌ Release Failed", embeds: [{title: $title, url: $url, description: "The Release run failed: see its log.",
+              color: 10038562, timestamp: $timestamp,
+              fields: [{name: "Repository", value: $repo, inline: true}, {name: "Actor", value: $actor, inline: true}]}]}')
+          curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H "Content-Type: application/json" -d "$json" "$WEBHOOK"

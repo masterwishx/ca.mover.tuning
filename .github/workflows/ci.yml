@@ -104,3 +104,25 @@ jobs:
         env:
           AGE_MOVER_TEST: '1'
         run: bash tests/age_mover/run.sh
+
+  # Dependabot's pull requests merge once the jobs above pass; release-notes runs only for the stable release PR.
+  # The PR's author, not github.actor: the actor is whoever acted last and can be spoofed
+  dependabot-merge:
+    name: Merge Dependabot pull request
+    needs: [validate, release-notes, release-scripts, age-mover]
+    if: >-
+      always() && github.event_name == 'pull_request'
+      && github.event.pull_request.user.login == 'dependabot[bot]'
+      && github.repository == github.event.pull_request.head.repo.full_name
+      && needs.validate.result == 'success' && needs.release-scripts.result == 'success'
+      && needs.age-mover.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.release-notes.result)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr merge --merge "$PR_URL"
