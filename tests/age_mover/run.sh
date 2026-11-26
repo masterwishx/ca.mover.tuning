@@ -3,8 +3,12 @@
 # the tests delete folders under /mnt, so set it only inside a throwaway container.
 HERE=$(cd "$(dirname "$0")" && pwd)
 if [ "${AGE_MOVER_TEST:-}" != 1 ]; then
-    exec docker run --rm --init -e AGE_MOVER_TEST=1 -v "$(cd "$HERE/../.." && pwd):/src:ro" \
-        "${AGE_MOVER_IMAGE:-debian:bookworm-slim}" bash /src/tests/age_mover/run.sh
+    # as CI's container job: PID 1 is tail, which reaps no orphan, so a test that leaves one fails here as it does in CI
+    c=$(docker run -d --rm -v "$(cd "$HERE/../.." && pwd):/src:ro" "${AGE_MOVER_IMAGE:-debian:bookworm-slim}" \
+        tail -f /dev/null) || exit 2
+    trap 'docker rm -f "$c" >/dev/null' EXIT
+    docker exec -e AGE_MOVER_TEST=1 "$c" bash /src/tests/age_mover/run.sh
+    exit
 fi
 # packages go in only inside a container: AGE_MOVER_TEST=1 on a host must not change its packages
 [ -e /.dockerenv ] || { echo "run.sh: AGE_MOVER_TEST=1 is set outside a container" >&2; exit 2; }
