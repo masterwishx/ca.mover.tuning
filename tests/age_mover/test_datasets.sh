@@ -312,7 +312,27 @@ rm /mnt/cache/sh/f.txt
 run_moves
 check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
 cache_is sh
+log_has 'TEST MODE: Would check ZFS dataset [cache/sh] for deletion'
 log_has 'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh'
+
+# test mode says it would check the dataset a real run would, and runs no zfs command
+begin "Clean ZFS datasets in test mode, the share's last file would move" cleanFolders topFolder cleanDatasets yes testmode yes
+mk cache sh/only/f.txt
+printf '%s\n' /mnt/cache /mnt/cache/sh >"$T/zfs"
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
+cache_is sh sh/only sh/only/f.txt
+log_has 'TEST MODE: Would check ZFS dataset [cache/sh] for deletion'
+
+begin "Clean ZFS datasets in test mode, the share a plain folder on a ZFS pool" cleanFolders topFolder cleanDatasets yes \
+    testmode yes
+mk cache sh/only/f.txt
+echo /mnt/cache >"$T/zfs"
+row 'move from primary' f sh/only/f.txt | list
+run_moves
+check "no zfs calls" "" "$(cat "$T/zfs.calls" 2>/dev/null)"
+log_lacks 'Would check ZFS dataset'
 
 for pool in 'not ZFS' 'ZFS, the share a plain folder on it'; do
     begin "Clean ZFS datasets, a share that empties on a pool that is $pool" cleanFolders topFolder cleanDatasets yes

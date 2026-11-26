@@ -2575,10 +2575,10 @@ note_top_folder() {
     TOP_FOLDERS+=("$top")
 }
 
-# With Clean datasets and Clean folders on and test mode off, notes this row's pool/share and destination for
-# cleanShareDataset after the pass when the row's source is the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
+# With Clean datasets and Clean folders on, notes this row's pool/share and destination for cleanShareDataset after
+# the pass when the row's source is the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
 note_share_dataset() {
-    [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] && [ "$TESTMODE" = "no" ] &&
+    [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] &&
         [ "$SOURCE" = "/mnt/$PRIMARYSTORAGENAME" ] || return 0
     local ds="$PRIMARYSTORAGENAME/$SHARENAME"
     [ -n "${DATASET_DEST[$ds]+x}" ] && return 0
@@ -2800,13 +2800,18 @@ unmount_check_destroy() {
 }
 
 # Destroys dataset $1/$2 if it is mounted at /mnt/$1/$2, has no children or snapshots, and dataset_loses against $3/$2
-# is empty both before the unmount and after it; else keeps it, and the log says when it stays unmounted
+# is empty both before the unmount and after it; else keeps it, and the log says when it stays unmounted. Test mode
+# runs no zfs command: it says the dataset would be checked
 cleanShareDataset() {
     local folder="/mnt/$1/$2" dataset="$1/$2" mounted names lost private
     mounted=$(zfs_dataset_at "$folder")
     [ -n "$mounted" ] || return 0
     if [ "$mounted" != "$dataset" ]; then
         mvDebuglogger "Keeping the ZFS dataset mounted at $(qp "$folder"): it is not ${dataset}" "Clean Dataset"
+        return 0
+    fi
+    if [ "$TESTMODE" != "no" ]; then
+        mvlogger "TEST MODE: Would check ZFS dataset [${dataset}] for deletion"
         return 0
     fi
     # listed first, so between the content check and the unmount only a log line is written
