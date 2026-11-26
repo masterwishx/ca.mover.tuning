@@ -2550,6 +2550,24 @@ filesInUse() {
     return 0
 }
 
+# Whether a real run would find path $1 on the source: test mode leaves out processTheMoves' TEST_GONE, what its moves
+# and deletions would have taken off it
+on_source() { [ -e "$1" ] && [ -z "${TEST_GONE[$1]+x}" ]; }
+
+# Prints how many of the paths find prints for args $@ a real run would find, as on_source does
+count_left() {
+    local - out p n=0 IFS=$'\n'
+    [ "$TESTMODE" = "yes" ] || { find "$@" | wc -l; return; }
+    # one read of find's output, split here: a read loop on a pipe takes a syscall per byte
+    out=$(find "$@")
+    set -f
+    for p in $out; do [ -n "${TEST_GONE[$p]+x}" ] || n=$((n + 1)); done
+    echo "$n"
+}
+
+# Whether a real run's rmdir would take folder $1: nothing left in it, as count_left sees, and no ZFS dataset mounted on it
+would_rmdir() { [ "$(count_left "$1" -mindepth 1 -maxdepth 1)" = 0 ] && ! is_zfs_dataset_mountpoint "$1"; }
+
 # In topFolder mode, notes this row's share top folder for the check after the pass; fills processTheMoves' TOP_SEEN
 # and TOP_FOLDERS
 note_top_folder() {
@@ -2560,10 +2578,10 @@ note_top_folder() {
     TOP_FOLDERS+=("$top")
 }
 
-# With Clean datasets and Clean folders on and test mode off, notes this row's pool/share and destination for
-# cleanShareDataset after the pass when the row's source is the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
+# With Clean datasets and Clean folders on, notes this row's pool/share and destination for cleanShareDataset after
+# the pass when the row's source is the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
 note_share_dataset() {
-    [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] && [ "$TESTMODE" = "no" ] &&
+    [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] &&
         [ "$SOURCE" = "/mnt/$PRIMARYSTORAGENAME" ] || return 0
     local ds="$PRIMARYSTORAGENAME/$SHARENAME"
     [ -n "${DATASET_DEST[$ds]+x}" ] && return 0
@@ -2593,15 +2611,19 @@ cleanTopFolder() {
         skip=(-path "${pat//\[/\\[}/.zfs" -prune -o)
     fi
     # -xdev: a mount inside, such as a child dataset, is counted but not walked
-    file_count=$(find "$top_folder" -xdev "${skip[@]}" -type f -print | wc -l)
-    dir_count=$(find "$top_folder" -xdev -mindepth 1 "${skip[@]}" -type d -print | wc -l)
+    file_count=$(count_left "$top_folder" -xdev "${skip[@]}" -type f -print)
+    dir_count=$(count_left "$top_folder" -xdev -mindepth 1 "${skip[@]}" -type d -print)
     mvDebuglogger "Top folder: $(qp "$top_folder"), share file(s): $file_count, share folder(s): $dir_count" "Clean Top Folder"
     if [ "$file_count" -ne 0 ] || [ "$dir_count" -ne 0 ]; then
         mvlogger "Not deleting top-level folder: contains $file_count file(s), $dir_count subfolder(s): ${top_folder}"
-    elif [ "$TESTMODE" != "no" ]; then
-        mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
     elif [ "$dataset" = yes ]; then
         mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
+    elif [ "$TESTMODE" != "no" ]; then
+        if would_rmdir "$top_folder"; then
+            mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
+        else
+            mvDebuglogger "TEST MODE: Would fail to delete top-level folder (not empty): $top_folder" "Clean Top Folder"
+        fi
     elif rmdir "$top_folder" 2>/dev/null; then
         mvlogger "Deleted empty top-level folder: $top_folder"
     else
@@ -2785,13 +2807,18 @@ unmount_check_destroy() {
 }
 
 # Destroys dataset $1/$2 if it is mounted at /mnt/$1/$2, has no children or snapshots, and dataset_loses against $3/$2
-# is empty both before the unmount and after it; else keeps it, and the log says when it stays unmounted
+# is empty both before the unmount and after it; else keeps it, and the log says when it stays unmounted. Test mode
+# runs no zfs command: it says the dataset would be checked
 cleanShareDataset() {
     local folder="/mnt/$1/$2" dataset="$1/$2" mounted names lost private
     mounted=$(zfs_dataset_at "$folder")
     [ -n "$mounted" ] || return 0
     if [ "$mounted" != "$dataset" ]; then
         mvDebuglogger "Keeping the ZFS dataset mounted at $(qp "$folder"): it is not ${dataset}" "Clean Dataset"
+        return 0
+    fi
+    if [ "$TESTMODE" != "no" ]; then
+        mvlogger "TEST MODE: Would check ZFS dataset [${dataset}] for deletion"
         return 0
     fi
     # listed first, so between the content check and the unmount only a log line is written
@@ -2851,6 +2878,7 @@ processTheMoves() {
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
     local -A HANDLED_LINKS=()
     local -A GONE_BEFORE=()
+    local -A TEST_GONE=()
     local -A CHARGED_BYTES=()
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
@@ -3085,6 +3113,14 @@ processTheMoves() {
                 fi
             fi
             copyWatchStop
+            # test mode notes what a real move takes off the source: every file, and with Unraid's move a folder
+            # its rmdir would take, as move leaves any other
+            if [ "$TESTMODE" = "yes" ] && [[ "$ACTION" =~ "move" ]] && { [ "$FILETYPE" = "f" ] || [ "$MOVE_FILES_TOOL" = "move" ]; }; then
+                for f in "${present[@]}"; do
+                    f=${f//\/.\//\/}
+                    [ "$FILETYPE" = "f" ] || would_rmdir "$f" && TEST_GONE[$f]=1
+                done
+            fi
 
             # a dry run counts every name as done; a real run counts only verified arrivals below
             names=${#SYNCED_FILES_ARR[@]}
@@ -3171,14 +3207,14 @@ processTheMoves() {
                     elif [ "${LAST_DIR}" != "${DIR}" ] || [ -n "${GONE_BEFORE[$key]}" ]; then
                         # an earlier row may have emptied and deleted it
                         LAST_COUNT=0
-                        [ ! -d "$DIR" ] || LAST_COUNT=$(find "$DIR" -maxdepth 1 -type f | wc -l)
+                        [ ! -d "$DIR" ] || LAST_COUNT=$(count_left "$DIR" -maxdepth 1 -type f)
                         LAST_DIR=$DIR
                         counted_in_row=1
                         count=$LAST_COUNT
                     else
                         # a count taken in this row already left out its moved names; a later row's name lowers it once it
-                        # left. Test mode moves nothing: each later name lowers it
-                        [ "$LAST_COUNT" = 0 ] || { [ "$TESTMODE" = no ] && { [ "$counted_in_row" = 1 ] || [ -e "$FILE" ]; }; } || LAST_COUNT=$((LAST_COUNT - 1))
+                        # left
+                        [ "$LAST_COUNT" = 0 ] || [ "$counted_in_row" = 1 ] || on_source "$FILE" || LAST_COUNT=$((LAST_COUNT - 1))
                         count=$LAST_COUNT
                     fi
                     mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of file(s): $count" "Clean Folder - End Loop"
@@ -3188,18 +3224,21 @@ processTheMoves() {
                     else
                         note_emptied_share
                         # the share's top folder is cleanTopFolder's, after the pass and in topFolder mode only
-                        if [ "$TESTMODE" = "no" ] && [ "$DIR" != "${SOURCE}/${SHARENAME}" ]; then
-                            # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
-                            if [ -d "${DIR}" ]; then
-                                if ! is_zfs_dataset_mountpoint "${DIR}"; then
-                                    if rmdir "${DIR}" 2>/dev/null; then
-                                        mvlogger "Deleted empty folder: ${DIR}"
-                                    else
-                                        mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Folder"
-                                    fi
+                        if [ "$DIR" != "${SOURCE}/${SHARENAME}" ] && [ -d "${DIR}" ] && on_source "$DIR"; then
+                            if is_zfs_dataset_mountpoint "${DIR}"; then
+                                mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
+                            # test mode asks what rmdir would: anything left in the folder keeps it
+                            elif [ "$TESTMODE" = "yes" ]; then
+                                if would_rmdir "$DIR"; then
+                                    TEST_GONE[$DIR]=1
+                                    mvlogger "TEST MODE: Would delete empty folder: ${DIR}"
                                 else
-                                    mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
+                                    mvDebuglogger "TEST MODE: Would fail to delete folder (not empty): ${DIR}" "Clean Folder"
                                 fi
+                            elif rmdir "${DIR}" 2>/dev/null; then
+                                mvlogger "Deleted empty folder: ${DIR}"
+                            else
+                                mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Folder"
                             fi
                         fi
                     fi
@@ -3213,8 +3252,8 @@ processTheMoves() {
                 LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
 
                 # Unraid's move deletes the folder itself; a parent gone too leaves the walk below nothing to do
-                if [ ! -d "$START_DIR" ]; then
-                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "$(qp "$START_DIR") is gone from the source: the walk starts at its parent $(qp "$(dirname "$START_DIR")")" "Clean Empty Moved Folder"
+                if [ ! -d "$START_DIR" ] || ! on_source "$START_DIR"; then
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "$(qp "$START_DIR") $([ -d "$START_DIR" ] && echo "would be" || echo is) gone from the source: the walk starts at its parent $(qp "$(dirname "$START_DIR")")" "Clean Empty Moved Folder"
                     START_DIR=$(dirname "$START_DIR")
                 fi
 
@@ -3224,7 +3263,7 @@ processTheMoves() {
 
                 mvDebuglogger "Cycle of delete empty folder: ${DIR}" "Clean Empty Moved Folder - Start Loop"
 
-                while [[ -d "$DIR" && "$DIR" != "${SOURCE}/${SHARENAME}" ]]; do
+                while [[ -d "$DIR" && "$DIR" != "${SOURCE}/${SHARENAME}" ]] && on_source "$DIR"; do
                     DIR_LIST+="${DIR}"$'\n'
                     DIR="$(dirname "${DIR}")"
                 done
@@ -3249,8 +3288,8 @@ processTheMoves() {
                     fi
 
                     # the folder's own entries only: a walk below would mount each snapshot a child dataset shows
-                    empty_file_count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
-                    empty_dir_count=$(find "$DIR" -mindepth 1 -maxdepth 1 -type d | wc -l)
+                    empty_file_count=$(count_left "$DIR" -maxdepth 1 -type f)
+                    empty_dir_count=$(count_left "$DIR" -mindepth 1 -maxdepth 1 -type d)
 
                     # Folder is truly empty
                     if [ "$empty_file_count" -eq 0 ] && [ "$empty_dir_count" -eq 0 ]; then
@@ -3261,8 +3300,13 @@ processTheMoves() {
                                 mvDebuglogger "Failed to delete moved folder (may not be empty): ${DIR}" "Clean Empty Moved Folder"
                                 break
                             fi
-                        else
+                        # test mode asks what rmdir would: anything left in the folder, such as a symlink, keeps it
+                        elif would_rmdir "$DIR"; then
+                            TEST_GONE[$DIR]=1
                             mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
+                        else
+                            mvDebuglogger "TEST MODE: Would fail to delete moved folder (not empty): ${DIR}" "Clean Empty Moved Folder"
+                            break
                         fi
                         chain_emptied=1
 
