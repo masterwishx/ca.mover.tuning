@@ -2565,7 +2565,7 @@ count_left() {
     echo "$n"
 }
 
-# Whether a real run's rmdir would take folder $1: nothing left in it, as count_left sees, and nothing mounted on it
+# Whether a real run's rmdir would take folder $1: nothing left in it, as count_left sees, and no ZFS dataset mounted on it
 would_rmdir() { [ "$(count_left "$1" -mindepth 1 -maxdepth 1)" = 0 ] && ! is_zfs_dataset_mountpoint "$1"; }
 
 # In topFolder mode, notes this row's share top folder for the check after the pass; fills processTheMoves' TOP_SEEN
