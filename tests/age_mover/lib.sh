@@ -169,7 +169,7 @@ EOF
 # as Linux does, rmdir refuses a folder something is mounted on
 cat >"$T/bin/rmdir" <<'EOF'
 #!/bin/bash
-if [ -n "$(awk -F'\t' -v p="${*: -1}" '$1 == p' "${0%/bin/rmdir}/zfs.private" 2>/dev/null)" ]; then
+if [ -n "$(cat "${0%/bin/rmdir}/zfs" "${0%/bin/rmdir}/zfs.private" 2>/dev/null | awk -F'\t' -v p="${*: -1}" '$1 == p')" ]; then
     echo "rmdir: failed to remove '${*: -1}': Device or resource busy" >&2
     exit 1
 fi
