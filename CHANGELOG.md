@@ -2,11 +2,7 @@
 
 ## Unreleased
 
-- fix: correct feature descriptions and improve clarity in README.md
-- fix: correct typos and improve formatting in README.md
-- fix: update tip for settings page in README.md
-- fix: update Unraid badge color in README.md
-- Update README.md (8957161)
+- No changes to the plugin since 2026.11.26a: README updates and release workflow fixes only. (masterwishx, chodeus)
 
 ## 2026.11.26a (beta)
 
