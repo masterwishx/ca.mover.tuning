@@ -183,10 +183,10 @@ jobs:
         set -euo pipefail
         # its own line, so set -e stops on an unreadable pull request instead of removing an open one's build
         state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR" --jq .state)
-        # PR cleanup's hourly sweep may get there first: "release not found", or a 404 when it removes it between
-        # gh's lookup and its delete, means it did, and the build is gone either way
+        # PR cleanup's sweep may get there first ("release not found", or a 404 between gh's lookup and its delete).
+        # The tag stays: that sweep finds it, notes the comment and removes it, so a failed note below is redone
         if [ "$state" != "open" ]; then
-          out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$TAG" --cleanup-tag --yes 2>&1) \
+          out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$TAG" --yes 2>&1) \
             || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; exit 1; }
           echo "closed=true" >> "$GITHUB_OUTPUT"
           echo "Pull request #$PR closed while publishing; the release was removed again."
