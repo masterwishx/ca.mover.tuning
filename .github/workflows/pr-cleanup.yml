@@ -27,18 +27,21 @@ jobs:
       run: |
         set -euo pipefail
         marker="<!-- pr-build -->"
-        note() { [ -z "$1" ] || gh api "repos/$GITHUB_REPOSITORY/issues/comments/$1" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null; }
         # set -e does not reach into a function called with ||, so every failure returns 1 itself
-        clean() {  # $1 pull request, $2 its tags, $3 closed or gone (deleted, so no note to update)
-          local id="" tag out
-          if [ "$3" = closed ]; then
-            id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || return 1
-            id=${id%%$'\n'*}
-          fi
-          [ "$id" != null ] || id=""
+        # looks the comment up each time: a publish run may post its first one between two notes
+        note() {  # $1 pull request, $2 closed or gone (deleted, so no note to update)
+          local id
+          [ "$2" = closed ] || return 0
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || return 1
+          id=${id%%$'\n'*}
+          [ -n "$id" ] || return 0
+          gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null
+        }
+        clean() {  # $1 pull request, $2 its tags, $3 closed or gone
+          local tag out
           # the note before the deletes, as this pull request is not visited again once they are done, and after
           # them, as a publish run may have written its own note in between
-          note "$id" || return 1
+          note "$1" "$3" || return 1
           while read -r tag; do
             if grep -qxF -- "$tag" <<< "$builds"; then
               # a publish run that saw the close may remove it first: "release not found", or a 404 when it does so
@@ -50,7 +53,7 @@ jobs:
             fi
             echo "removed $tag"
           done <<< "$2"
-          note "$id" || return 1
+          note "$1" "$3" || return 1
         }
         # listed first: a failing call inside a process substitution would read as "nothing to remove". Tags before
         # releases, so a release published between the two lists is never taken for a tag without one
