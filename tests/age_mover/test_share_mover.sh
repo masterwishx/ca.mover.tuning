@@ -127,6 +127,31 @@ mv "$T/move.aside" /usr/libexec/unraid/move
 log_has 'move exited 127'
 cache_is sh sh/a.txt
 
+# find fails, as when a folder goes during the walk: the run exits with find's status, or move's when move fails too
+mkdir -p "$T/wrap"
+cat >"$T/wrap/find" <<'EOF'
+#!/bin/bash
+/usr/bin/find "$@"
+exit 1
+EOF
+chmod 755 "$T/wrap/find"
+for movetoo in no yes; do
+    share "find fails$([ "$movetoo" = no ] || echo ', and move too')" yes
+    mk cache sh/a.txt
+    if [ "$movetoo" = no ]; then
+        PATH=$T/wrap:$PATH run 1
+        log_has 'Move command failed: find exited 1, move exited 0'
+        array_is sh sh/a.txt
+    else
+        move_hook 'cat >/dev/null; exit 3'
+        PATH=$T/wrap:$PATH run 3
+        move_unhook
+        log_has 'Move command failed: find exited 1, move exited 3'
+        cache_is sh sh/a.txt
+    fi
+done
+rm -rf "$T/wrap"
+
 # /mnt/other is no array disk or pool, as Unassigned Devices' mounts: a folder there that only shares the name stays.
 # disk10 is an array disk too
 share 'a prefer share' prefer
