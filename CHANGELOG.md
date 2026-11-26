@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.11.26a (beta)
 
 - perf: Faster in-use file checks: file leases replace fuser where the system supports them. (coppit)
 - perf: Logging costs much less, and almost nothing when it is off. (coppit)
