@@ -347,7 +347,8 @@ same_in_test_mode "topFolder, a row's file gone before the run, in a folder an e
     'Deleted empty folder: /mnt/cache/sh/d' 'Not deleting top-level folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh')" \
     one_name_gone cleanFolders topFolder
 
-# the gone name's recount takes the count back to the two still on the source; the later rows lower it to 0
+# the gone name's recount keeps the count at the two still on the source, where lowering it would give 1; the later
+# rows lower it to 0
 middle_name_gone() {
     mk cache sh/d/a.txt sh/d/b.txt sh/d/c.txt sh/d/d.txt sh/keep.txt
     for f in a b c d; do row 'move from primary' f "sh/d/$f.txt"; done | list
