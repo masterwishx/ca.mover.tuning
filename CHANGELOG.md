@@ -13,7 +13,6 @@
 - fix: Turbo write is now restored when a move is stopped, Move Now included. (chodeus)
 - fix: Move Now no longer reads Unassigned Devices mounts or runs text from a share name. (chodeus)
 - fix: Test mode's folder cleanup and turbo write lines now match what a real run does. (chodeus)
-- No changes to the plugin since 2026.11.26a: README updates and release workflow fixes only. (masterwishx, chodeus)
 
 ## 2026.11.26b (beta)
 
