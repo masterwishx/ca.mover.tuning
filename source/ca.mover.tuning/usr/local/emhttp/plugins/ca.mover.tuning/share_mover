@@ -147,6 +147,7 @@ if ! mountpoint -q /mnt/user0 && [ ${#POOLCFGS[@]} -lt 2 ]; then
 fi
 
 # Remove the pid file only while it still names this run, so overlapping runs cannot delete each other's
+# shellcheck disable=SC2329 # the EXIT traps call it
 pid_cleanup() {
     [ "$(cat "$PIDFILE" 2>/dev/null)" = "$$" ] && rm -f "$PIDFILE"
 }
@@ -170,8 +171,8 @@ force_turbo() {
         mvlogger "TEST MODE: Would force turbo write on"
         return 0
     fi
-    # set first: a stop that ends the run from here on puts the write method back before the pid file goes, and a second
-    # stop waits for it; a KILL cannot
+    # set first: a stop that ends the run from here on tries once to put the write method back before the pid file goes,
+    # and a second stop waits for that try; a KILL cannot
     trap 'trap "" HUP INT TERM; restore_turbo; pid_cleanup' EXIT
     mvlogger "Forcing turbo write on"
     /usr/local/sbin/mdcmd set md_write_method 1 || mvlogger "Could not force turbo write on: mdcmd exited $?"
@@ -290,7 +291,11 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
             force_turbo
             mvlogger "Complete Mover Command: $FINDSTR | $MOVE -d $LOGLEVEL"
             find "${paths[@]}" -type f -depth | "$MOVE" -d "$LOGLEVEL"
+            st=("${PIPESTATUS[@]}")
             restore_turbo
+            # move's own failure first: find's SIGPIPE follows from it
+            MOVE_RC=$((st[1] ? st[1] : st[0]))
+            [ "$MOVE_RC" = 0 ] || mvlogger "Move command failed: find exited ${st[0]}, move exited ${st[1]}"
         fi
 
     fi
@@ -298,3 +303,4 @@ fi
 
 mvlogger "$(titleLine 'WE ARE DONE !' '*')"
 [ "$LOGLEVEL" = 1 ] || echo "Mover tuning plugin done!"
+exit "${MOVE_RC:-0}"

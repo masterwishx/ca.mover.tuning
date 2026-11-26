@@ -108,6 +108,25 @@ rm "$T/bin/move"
 log_has "Complete Mover Command: find \"/mnt/cache/sh\" -type f -depth | $T/bin/move -d 1"
 array_is sh sh/a.txt
 
+# a move that fails: the run puts the write method back, then exits with move's status
+share 'turbo on, move fails' yes enableTurbo yes
+mk cache sh/a.txt
+move_hook 'cat >/dev/null; exit 3'
+run 3
+move_unhook
+log_has 'Move command failed: find exited 0, move exited 3'
+mdcmd_calls 'set md_write_method 1' 'set md_write_method auto'
+cache_is sh sh/a.txt
+
+share 'no move anywhere' yes
+mk cache sh/a.txt
+mv /usr/libexec/unraid/move "$T/move.aside"
+# shellcheck disable=SC2016 # the text of share_mover's move line
+run 127 "$SM: line $(grep -nF '"$MOVE" -d' "$SM" | cut -d: -f1): : command not found"
+mv "$T/move.aside" /usr/libexec/unraid/move
+log_has 'move exited 127'
+cache_is sh sh/a.txt
+
 # /mnt/other is no array disk or pool, as Unassigned Devices' mounts: a folder there that only shares the name stays.
 # disk10 is an array disk too
 share 'a prefer share' prefer
@@ -239,6 +258,24 @@ run 0
 mdcmd_calls 'set md_write_method 1' 'set md_write_method auto'
 log_count 1 'Could not restore original turbo write mode Auto (read/modify/write): mdcmd exited 143'
 log_count 2 'Restoring original turbo write mode Auto (read/modify/write)'
+array_is sh sh/a.txt
+
+# a stop during the moves, and mdcmd fails to put the write method back: the EXIT trap tries once, before the pid file goes
+share 'turbo on, a stop during the moves, mdcmd fails to put the write method back' yes enableTurbo yes
+mk cache sh/a.txt
+cat >/usr/local/sbin/mdcmd <<EOF
+#!/bin/bash
+w=\$(cat /var/run/mover.pid 2>/dev/null)
+echo "mdcmd \$*\${w:+ (pid file there)}" >>$T/mdcmd.calls
+[ "\$3" != auto ]
+EOF
+# shellcheck disable=SC2016 # the hook expands it
+move_hook 'kill -TERM "$(cat /var/run/mover.pid)"'
+run 143
+move_unhook
+mdcmd_calls 'set md_write_method 1 (pid file there)' 'set md_write_method auto (pid file there)'
+log_count 1 'Could not restore original turbo write mode Auto (read/modify/write): mdcmd exited 1'
+check 'the run removed its pid file' '' "$(ls /var/run/mover.pid 2>/dev/null)"
 array_is sh sh/a.txt
 
 share 'turbo on, mdcmd fails to force it' yes enableTurbo yes
