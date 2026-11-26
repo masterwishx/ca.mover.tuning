@@ -3,7 +3,7 @@
 # the tests delete folders under /mnt, so set it only inside a throwaway container.
 HERE=$(cd "$(dirname "$0")" && pwd)
 if [ "${AGE_MOVER_TEST:-}" != 1 ]; then
-    # as CI's container job: PID 1 is tail, which reaps no orphan, so a test that leaves one fails here as it does in CI
+    # as CI's container job: PID 1 is tail, which reaps no orphan, so an orphan stays a zombie here as it does in CI
     c=$(docker run -d --rm -v "$(cd "$HERE/../.." && pwd):/src:ro" "${AGE_MOVER_IMAGE:-debian:bookworm-slim}" \
         tail -f /dev/null) || exit 2
     trap 'docker rm -f "$c" >/dev/null' EXIT
