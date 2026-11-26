@@ -55,8 +55,8 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 ### Safety, logging and troubleshooting
 
 - Test Mode (dry run) with clear warnings.
-- **Live progress** of a run under the Move button: named steps (filtering, deciding, moving), the file being processed, size left, speed and ETA. Updated every 5 seconds while a file moves (with the Move tool, in 2 GiB steps).
-- Verified results: a move or sync counts as successful only after the file has arrived at the destination and been removed from the source. Successful and failed items are counted and reported separately in logs and notifications.
+- **Live progress** of a run under the Move button: named steps (filtering, deciding, moving), the file being processed, size left, speed and ETA. Updated every 5 seconds while a file moves (with the Move tool, in 2 GiB steps). On Unraid 7.4 and newer, the rows show only when **Mover Progress** is enabled in Settings → Scheduler → Mover Settings (it is disabled by default).
+- Verified results: a move counts as successful only after the file has arrived at the destination and is gone from the source; a sync, only after the copy matches the source in size and modification time. Successful and failed items are counted and reported separately in logs and notifications.
 - **Pause** and **Resume** buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The per-share Move and the runs of the built-in mover that the plugin starts (forced move, "Move now" without the filters) pause once their current file is done; runs Unraid starts itself are left alone. The next scheduled run or a cache watchdog trigger resumes a paused run.
 - Detailed logs (file only, or file and syslog), configurable log folder and log age, a Log files row that views or downloads any run's log, and a "Run by" entry showing whether the run came from cron, the CLI or the web UI.
 - The log explains why a file did not move (for example "No space left on device") and warns when a share's minimum free space is smaller than the largest file to move.
@@ -80,12 +80,12 @@ Next, it checks each of the top-level directories (shares) on the cache disk.
 For all shares with the 'Use Cache' setting set to "prefer" or "yes", we use 'find' to create a filtered file list of that share directory.
 For all shares with the 'Use Cache' setting set to "only", we use 'du' or 'zfs list' to get the total size of that share directory.
 
-The list is sorted by "Use cache", increasing age, pool, and file inode, giving priority for being on cache to "cache only" shares, then "cache prefer" by moving newest from array to cache and older to array, and finally to "cache yes" shares by moving only from cache to array.
+The list is sorted by pool, "Use cache", newest file first, and file inode. This gives priority for space on the Primary pool to "cache only" shares, then to "cache prefer" shares, whose newest files move from Secondary to Primary up to the fill-up level, and last to "cache yes" shares, whose files move from Primary to Secondary in the Move order (oldest first by default).
 Please note that if the age setting is set to something other than "Auto (smart cache)", this script is actually dumb: it does not check for size and free space and relies on your own calculations.
 Files at the top level of the cache or an array disk (i.e. not in a share) are never moved.
 
 The list is then processed with the chosen tool (Rsync by default, or Unraid's move utility).
-For each file, if the file is not "in use" by any process (as detected by an exclusive Linux file lease, with `fuser` as a compatibility fallback when leases or Perl are unavailable), then the file is moved and, upon success, deleted from the source disk. If the file already exists on the target, it is not moved and the source is not deleted. All metadata of moved files/directories is preserved: permissions, ownership, extended attributes, and access/modified timestamps.
+For each file, if the file is not "in use" by any process (as detected by an exclusive Linux file lease, with `fuser` as a compatibility fallback when leases or Perl are unavailable), then the file is moved and, upon success, deleted from the source disk. If the file already exists on the target, Unraid's move leaves both copies in place and the run counts the file as not moved; Rsync replaces the copy on the target with the source file. Moved files keep their permissions, ownership, extended attributes and modification time. Unraid's move also keeps the access time; with Rsync, it becomes the time of the copy.
 If an error occurs while copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
 ## Changelog
