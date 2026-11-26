@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- fix: correct feature descriptions and improve clarity in README.md
+- fix: correct typos and improve formatting in README.md
+- fix: update tip for settings page in README.md
+- fix: update Unraid badge color in README.md
+- Update README.md (8957161)
+
 ## 2026.11.26a (beta)
 
 - perf: Faster in-use file checks: file leases replace fuser where the system supports them. (coppit)
