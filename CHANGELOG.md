@@ -4,7 +4,7 @@
 
 - perf: Faster in-use file checks: file leases replace fuser where the system supports them. (coppit)
 - perf: Logging costs much less, and almost nothing when it is off. (coppit)
-- perf: Large moves run faster, with fewer hardlink lookups and top folder checks. (chodeus)
+- perf: Large moves run faster, with fewer hardlink lookups and top folder checks. (chodeus, coppit)
 - fix: Apply now changes the mover schedule to the saved settings. (chodeus)
 - fix: File names holding $, <, : and similar characters now move; the filename check is removed. (chodeus)
 - fix: A file name holding < or > no longer breaks notifications before Unraid 7.2. (chodeus)
