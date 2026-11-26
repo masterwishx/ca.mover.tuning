@@ -221,6 +221,39 @@ cat >/usr/local/sbin/mdcmd <<EOF
 echo "mdcmd \$*" >>$T/mdcmd.calls
 EOF
 
+# the plugin's stop signals mdcmd before the run, so mdcmd can end before it sets the write method back (143 here): the
+# run keeps its EXIT trap and tries again as it ends
+share 'turbo on, mdcmd fails as the run puts the write method back' yes enableTurbo yes
+mk cache sh/a.txt
+touch "$T/fail_once"
+cat >/usr/local/sbin/mdcmd <<EOF
+#!/bin/bash
+[ "\$3" != auto ] || [ ! -e $T/fail_once ] || { rm -f $T/fail_once; exit 143; }
+echo "mdcmd \$*" >>$T/mdcmd.calls
+EOF
+run 0
+mdcmd_calls 'set md_write_method 1' 'set md_write_method auto'
+log_count 1 'Could not restore original turbo write mode Auto (read/modify/write): mdcmd exited 143'
+log_count 2 'Restoring original turbo write mode Auto (read/modify/write)'
+array_is sh sh/a.txt
+
+share 'turbo on, mdcmd fails to force it' yes enableTurbo yes
+mk cache sh/a.txt
+cat >/usr/local/sbin/mdcmd <<EOF
+#!/bin/bash
+[ "\$3" != 1 ] || exit 1
+echo "mdcmd \$*" >>$T/mdcmd.calls
+EOF
+run 0
+mdcmd_calls 'set md_write_method auto'
+log_count 1 'Could not force turbo write on: mdcmd exited 1'
+log_count 1 'Restoring original turbo write mode Auto (read/modify/write)'
+array_is sh sh/a.txt
+cat >/usr/local/sbin/mdcmd <<EOF
+#!/bin/bash
+echo "mdcmd \$*" >>$T/mdcmd.calls
+EOF
+
 # a share name with shell in it is a name: the run moves its files and runs nothing
 share 'a share name that holds a command' yes
 # shellcheck disable=SC2016 # the name holds shell text on purpose
