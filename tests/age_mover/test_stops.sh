@@ -203,10 +203,12 @@ real_pgrep=$(command -v pgrep)
 (bash -c 'sleep 30; exit 0' & echo $! >"$T/run.pid")
 run=$(cat "$T/run.pid")
 gone=$(($(cat /proc/sys/kernel/pid_max) + 1))
+# shellcheck disable=SC2016 # the stand-in expands its own $@ and $*
 printf '#!/bin/bash\n%q "$@"\n[ "${*: -1}" != %q ] || echo %q\n' "$real_pgrep" "$run" "$gone" >"$T/bin/pgrep"
 chmod 755 "$T/bin/pgrep"
 hash -r
 echo "$run" >"$T/pid"
+# shellcheck disable=SC2034 # stop, from funcs.sh, reads them
 check "the stop said only that it stopped" 'mover: stopped' \
     "$(PIDFILE=$T/pid MOVER_STATUS=$T/mover.ini PAUSEFILE=$T/pause MOVINGFILE=$T/moving; stop 2>&1)"
 rm -f "$T/bin/pgrep"
