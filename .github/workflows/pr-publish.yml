@@ -221,7 +221,7 @@ jobs:
           id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -X POST -f body="$body" --jq .id)
         fi
         # checked after the write: PR cleanup may have removed the build since the closed check, and it notes after
-        # its deletes, so whichever note lands last says what is there
+        # its release deletes, so whichever note lands last says what is there
         [ "$VERIFIED" = true ] && [ "$CLOSED" != true ] || exit 0
         out=$(gh release view --repo "$GITHUB_REPOSITORY" "$TAG" 2>&1 >/dev/null) && exit 0
         [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }

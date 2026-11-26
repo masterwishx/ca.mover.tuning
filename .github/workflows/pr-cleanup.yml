@@ -28,7 +28,6 @@ jobs:
         set -euo pipefail
         marker="<!-- pr-build -->"
         # set -e does not reach into a function called with ||, so every failure returns 1 itself
-        # looks the comment up each time: a publish run may post its first one between two notes
         note() {  # $1 pull request, $2 closed or gone (deleted, so no note to update)
           local id
           [ "$2" = closed ] || return 0
@@ -39,30 +38,29 @@ jobs:
         }
         clean() {  # $1 pull request, $2 its tags, $3 closed or gone
           local tag out
-          # the note before the deletes, as this pull request is not visited again once they are done, and after
-          # them, as a publish run may have written its own note in between
+          while read -r tag; do
+            grep -qxF -- "$tag" <<< "$builds" || continue
+            # a publish run that saw the close may remove it first: "release not found", or a 404 when it does so
+            # between gh's lookup and its delete, is that outcome
+            out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes 2>&1) \
+              || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
+          done <<< "$2"
+          # after the release deletes: a publish run's comment lands before it or finds no release (pr-publish). Before
+          # the tag deletes: a failed note keeps the tags, so the next sweep comes back to this pull request
           note "$1" "$3" || return 1
           while read -r tag; do
-            if grep -qxF -- "$tag" <<< "$builds"; then
-              # a publish run that saw the close may remove it first: "release not found", or a 404 when it does so
-              # between gh's lookup and its delete, is that outcome
-              out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes --cleanup-tag 2>&1) \
-                || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
-            else
-              # a publish run's --cleanup-tag may remove it first: GitHub answers that with this 422, or a 404
-              out=$(gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" 2>&1 >/dev/null) \
-                || [[ "$out" == *"Reference does not exist"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
-            fi
+            # a publish run's --cleanup-tag may remove it first: GitHub answers that with this 422, or a 404
+            out=$(gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" 2>&1 >/dev/null) \
+              || [[ "$out" == *"Reference does not exist"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
             echo "removed $tag"
           done <<< "$2"
-          note "$1" "$3" || return 1
         }
         # listed first: a failing call inside a process substitution would read as "nothing to remove". Tags before
         # releases, so a release published between the two lists is never taken for a tag without one
         refs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/pr-" --jq '.[].ref | ltrimstr("refs/tags/") | select(test("^pr-[0-9]+-"))')
         listed=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.tag_name | test("^pr-[0-9]+-")) | "\(.prerelease) \(.tag_name)"')
         builds=$(sed -n 's/^true //p' <<< "$listed")
-        # a tag no release has: gh deletes the release first, so a failed tag delete leaves the tag behind
+        # a tag no release has: clean deletes tags last, so a failure after the release deletes leaves them behind
         orphans=$(grep -vxF -f <(sed 's/^[a-z]* //' <<< "$listed") <<< "$refs") || [ $? = 1 ]
         tags=$(printf '%s\n' "$builds" "$orphans" | sed '/^$/d' | sort -u)
         [ -n "$tags" ] || { echo "No test builds."; exit 0; }
