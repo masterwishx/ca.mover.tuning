@@ -74,6 +74,29 @@ cache_is sh sh/bare.txt
 no_private
 notices "$NOT_MOUNTED"
 
+# mdcmd fails to put the write method back: no other try once the pid file has gone, as a run started then may force it
+begin "Clean ZFS datasets, a stop of the run alone, mdcmd fails to put the write method back" cleanFolders topFolder \
+    cleanDatasets yes notify errorsOnly enableTurbo yes
+one_share
+mkdir -p /usr/local/sbin /var/local/emhttp
+echo 'md_write_method="0"' >/var/local/emhttp/var.ini
+# shellcheck disable=SC2016 # the stand-in expands its own $*, $w and $3
+printf '#!/bin/bash\n[ ! -e %q ] || w=" (pid file there)"\necho "mdcmd $*$w" >>%q\n[ "$3" != 0 ]\n' "$T/pid" \
+    "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
+chmod 755 /usr/local/sbin/mdcmd
+echo $$ >"$T/pid"
+{ stop_hook run; echo 'echo y >/mnt/cache/sh/bare.txt'; } >"$T/zfs.on_mount.zfs"
+run_moves 'processTheMoves did not return'
+check "turbo write forced, then one try to put it back, before the pid file goes" \
+    "$(printf '%s\n' 'mdcmd set md_write_method 1 (pid file there)' 'mdcmd set md_write_method 0 (pid file there)')" \
+    "$(cat "$T/mdcmd.calls")"
+log_count 1 'Could not restore original turbo write mode Read/modify/write: mdcmd exited 1'
+check "the run removed its pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+cache_is sh sh/bare.txt
+no_private
+notices "$NOT_MOUNTED"
+
 # a second stop that signals every process, as the plugin's does, reaches the run and the mdcmd that puts the write
 # method back: both wait for it
 begin "Clean ZFS datasets, a second stop as the stopped run puts the write method back" cleanFolders topFolder \

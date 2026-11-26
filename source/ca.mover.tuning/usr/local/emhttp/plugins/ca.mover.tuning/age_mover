@@ -3377,10 +3377,9 @@ processTheMoves() {
     notice_lines=$(finish_on_stop dataset_problems_notice)
     [ -z "$notice_lines" ] || printf '%s\n' "$notice_lines"
     if [ -n "$stopped" ]; then
-        # before the pid file goes, as a run that starts once it has gone may force turbo write again; a second stop must
-        # not end the run, or its mdcmd, first
+        # a second stop must not end the run, or its mdcmd, before the pid file goes
         trap '' TERM HUP INT
-        restore_turbo
+        last_restore_turbo
         # the plugin's stop removes these once the run has ended; a stop that signals the run alone leaves them
         [ "$(cat "$PIDFILE" 2>/dev/null)" != "$$" ] || rm -f "$PIDFILE" "$MOVER_STATUS" "$PAUSEFILE" "$MOVINGFILE"
         exit 0
@@ -3466,6 +3465,10 @@ restore_turbo() {
     TURBO_WAS=""
     trap - EXIT
 }
+
+# The last try, before the run removes its pid file: a run that starts after may force turbo write, which a later try
+# would undo
+last_restore_turbo() { restore_turbo || trap - EXIT; }
 
 # The settings pages cannot offer this combination, so it only arrives by saving a
 # lower moving threshold while the old freeing value is still selected.
@@ -3641,6 +3644,7 @@ start() {
 
     mvDebuglogger "Reset run-once settings completed" "run-once settings END"
 
+    last_restore_turbo
     mvlogger "Cleaning lock and stop files"
     for file in $PIDFILE $SOFTSTOPFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE; do
         [[ -e "$file" ]] && rm -f "$file"
