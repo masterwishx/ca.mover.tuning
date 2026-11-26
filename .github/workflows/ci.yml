@@ -19,11 +19,16 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install xmllint
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils
+      - name: Install test tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libxml2-utils perl
 
       - name: Validate plugin manifest (XML)
         run: xmllint --noout plugins/ca.mover.tuning.plg
+
+      - name: Test mover file leases
+        run: |
+          bash -n source/ca.mover.tuning/usr/local/emhttp/plugins/ca.mover.tuning/age_mover
+          bash .github/scripts/test_files_in_use.sh
 
       # CHANGELOG.md must render to the committed CHANGES block for this branch's channel,
       # pluginURL must point at this branch, and the manifest md5 must match the served package.
@@ -83,3 +88,43 @@ jobs:
 
       - name: Run tests
         run: python -m pytest .github/scripts/release/tests -q
+
+  age-mover:
+    name: age_mover tests
+    runs-on: ubuntu-latest
+    container: debian:bookworm-slim
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run the age_mover tests
+        env:
+          AGE_MOVER_TEST: '1'
+        run: bash tests/age_mover/run.sh
+
+  # Dependabot's pull requests merge once the jobs above pass; release-notes runs only for the stable release PR.
+  # The PR's author, not github.actor: the actor is whoever acted last and can be spoofed
+  dependabot-merge:
+    name: Merge Dependabot pull request
+    needs: [validate, release-notes, release-scripts, age-mover]
+    if: >-
+      !cancelled() && github.event_name == 'pull_request'
+      && github.event.pull_request.user.login == 'dependabot[bot]'
+      && github.repository == github.event.pull_request.head.repo.full_name
+      && needs.validate.result == 'success' && needs.release-scripts.result == 'success'
+      && needs.age-mover.result == 'success' && contains(fromJSON('["success", "skipped"]'), needs.release-notes.result)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          # the head this run tested: a newer push merges only after its own run passes
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr merge --merge --match-head-commit "$HEAD_SHA" "$PR_URL"

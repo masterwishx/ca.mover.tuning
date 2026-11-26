@@ -8,6 +8,9 @@
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=Mover Tuning 插件未能移动/同步 %s 个文件和 %s 个文件夹，共 %s。
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s 个文件和 %s 个文件夹已移动/同步，但 rsync 报告了错误。请查看 Mover Tuning 日志。
 Action=操作
+a file is hidden under it stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=其下有文件被遮盖：停止向该共享写入，运行 zfs unmount %s，将 %s 中的所有内容移到别处，运行 zfs mount %s，然后移回 %s，不要覆盖其中已有的文件：保留两份副本并加以比较
+mounted again, but the look for a file written to %s as it was mounted was cut short, so one may be hidden under it stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=已重新挂载，但对挂载期间写入 %s 的文件的检查被中断，其下可能有文件被遮盖：停止向该共享写入，运行 zfs unmount %s，将 %s 中的所有内容移到别处，运行 zfs mount %s，然后移回 %s，不要覆盖其中已有的文件：保留两份副本并加以比较
+the remount was cut short, so it may not be mounted or may hide a file stop writes to the share, if zfs mount lists it at %s run zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=重新挂载被中断，因此它可能未挂载，或其下有文件被遮盖：停止向该共享写入，如果 zfs mount 列出它挂载在 %s，运行 zfs unmount %s，将 %s 中的所有内容移到别处，运行 zfs mount %s，然后移回 %s，不要覆盖其中已有的文件：保留两份副本并加以比较
 All community developers=所有社区开发者
 Allow force mover schedule to run during a parity checkrebuild=允许强制移动计划在奇偶校验/重建期间运行
 All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=所有插件设置都将恢复为默认值，包括 Mover Tuning 计划、强制移动计划和缓存看门狗，并且所有共享的覆盖设置都将被删除。
@@ -24,6 +27,7 @@ Cache → Array=缓存 → 阵列
 Cancel=取消
 Clean empty folders=清理空文件夹
 Clean empty ZFS datasets=清理空的 ZFS 数据集
+Clean empty ZFS datasets did not finish for %s The mover log has the details unless Log Mover Tuning plugin actions is set to No=清理空的 ZFS 数据集未能完成：%s。详情见日志，除非“记录 Mover Tuning 插件日志”设为“否”。
 CLI help commands=命令行帮助
 Comma separated list of file types=以逗号分隔的文件扩展名列表
 Cron Schedule to force move all of files=强制移动所有文件的 Cron 计划
@@ -35,22 +39,17 @@ Delete Mover Log files over than this days old=日志文件保留天数
 Disable Mover running on a schedule=禁用 Mover 按计划运行
 disables test mode=禁用测试模式
 disables the plugins schedule=禁用插件的计划
-disables validation of input filenames=禁用文件名验证
 Download=下载
 enable smart caching=启用智能缓存
 Error checking mover status Please refresh the page=检查 Mover 状态时出错，请刷新页面。
 Error Config file %s not found=错误：找不到配置文件“%s”。
 Error Failed to convert CRLF line endings in %s Check file permissions=错误：无法转换 %s 中的 CRLF 换行符，请检查文件权限。
-Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=错误：文件名路径无效：%s。请修改为有效的文件名，或禁用“验证文件名防止攻击”选项。
 Error No files found to move for %s=错误：未找到 %s 中需要移动的文件
 Errors Only=仅错误
 Estimated Completion=预计完成
 ETA=剩余时间
-Failed to destroy ZFS dataset %s — attempting to remount=销毁 ZFS 数据集 [%s] 失败，正在尝试重新挂载。
-Failed to remount dataset %s=重新挂载数据集 [%s] 失败
 Failed to reset Mover Tuning Check the logs=重置 Mover Tuning 失败，请查看日志。
 Failed to start Mover Tuning Check the logs=启动 Mover Tuning 失败，请查看日志。
-Failed to unmount ZFS dataset %s=卸载 ZFS 数据集 [%s] 失败
 Fatal error %s does not exist, check this=严重错误：%s 不存在，请检查。
 Fatal error cache not enabled and less than 2 pools set up=严重错误：未启用缓存，且设置的存储池少于 2 个。
 Fatal error cache not present, or only cache present, and less than 2 pools set up=严重错误：缓存不存在或只有缓存，且设置的存储池少于 2 个。
@@ -74,7 +73,6 @@ If you want Mover Tuning to fully manage scheduling, disable it in Mover Setting
 Ignore All hidden files and directories=忽略隐藏文件和目录
 Ignore files and folders listed inside of a text file=忽略列表中的文件和文件夹
 Ignore file types=忽略指定文件类型
-Invalid characters to block=要阻止的无效字符
 Largest first=最大的优先
 Let scheduled mover run during a parity check rebuild=允许计划的 Mover 在奇偶校验/重建期间运行
 Log files=日志文件
@@ -83,6 +81,7 @@ Logs parent folder for Mover Tuning plugin=日志文件保存路径
 Low=低
 Maintainers=维护者
 make those plugins with ❤️ and a lot of ☕=用 ❤️（和很多 ☕）制作了这些插件。
+mounted read-only at %s stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=以只读方式挂载于 %s：停止向该共享写入，运行 umount %s，将 %s 中的所有内容移到别处，运行 zfs mount %s，然后移回 %s，不要覆盖其中已有的文件：保留两份副本并加以比较
 Move ALL files from current pool ignores filters and thresholds=从当前存储池移出**所有**文件（无视过滤条件和阈值）
 Move ALL files to current pool ignores filters and thresholds=将**所有**文件移入当前存储池（无视过滤条件和阈值）
 Move All from Primary->Secondary cacheyes shares pool percentage=主存储->次存储（cache:yes）共享全部移动的存储池百分比
@@ -124,7 +123,9 @@ Mover Tuning thresholds=Mover Tuning 阈值
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Mover Tuning 插件没有移动/同步任何文件。耗时：%s
 No log files yet=暂无日志文件
 Not Applicable Share Does Not Exist Yet=不适用（共享尚不存在）
+Not a valid cron schedule it is not applied=无效的 cron 计划：不会生效。
 Notify Mover Tuning plugin actions=通知设置
+not mounted stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=未挂载：停止向该共享写入，将 %s 中的所有内容移到别处，运行 zfs mount %s，然后移回 %s，不要覆盖其中已有的文件：保留两份副本并加以比较
 Oldest first=最旧的优先
 Only move files larger than this in MB=仅移动大于此大小的文件（MB）
 Only move files that are older than this in days=仅移动早于此天数的文件（天）
@@ -180,7 +181,6 @@ Use CTIME change time=使用状态更改时间（CTIME）
 Use global=使用全局设置
 Used IDE=开发工具
 User shares not enabled=用户共享未启用
-Validate input filenames to prevent attacks=验证文件名防止攻击
 Very Low=很低
 View=查看
 Want to support the developer and say Thank You=想支持开发者并说声**谢谢**吗？
@@ -236,36 +236,13 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 > 使用自定义 cron 条目运行 Mover Tuning 插件的 <strong><code>age_mover</code></strong> 计划（应用所有插件过滤器）。
 >
 > Cron 计划示例 <strong>0 */4 * * *</strong>。&nbsp; 表示<em>每</em><strong> 4 小时</strong>运行一次。&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> 什么是 Cron</a>
+>
+> 计划必须是有效的 cron 条目：无效的计划不会生效，错误会写入系统日志。
 :end
 
 :mover_tune_testmode_plug:
 <p> 测试模式<strong>不会</strong>运行 Mover，而是将自定义 find 命令的结果输出到 <em>/tmp/ca.mover.tuning/</em>。运行前和运行后的脚本仍会执行。</p>
 <p> 注意 - 测试模式不会阻止原始 Mover：它仍会按“定时强制移动所有文件”的计划运行；如果“立即移动按钮遵循过滤器”设为<strong>否</strong>，立即移动按钮也会运行原始 Mover。在 Unraid 7.2.1 及更高版本中，Unraid 自带的 Mover 计划和移动按钮始终运行原始 Mover。</p>
-:end
-
-:mover_tune_validate_plug:
-<p> <strong><em>在网络安全中，文件名可能成为潜在攻击和系统漏洞的重要途径。未经清理的文件名会带来重大风险，可能危及系统的完整性和安全性。</em></strong></p>
-<p> 验证文件名会在 Mover 处理每个文件名之前进行检查，确保<strong>只接受有效</strong>的文件名，<strong>降低</strong>攻击和漏洞的<strong>风险</strong>。</p>
-<p> <strong>仅</strong>当需要移动大量文件，并且<strong>确定</strong>所有文件名都<strong>有效</strong>、不含任何潜在安全风险时，才禁用此选项。</p>
-<p> 1. <strong>检查文件名长度</strong> - 文件名超过 255 个字符将被拒绝。</p>
-<p> 2. <strong>检查无效字符</strong> - 文件名不应包含任何被视为无效的字符，例如
-(<strong><em> $ </em></strong>), (<strong><em> / </em></strong>), (<strong><em> < </em></strong>), (<strong><em> > </em></strong>), (<strong><em> : </em></strong>), (<strong><em> " </em></strong>), (<strong><em> | </em></strong>), (<strong><em> ? </em></strong>), (<strong><em> * </em></strong>)。</p>
-<p> 3. <strong>防止路径遍历</strong> - 文件名不应包含可用于遍历目录的字符，例如 (<strong><em> ../ </em></strong>)。</p>
-<p> 只要有一项检查失败，该文件名就会被拒绝。</p>
-:end
-
-:mover_tune_invalidfilechars_plug:
-<p> 文件名中的以下字符：
-  <strong><em>$</em></strong>
-  <strong><em>/</em></strong>
-  <strong><em><</em></strong>
-  <strong><em>></em></strong>
-  <strong><em>:</em></strong>
-  <strong><em>"</em></strong>
-  <strong><em>|</em></strong>
-  <strong><em>?</em></strong>
-  <strong><em>*</em></strong>。
-</p>
 :end
 
 :mover_tune_logging_plug:
@@ -462,11 +439,11 @@ Youre welcome 😊 Thanks for using=不客气！😊 感谢使用！
 
 :mover_tune_cleanfolders_plug:
 <p><strong>是</strong> - <strong>仅</strong>删除<strong>已移动</strong>文件的父文件夹。</p>
-<p><strong>顶层文件夹</strong> - 删除已移动内容的顶层<strong>共享文件夹</strong>，包括主存储上的<strong>所有空子文件夹</strong>。</p>
+<p><strong>顶层文件夹</strong> - 与<strong>是</strong>相同，并在文件移出位置的顶层<strong>共享文件夹</strong>变空后将其删除，除非它是 ZFS 数据集（见<strong>清理空的 ZFS 数据集</strong>）。</p>
 :end
 
 :mover_tune_cleandatasets_plug:
-> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>空的父 ZFS 数据集，<strong>仅在不包含</strong>子数据集时执行。仅在<strong>清理空文件夹</strong>设为<strong>是</strong>或<strong>顶层文件夹</strong>时生效。
+> 移动文件后<strong>卸载</strong>并<strong>销毁</strong>主存储上该共享的 ZFS 数据集，<strong>仅在</strong>其没有子数据集或快照、且剩下的每一项都是次存储上也存在的文件夹时执行。数据集自身的 ZFS 设置（如压缩或配额）会随之删除。仅在<strong>清理空文件夹</strong>设为<strong>是</strong>或<strong>顶层文件夹</strong>时生效。
 :end
 
 :mover_tune_sharecalculation_plug:

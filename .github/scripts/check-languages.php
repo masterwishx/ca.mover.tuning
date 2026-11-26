@@ -176,7 +176,7 @@ function mover_texts(string $pluginDir): array
     }
     $used = [];
     $code = file_get_contents($mover);
-    preg_match_all('/(?:translate_text|mvlogger_t) "((?:[^"\\\\]|\\\\.)*)"/', $code, $m, PREG_OFFSET_CAPTURE);
+    preg_match_all('/(?:translate_text|mvlogger_t|dataset_out_of_view) "((?:[^"\\\\]|\\\\.)*)"/', $code, $m, PREG_OFFSET_CAPTURE);
     foreach ($m[1] as [$text, $offset]) {
         // an unescaped $ is a shell variable: the text is only known at run time
         if (preg_match('/(?<!\\\\)\$/', $text) === 1) {

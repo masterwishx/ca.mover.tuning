@@ -27,8 +27,9 @@ function titleLine() {
     local line_length=71
     local padding_left=$((line_length - ${#title} / 2))
     local padding_right=$((padding_left - ${#title} % 2 - 1))
-    local left_padding=$(printf "%*s" "$padding_left" | tr ' ' "$padding_char")
-    local right_padding=$(printf "%*s" "$padding_right" | tr ' ' "$padding_char")
+    local left_padding right_padding
+    left_padding=$(printf "%*s" "$padding_left" "" | tr ' ' "$padding_char")
+    right_padding=$(printf "%*s" "$padding_right" "" | tr ' ' "$padding_char")
     echo "${left_padding}$padding_char $title $padding_char${right_padding}"
 }
 
@@ -55,8 +56,6 @@ getMoverSettings() {
         echo "$1=\"$2\"" >>"$config_file"
     }
 
-    timezone=$(grep "timeZone=" "/boot/config/ident.cfg" | cut -d '"' -f 2)
-
     if [[ ! -f "$config_file" ]]; then
         mvlogger "Error: Config file '$config_file' not found."
         return 1
@@ -64,7 +63,7 @@ getMoverSettings() {
 
     ## [[ ! "$config_file" =~ shareOverrideConfig ]] ensure that we are not reading share custom settings
 
-    if [ -z $(cfg enableTurbo) ]; then
+    if [ -z "$(cfg enableTurbo)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Turbo Mode argument provided, defaulting to no"
             ENABLETURBO="no"
@@ -72,10 +71,10 @@ getMoverSettings() {
         fi
     else
         ENABLETURBO=$(cfg enableTurbo)
-        [ $ENABLETURBO = "yes" ] && mvlogger "Enable Turbo: $ENABLETURBO"
+        [ "$ENABLETURBO" = "yes" ] && mvlogger "Enable Turbo: $ENABLETURBO"
     fi
 
-    if [ -z $(cfg testmode) ]; then
+    if [ -z "$(cfg testmode)" ]; then
         if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
             mvlogger "No Test Mode argument provided, defaulting to yes"
             # yes for this run only: written to the global cfg it would put the scheduled mover in test mode too
@@ -83,7 +82,7 @@ getMoverSettings() {
         fi
     else
         TESTMODE=$(cfg testmode)
-        [ $TESTMODE = "yes" ] && mvlogger "Test Mode: $TESTMODE"
+        [ "$TESTMODE" = "yes" ] && mvlogger "Test Mode: $TESTMODE"
     fi
 
 }
@@ -99,7 +98,7 @@ if [ -f $UNRAIDCFGFILE ]; then
     fi
 fi
 
-mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
+[ ! -f "$MOVERTUNINGCFGFILE" ] || mvlogger "$(titleLine "Mover Tuning Plugin version $(grep "version=" "$MOVERTUNINGCFGFILE" | cut -d '"' -f 2)" '*')"
 
 #Test input variables
 if [ -z "$1" ]; then
@@ -110,11 +109,11 @@ else
     SHARECFG="/boot/config/shares/${SHARENAME}.cfg"
 fi
 
-if [ -f $PIDFILE ]; then
-    if ps h $(cat $PIDFILE) | grep mover; then
-        mvlogger "already running"
-        exit 1
-    fi
+pid=$(head -n 1 "$PIDFILE" 2>/dev/null | tr -cd '0-9')
+# shellcheck disable=SC2009 # pgrep -f would match any mover, not only this pid
+if [ -n "$pid" ] && ps h "$pid" | grep -q mover; then
+    mvlogger "already running"
+    exit 1
 fi
 
 # Only start if config OK
@@ -124,7 +123,6 @@ if [ -f $UNRAIDCFGFILE ]; then
     fi
 else
     mvlogger "Fatal error: $UNRAIDCFGFILE does not exist, check this."
-    rm $SOFTSTOPFILE
     exit 2
 fi
 if [ -f $MOVERTUNINGCFGFILE ]; then
@@ -133,29 +131,82 @@ if [ -f $MOVERTUNINGCFGFILE ]; then
     getMoverSettings $MOVERTUNINGCFGFILE
 else
     mvlogger "Fatal error: $MOVERTUNINGCFGFILE does not exist, check this."
-    rm $SOFTSTOPFILE
     exit 3
 fi
 
+shopt -s nullglob
+POOLCFGS=(/boot/config/pools/*.cfg)
 # Only start if cache enabled and present
-if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
+if ! grep -qs 'shareCacheEnabled="yes"' $UNRAIDCFGFILE && [ ${#POOLCFGS[@]} -lt 2 ]; then
     mvlogger "Fatal error: cache not enabled and less than 2 pools set up."
     exit 4
 fi
-if ! mountpoint -q /mnt/user0 && [ $(ls /boot/config/pools/*.cfg | wc -l) -lt 2 ]; then
+if ! mountpoint -q /mnt/user0 && [ ${#POOLCFGS[@]} -lt 2 ]; then
     mvlogger "Fatal error: cache not present, or only cache present, and less than 2 pools set up."
     exit 5
 fi
 
 # Remove the pid file only while it still names this run, so overlapping runs cannot delete each other's
+# shellcheck disable=SC2329 # the EXIT traps call it
 pid_cleanup() {
     [ "$(cat "$PIDFILE" 2>/dev/null)" = "$$" ] && rm -f "$PIDFILE"
 }
+
+# Prints the write method var.ini gives when it is one mdcmd can set back: 0, 1 or auto, as mover.php checks
+write_method() {
+    local m
+    m=$(grep -s '^md_write_method=' /var/local/emhttp/var.ini | cut -d'"' -f2)
+    case $m in 0 | 1 | auto) echo "$m" ;; *) return 1 ;; esac
+}
+
+# With Turbo Mode on, forces turbo write for the moves, only when the write method can be set back after
+force_turbo() {
+    TURBO_WAS=""
+    [ "$ENABLETURBO" = "yes" ] || return 0
+    if ! TURBO_WAS=$(write_method); then
+        mvlogger "Not forcing turbo write on: /var/local/emhttp/var.ini gives no write method (0, 1 or auto) to set back after"
+        return 0
+    fi
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would force turbo write on"
+        return 0
+    fi
+    # set first: a stop that ends the run from here on tries once to put the write method back before the pid file goes,
+    # and a second stop waits for that try; a KILL cannot
+    trap 'trap "" HUP INT TERM; restore_turbo; pid_cleanup' EXIT
+    mvlogger "Forcing turbo write on"
+    /usr/local/sbin/mdcmd set md_write_method 1 || mvlogger "Could not force turbo write on: mdcmd exited $?"
+}
+
+# Sets the write method back after force_turbo, where the moves end or from the EXIT trap of a run a signal ends sooner;
+# the EXIT trap goes back to pid_cleanup alone, in a real run only once mdcmd has set it back
+restore_turbo() {
+    local m name
+    [ -n "$TURBO_WAS" ] || return 0
+    # var.ini's now, which Settings may have changed during the moves; the one read before when it gives none
+    m=$(write_method) || m=$TURBO_WAS
+    case $m in
+    auto) name="Auto (read/modify/write)" ;;
+    1) name="Turbo writes (Reconstruct)" ;;
+    *) name="Read/modify/write" ;;
+    esac
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would restore original turbo write mode $name"
+    else
+        mvlogger "Restoring original turbo write mode $name"
+        # the plugin's stop signals mdcmd before the run: one it ends first leaves the EXIT trap to try again
+        /usr/local/sbin/mdcmd set md_write_method "$m" || {
+            mvlogger "Could not restore original turbo write mode $name: mdcmd exited $?"
+            return 1
+        }
+    fi
+    TURBO_WAS=""
+    trap pid_cleanup EXIT
+}
+
 trap pid_cleanup EXIT
 trap 'exit 143' HUP INT TERM
 echo $$ >"$PIDFILE"
-
-shopt -s nullglob
 
 mvlogger "$(titleLine "Processing $SHARENAME share" '-')"
 if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
@@ -180,7 +231,7 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
     # Determine secondary storage
     SECONDARYSTORAGENAME=$(grep "shareCachePool2=" "$SHARECFG" | cut -d'=' -f 2 | tr -d '"' | tr -d '\r')
     if [ -z "$SECONDARYSTORAGENAME" ]; then
-        if [ $SHAREUSECACHE = "only" ] || [ $SHAREUSECACHE = "no" ]; then
+        if [ "$SHAREUSECACHE" = "only" ] || [ "$SHAREUSECACHE" = "no" ]; then
             SECONDARYSTORAGENAME="none"
         else
             SECONDARYSTORAGENAME="user0"
@@ -205,52 +256,51 @@ if grep -qs 'shareUseCache="yes\|shareUseCache="prefer"' "$SHARECFG"; then
         mvlogger "=> Skipping"
     else
         mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
-        if [ $ENABLETURBO = "yes" ]; then
-            mvlogger "Forcing turbo write on"
-            [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
-        fi
 
-        #Base Find String
-        # Alterate SHAREPATH on Cache=prefer
+        # the share name reaches find only as an argument, never parsed as shell
         if [ "$SHAREUSECACHE" = "prefer" ]; then
-            #"cache=prefer" pool, we replace path to list files in /mnt/user and process later
-
-            # Check if SHAREPATH is in the format "/mnt/*/$SHARENAME"
-            # Initialize FINDSTR with the base find command
-            FINDSTR="find"
-            # Iterate over all directories in /mnt/*
-            for dir in /mnt/*; do
-                # Check if the directory contains a subdirectory named $SHARENAME and not equal to "/mnt/$PRIMARYSTORAGENAME/$SHARENAME"
+            # "cache=prefer": the share's folder on each array disk and each other pool, never on a mount such as
+            # Unassigned Devices' that only shares its name, for the move to the primary
+            paths=()
+            for dir in /mnt/disk[0-9] /mnt/disk[1-9][0-9] "${POOLCFGS[@]}"; do
+                dir=/mnt/${dir##*/}
+                dir=${dir%.cfg}
                 if [ -d "$dir/$SHARENAME" ] && [ "$dir/$SHARENAME" != "/mnt/$PRIMARYSTORAGENAME/$SHARENAME" ]; then
-                    # Append the path to FINDSTR, ensuring it's quoted and separated by spaces
-                    FINDSTR+=" \"$dir/$SHARENAME\""
+                    paths+=("$dir/$SHARENAME")
                 fi
             done
-            # Add the depth option at the end
-            FINDSTR+=" -type f -not -path '/mnt/user*' -depth"
         else
-            # Alterate SHAREPATH on Cache=yes
-            FINDSTR="find \"${SHAREPATH}\" -type f -depth"
+            paths=("$SHAREPATH")
         fi
+        FINDSTR="find"
+        for p in "${paths[@]}"; do FINDSTR+=" $(qp "$p")"; done
+        FINDSTR+=" -type f -depth"
 
-        if [ "$TESTMODE" = "yes" ]; then
+        # find given no folder would list the one it runs in
+        if [ ${#paths[@]} -eq 0 ]; then
+            mvlogger "No array disk or other pool holds a folder of the share: nothing to move"
+            mvlogger "=> Skipping"
+        elif [ "$TESTMODE" = "yes" ]; then
+            force_turbo
             mvlogger "Running in Test Mode: $FINDSTR"
-            eval "${FINDSTR}"
+            find "${paths[@]}" -type f -depth
+            restore_turbo
         else
-            #Add Mover to find string
-            FINDSTR="${FINDSTR} | $([ -f /usr/libexec/unraid/move ] && echo /usr/libexec/unraid/move || which move) -d $LOGLEVEL"
-            mvlogger "Complete Mover Command: $FINDSTR"
-            eval " ${FINDSTR}"
-        fi
-
-        if [ $ENABLETURBO = "yes" ]; then
-            turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
-            mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
-            [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
+            MOVE=/usr/libexec/unraid/move
+            [ -f "$MOVE" ] || MOVE=$(which move)
+            force_turbo
+            mvlogger "Complete Mover Command: $FINDSTR | $MOVE -d $LOGLEVEL"
+            find "${paths[@]}" -type f -depth | "$MOVE" -d "$LOGLEVEL"
+            st=("${PIPESTATUS[@]}")
+            restore_turbo
+            # move's own failure first: find's SIGPIPE follows from it
+            MOVE_RC=$((st[1] ? st[1] : st[0]))
+            [ "$MOVE_RC" = 0 ] || mvlogger "Move command failed: find exited ${st[0]}, move exited ${st[1]}"
         fi
 
     fi
 fi
 
 mvlogger "$(titleLine 'WE ARE DONE !' '*')"
-[ $LOGLEVEL = 0 ] && echo "Mover tuning plugin done!"
+[ "$LOGLEVEL" = 1 ] || echo "Mover tuning plugin done!"
+exit "${MOVE_RC:-0}"

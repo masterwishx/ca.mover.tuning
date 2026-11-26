@@ -9,6 +9,9 @@
 %s files and %s folders representing %s could not be movedsynced by Mover Tuning plugin=%s fichiers et %s dossiers représentant %s n’ont pas pu être déplacés/synchronisés par le plugin Mover Tuning.
 %s files and %s folders were movedsynced, but rsync reported errors for them Check the Mover Tuning log=%s fichiers et %s dossiers ont été déplacés/synchronisés, mais rsync a signalé des erreurs les concernant. Consultez le journal de Mover Tuning.
 Action=Action
+a file is hidden under it stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=un fichier est masqué dessous : arrêtez les écritures sur le partage, lancez zfs unmount %s, mettez de côté tout ce qui est dans %s, lancez zfs mount %s, puis remettez le tout dans %s sans remplacer un fichier déjà présent : gardez les deux copies et comparez-les
+mounted again, but the look for a file written to %s as it was mounted was cut short, so one may be hidden under it stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=monté à nouveau, mais la recherche de fichiers écrits dans %s pendant le montage a été interrompue, un fichier y est peut-être masqué : arrêtez les écritures sur le partage, lancez zfs unmount %s, mettez de côté tout ce qui est dans %s, lancez zfs mount %s, puis remettez le tout dans %s sans remplacer un fichier déjà présent : gardez les deux copies et comparez-les
+the remount was cut short, so it may not be mounted or may hide a file stop writes to the share, if zfs mount lists it at %s run zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=le remontage a été interrompu, il peut donc ne pas être monté ou masquer un fichier : arrêtez les écritures sur le partage, si zfs mount le montre sur %s lancez zfs unmount %s, mettez de côté tout ce qui est dans %s, lancez zfs mount %s, puis remettez le tout dans %s sans remplacer un fichier déjà présent : gardez les deux copies et comparez-les
 All community developers=Tous les développeurs de la communauté
 Allow force mover schedule to run during a parity checkrebuild=Autoriser l’exécution forcée du mover pendant une vérification/réparation de parité
 All plugin settings return to their defaults, including the Mover Tuning schedule, the forced move schedule and the cache watchdog, and the override settings of every share are deleted=Tous les paramètres du plugin reviennent à leurs valeurs par défaut, y compris la planification Mover Tuning, l’horaire du déplacement forcé et la surveillance du cache, et les paramètres remplacés de chaque part sont supprimés.
@@ -25,6 +28,7 @@ Cache → Array=Cache → Array
 Cancel=Annuler
 Clean empty folders=Nettoyer les dossiers vides
 Clean empty ZFS datasets=Nettoyer les datasets ZFS vides
+Clean empty ZFS datasets did not finish for %s The mover log has the details unless Log Mover Tuning plugin actions is set to No=Nettoyer les datasets ZFS vides n'a pas abouti pour %s. Le journal donne les détails, sauf si « Journaliser les actions du plugin Mover Tuning » est sur Non.
 CLI help commands=Commandes d’aide CLI
 Comma separated list of file types=Liste de types de fichiers séparés par des virgules
 Cron Schedule to force move all of files=Cron pour forcer le déplacement de tous les fichiers
@@ -36,22 +40,17 @@ Delete Mover Log files over than this days old=Supprimer les journaux du mover p
 Disable Mover running on a schedule=Désactiver l’exécution programmée du mover
 disables test mode=désactive le mode test
 disables the plugins schedule=désactive la planification du plugin
-disables validation of input filenames=désactive la validation des noms de fichiers
 Download=Télécharger
 enable smart caching=activer le cache intelligent
 Error checking mover status Please refresh the page=Erreur lors de la vérification du statut du mover. Veuillez rafraîchir la page.
 Error Config file %s not found=Erreur : fichier de configuration « %s » introuvable.
 Error Failed to convert CRLF line endings in %s Check file permissions=Erreur : impossible de convertir les fins de ligne CRLF dans %s. Vérifiez les permissions du fichier.
-Error Invalid filename path %s Please either change the filename to valid or disable the Validate input filenames option=Erreur : chemin de fichier invalide %s. Corrigez le nom ou désactivez l’option de validation des noms de fichiers.
 Error No files found to move for %s=Erreur : aucun fichier trouvé à déplacer pour %s
 Errors Only=Erreurs uniquement
 Estimated Completion=Fin estimée
 ETA=Temps restant
-Failed to destroy ZFS dataset %s — attempting to remount=Échec de la destruction du dataset ZFS [%s] — tentative de remontage.
-Failed to remount dataset %s=Échec du remontage du dataset [%s]
 Failed to reset Mover Tuning Check the logs=Échec de la réinitialisation de Mover Tuning. Consultez les journaux.
 Failed to start Mover Tuning Check the logs=Échec du démarrage de Mover Tuning. Consultez les journaux.
-Failed to unmount ZFS dataset %s=Échec du démontage du dataset ZFS [%s]
 Fatal error %s does not exist, check this=Erreur fatale : %s n’existe pas, vérifiez cela.
 Fatal error cache not enabled and less than 2 pools set up=Erreur fatale : cache non activé et moins de deux pools configurés.
 Fatal error cache not present, or only cache present, and less than 2 pools set up=Erreur fatale : cache absent, ou uniquement cache présent, et moins de deux pools configurés.
@@ -75,7 +74,6 @@ If you want Mover Tuning to fully manage scheduling, disable it in Mover Setting
 Ignore All hidden files and directories=Ignorer tous les fichiers et dossiers cachés
 Ignore files and folders listed inside of a text file=Ignorer les fichiers et dossiers listés dans un fichier texte
 Ignore file types=Ignorer les types de fichiers
-Invalid characters to block=Caractères invalides à bloquer
 Largest first=Les plus gros d’abord
 Let scheduled mover run during a parity check rebuild=Autoriser le mover programmé pendant une vérification/réparation de parité
 Log files=Fichiers journaux
@@ -84,6 +82,7 @@ Logs parent folder for Mover Tuning plugin=Dossier parent des journaux du plugin
 Low=Faible
 Maintainers=Mainteneurs
 make those plugins with ❤️ and a lot of ☕=créent ces plugins avec ❤️ et beaucoup de ☕
+mounted read-only at %s stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=monté en lecture seule sur %s : arrêtez les écritures sur le partage, lancez umount %s, mettez de côté tout ce qui est dans %s, lancez zfs mount %s, puis remettez le tout dans %s sans remplacer un fichier déjà présent : gardez les deux copies et comparez-les
 Move ALL files from current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers du pool actuel (en ignorant les filtres et les seuils)
 Move ALL files to current pool ignores filters and thresholds=Déplacer **TOUS** les fichiers vers le pool actuel (en ignorant les filtres et les seuils)
 Move All from Primary->Secondary cacheyes shares pool percentage=Déplacer tout depuis Primaire→Secondaire (cache:yes) selon le pourcentage du pool
@@ -125,7 +124,9 @@ Mover Tuning thresholds=Seuils Mover Tuning
 No files were movedsynced by Mover Tuning plugin Elapsed time %s=Aucun fichier n’a été déplacé/synchronisé par le plugin Mover Tuning. Temps écoulé : %s
 No log files yet=Aucun fichier journal pour le moment
 Not Applicable Share Does Not Exist Yet=Non applicable (la part n’existe pas encore)
+Not a valid cron schedule it is not applied=Planification cron invalide : elle n’est pas appliquée.
 Notify Mover Tuning plugin actions=Notifier les actions du plugin Mover Tuning
+not mounted stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there keep both copies and compare them=non monté : arrêtez les écritures sur le partage, mettez de côté tout ce qui est dans %s, lancez zfs mount %s, puis remettez le tout dans %s sans remplacer un fichier déjà présent : gardez les deux copies et comparez-les
 Oldest first=Les plus anciens d’abord
 Only move files larger than this in MB=Déplacer uniquement les fichiers plus grands que cette taille (en Mo)
 Only move files that are older than this in days=Déplacer uniquement les fichiers plus anciens que ce nombre de jours
@@ -181,7 +182,6 @@ Use CTIME change time=Utiliser CTIME (date de changement d’état)
 Use global=Réglage global
 Used IDE=IDE utilisé
 User shares not enabled=Les parts utilisateur ne sont pas activées !
-Validate input filenames to prevent attacks=Valider les noms de fichiers pour prévenir les attaques
 Very Low=Très faible
 View=Afficher
 Want to support the developer and say Thank You=Vous souhaitez soutenir le développeur et dire **Merci** ?
@@ -237,35 +237,13 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 > Exécute le calendrier <strong><code>age_mover</code></strong> du plugin Mover Tuning en utilisant votre entrée cron personnalisée (inclut tous les filtres du plugin).
 >
 > Exemple d’entrée Cron : <strong>0 */4 * * *</strong>.&nbsp; Pour exécuter <strong>toutes les 4 heures</strong>.&nbsp; <a href="https://crontab.guru/" target="_blank" rel="noopener noreferrer"><i class="fa fa-clock-o"></i> Qu’est‑ce que Cron</a>
+>
+> La planification doit être une entrée cron valide : une entrée invalide n’est pas appliquée, et l’erreur est écrite dans le syslog.
 :end
 
 :mover_tune_testmode_plug:
 <p>Le mode test ne <strong>lance pas</strong> le mover mais affiche les résultats de la commande find personnalisée dans <em>/tmp/ca.mover.tuning/</em>. Les scripts avant et après s’exécutent quand même.</p>
 <p>Attention — le mode test n’arrête pas le mover original : il s’exécute quand même selon l’horaire de l’option <strong>Forcer le déplacement de tous les fichiers selon un horaire</strong>, et depuis le bouton « Déplacer maintenant » si l’option <strong>Le bouton « Déplacer maintenant » suit les filtres du plugin</strong> est réglée sur <strong>Non</strong>. À partir d’Unraid 7.2.1, la planification du mover et les boutons de déplacement d’Unraid lancent toujours le mover original.</p>
-:end
-
-:mover_tune_validate_plug:
-<p><strong><em>En cybersécurité, les noms de fichiers peuvent être un vecteur critique d’attaques et de vulnérabilités. Des noms non vérifiés peuvent compromettre l’intégrité et la sécurité du système.</em></strong></p>
-<p>La validation des noms de fichiers vérifie chaque nom avant qu’il ne soit traité par le mover. Cela garantit que seuls des noms <strong>valides</strong> sont acceptés, <strong>réduisant les risques</strong> d’attaques.</p>
-<p>Désactivez cette option <strong>uniquement</strong> si vous avez beaucoup de fichiers à déplacer et que vous êtes <strong>certain</strong> que tous les noms sont valides et sans risque.</p>
-<p>1. <strong>Longueur du nom</strong> — si le nom dépasse 255 caractères, il est rejeté.</p>
-<p>2. <strong>Caractères invalides</strong> — le nom ne doit pas contenir des caractères interdits tels que (<strong><em>$</em></strong>), (<strong><em>/</em></strong>), (<strong><em><</em></strong>), (<strong><em>></em></strong>), (<strong><em>:</em></strong>), (<strong><em>"</em></strong>), (<strong><em>|</em></strong>), (<strong><em>?</em></strong>), (<strong><em>*</em></strong>).</p>
-<p>3. <strong>Éviter la traversée de répertoires</strong> — le nom ne doit pas contenir (<strong><em>../</em></strong>).</p>
-<p>Si une vérification échoue, le nom est rejeté.</p>
-:end
-
-:mover_tune_invalidfilechars_plug:
-<p>Caractères invalides dans un nom de fichier :
-  <strong><em>$</em></strong>
-  <strong><em>/</em></strong>
-  <strong><em><</em></strong>
-  <strong><em>></em></strong>
-  <strong><em>:</em></strong>
-  <strong><em>"</em></strong>
-  <strong><em>|</em></strong>
-  <strong><em>?</em></strong>
-  <strong><em>*</em></strong>.
-</p>
 :end
 
 :mover_tune_logging_plug:
@@ -471,11 +449,11 @@ Youre welcome 😊 Thanks for using=Avec plaisir 😊 Merci pour votre utilisati
 
 :mover_tune_cleanfolders_plug:
 <p><strong>Oui</strong> — supprime le dossier parent des fichiers déplacés.</p>
-<p><strong>Dossier principal</strong> — supprime le dossier de la part et tous les sous‑dossiers vides.</p>
+<p><strong>Dossier principal</strong> — comme <strong>Oui</strong>, et supprime aussi le dossier de premier niveau de la part, là d’où les fichiers ont été déplacés, une fois vide, sauf s’il s’agit d’un dataset ZFS (voir <strong>Nettoyer les datasets ZFS vides</strong>).</p>
 :end
 
 :mover_tune_cleandatasets_plug:
-> Démonte et détruit le dataset ZFS parent si aucun dataset enfant n’existe. Fonctionne uniquement si <strong>Nettoyer les dossiers vides</strong> est réglé sur <strong>Oui</strong> ou <strong>Dossier principal</strong>.
+> Démonte et détruit le dataset ZFS de la part sur le stockage primaire après le déplacement de ses fichiers, <strong>uniquement</strong> s’il n’a ni dataset enfant ni snapshot et si chaque élément restant est un dossier qui existe aussi sur le stockage secondaire. Les réglages ZFS propres au dataset, comme la compression ou le quota, disparaissent avec lui. Fonctionne uniquement si <strong>Nettoyer les dossiers vides</strong> est réglé sur <strong>Oui</strong> ou <strong>Dossier principal</strong>.
 :end
 
 :mover_tune_sharecalculation_plug:
