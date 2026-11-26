@@ -199,9 +199,9 @@ done
 # a process pgrep lists can end before its signal; a pid no process can have stands for it, so no real one is signalled
 begin "the plugin's stop, a listed process gone before its signal"
 real_pgrep=$(command -v pgrep)
-# the container's init, not this script, reaps it: a zombie would still answer the stop's kill -0
-(bash -c 'sleep 30; exit 0' & echo $! >"$T/run.pid")
-run=$(cat "$T/run.pid")
+# this script waits on the run, so it is reaped as it ends: one nobody reaps would still answer the stop's kill -0
+bash -c 'sleep 30 && exit 3' &
+run=$!
 gone=$(($(cat /proc/sys/kernel/pid_max) + 1))
 # shellcheck disable=SC2016 # the stand-in expands its own $@ and $*
 printf '#!/bin/bash\n%q "$@"\n[ "${*: -1}" != %q ] || echo %q\n' "$real_pgrep" "$run" "$gone" >"$T/bin/pgrep"
@@ -209,11 +209,15 @@ chmod 755 "$T/bin/pgrep"
 hash -r
 echo "$run" >"$T/pid"
 # shellcheck disable=SC2034 # stop, from funcs.sh, reads them
-check "the stop said only that it stopped" 'mover: stopped' \
-    "$(PIDFILE=$T/pid MOVER_STATUS=$T/mover.ini PAUSEFILE=$T/pause MOVINGFILE=$T/moving; stop 2>&1)"
+(PIDFILE=$T/pid MOVER_STATUS=$T/mover.ini PAUSEFILE=$T/pause MOVINGFILE=$T/moving; stop) >"$T/stop.out" 2>&1 &
+stopper=$!
+wait "$run"
+check "the stop ended the run" 143 "$?"
+wait "$stopper"
 rm -f "$T/bin/pgrep"
 hash -r
-check "the run ended" "" "$(kill -0 "$run" 2>/dev/null && echo running)"
+check "the stop said only that it stopped" 'mover: stopped' "$(cat "$T/stop.out")"
 check "the stop removed the pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+rm -f "$T/stop.out"
 
 finish
