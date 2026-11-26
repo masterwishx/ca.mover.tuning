@@ -8,25 +8,6 @@ if ! awk '$5 ~ "^/(usr|var)/local(/|$)" || $5 ~ "^/(usr|var)$" { exit 1 }' /proc
     exit 2
 fi
 
-# a hook, run once, that stops the mover: one stop signals the run alone, as a kill of its pid does; the plugin's is
-# age_mover stop, run outside the run, which signals every process of it. The hook waits until that stop says it waits
-# for the run or has ended, and notes whether the run's pid file is still there
-stop_hook() {
-    cat <<EOF
-rm -f "\$0"
-p=\$PPID
-while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); done
-EOF
-    # shellcheck disable=SC2016 # the hook expands its own $p
-    if [ "$1" = run ]; then echo 'kill -TERM "$p"'; return; fi
-    cat <<EOF
-echo "\$p" >"$T/pid"
-( setsid bash -c '. "$T/funcs.sh"; PIDFILE="$T/pid" MOVER_STATUS="$T/mover.ini" PAUSEFILE="$T/pause" MOVINGFILE="$T/moving"; stop' \\
-    </dev/null >"$T/stop.out" 2>&1 & )
-for _ in \$(seq 100); do grep -qs -e 'mover: stopped' -e 'mover: waiting' "$T/stop.out" && break; sleep 0.1; done
-[ ! -f "$T/pid" ] || echo kept >"$T/pid.kept"
-EOF
-}
 # the plugin's stop waits for the run to end, then removes the pid and status files: it must end before the next case
 stop_done() {
     local _
@@ -67,18 +48,20 @@ mounted_again() { check "the dataset is mounted at its folder again" /mnt/cache/
 REMOUNTED=$(sed '$d' <<<"$DESTROYED"; echo 'zfs mount cache/sh')
 
 # a stop of the run alone during the check after the unmount, and a write through /mnt/user meanwhile, which keeps it
-# unmounted. The run puts back the write method it forced and removes its pid file
+# unmounted. The run puts back the write method it forced, then removes its pid file
 begin "Clean ZFS datasets, a stop of the run alone during the check after the unmount" cleanFolders topFolder \
     cleanDatasets yes notify errorsOnly enableTurbo yes
 one_share
 mkdir -p /usr/local/sbin /var/local/emhttp
 echo 'md_write_method="0"' >/var/local/emhttp/var.ini
-printf '#!/bin/bash\necho "mdcmd $*" >>%q\n' "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
+# shellcheck disable=SC2016 # the stand-in expands its own $* and $w
+printf '#!/bin/bash\n[ ! -e %q ] || w=" (pid file there)"\necho "mdcmd $*$w" >>%q\n' "$T/pid" "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
 chmod 755 /usr/local/sbin/mdcmd
 echo $$ >"$T/pid"
 { stop_hook run; echo 'echo y >/mnt/cache/sh/bare.txt'; } >"$T/zfs.on_mount.zfs"
 run_moves 'processTheMoves did not return'
-check "turbo write forced, then put back" "$(printf '%s\n' 'mdcmd set md_write_method 1' 'mdcmd set md_write_method 0')" \
+check "turbo write forced, then put back before the pid file goes" \
+    "$(printf '%s\n' 'mdcmd set md_write_method 1 (pid file there)' 'mdcmd set md_write_method 0 (pid file there)')" \
     "$(cat "$T/mdcmd.calls")"
 check "the run removed its pid file" "" "$(ls "$T/pid" 2>/dev/null)"
 rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
@@ -91,32 +74,50 @@ cache_is sh sh/bare.txt
 no_private
 notices "$NOT_MOUNTED"
 
-# a second stop, at the read of var.ini that puts the write method back, waits for it
+# mdcmd fails to put the write method back: no other try once the pid file has gone, as a run started then may force it
+begin "Clean ZFS datasets, a stop of the run alone, mdcmd fails to put the write method back" cleanFolders topFolder \
+    cleanDatasets yes notify errorsOnly enableTurbo yes
+one_share
+mkdir -p /usr/local/sbin /var/local/emhttp
+echo 'md_write_method="0"' >/var/local/emhttp/var.ini
+# shellcheck disable=SC2016 # the stand-in expands its own $*, $w and $3
+printf '#!/bin/bash\n[ ! -e %q ] || w=" (pid file there)"\necho "mdcmd $*$w" >>%q\n[ "$3" != 0 ]\n' "$T/pid" \
+    "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
+chmod 755 /usr/local/sbin/mdcmd
+echo $$ >"$T/pid"
+{ stop_hook run; echo 'echo y >/mnt/cache/sh/bare.txt'; } >"$T/zfs.on_mount.zfs"
+run_moves 'processTheMoves did not return'
+check "turbo write forced, then one try to put it back, before the pid file goes" \
+    "$(printf '%s\n' 'mdcmd set md_write_method 1 (pid file there)' 'mdcmd set md_write_method 0 (pid file there)')" \
+    "$(cat "$T/mdcmd.calls")"
+log_count 1 'Could not restore original turbo write mode Read/modify/write: mdcmd exited 1'
+check "the run removed its pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+cache_is sh sh/bare.txt
+no_private
+notices "$NOT_MOUNTED"
+
+# a second stop that signals every process, as the plugin's does, reaches the run and the mdcmd that puts the write
+# method back: both wait for it
 begin "Clean ZFS datasets, a second stop as the stopped run puts the write method back" cleanFolders topFolder \
     cleanDatasets yes enableTurbo yes
 one_share
 mkdir -p /usr/local/sbin /var/local/emhttp
 echo 'md_write_method="0"' >/var/local/emhttp/var.ini
-printf '#!/bin/bash\necho "mdcmd $*" >>%q\n' "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
-chmod 755 /usr/local/sbin/mdcmd
-echo $$ >"$T/pid"
-cat >"$T/bin/grep" <<EOF
+cat >/usr/local/sbin/mdcmd <<EOF
 #!/bin/bash
-if [ "\$1" = md_write_method= ] && [ -e $T/stop2 ]; then
+if [ "\$3" = 0 ] && [ -e $T/stop2 ]; then
     rm -f $T/stop2
     p=\$PPID
     while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); done
-    kill -TERM "\$p"
+    kill -TERM "\$p" \$\$
 fi
-exec /usr/bin/grep "\$@"
+echo "mdcmd \$*" >>$T/mdcmd.calls
 EOF
-chmod 755 "$T/bin/grep"
-# the run is a subshell of this script: it would keep the grep this script found before
-hash -r
+chmod 755 /usr/local/sbin/mdcmd
+echo $$ >"$T/pid"
 { stop_hook run; echo "touch $T/stop2"; } >"$T/zfs.on_mount.zfs"
 run_moves 'processTheMoves did not return'
-rm -f "$T/bin/grep"
-hash -r
 check "the second stop came" "" "$(ls "$T/stop2" 2>/dev/null)"
 check "turbo write forced, then put back" "$(printf '%s\n' 'mdcmd set md_write_method 1' 'mdcmd set md_write_method 0')" \
     "$(cat "$T/mdcmd.calls")"
