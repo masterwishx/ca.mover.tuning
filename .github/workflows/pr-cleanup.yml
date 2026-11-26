@@ -49,7 +49,9 @@ jobs:
               out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes --cleanup-tag 2>&1) \
                 || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
             else
-              gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" >/dev/null || return 1
+              # a publish run's --cleanup-tag may remove it first: GitHub answers that with this 422, or a 404
+              out=$(gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" 2>&1 >/dev/null) \
+                || [[ "$out" == *"Reference does not exist"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
             fi
             echo "removed $tag"
           done <<< "$2"
