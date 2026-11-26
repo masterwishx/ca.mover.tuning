@@ -3701,8 +3701,8 @@ killtree() {
     for child in $(pgrep --ns $$ -P $pid); do
         killtree $child
     done
-    # a paused copy acts on the TERM only once it runs again
-    [ $pid -ne $$ ] && kill -TERM $pid && kill -CONT "$pid"
+    # a paused copy acts on the TERM only once it runs again; one that ended since pgrep listed it needs none
+    [ $pid -ne $$ ] && kill -TERM $pid 2>/dev/null && kill -CONT "$pid"
 }
 
 # Caution: stopping mover like this can lead to partial files on the destination

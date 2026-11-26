@@ -196,4 +196,22 @@ for now in 'auto Auto (read/modify/write)' ' Read/modify/write'; do
     array_is sh sh/s sh/s/1.txt
 done
 
+# a process pgrep lists can end before its signal; a pid no process can have stands for it, so no real one is signalled
+begin "the plugin's stop, a listed process gone before its signal"
+real_pgrep=$(command -v pgrep)
+# the container's init, not this script, reaps it: a zombie would still answer the stop's kill -0
+(bash -c 'sleep 30; exit 0' & echo $! >"$T/run.pid")
+run=$(cat "$T/run.pid")
+gone=$(($(cat /proc/sys/kernel/pid_max) + 1))
+printf '#!/bin/bash\n%q "$@"\n[ "${*: -1}" != %q ] || echo %q\n' "$real_pgrep" "$run" "$gone" >"$T/bin/pgrep"
+chmod 755 "$T/bin/pgrep"
+hash -r
+echo "$run" >"$T/pid"
+check "the stop said only that it stopped" 'mover: stopped' \
+    "$(PIDFILE=$T/pid MOVER_STATUS=$T/mover.ini PAUSEFILE=$T/pause MOVINGFILE=$T/moving; stop 2>&1)"
+rm -f "$T/bin/pgrep"
+hash -r
+check "the run ended" "" "$(kill -0 "$run" 2>/dev/null && echo running)"
+check "the stop removed the pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+
 finish
