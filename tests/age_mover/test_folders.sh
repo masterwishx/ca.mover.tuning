@@ -1,6 +1,6 @@
 #!/bin/bash
 # The folder cleanup after each row and the top-folder check after the pass: Clean Folders no / yes / topFolder, Move
-# empty folders. Clean ZFS datasets: test_datasets.sh.
+# empty folders, and test mode's predictions of them. Clean ZFS datasets: test_datasets.sh.
 . "$(dirname "$0")/lib.sh"
 
 # the half of an unreadable-folder case that runs as a plain user, since root lists any folder
@@ -14,6 +14,30 @@ if [ "${1:-}" = --as-tester ]; then
     [ "$FAILS" = 0 ]
     exit
 fi
+
+# a case's folder lines, a test-mode prediction written as the line a real run logs
+folder_lines() {
+    log | grep -E 'empty (top-level |moved )?folder: |^Not deleting |^Skipping deletion ' |
+        sed -e 's/^TEST MODE: Would delete moved empty folder/Deleted empty moved folder/' -e 's/^TEST MODE: Would delete empty/Deleted empty/'
+}
+# same_in_test_mode <case> <folder lines> <setup> <settings>...: setup's shape runs for real, whose folder lines must be
+# these, then in test mode, which must predict each of them and change nothing
+same_in_test_mode() {
+    local name=$1 want=$2 setup=$3 real tree
+    shift 3
+    begin "$name" "$@"
+    "$setup"
+    run_moves
+    real=$(folder_lines)
+    check "the real run's folder lines" "$want" "$real"
+    begin "$name, test mode" "$@" testmode yes
+    "$setup"
+    tree=$(find /mnt | sort)
+    run_moves
+    check "test mode predicts the real run's folder lines" "$real" "$(folder_lines)"
+    check "test mode leaves the disks as they were" "$tree" "$(find /mnt | sort)"
+    log_lacks 'Deleted empty'
+}
 
 for cf in no yes topFolder; do
     begin "Clean Folders $cf, a share that empties" cleanFolders "$cf"
@@ -29,6 +53,23 @@ for cf in no yes topFolder; do
     [ "$cf" = no ] || log_has 'Not deleting folder containing 1 files: /mnt/cache/sh/only'
 done
 
+# the share's top folder is the top-folder check's, after the pass: Yes never deletes it
+for cf in yes topFolder; do
+    begin "Clean Folders $cf, a file in the share's top folder" cleanFolders "$cf"
+    mk cache sh/f.txt
+    row 'move from primary' f sh/f.txt | list
+    run_moves
+    array_is sh sh/f.txt
+    log_lacks 'Deleted empty folder: /mnt/cache/sh'
+    if [ "$cf" = yes ]; then
+        cache_is sh
+        log_lacks 'top-level'
+    else
+        cache_is
+        log_has 'Deleted empty top-level folder: /mnt/cache/sh'
+    fi
+done
+
 begin "topFolder, a share that keeps a file elsewhere" cleanFolders topFolder
 mk cache sh/a/f.txt sh/keep/k.txt
 row 'move from primary' f sh/a/f.txt | list
@@ -42,6 +83,46 @@ row 'move from primary' f sh/a/f.txt | list
 run_moves
 cache_is sh sh/a sh/a/g.txt
 log_has 'Not deleting folder containing 1 files: /mnt/cache/sh/a'
+log_lacks 'top-level'
+
+# a folder on the array where b.txt goes makes its move fail: b.txt stays, and the count after it keeps it
+begin "topFolder, three rows in one folder, the middle one fails" cleanFolders topFolder
+mk cache sh/d/a.txt sh/d/b.txt sh/d/c.txt
+mkdir -p /mnt/user0/sh/d/b.txt/x
+for f in a b c; do row 'move from primary' f "sh/d/$f.txt"; done | list
+run_moves
+cache_is sh sh/d sh/d/b.txt
+log_count 2 'Not deleting folder containing 2 files: /mnt/cache/sh/d'
+log_has 'Not deleting folder containing 1 files: /mnt/cache/sh/d'
+log_lacks 'top-level'
+
+# a name gone before its turn may have left before the count: its folder is counted again
+begin "topFolder, a row's file gone before the run, beside a file that stays" cleanFolders topFolder
+mk cache sh/d/x.txt sh/d/y.txt sh/d/z.txt
+{ row 'move from primary' f sh/d/x.txt; row 'move from primary' f sh/d/y.txt; } | list
+rm /mnt/cache/sh/d/y.txt
+run_moves
+cache_is sh sh/d sh/d/z.txt
+log_has 'Gone from the source before its turn: "/mnt/cache/sh/d/y.txt"'
+log_count 2 'Not deleting folder containing 1 files: /mnt/cache/sh/d'
+
+# the earlier row deletes the folder, so the vanished name's recount finds no folder and counts nothing
+begin "topFolder, a row's file gone before the run, in a folder an earlier row empties" cleanFolders topFolder
+mk cache sh/d/a.txt sh/d/b.txt sh/keep.txt
+{ row 'move from primary' f sh/d/a.txt; row 'move from primary' f sh/d/b.txt; } | list
+rm /mnt/cache/sh/d/b.txt
+run_moves
+cache_is sh sh/keep.txt
+log_count 1 'Deleted empty folder: /mnt/cache/sh/d'
+
+# both names leave in one row, so the count taken after it already lacks the second
+begin "topFolder, a hardlink group in one folder beside another file" cleanFolders topFolder
+mk cache sh/h/a.txt sh/h/k.txt
+ln /mnt/cache/sh/h/a.txt /mnt/cache/sh/h/b.txt
+{ row 'move from primary' f sh/h/a.txt; row 'move from primary' f sh/h/b.txt; } | list
+run_moves
+cache_is sh sh/h sh/h/k.txt
+log_count 2 'Not deleting folder containing 1 files: /mnt/cache/sh/h'
 log_lacks 'top-level'
 
 # the count takes files only, so the folder looks empty: rmdir alone keeps the subfolder's file
@@ -84,29 +165,25 @@ cache_is sh sh/dangling
 log_lacks 'top-level'
 [ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'Failed to delete top-level folder (may not be empty): /mnt/cache/sh'
 
-for tm in no yes; do
-    begin "topFolder, the top folder is a ZFS dataset mountpoint, test mode $tm" cleanFolders topFolder testmode "$tm"
-    mk cache sh/only/f.txt
-    echo /mnt/cache/sh >"$T/zfs"
-    row 'move from primary' f sh/only/f.txt | list
+# a dataset's .zfs is not counted: with snapdir=visible a walk would mount and count every snapshot. The name's [ ]
+# would make a glob of the path
+for s in sh 'sh[1]'; do
+    begin "topFolder, the top folder $s is a ZFS dataset showing a snapshot" cleanFolders topFolder
+    mk cache "$s/only/f.txt" "$s/.zfs/snapshot/s1/only/f.txt"
+    echo "/mnt/cache/$s" >"$T/zfs"
+    row 'move from primary' f "$s/only/f.txt" | list
     run_moves
-    if [ "$tm" = no ]; then
-        cache_is sh
-        log_has 'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh'
-    else
-        cache_is sh sh/only sh/only/f.txt
-        log_has 'Not deleting folder containing 1 files: /mnt/cache/sh/only'
-        log_lacks 'top-level'
-    fi
+    log_has "Skipping deletion of ZFS dataset mountpoint: /mnt/cache/$s"
+    log_lacks 'Not deleting top-level folder'
 done
 
-begin "topFolder in test mode, a share holding one empty folder" cleanFolders topFolder testmode yes
-mkdir -p /mnt/cache/sh/e
-row 'move from primary' d sh/e | list
+# only a dataset has snapshots in .zfs: in a plain folder it is a folder like any other
+begin "topFolder, a plain top folder holding a folder named .zfs" cleanFolders topFolder
+mk cache sh/only/f.txt sh/.zfs/k.txt
+row 'move from primary' f sh/only/f.txt | list
 run_moves
-cache_is sh sh/e
-log_has 'TEST MODE: Would delete moved empty folder: /mnt/cache/sh/e'
-log_has 'Not deleting top-level folder: contains 0 file(s), 1 subfolder(s): /mnt/cache/sh'
+cache_is sh sh/.zfs sh/.zfs/k.txt
+log_has 'Not deleting top-level folder: contains 1 file(s), 1 subfolder(s): /mnt/cache/sh'
 
 # with Move empty folders off the planner lists no folder rows, so an empty folder stays and keeps the top folder
 begin "topFolder, Move empty folders no, an empty folder not listed" cleanFolders topFolder moveEmptyFolders no
@@ -147,6 +224,41 @@ run_moves
 cache_is sh sh/p sh/p/k.txt
 log_has 'Not deleting folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh/p'
 log_lacks 'top-level'
+
+# the parent's own subfolder counts once: the walk does not go below it
+begin "topFolder, a folder row whose parent keeps a nested subfolder" cleanFolders topFolder
+mkdir -p /mnt/cache/sh/p/e /mnt/cache/sh/p/k/a/b
+row 'move from primary' d sh/p/e | list
+run_moves
+cache_is sh sh/p sh/p/k sh/p/k/a sh/p/k/a/b
+log_has 'Not deleting folder: contains 0 file(s), 1 subfolder(s): /mnt/cache/sh/p'
+log_lacks 'top-level'
+
+# the folder stays, or it would exist nowhere. Unraid's move cannot make the share's folder over a file; rsync
+# replaces the file, so its copy is taken away instead
+for tool in rsync move; do
+    begin "topFolder, a folder row that does not arrive ($tool)" cleanFolders topFolder movefilesTool "$tool"
+    mkdir -p /mnt/cache/sh/p/e
+    if [ "$tool" = move ]; then printf 'x\n' >/mnt/user0/sh; else after_first_rsync 'rm -r /mnt/user0/sh'; fi
+    row 'move from primary' d sh/p/e | list
+    run_moves
+    cache_is sh sh/p sh/p/e
+    log_has 'Did not arrive: "/mnt/cache/sh/p/e"'
+    log_lacks 'Deleted empty moved folder'
+    log_lacks 'top-level'
+done
+
+# the folder's parent goes during its move: the row still leaves the remaining counters
+begin "Clean Folders yes, a folder row whose parent is gone after its move" cleanFolders yes
+mkdir -p /mnt/cache/sh/p/e
+row 'move from primary' d sh/p/e | list
+after_first_rsync 'rm -r /mnt/cache/sh/p'
+run_moves
+cache_is sh
+array_is sh sh/p sh/p/e
+counter REMAINING_CACHE_FOLDERS 0
+log_has '0 folders remaining from caches to array'
+[ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has '"/mnt/cache/sh/p/e" is gone from the source: the walk starts at its parent "/mnt/cache/sh/p"'
 
 # the reporter's shape: one top-folder check for the share, whichever row empties a folder first
 for order in file-first folders-first; do
@@ -200,5 +312,157 @@ for keep in no yes; do
     [ ! -d /mnt/cache/sh ] || chmod 0755 /mnt/cache/sh
     if [ "$keep" = yes ]; then cache_is sh sh/stay.txt; else cache_is; fi
 done
+
+# test mode's predictions: what a real move or deletion would take off the source is left out of each count
+three_rows() {
+    mk cache sh/d/a.txt sh/d/b.txt sh/d/c.txt
+    for f in a b c; do row 'move from primary' f "sh/d/$f.txt"; done | list
+}
+same_in_test_mode "Clean Folders yes, three rows in one folder" "$(printf '%s\n' 'Not deleting folder containing 2 files: /mnt/cache/sh/d' \
+    'Not deleting folder containing 1 files: /mnt/cache/sh/d' 'Deleted empty folder: /mnt/cache/sh/d')" three_rows cleanFolders yes
+
+taking_turns() {
+    mk cache sh/a/1.txt sh/a/2.txt sh/b/1.txt
+    for f in a/1 b/1 a/2; do row 'move from primary' f "sh/$f.txt"; done | list
+}
+same_in_test_mode "Clean Folders yes, rows taking turns between two folders" "$(printf '%s\n' \
+    'Not deleting folder containing 1 files: /mnt/cache/sh/a' 'Deleted empty folder: /mnt/cache/sh/b' \
+    'Deleted empty folder: /mnt/cache/sh/a')" taking_turns cleanFolders yes
+
+# both names leave in the first one's row; the second finds the folder gone
+link_pair() {
+    mk cache sh/h/a.txt
+    ln /mnt/cache/sh/h/a.txt /mnt/cache/sh/h/b.txt
+    { row 'move from primary' f sh/h/a.txt; row 'move from primary' f sh/h/b.txt; } | list
+}
+same_in_test_mode "Clean Folders yes, a hardlink group alone in its folder" 'Deleted empty folder: /mnt/cache/sh/h' link_pair \
+    cleanFolders yes
+
+one_name_gone() {
+    mk cache sh/d/a.txt sh/d/b.txt sh/keep.txt
+    { row 'move from primary' f sh/d/a.txt; row 'move from primary' f sh/d/b.txt; } | list
+    rm /mnt/cache/sh/d/b.txt
+}
+same_in_test_mode "topFolder, a row's file gone before the run, in a folder an earlier row empties" "$(printf '%s\n' \
+    'Deleted empty folder: /mnt/cache/sh/d' 'Not deleting top-level folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh')" \
+    one_name_gone cleanFolders topFolder
+
+# the gone name's recount keeps the count at the two still on the source, where lowering it would give 1; the later
+# rows lower it to 0
+middle_name_gone() {
+    mk cache sh/d/a.txt sh/d/b.txt sh/d/c.txt sh/d/d.txt sh/keep.txt
+    for f in a b c d; do row 'move from primary' f "sh/d/$f.txt"; done | list
+    rm /mnt/cache/sh/d/b.txt
+}
+same_in_test_mode "topFolder, the middle one of four rows in one folder gone before the run" "$(printf '%s\n' \
+    'Not deleting folder containing 2 files: /mnt/cache/sh/d' 'Not deleting folder containing 2 files: /mnt/cache/sh/d' \
+    'Not deleting folder containing 1 files: /mnt/cache/sh/d' 'Deleted empty folder: /mnt/cache/sh/d' \
+    'Not deleting top-level folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh')" middle_name_gone \
+    cleanFolders topFolder
+
+nested_file() {
+    mk cache sh/p/q/f.txt
+    row 'move from primary' f sh/p/q/f.txt | list
+}
+same_in_test_mode "topFolder, a file two folders down" "$(printf '%s\n' 'Deleted empty folder: /mnt/cache/sh/p/q' \
+    'Not deleting top-level folder: contains 0 file(s), 1 subfolder(s): /mnt/cache/sh')" nested_file cleanFolders topFolder
+
+# rmdir refuses the file's folder, which keeps a subfolder
+keeps_subfolder() {
+    mk cache sh/d/f.txt
+    mkdir -p /mnt/cache/sh/d/sub
+    row 'move from primary' f sh/d/f.txt | list
+}
+same_in_test_mode "topFolder, the file's folder keeps an empty subfolder" \
+    'Not deleting top-level folder: contains 0 file(s), 2 subfolder(s): /mnt/cache/sh' keeps_subfolder cleanFolders topFolder
+
+dataset_top() {
+    mk cache sh/only/f.txt
+    echo /mnt/cache/sh >"$T/zfs"
+    row 'move from primary' f sh/only/f.txt | list
+}
+same_in_test_mode "topFolder, the top folder is a ZFS dataset mountpoint" "$(printf '%s\n' \
+    'Deleted empty folder: /mnt/cache/sh/only' 'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh')" dataset_top cleanFolders topFolder
+
+# no file or folder is left in the top folder, but rmdir refuses it for the symlink
+top_symlink() {
+    mk cache sh/only/f.txt
+    ln -s gone /mnt/cache/sh/link
+    row 'move from primary' f sh/only/f.txt | list
+}
+same_in_test_mode "topFolder, the top folder keeps only a symlink" 'Deleted empty folder: /mnt/cache/sh/only' top_symlink \
+    cleanFolders topFolder
+[ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'TEST MODE: Would fail to delete top-level folder (not empty): /mnt/cache/sh'
+
+# Unraid's move takes the folder itself; with rsync the walk deletes it
+one_empty_folder() {
+    mkdir -p /mnt/cache/sh/e
+    row 'move from primary' d sh/e | list
+}
+folder_row_alone() {
+    mkdir -p /mnt/cache/sh/p/e
+    row 'move from primary' d sh/p/e | list
+}
+for tool in rsync move; do
+    want='Deleted empty top-level folder: /mnt/cache/sh'
+    [ "$tool" = move ] || want=$'Deleted empty moved folder: /mnt/cache/sh/e\n'$want
+    same_in_test_mode "topFolder, a share holding only an empty folder ($tool)" "$want" one_empty_folder cleanFolders topFolder \
+        movefilesTool "$tool"
+    want=$'Deleted empty moved folder: /mnt/cache/sh/p\nDeleted empty top-level folder: /mnt/cache/sh'
+    [ "$tool" = move ] || want=$'Deleted empty moved folder: /mnt/cache/sh/p/e\n'$want
+    same_in_test_mode "topFolder, a folder row whose parent holds nothing else ($tool)" "$want" folder_row_alone \
+        cleanFolders topFolder movefilesTool "$tool"
+    [ "$tool" = rsync ] || [ "${AGE_MOVER_DEBUG:-0}" != 2 ] ||
+        dlog_has '"/mnt/cache/sh/p/e" would be gone from the source: the walk starts at its parent "/mnt/cache/sh/p"'
+done
+
+# rmdir, in move or the walk, refuses a folder a dataset is mounted on, and one that holds a symlink
+empty_mountpoint_row() {
+    mkdir -p /mnt/cache/sh/p/e
+    echo /mnt/cache/sh/p/e >"$T/zfs"
+    row 'move from primary' d sh/p/e | list
+}
+symlink_beside_row() {
+    mkdir -p /mnt/cache/sh/g/p/e
+    ln -s gone /mnt/cache/sh/g/p/link
+    row 'move from primary' d sh/g/p/e | list
+}
+for tool in rsync move; do
+    same_in_test_mode "topFolder, a folder row that is an empty ZFS dataset mountpoint ($tool)" \
+        'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh/p/e' empty_mountpoint_row cleanFolders topFolder \
+        movefilesTool "$tool"
+    want=""
+    [ "$tool" = move ] || want='Deleted empty moved folder: /mnt/cache/sh/g/p/e'
+    same_in_test_mode "topFolder, a folder row whose parent holds a symlink ($tool)" "$want" symlink_beside_row \
+        cleanFolders topFolder movefilesTool "$tool"
+    [ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'TEST MODE: Would fail to delete moved folder (not empty): /mnt/cache/sh/g/p'
+done
+
+# the second folder row's folder is gone before its turn, and the first row's walk deleted its parent
+folder_rows_one_gone() {
+    mkdir -p /mnt/cache/sh/p/e /mnt/cache/sh/p/g
+    mk cache sh/keep.txt
+    { row 'move from primary' d sh/p/e; row 'move from primary' d sh/p/g; } | list
+    rmdir /mnt/cache/sh/p/g
+}
+for tool in rsync move; do
+    want=$'Deleted empty moved folder: /mnt/cache/sh/p\nNot deleting top-level folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh'
+    [ "$tool" = move ] || want=$'Deleted empty moved folder: /mnt/cache/sh/p/e\n'$want
+    same_in_test_mode "topFolder, a folder row's folder gone before its turn, its parent deleted ($tool)" "$want" \
+        folder_rows_one_gone cleanFolders topFolder movefilesTool "$tool"
+    [ "${AGE_MOVER_DEBUG:-0}" != 2 ] ||
+        dlog_has '"/mnt/cache/sh/p/g" is gone from the source: the walk starts at its parent "/mnt/cache/sh/p"'
+done
+
+# move leaves a folder that holds something, here a file written after the planning: nothing in the share empties, so
+# the top-folder check does not run
+folder_row_gains_file() {
+    mkdir -p /mnt/cache/sh/p/e
+    row 'move from primary' d sh/p/e | list
+    mk cache sh/p/e/new.txt
+}
+same_in_test_mode "topFolder, a folder row's folder gains a file after the planning (move)" \
+    'Not deleting folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh/p/e' folder_row_gains_file \
+    cleanFolders topFolder movefilesTool move
 
 finish

@@ -64,7 +64,14 @@ for tool in rsync move; do
     cache_is sh sh/t sh/t/e sh/t/f.txt sh/t/s.txt
     counter MOVEDFILES 0
     log_has "$([ "$tool" = move ] && echo 'TEST MODE: Would move using Unraid move utility' || echo 'TEST MODE: Would Move using rsync utility')"
-    log_has 'TEST MODE: Would delete moved empty folder: /mnt/cache/sh/t/e'
+    # Unraid's move would take the folder itself, so only rsync's would be left for the walk; the synced file keeps the
+    # parent either way
+    if [ "$tool" = move ]; then
+        log_lacks 'TEST MODE: Would delete moved empty folder'
+    else
+        log_has 'TEST MODE: Would delete moved empty folder: /mnt/cache/sh/t/e'
+    fi
+    log_has 'Not deleting folder: contains 1 file(s), 0 subfolder(s): /mnt/cache/sh/t'
     log_lacks 'Set last sync date'
 
     begin "move from secondary ($tool)" movefilesTool "$tool"
