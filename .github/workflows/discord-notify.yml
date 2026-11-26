@@ -7,57 +7,16 @@ on:
     types: [opened, closed, reopened]
   issues:
     types: [opened, closed, reopened]
-  workflow_run:
-    workflows: ["Release"]
-    types: [completed]
   workflow_dispatch:
 
-permissions:
-  actions: read
+permissions: {}
 
 jobs:
   notify_discord:
     runs-on: ubuntu-latest
 
     steps:
-      # ---------------------------------------------------------
-      # 1. Download release info artifact (workflow_run only)
-      # ---------------------------------------------------------
-      - name: Download release info artifact
-        id: release_artifact
-        if: ${{ github.event_name == 'workflow_run' }}
-        continue-on-error: true
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
-        with:
-          name: release_info
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          run-id: ${{ github.event.workflow_run.id }}
-
-      # ---------------------------------------------------------
-      # 2. Parse release info JSON
-      # ---------------------------------------------------------
-      - name: Read release info
-        if: ${{ github.event_name == 'workflow_run' && steps.release_artifact.outcome == 'success' }}
-        id: release_info
-        run: |
-          RELEASE_TAG=$(jq -r '.release_tag' release_info.json)
-          RELEASE_NAME=$(jq -r '.release_name' release_info.json)
-          NEW_RELEASE=$(jq -r '.new_release' release_info.json)
-
-          {
-            echo "RELEASE_TAG=${RELEASE_TAG}"
-            echo "RELEASE_NAME=${RELEASE_NAME}"
-            echo "NEW_RELEASE=${NEW_RELEASE}"
-          } >> "${GITHUB_ENV}"
-
-      # ---------------------------------------------------------
-      # 3. Build & send Discord embed
-      # ---------------------------------------------------------
-
-      # Notify unless workflow_run succeeded without a new release, or was cancelled or skipped
       - name: Send Discord Notification
-        if: ${{ github.event_name != 'workflow_run' || env.NEW_RELEASE == 'true' || !contains(fromJSON('["success", "cancelled", "skipped"]'), github.event.workflow_run.conclusion) }}
-
         env:
           WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
           EVENT: ${{ github.event_name }}
@@ -68,9 +27,8 @@ jobs:
           # Release info
           RELEASE_URL: ${{ github.event.release.html_url || '' }}
           RELEASE_BODY: ${{ github.event.release.body || '' }}
-          RELEASE_TAG: ${{ github.event.release.tag_name || env.RELEASE_TAG || '' }}
-          RELEASE_NAME: ${{ github.event.release.name || env.RELEASE_NAME || '' }}
-          NEW_RELEASE: ${{ github.event_name == 'release' && 'true' || env.NEW_RELEASE || 'false' }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || '' }}
+          RELEASE_NAME: ${{ github.event.release.name || '' }}
 
           # PR / Issue info
           PR_TITLE: ${{ github.event.pull_request.title || '' }}
@@ -81,13 +39,6 @@ jobs:
           ISSUE_TITLE: ${{ github.event.issue.title || '' }}
           ISSUE_URL: ${{ github.event.issue.html_url || '' }}
           ISSUE_BODY: ${{ github.event.issue.body || '' }}
-
-          # Workflow run info
-          WORKFLOW_NAME: ${{ github.event.workflow_run.name || '' }}
-          WORKFLOW_CONCLUSION: ${{ github.event.workflow_run.conclusion || '' }}
-          WORKFLOW_URL: ${{ github.event.workflow_run.html_url || '' }}
-          WORKFLOW_STARTED: ${{ github.event.workflow_run.run_started_at || '' }}
-          WORKFLOW_FINISHED: ${{ github.event.workflow_run.updated_at || '' }}
 
         run: |
           # -----------------------------------------------------
@@ -159,27 +110,6 @@ jobs:
                 COLOR=9807270
               fi
               ;;
-            workflow_run)
-              URL="${WORKFLOW_URL:-https://github.com/${REPO}/actions}"
-              TITLE="${WORKFLOW_NAME}"
-              BODY="Workflow completed with conclusion: ${WORKFLOW_CONCLUSION}"
-
-              if [ "${WORKFLOW_CONCLUSION}" = "success" ]; then
-                ICON="✅"
-                CONTENT="Workflow Succeeded"
-                COLOR=5763719
-              else
-                ICON="❌"
-                CONTENT="Workflow Failed"
-                COLOR=10038562
-              fi
-
-              if [ "${NEW_RELEASE}" = "true" ]; then
-                BODY="${BODY}"$'\n'"Built Version: ${RELEASE_TAG}"
-                TITLE="${TITLE} — ${RELEASE_TAG}"
-                CONTENT="Workflow Succeeded — New Release"
-              fi
-              ;;
             *)
               ICON="🧭"
               CONTENT="Manual Trigger"
@@ -189,33 +119,6 @@ jobs:
               COLOR=8421504
               ;;
           esac
-
-          # -----------------------------------------------------
-          # Compute workflow duration (guard null)
-          # -----------------------------------------------------
-          DURATION=""
-          if [ "${EVENT}" = "workflow_run" ] &&
-             [ "${WORKFLOW_STARTED}" != "null" ] &&
-             [ "${WORKFLOW_FINISHED}" != "null" ] &&
-             [ -n "${WORKFLOW_STARTED}" ] &&
-             [ -n "${WORKFLOW_FINISHED}" ]; then
-
-            START=$(date -d "${WORKFLOW_STARTED}" +%s)
-            END=$(date -d "${WORKFLOW_FINISHED}" +%s)
-            ELAPSED=$((END - START))
-
-            H=$((ELAPSED / 3600))
-            M=$(((ELAPSED % 3600) / 60))
-            S=$((ELAPSED % 60))
-
-            if [ ${H} -gt 0 ]; then
-              DURATION="${H}h ${M}m ${S}s"
-            elif [ ${M} -gt 0 ]; then
-              DURATION="${M}m ${S}s"
-            else
-              DURATION="${S}s"
-            fi
-          fi
 
           # -----------------------------------------------------
           # Build JSON using jq (safe & correct)
@@ -231,8 +134,6 @@ jobs:
             --arg release_tag "${RELEASE_TAG}" \
             --arg release_name "${RELEASE_NAME}" \
             --arg event "${EVENT}" \
-            --arg new_release "${NEW_RELEASE}" \
-            --arg duration "${DURATION}" \
             --argjson color "${COLOR}" \
             '
             {
@@ -251,20 +152,10 @@ jobs:
                     ]
                     +
                     (
-                      if ($event == "release" or $new_release == "true") then
+                      if $event == "release" then
                         [
                           {name: "Release Tag", value: $release_tag, inline: true},
                           {name: "Release Name", value: $release_name, inline: true}
-                        ]
-                      else
-                        []
-                      end
-                    )
-                    +
-                    (
-                      if ($event == "workflow_run" and $duration != "") then
-                        [
-                          {name: "Duration", value: $duration, inline: true}
                         ]
                       else
                         []
