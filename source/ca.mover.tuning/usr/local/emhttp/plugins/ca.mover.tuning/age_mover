@@ -5,7 +5,7 @@
 #      2023 - hugenbd (parts of code from mover tuning package)
 #      2024 - R3yn4ld (parts of code from mover tuning package)
 #      2025 - masterwishx (as current author and maintainer of this file)
-#      2026 - masterwishx and chodeus (as current authors and maintainers of this file), with contributions by Joly0 (parts of code from mover tuning package)
+#      2026 - masterwishx and chodeus (as current authors and maintainers of this file)
 #License: GPLv2 only
 
 # This is the 'mover tuning' script used for moving files between the cache disk and main array.
@@ -2600,7 +2600,7 @@ cleanTopFolder() {
 }
 
 # Prints folder $1's first entry that is not a folder, or is a folder that folder $2 lacks; $1 itself when cd or find fails.
-# Skips $1/.zfs, which snapdir=visible shows: its snapshots keep the dataset at the children check
+# Succeeds once it has looked. Skips $1/.zfs, which snapdir=visible shows: its snapshots keep the dataset at the children check
 dataset_loses() {
     local src=$1 dest=$2 entry
     # two passes: the destination is read only once nothing but folders is left
@@ -2608,23 +2608,25 @@ dataset_loses() {
         first=$(find . -mindepth 1 -path ./.zfs -prune -o ! -type d -print -quit) || exit
         [ -n "$first" ] && { printf '%s' "$first"; exit; }
         find . -mindepth 1 -path ./.zfs -prune -o -type d ! -exec test -d "$dest/{}" \; -print -quit
-    }) || { printf '%s' "$src"; return; }
-    [ -n "$entry" ] && printf '%s' "$src/${entry#./}"
+    }) || { printf '%s' "$src"; return 0; }
+    [ -z "$entry" ] || printf '%s' "$src/${entry#./}"
 }
 
 # Mounts the unmounted dataset $1 read-only at empty folder $2 and prints dataset_loses there against $4, with $2 shown
 # as $3; prints why and fails when it cannot mount or read it, and returns 2 with umount's reason when umount fails
 dataset_loses_unmounted() {
-    local err lost
+    local err lost scanned=yes
     if ! err=$(mount -t zfs -o ro,zfsutil "$1" "$2" 2>&1); then
         printf 'mount: %s' "$(zfs_reason "${err#mount: }")"
         return 1
     fi
-    lost=$(dataset_loses "$2" "$4")
+    # a scan cut short can print nothing, as a clean one does: only its status tells them apart
+    lost=$(dataset_loses "$2" "$4") || scanned=
     if ! err=$(umount "$2" 2>&1); then
         printf '%s' "$(zfs_reason "${err#umount: }")"
         return 2
     fi
+    [ -n "$scanned" ] || { printf 'the check was cut short'; return 1; }
     # dataset_loses names its folder itself when it cannot read it
     [ "$lost" != "$2" ] || { printf 'find: the dataset could not be read'; return 1; }
     [ -z "$lost" ] || printf '%s' "$3${lost#"$2"}"
@@ -2663,14 +2665,15 @@ dataset_problems_notice() {
 }
 
 # Mounts dataset $1 at its folder $2 from inside the folder and prints the first entry the mount hides, seen through .;
-# prints why and fails when the folder cannot be entered or the mount fails
+# prints why and fails when the folder cannot be entered or the mount fails; fails with 2 when the look is cut short
 mount_back() {
-    local err
+    local err entry
     # made if gone: a write through /mnt/user can make it again, with a file in it, before the mount
     { mkdir -p "$2" && cd "$2"; } 2>/dev/null || { printf 'cannot enter its folder %s' "$2"; return 1; }
     err=$(zfs mount "$1" 2>&1) || { printf 'zfs: %s' "$(zfs_reason "$err")"; return 1; }
-    find . -mindepth 1 -print -quit 2>/dev/null
-    return 0
+    # a look cut short can print nothing, as a clean one does: only its status tells them apart
+    entry=$(find . -mindepth 1 -print -quit 2>/dev/null) || return 2
+    printf '%s' "$entry"
 }
 
 # Mounts dataset $1 again at its folder $2, unless the folder gained files that a mount would hide
@@ -2679,15 +2682,35 @@ remount_dataset() {
     # a write through /mnt/user while it was unmounted lands in the bare folder
     if [ -n "$(finish_on_stop find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
         out="Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
-    elif out=$(finish_on_stop mount_back "$1" "$2"); then
-        [ -n "$out" ] || return 0
-        dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it"
-        dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
-            "$1" "$1" "$2" "$1" "$2"
-        return 0
+    else
+        out=$(finish_on_stop mount_back "$1" "$2")
+        case $? in
+        0)
+            [ -n "$out" ] || return 0
+            dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it"
+            dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+                "$1" "$1" "$2" "$1" "$2"
+            return 0
+            ;;
+        1) ;;
+        2)
+            # a failure, as a found file is: Notify errors only must still say a file may be out of view
+            dataset_problem failure "$1"
+            dataset_out_of_view "mounted again, but the look for a file written to %s as it was mounted was cut short, so one may be hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+                "$1" "$2" "$1" "$2" "$1" "$2"
+            return 0
+            ;;
+        *)
+            # killed outright, it may have mounted it or not
+            dataset_problem failure "$1"
+            dataset_out_of_view "the remount was cut short, so it may not be mounted or may hide a file: stop writes to the share, if zfs mount lists it at %s run zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+                "$1" "$2" "$1" "$2" "$1" "$2"
+            return 0
+            ;;
+        esac
     fi
     dataset_problem failure "$1" "Failed to remount dataset [$1]" "$out"
-    dataset_out_of_view "not mounted: stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s" \
+    dataset_out_of_view "not mounted: stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
         "$1" "$2" "$1" "$2"
 }
 
@@ -2696,6 +2719,9 @@ dataset_kept() {
     # the planner never saw this name: a newline in it would end the debug line before debug_mover's mangling
     mvDebuglogger "Keeping ZFS dataset [$1]: a destroy could lose $(qp "${2//$'\n'/\\n}")" "Clean Dataset"
 }
+
+# Succeeds if dataset $1 is mounted at folder $2; a stop does not cut the read short
+mounted_at() { [ "$(finish_on_stop findmnt -no source --mountpoint "$2")" = "$1" ]; }
 
 # Unmounts dataset $1 from folder $2 and destroys it if dataset_loses_unmounted at private folder $4 against $3 is empty;
 # else tries to mount it back. processTheMoves' stopped, set by a stop, skips the destroy
@@ -2715,10 +2741,10 @@ unmount_check_destroy() {
     # umount after unmounting, so the mount table decides
     if [ "$rc" != 0 ]; then
         [ "$rc" = 1 ] || [ "$rc" = 2 ] || lost="the check was cut short"
-        if [ "$(finish_on_stop findmnt -no source --mountpoint "$private")" != "$dataset" ]; then
+        if ! mounted_at "$dataset" "$private"; then
             # unmounted after all, but what the check found was not kept
             [ "$rc" != 2 ] || { lost="umount: $lost"; rc=1; }
-        elif [ "$rc" != 2 ] && ! err=$(finish_on_stop umount "$private" 2>&1); then
+        elif [ "$rc" != 2 ] && ! err=$(finish_on_stop umount "$private" 2>&1) && mounted_at "$dataset" "$private"; then
             lost=$(zfs_reason "${err#umount: }")
             rc=2
         fi
@@ -2726,7 +2752,7 @@ unmount_check_destroy() {
     if [ "$rc" = 2 ]; then
         dataset_problem failure "$dataset" \
             "ZFS dataset [${dataset}] is still mounted read-only at ${private}, not at ${folder}: umount: $lost"
-        dataset_out_of_view "mounted read-only at %s: stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s" \
+        dataset_out_of_view "mounted read-only at %s: stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
             "$dataset" "$private" "$private" "$folder" "$dataset" "$folder"
         return 0
     elif [ "$rc" != 0 ]; then
@@ -2763,7 +2789,8 @@ cleanShareDataset() {
         mvlogger "ZFS dataset [${dataset}] could not be listed, will not delete: $(zfs_reason "$names")"
         return 0
     fi
-    lost=$(finish_on_stop dataset_loses "$folder" "$3/$2")
+    # cut short, it is kept as a folder it cannot read is
+    lost=$(finish_on_stop dataset_loses "$folder" "$3/$2") || lost=$folder
     if [ -n "$lost" ]; then
         dataset_kept "$dataset" "$lost"
         return 0
@@ -3303,14 +3330,16 @@ processTheMoves() {
     # the notice's log lines come back out of the $( )
     notice_lines=$(finish_on_stop dataset_problems_notice)
     [ -z "$notice_lines" ] || printf '%s\n' "$notice_lines"
-    trap - TERM HUP INT
     if [ -n "$stopped" ]; then
-        # before the pid file goes: a run that starts once it has gone may force turbo write again
+        # before the pid file goes, as a run that starts once it has gone may force turbo write again; a second stop must
+        # not end the run, or its mdcmd, first
+        trap '' TERM HUP INT
         restore_turbo
         # the plugin's stop removes these once the run has ended; a stop that signals the run alone leaves them
         [ "$(cat "$PIDFILE" 2>/dev/null)" != "$$" ] || rm -f "$PIDFILE" "$MOVER_STATUS" "$PAUSEFILE" "$MOVINGFILE"
         exit 0
     fi
+    trap - TERM HUP INT
     for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&

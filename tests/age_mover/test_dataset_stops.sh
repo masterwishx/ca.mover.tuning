@@ -19,14 +19,14 @@ stop_done() {
     rm -f "$T/stop.out" "$T/pid.kept"
 }
 # a hook, run once after command $2, that sends signal $1 to every process from its caller up to, not including, the run
+# and its $3 (default 0) nearest
 kill_hook() {
     cat <<EOF
 rm -f "\$0"
 $2
 p=\$PPID up=(\$PPID)
 while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); up+=("\$p"); done
-unset 'up[-1]'
-kill -$1 "\${up[@]}"
+kill -$1 "\${up[@]:0:\${#up[@]}-$((1 + ${3:-0}))}"
 EOF
 }
 # a $1 first on PATH, under $T/wrap, that runs $T/$1.hook when its arguments start with $2, then the real $1
@@ -73,6 +73,40 @@ check "the dataset is kept, unmounted" yes "$([ -d "$T/zfs.store/cache/sh" ] && 
 cache_is sh sh/bare.txt
 no_private
 notices "$NOT_MOUNTED"
+
+# a second stop, at the read of var.ini that puts the write method back, waits for it
+begin "Clean ZFS datasets, a second stop as the stopped run puts the write method back" cleanFolders topFolder \
+    cleanDatasets yes enableTurbo yes
+one_share
+mkdir -p /usr/local/sbin /var/local/emhttp
+echo 'md_write_method="0"' >/var/local/emhttp/var.ini
+printf '#!/bin/bash\necho "mdcmd $*" >>%q\n' "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
+chmod 755 /usr/local/sbin/mdcmd
+echo $$ >"$T/pid"
+cat >"$T/bin/grep" <<EOF
+#!/bin/bash
+if [ "\$2" = '^md_write_method=' ] && [ -e $T/stop2 ]; then
+    rm -f $T/stop2
+    p=\$PPID
+    while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); done
+    kill -TERM "\$p"
+fi
+exec /usr/bin/grep "\$@"
+EOF
+chmod 755 "$T/bin/grep"
+# the run is a subshell of this script: it would keep the grep this script found before
+hash -r
+{ stop_hook run; echo "touch $T/stop2"; } >"$T/zfs.on_mount.zfs"
+run_moves 'processTheMoves did not return'
+rm -f "$T/bin/grep"
+hash -r
+check "the second stop came" "" "$(ls "$T/stop2" 2>/dev/null)"
+check "turbo write forced, then put back" "$(printf '%s\n' 'mdcmd set md_write_method 1' 'mdcmd set md_write_method 0')" \
+    "$(cat "$T/mdcmd.calls")"
+check "the run removed its pid file" "" "$(ls "$T/pid" 2>/dev/null)"
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+log_lacks 'successfully destroyed'
+no_private
 
 # the plugin's stop as each step runs: the step finishes, a destroy that finished stays done, else the dataset goes back
 for step in 'zfs list' 'zfs unmount' 'the read-only umount' 'zfs destroy' 'the remount'; do
@@ -179,7 +213,7 @@ log_has 'Failed to remount dataset [cache/a]'
 log_lacks 'ZFS dataset [cache/sh] holds only folders'
 check "cache/sh is still mounted" /mnt/cache/sh "$(grep -x /mnt/cache/sh "$T/zfs")"
 check "the share after it is not looked at" "" "$(grep -F cache/z "$T/zfs.calls")"
-notices "$(notice_for '[cache/a] (not mounted: stop writes to the share, move anything in /mnt/cache/a aside, zfs mount cache/a, then move it back into /mnt/cache/a)')"
+notices "$(notice_for '[cache/a] (not mounted: stop writes to the share, move anything in /mnt/cache/a aside, zfs mount cache/a, then move it back into /mnt/cache/a without replacing a file already there: keep both copies and compare them)')"
 no_private
 check "another run's pid file stays" 1 "$(cat "$T/pid" 2>/dev/null)"
 rm -f "$T/pid"
@@ -286,6 +320,67 @@ for when in 'before the read-only mount' 'while it is mounted' 'while it is moun
     notices "$NOTICE"
     log_has 'ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: the check was cut short'
     mounted_again
+    no_private
+done
+
+# a scan's subshell killed outright, its caller not: it printed nothing because it never looked. The first check keeps
+# the dataset mounted; the one at the private mount, where a file landed as it unmounted, keeps it and mounts it back
+SCAN=". -mindepth 1 -path ./.zfs -prune -o ! -type d -print -quit"
+for which in 'first check' 'check at the private mount'; do
+    begin "Clean ZFS datasets, the scan of the $which is killed" cleanFolders topFolder cleanDatasets yes
+    one_share
+    wrap_hook find "$SCAN"
+    if [ "$which" = 'first check' ]; then
+        kill_hook KILL : >"$T/find.hook"
+    else
+        kill_hook KILL : 1 >"$T/kill.hook"
+        printf '%s\n' 'echo x >/mnt/cache/sh/new.txt' "cp \"$T/kill.hook\" \"$T/find.hook\"" >"$T/zfs.on_unmount"
+    fi
+    PATH=$T/wrap:$PATH run_moves
+    log_lacks 'successfully destroyed'
+    if [ "$which" = 'first check' ]; then
+        check "zfs calls" "zfs $LS cache/sh" "$(cat "$T/zfs.calls")"
+        log_lacks 'attempting to unmount'
+        notices ''
+        continue
+    fi
+    check "zfs calls" "$REMOUNTED" "$(cat "$T/zfs.calls")"
+    log_has 'ZFS dataset [cache/sh] could not be checked once unmounted, will not delete: the check was cut short'
+    notices "$NOTICE"
+    mounted_again
+    cache_is sh sh/new.txt
+    no_private
+done
+
+# a file lands in the folder as the dataset is mounted back. The look after the mount killed printed nothing because it
+# never looked; the whole remount killed leaves the run unable to tell whether the mount happened
+# Notify errors only: a failure still sends the notice, which alone carries the steps when action logging is off
+for what in look remount; do
+    begin "Clean ZFS datasets, the $what at the mount back is killed" cleanFolders topFolder cleanDatasets yes notify errorsOnly
+    one_share
+    echo 'echo x >/mnt/cache/sh/new.txt' >"$T/zfs.on_unmount"
+    echo 'echo y >/mnt/cache/sh/late.txt' >"$T/zfs.on_mount"
+    wrap_hook find ". -mindepth 1 -print -quit"
+    if [ "$what" = look ]; then
+        cat >"$T/find.hook" <<'EOF'
+rm -f "$0"
+kill -KILL "$PPID"
+EOF
+    else
+        kill_hook KILL : >"$T/find.hook"
+    fi
+    PATH=$T/wrap:$PATH run_moves
+    check "zfs calls" "$REMOUNTED" "$(cat "$T/zfs.calls")"
+    if [ "$what" = look ]; then
+        why="mounted again, but the look for a file written to /mnt/cache/sh as it was mounted was cut short, so one may be hidden under it: stop writes to the share, zfs unmount cache/sh, $BACK"
+    else
+        why="the remount was cut short, so it may not be mounted or may hide a file: stop writes to the share, if zfs mount lists it at /mnt/cache/sh run zfs unmount cache/sh, $BACK"
+    fi
+    log_has "ZFS dataset [cache/sh]: $why"
+    log_lacks 'Failed to remount'
+    notices "$(notice_for "[cache/sh] ($why)")"
+    mounted_again
+    cache_is sh sh/new.txt
     no_private
 done
 
