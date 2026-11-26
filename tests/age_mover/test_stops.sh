@@ -154,6 +154,42 @@ put_back_once
 array_is sh sh/s sh/s/1.txt
 cache_is sh sh/s sh/s/2.txt
 
+# the plugin's stop signals mdcmd before the run, so mdcmd can end before it sets the write method back (143 here): the
+# run keeps its EXIT trap and tries again as it ends
+begin "turbo write on, mdcmd fails as the run puts the write method back" enableTurbo yes
+mk cache sh/s/1.txt
+row 'move from primary' f sh/s/1.txt | list
+turbo_standin
+touch "$T/fail_once"
+cat >/usr/local/sbin/mdcmd <<EOF
+#!/bin/bash
+[ "\$3" != 0 ] || [ ! -e $T/fail_once ] || { rm -f $T/fail_once; exit 143; }
+echo "mdcmd \$*" >>$T/mdcmd.calls
+EOF
+run_moves
+check "turbo write forced, then put back as the run ended" "$(printf '%s\n' 'mdcmd set md_write_method 1' \
+    'mdcmd set md_write_method 0')" "$(cat "$T/mdcmd.calls")"
+log_count 1 'Could not restore original turbo write mode Read/modify/write: mdcmd exited 143'
+log_count 2 'Restoring original turbo write mode Read/modify/write'
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+array_is sh sh/s sh/s/1.txt
+
+begin "turbo write on, mdcmd fails to force it" enableTurbo yes
+mk cache sh/s/1.txt
+row 'move from primary' f sh/s/1.txt | list
+turbo_standin
+cat >/usr/local/sbin/mdcmd <<EOF
+#!/bin/bash
+[ "\$3" != 1 ] || exit 1
+echo "mdcmd \$*" >>$T/mdcmd.calls
+EOF
+run_moves
+check "the write method was set back as it was" 'mdcmd set md_write_method 0' "$(cat "$T/mdcmd.calls")"
+log_count 1 'Could not force turbo write on: mdcmd exited 1'
+log_count 1 'Restoring original turbo write mode Read/modify/write'
+rm -rf /usr/local/sbin/mdcmd /var/local/emhttp "$T/mdcmd.calls"
+array_is sh sh/s sh/s/1.txt
+
 begin "turbo write on, var.ini gives no write method" enableTurbo yes
 mk cache sh/s/1.txt
 row 'move from primary' f sh/s/1.txt | list
@@ -196,8 +232,9 @@ for now in 'auto Auto (read/modify/write)' ' Read/modify/write'; do
     array_is sh sh/s sh/s/1.txt
 done
 
-# a process pgrep lists can end before its signal; a pid no process can have stands for it, so no real one is signalled
-begin "the plugin's stop, a listed process gone before its signal"
+# a process pgrep lists can end before its TERM, or between its TERM and CONT: a pid no process can have stands for the
+# first, so no real one is signalled, and a kill that waits after each TERM until its process has gone for the second
+begin "the plugin's stop, listed processes that end before or between its signals"
 real_pgrep=$(command -v pgrep)
 # this script waits on the run, so it is reaped as it ends: one nobody reaps would still answer the stop's kill -0
 bash -c 'sleep 30 && exit 3' &
@@ -208,8 +245,16 @@ printf '#!/bin/bash\n%q "$@"\n[ "${*: -1}" != %q ] || echo %q\n' "$real_pgrep" "
 chmod 755 "$T/bin/pgrep"
 hash -r
 echo "$run" >"$T/pid"
-# shellcheck disable=SC2034 # stop, from funcs.sh, reads them
-(PIDFILE=$T/pid MOVER_STATUS=$T/mover.ini PAUSEFILE=$T/pause MOVINGFILE=$T/moving; stop) >"$T/stop.out" 2>&1 &
+# shellcheck disable=SC2034,SC2329 # stop, from funcs.sh, reads the variables and calls kill
+(
+    kill() {
+        builtin kill "$@" || return
+        [ "$1" = -TERM ] || return 0
+        for _ in $(seq 50); do builtin kill -0 "$2" 2>/dev/null || return 0; sleep 0.1; done
+    }
+    PIDFILE=$T/pid MOVER_STATUS=$T/mover.ini PAUSEFILE=$T/pause MOVINGFILE=$T/moving
+    stop
+) >"$T/stop.out" 2>&1 &
 stopper=$!
 wait "$run"
 check "the stop ended the run" 143 "$?"
