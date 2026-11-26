@@ -3,8 +3,8 @@
 # the tests delete folders under /mnt, so set it only inside a throwaway container.
 HERE=$(cd "$(dirname "$0")" && pwd)
 if [ "${AGE_MOVER_TEST:-}" != 1 ]; then
-    # mirrors CI's job container: PID 1 must reap no orphan (no --init), or a leaked process passes here and fails in CI
-    # sleep's limit ends a container whose run.sh died without running its trap; --rm then removes it
+    # mirrors CI's job container: PID 1 must reap no orphan (no --init), or a test can pass here and fail in CI
+    # sleep's limit ends a container run.sh did not stop (run.sh killed, or interrupted inside docker run); --rm removes it
     c=
     trap '[ -z "$c" ] || docker kill "$c" >/dev/null' EXIT
     c=$(docker run -d --rm -v "$(cd "$HERE/../.." && pwd):/src:ro" "${AGE_MOVER_IMAGE:-debian:bookworm-slim}" \
