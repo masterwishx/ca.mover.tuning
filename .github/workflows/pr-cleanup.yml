@@ -1,13 +1,20 @@
 name: PR cleanup
 
-# Removes the pr-<number>-<version> test builds when a pull request closes. Checks out nothing.
+# Every hour, removes the pr-<number>-<version> test builds of closed pull requests and says so in their build
+# comment. Checks out nothing. A schedule runs the default branch's copy of this file, and GitHub turns it off after
+# 60 days without repository activity: turn it back on from the Actions tab.
 on:
-  pull_request_target:
-    types: [closed]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
+
+concurrency:
+  group: pr-cleanup
+  cancel-in-progress: false
 
 env:
   GH_TOKEN: ${{ github.token }}
@@ -16,24 +23,55 @@ jobs:
   cleanup:
     runs-on: ubuntu-latest
     steps:
-    - name: Remove the pull request releases, their tags and the note
-      env:
-        PR: ${{ github.event.pull_request.number }}
+    - name: Remove closed pull requests' releases and tags, and mark their notes removed
       run: |
         set -euo pipefail
-        # listed first: a failing call inside a process substitution would read as "nothing to remove"
-        tags=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq ".[] | select(.prerelease and (.tag_name | startswith(\"pr-$PR-\"))) | .tag_name")
-        [ -n "$tags" ] || echo "No test build for #$PR."
-        while read -r tag; do
-          [ -n "$tag" ] || continue
-          # a publish run that saw the close may have removed it already: "release not found" is that outcome
-          out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes --cleanup-tag 2>&1) \
-            || [[ "$out" == *"release not found"* ]] || { echo "$out" >&2; exit 1; }
-          echo "removed $tag"
-        done <<< "$tags"
-        # also when nothing was left: an earlier attempt may have removed the builds and failed before this
         marker="<!-- pr-build -->"
-        id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n 1)
-        if [ -n "$id" ] && [ "$id" != "null" ]; then
+        # set -e does not reach into a function called with ||, so every failure returns 1 itself
+        note() {  # $1 pull request, $2 closed or gone (deleted, so no note to update)
+          local id
+          [ "$2" = closed ] || return 0
+          id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$1/comments?per_page=100" --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id") || return 1
+          id=${id%%$'\n'*}
+          [ -n "$id" ] || return 0
           gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$marker"$'\n'"The test build for this pull request has been removed." >/dev/null
-        fi
+        }
+        clean() {  # $1 pull request, $2 its tags, $3 closed or gone
+          local tag out
+          while read -r tag; do
+            grep -qxF -- "$tag" <<< "$builds" || continue
+            # a publish run that saw the close may remove it first: "release not found", or a 404 when it does so
+            # between gh's lookup and its delete, is that outcome
+            out=$(gh release delete --repo "$GITHUB_REPOSITORY" "$tag" --yes 2>&1) \
+              || [[ "$out" == *"release not found"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
+          done <<< "$2"
+          # after the release deletes: a publish run's comment lands before it or finds no release (pr-publish). Before
+          # the tag deletes: a failed note keeps the tags, so the next sweep comes back to this pull request
+          note "$1" "$3" || return 1
+          while read -r tag; do
+            # a publish run's --cleanup-tag may remove it first: GitHub answers that with this 422, or a 404
+            out=$(gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$tag" 2>&1 >/dev/null) \
+              || [[ "$out" == *"Reference does not exist"* || "$out" == *"HTTP 404"* ]] || { echo "$out" >&2; return 1; }
+            echo "removed $tag"
+          done <<< "$2"
+        }
+        # listed first: a failing call inside a process substitution would read as "nothing to remove". Tags before
+        # releases, so a release published between the two lists is never taken for a tag without one
+        refs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/git/matching-refs/tags/pr-" --jq '.[].ref | ltrimstr("refs/tags/") | select(test("^pr-[0-9]+-"))')
+        listed=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" --jq '.[] | select(.tag_name | test("^pr-[0-9]+-")) | "\(.prerelease) \(.tag_name)"')
+        builds=$(sed -n 's/^true //p' <<< "$listed")
+        # a tag no release has: clean deletes tags last, so a failure after the release deletes leaves them behind
+        orphans=$(grep -vxF -f <(sed 's/^[a-z]* //' <<< "$listed") <<< "$refs") || [ $? = 1 ]
+        tags=$(printf '%s\n' "$builds" "$orphans" | sed '/^$/d' | sort -u)
+        [ -n "$tags" ] || { echo "No test builds."; exit 0; }
+        rc=0
+        while read -r -u 3 pr; do
+          if ! state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$pr" --jq .state 2>&1); then
+            # a deleted pull request answers 404: its builds go too, else every sweep would fail on it
+            [[ "$state" == *"(HTTP 404)"* ]] || { echo "::error::cannot read #$pr: $state"; rc=1; continue; }
+            state=gone
+          fi
+          case $state in closed | gone) ;; *) continue ;; esac
+          clean "$pr" "$(grep "^pr-$pr-" <<< "$tags")" "$state" || { echo "::error::could not clean up #$pr"; rc=1; }
+        done 3<<< "$(sed -E 's/^pr-([0-9]+)-.*/\1/' <<< "$tags" | sort -un)"
+        exit $rc

@@ -2,8 +2,8 @@
 <!DOCTYPE PLUGIN [
 <!ENTITY name      "ca.mover.tuning">
 <!ENTITY author    "masterwishx">
-<!ENTITY version   "2026.11.26a">
-<!ENTITY md5       "74a779fc13cfb157640448d77ad043ba">
+<!ENTITY version   "2026.11.26b">
+<!ENTITY md5       "62b3b75c52a59181e8175aad377bdd99">
 <!ENTITY launch    "Settings/Scheduler">
 <!ENTITY plugdir   "/usr/local/emhttp/plugins/&name;">
 <!ENTITY github    "masterwishx/&name;">
@@ -14,6 +14,9 @@
 <PLUGIN name="&name;" author="&author;" version="&version;" launch="&launch;" pluginURL="&pluginURL;" icon="wrench" min="6.9.0-rc2">
 
 <CHANGES>
+###2026.11.26b
+- No changes to the plugin since 2026.11.26a: README updates and release workflow fixes only. (masterwishx, chodeus)
+
 ###2026.11.26a
 - perf: Faster in-use file checks: file leases replace fuser where the system supports them. (coppit)
 - perf: Logging costs much less, and almost nothing when it is off. (coppit)

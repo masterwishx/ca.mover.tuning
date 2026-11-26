@@ -3,11 +3,12 @@
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/6f52a17f3cc6448c99787e6f94fafa65)](https://app.codacy.com/gh/masterwishx/ca.mover.tuning/dashboard?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 [![CodeFactor](https://www.codefactor.io/repository/github/masterwishx/ca.mover.tuning/badge)](https://www.codefactor.io/repository/github/masterwishx/ca.mover.tuning)
 
-[![Release](https://img.shields.io/github/v/release/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/masterwishx/ca.mover.tuning/total?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/releases)
-[![License: GPL-2.0](https://img.shields.io/github/license/masterwishx/ca.mover.tuning?style=flat-square)](LICENSE)
-[![Last commit](https://img.shields.io/github/last-commit/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/commits/master)
-[![Stars](https://img.shields.io/github/stars/masterwishx/ca.mover.tuning?style=flat-square)](https://github.com/masterwishx/ca.mover.tuning/stargazers)
+[![Release](https://img.shields.io/github/v/release/masterwishx/ca.mover.tuning?style=flat-square&label=Release)](https://github.com/masterwishx/ca.mover.tuning/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/masterwishx/ca.mover.tuning/total?style=flat-square&label=Downloads)](https://github.com/masterwishx/ca.mover.tuning/releases)
+[![License: GPL-2.0](https://img.shields.io/github/license/masterwishx/ca.mover.tuning?style=flat-square&label=License)](LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/masterwishx/ca.mover.tuning?style=flat-square&label=Last%20commit)](https://github.com/masterwishx/ca.mover.tuning/commits/master)
+[![Stars](https://img.shields.io/github/stars/masterwishx/ca.mover.tuning?style=flat-square&label=Stars)](https://github.com/masterwishx/ca.mover.tuning/stargazers)
+[![Unraid](https://img.shields.io/badge/Unraid-6.9.0--rc2%2B-orange?style=flat-square)](#requirements)
 
 [![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?style=flat-square&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=UDXM742YK5ZV6)
 
@@ -17,25 +18,26 @@ This is an [Unraid](https://unraid.net/) plugin that lets you fine-tune the oper
 
 This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/pulls) from [R3yn4ld](https://github.com/R3yn4ld/ca.mover.tuning) after review (cosmetics, per-share skipfiletypes merge, automatic age threshold, Unraid 7.x compatibility) and adds many new features. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
-**Requires Unraid 6.9.0-rc2 or newer.** With Perl, which is part of Unraid's base distribution from 6.11.0, the mover checks whether a file is in use faster, with a Linux file lease. Unraid 7.2.1+ and the 7.4 rc1 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
+## Requirements
 
-> **Tip:** click on any option or press **F1** on the settings page to read a detailed description of all settings.
+**Unraid 6.9.0-rc2 or newer.** With Perl, which is part of Unraid's base distribution from 6.11.0, the mover checks whether a file is in use faster, with a Linux file lease. Unraid 7.2.1+ and the 7.4.0 are supported (see [Unraid 7.2.1 and newer](#unraid-721-and-newer)).
 
 ## Features
 
-**When and what to move**
+### When and what to move
 
 - Only move files if the cache is getting full: *move above* a threshold of used Primary (cache) space, *free down* to a lower level, and *fill up* (Array → Cache) to a chosen level.
+- Threshold lists adjust to the chosen moving threshold (freeing thresholds stay at or below it, Move All thresholds above it). A warning appears when the freeing threshold is above the moving threshold, and out-of-range saved values are corrected and flagged.
 - Filter by file age ("Auto" enables smart caching), CTIME or ATIME, minimum size, sparseness, hidden files, file types, or a list of ignored files and folders in a text file.
 - **Move order:** oldest, largest or smallest first.
 - Optionally move all files from Primary → Secondary (cache:yes) shares when the pool is above a chosen percentage.
 - **Cache watchdog** (opt-in): monitors the cache and starts a run when the pool reaches a trigger level.
-- Optionally don't run the scheduled mover during a parity check / rebuild.
+- Optionally don't run the scheduled mover during a parity check / rebuild. A paused check or rebuild does not count, so it no longer blocks scheduled or forced moves.
 - Optionally force a move of all files on a schedule, or disable the scheduled run completely.
 - Files that are in use are left where they are, unless you enable "Move files that are in use".
-- Choose the file-moving tool: Move (Unraid's built-in utility) or Rsync. Optionally force turbo write and set the priority of the mover process and of disk I/O.
+- Choose the file-moving tool: **Move** (Unraid's built-in utility) or **Rsync**. Optionally force turbo write and set the priority of the mover process and of disk I/O.
 
-**Shares**
+### Shares
 
 - Per-share overrides of the global settings (Shares → click a share → Mover Tuning). Every override has a "Use global" choice.
 - Cache:prefer shares: array → cache moves up to a configurable fill-up level.
@@ -45,29 +47,30 @@ This fork merges all [pull requests](https://github.com/R3yn4ld/ca.mover.tuning/
 - Hardlinked files are moved and synced together.
 - "Share size calculation" option to avoid slow scans on large or busy shares.
 
-**Cleanup**
+### Cleanup
 
 - Optional moving and cleanup of empty folders, including top-level share folders.
 - Cleanup of empty ZFS datasets, with protection for ZFS datasets and `.placeholder` files.
 
-**Safety, logging and troubleshooting**
+### Safety, logging and troubleshooting
 
 - Test Mode (dry run) with clear warnings.
-- Live progress of a run (file being processed, action, overall progress, estimated completion).
-- Pause and Resume buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The per-share Move and the runs of the built-in mover that the plugin starts (forced move, "Move now" without the filters) pause once their current file is done; runs Unraid starts itself are left alone. The next scheduled run or a cache watchdog trigger resumes a paused run.
+- **Live progress** of a run under the Move button: named steps (filtering, deciding, moving), the file being processed, size left, speed and ETA. Updated every 5 seconds while a file moves (with the Move tool, in 2 GiB steps).
+- Verified results: a move or sync counts as successful only after the file has arrived at the destination and been removed from the source. Successful and failed items are counted and reported separately in logs and notifications.
+- **Pause** and **Resume** buttons on Main and next to "Move now" while a run moves files. An Rsync copy pauses at once; with Move, the run pauses once the current file is done. The per-share Move and the runs of the built-in mover that the plugin starts (forced move, "Move now" without the filters) pause once their current file is done; runs Unraid starts itself are left alone. The next scheduled run or a cache watchdog trigger resumes a paused run.
 - Detailed logs (file only, or file and syslog), configurable log folder and log age, a Log files row that views or downloads any run's log, and a "Run by" entry showing whether the run came from cron, the CLI or the web UI.
 - The log explains why a file did not move (for example "No space left on device") and warns when a share's minimum free space is smaller than the largest file to move.
-- Unraid notifications for failures and completion, with a "Moved Only" option.
-- Optional scripts to run before and after the mover.
+- Unraid notifications for failures and completion, with a "Moved Only" option. Notifications follow the GUI language.
+- Optional scripts to run **before** and **after** the mover.
 - Debug package (.zip) for the support thread, with file names hidden.
-- "Defaults" button that asks first and then resets all settings, including schedules.
+- "Defaults" button that asks first and then **resets** all settings, including schedules.
 
-**Unraid 7.2.1+**
+### Unraid 7.2.1+
 
 - Own Mover Tuning schedule, separate from the native mover, with automatic migration of the old schedule.
 - "Move now" button that shows the mover as running until it finishes.
 
-**Languages:** English, Russian, German, French and Simplified Chinese.
+**Languages:** English, Russian, German, French and Simplified Chinese (interface, help and notifications).
 
 ## How it works
 
@@ -81,7 +84,7 @@ The list is sorted by "Use cache", increasing age, pool, and file inode, giving 
 Please note that if the age setting is set to something other than "Auto (smart cache)", this script is actually dumb: it does not check for size and free space and relies on your own calculations.
 Files at the top level of the cache or an array disk (i.e. not in a share) are never moved.
 
-The list is then passed to the original Unraid mover.
+The list is then processed with the chosen tool (Rsync by default, or Unraid's move utility).
 For each file, if the file is not "in use" by any process (as detected by an exclusive Linux file lease, with `fuser` as a compatibility fallback when leases or Perl are unavailable), then the file is moved and, upon success, deleted from the source disk. If the file already exists on the target, it is not moved and the source is not deleted. All metadata of moved files/directories is preserved: permissions, ownership, extended attributes, and access/modified timestamps.
 If an error occurs while copying a file, the partial file, if present, is deleted and the operation continues on to the next file.
 
@@ -122,22 +125,24 @@ You'll find the settings on the Mover Tuning page within Settings - [Scheduler](
 
 Per-share overrides are on each share's own page (Shares → click a share → Mover Tuning).
 
-**Plugin Settings**
+> **Tip:** click on any option or press **F1** on the settings page to read a detailed description of all settings.
+
+## Plugin Settings
 
 ![Plugin Settings](screenshots/settings.png)
 
 <details>
 <summary>More screenshots</summary>
 
-**Filters**
+### Filters
 
 ![Filters](screenshots/filters.png)
 
-**Options**
+### Options
 
 ![Options](screenshots/options.png)
 
-**Help**
+### Help
 
 ![Help](screenshots/help.png)
 
@@ -153,10 +158,10 @@ Commands that can be launched from a terminal or a script (`age_mover` is instal
 | --- | --- |
 | `age_mover start` | Starts the age_mover with the settings you set in the GUI. |
 | `age_mover stop` | Forced stop of the age_mover process tree. Not recommended: it can leave partial files and incomplete hardlink transfers. Use `softstop` instead. |
-| `age_mover softstop` | Soft stop (recommended) of a Mover Tuning run. Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. |
+| `age_mover softstop` | Soft stop (recommended) of a Mover Tuning run. Cleanly exits the loops (Filtering, Deciding, Moving); an ongoing file transfer is not interrupted, and the stop occurs after the current file operation. Turbo write is restored afterwards. Also works on Unraid before 7.2.1. |
 | `age_mover pause` | Pauses a run that is moving files, like the Pause button: an Rsync copy waits at once, a Move copy once its file is done. |
 | `age_mover resume` | Resumes a paused run. The next scheduled run or a cache watchdog trigger also resumes it. |
-| `age_mover status` | Checks if the age_over is running. |
+| `age_mover status` | Checks if age_mover is running (also on Unraid before 7.2.1). |
 | `age_mover reset` | Resets the plugin config and schedules to default values and deletes the override config folder. |
 | `age_mover debug` | Creates a diagnostics ZIP at `/boot/logs/ca.mover.tuning-debug-<date-time>.zip`. |
 | `age_mover watchdog` | Starts a run when a cache:yes share's primary pool reaches the Cache watchdog trigger level. Run by cron, so you normally don't need to call it yourself. |
