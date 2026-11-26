@@ -251,6 +251,26 @@ after_first_rsync() {
     chmod 755 "$T/bin/rsync"
 }
 
+# a hook, run once, that stops the mover: one stop signals the run alone, as a kill of its pid does; the plugin's is
+# age_mover stop, run outside the run, which signals every process of it. The hook waits until that stop says it waits
+# for the run or has ended, and notes whether the run's pid file is still there
+stop_hook() {
+    cat <<EOF
+rm -f "\$0"
+p=\$PPID
+while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); done
+EOF
+    # shellcheck disable=SC2016 # the hook expands its own $p
+    if [ "$1" = run ]; then echo 'kill -TERM "$p"'; return; fi
+    cat <<EOF
+echo "\$p" >"$T/pid"
+( setsid bash -c '. "$T/funcs.sh"; PIDFILE="$T/pid" MOVER_STATUS="$T/mover.ini" PAUSEFILE="$T/pause" MOVINGFILE="$T/moving"; stop' \\
+    </dev/null >"$T/stop.out" 2>&1 & )
+for _ in \$(seq 100); do grep -qs -e 'mover: stopped' -e 'mover: waiting' "$T/stop.out" && break; sleep 0.1; done
+[ ! -f "$T/pid" ] || echo kept >"$T/pid.kept"
+EOF
+}
+
 # mk <root> <share/path>...: a 2-byte file at /mnt/<root>/<path>
 mk() {
     local r=$1 p

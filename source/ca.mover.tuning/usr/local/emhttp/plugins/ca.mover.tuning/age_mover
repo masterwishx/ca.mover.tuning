@@ -2859,10 +2859,7 @@ processTheMoves() {
     # the Pause button shows from here until movesEnd
     echo "$$ 0" >"$MOVINGFILE"
     mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
-    if [ "$ENABLETURBO" = "yes" ]; then
-        mvlogger "Forcing turbo write on"
-        [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
-    fi
+    force_turbo
     # MOVER_ACTIONLIST header:
     # PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|FILESIZE|POOLSUM|THRESHOLD|PROJECTED|NBLINKS|INODE|ACTION|FROM|TO|FILETYPE|FILEPATH
 
@@ -3380,9 +3377,9 @@ processTheMoves() {
     notice_lines=$(finish_on_stop dataset_problems_notice)
     [ -z "$notice_lines" ] || printf '%s\n' "$notice_lines"
     if [ -n "$stopped" ]; then
-        # a second stop must not end the run, or its mdcmd, before the write method is back
+        # a second stop must not end the run, or its mdcmd, before the pid file goes
         trap '' TERM HUP INT
-        restore_turbo
+        last_restore_turbo
         # the plugin's stop removes these once the run has ended; a stop that signals the run alone leaves them
         [ "$(cat "$PIDFILE" 2>/dev/null)" != "$$" ] || rm -f "$PIDFILE" "$MOVER_STATUS" "$PAUSEFILE" "$MOVINGFILE"
         exit 0
@@ -3417,13 +3414,61 @@ processTheMoves() {
     restore_turbo
 }
 
-# Sets the write method back from the turbo write that processTheMoves forced on
-restore_turbo() {
-    [ "$ENABLETURBO" = "yes" ] || return 0
-    turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
-    mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
-    [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
+# Prints the write method var.ini gives when it is one mdcmd can set back: 0, 1 or auto, as mover.php checks
+write_method() {
+    local m
+    m=$(grep -s '^md_write_method=' /var/local/emhttp/var.ini | cut -d'"' -f2)
+    case $m in 0 | 1 | auto) echo "$m" ;; *) return 1 ;; esac
 }
+
+# With Turbo Mode on, forces turbo write for the moves, only when the write method can be set back after
+force_turbo() {
+    TURBO_WAS=""
+    [ "$ENABLETURBO" = "yes" ] || return 0
+    if ! TURBO_WAS=$(write_method); then
+        mvlogger "Not forcing turbo write on: /var/local/emhttp/var.ini gives no write method (0, 1 or auto) to set back after"
+        return 0
+    fi
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would force turbo write on"
+        return 0
+    fi
+    # set first: a stop that ends the run from here on puts the write method back on its way out, and a second stop
+    # waits for it; a KILL cannot
+    trap 'trap "" HUP INT TERM; restore_turbo' EXIT
+    mvlogger "Forcing turbo write on"
+    /usr/local/sbin/mdcmd set md_write_method 1 || mvlogger "Could not force turbo write on: mdcmd exited $?"
+}
+
+# Sets the write method back after force_turbo, where the run ends or from the EXIT trap of a run a signal ends sooner;
+# it clears the trap, in a real run only once mdcmd has set it back
+restore_turbo() {
+    local m name
+    [ -n "$TURBO_WAS" ] || return 0
+    # var.ini's now, which Settings may have changed during the moves; the one read before when it gives none
+    m=$(write_method) || m=$TURBO_WAS
+    case $m in
+    auto) name="Auto (read/modify/write)" ;;
+    1) name="Turbo writes (Reconstruct)" ;;
+    *) name="Read/modify/write" ;;
+    esac
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would restore original turbo write mode $name"
+    else
+        mvlogger "Restoring original turbo write mode $name"
+        # the plugin's stop signals mdcmd before the run: one it ends first leaves the EXIT trap to try again
+        /usr/local/sbin/mdcmd set md_write_method "$m" || {
+            mvlogger "Could not restore original turbo write mode $name: mdcmd exited $?"
+            return 1
+        }
+    fi
+    TURBO_WAS=""
+    trap - EXIT
+}
+
+# The last try, before the run removes its pid file: a run that starts after may force turbo write, which a later try
+# would undo
+last_restore_turbo() { restore_turbo || trap - EXIT; }
 
 # The settings pages cannot offer this combination, so it only arrives by saving a
 # lower moving threshold while the old freeing value is still selected.
@@ -3599,6 +3644,7 @@ start() {
 
     mvDebuglogger "Reset run-once settings completed" "run-once settings END"
 
+    last_restore_turbo
     mvlogger "Cleaning lock and stop files"
     for file in $PIDFILE $SOFTSTOPFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE; do
         [[ -e "$file" ]] && rm -f "$file"
@@ -3709,8 +3755,8 @@ killtree() {
     for child in $(pgrep --ns $$ -P $pid); do
         killtree $child
     done
-    # a paused copy acts on the TERM only once it runs again
-    [ $pid -ne $$ ] && kill -TERM $pid && kill -CONT "$pid"
+    # a paused copy acts on the TERM only once it runs again; a process can end before either signal reaches it
+    [ $pid -ne $$ ] && kill -TERM $pid 2>/dev/null && kill -CONT "$pid" 2>/dev/null
 }
 
 # Caution: stopping mover like this can lead to partial files on the destination
