@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2026.11.26b (beta)
 
 - No changes to the plugin since 2026.11.26a: README updates and release workflow fixes only. (masterwishx, chodeus)
 
