@@ -108,17 +108,21 @@ rm "$T/bin/move"
 log_has "Complete Mover Command: find \"/mnt/cache/sh\" -type f -depth | $T/bin/move -d 1"
 array_is sh sh/a.txt
 
-# /mnt/other is no array disk or pool, as Unassigned Devices' mounts: a folder there that only shares the name stays
+# /mnt/other is no array disk or pool, as Unassigned Devices' mounts: a folder there that only shares the name stays.
+# disk10 is an array disk too
 share 'a prefer share' prefer
 mk disk1 sh/c.txt
 mk disk2 sh/d.txt
+mk disk10 sh/e.txt
 mk user0 sh/u.txt
 mk other sh/o.txt
 run 0
-log_has 'Complete Mover Command: find "/mnt/disk1/sh" "/mnt/disk2/sh" -type f -depth | /usr/libexec/unraid/move -d 1'
-cache_is sh sh/c.txt sh/d.txt
+log_has 'Complete Mover Command: find "/mnt/disk1/sh" "/mnt/disk2/sh" "/mnt/disk10/sh" -type f -depth | /usr/libexec/unraid/move -d 1'
+cache_is sh sh/c.txt sh/d.txt sh/e.txt
 holds disk1 sh
 holds disk2 sh
+holds disk10 sh
+rm -rf /mnt/disk10
 array_is sh sh/u.txt
 holds other sh sh/o.txt
 
