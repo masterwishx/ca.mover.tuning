@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- No changes to the plugin since 2026.11.26a: README updates and release workflow fixes only. (masterwishx, chodeus)
+
 ## 2026.11.26a (beta)
 
 - perf: Faster in-use file checks: file leases replace fuser where the system supports them. (coppit)
