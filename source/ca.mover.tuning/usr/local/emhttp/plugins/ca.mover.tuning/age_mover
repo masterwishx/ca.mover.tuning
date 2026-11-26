@@ -2565,6 +2565,9 @@ count_left() {
     echo "$n"
 }
 
+# Whether a real run's rmdir would take folder $1: nothing left in it, as count_left sees, and nothing mounted on it
+would_rmdir() { [ "$(count_left "$1" -mindepth 1 -maxdepth 1)" = 0 ] && ! is_zfs_dataset_mountpoint "$1"; }
+
 # In topFolder mode, notes this row's share top folder for the check after the pass; fills processTheMoves' TOP_SEEN
 # and TOP_FOLDERS
 note_top_folder() {
@@ -2616,7 +2619,11 @@ cleanTopFolder() {
     elif [ "$dataset" = yes ]; then
         mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
     elif [ "$TESTMODE" != "no" ]; then
-        mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
+        if would_rmdir "$top_folder"; then
+            mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
+        else
+            mvDebuglogger "TEST MODE: Would fail to delete top-level folder (not empty): $top_folder" "Clean Top Folder"
+        fi
     elif rmdir "$top_folder" 2>/dev/null; then
         mvlogger "Deleted empty top-level folder: $top_folder"
     else
@@ -3106,12 +3113,12 @@ processTheMoves() {
                 fi
             fi
             copyWatchStop
-            # test mode notes what a real move takes off the source: every file, and with Unraid's move a folder that
-            # holds nothing, as move leaves one that does
+            # test mode notes what a real move takes off the source: every file, and with Unraid's move a folder
+            # its rmdir would take, as move leaves any other
             if [ "$TESTMODE" = "yes" ] && [[ "$ACTION" =~ "move" ]] && { [ "$FILETYPE" = "f" ] || [ "$MOVE_FILES_TOOL" = "move" ]; }; then
                 for f in "${present[@]}"; do
                     f=${f//\/.\//\/}
-                    [ "$FILETYPE" = "f" ] || [ "$(count_left "$f" -mindepth 1 -maxdepth 1)" = 0 ] && TEST_GONE[$f]=1
+                    [ "$FILETYPE" = "f" ] || would_rmdir "$f" && TEST_GONE[$f]=1
                 done
             fi
 
@@ -3222,7 +3229,7 @@ processTheMoves() {
                                 mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
                             # test mode asks what rmdir would: anything left in the folder keeps it
                             elif [ "$TESTMODE" = "yes" ]; then
-                                if [ "$(count_left "$DIR" -mindepth 1 -maxdepth 1)" = 0 ]; then
+                                if would_rmdir "$DIR"; then
                                     TEST_GONE[$DIR]=1
                                     mvlogger "TEST MODE: Would delete empty folder: ${DIR}"
                                 else
@@ -3293,9 +3300,13 @@ processTheMoves() {
                                 mvDebuglogger "Failed to delete moved folder (may not be empty): ${DIR}" "Clean Empty Moved Folder"
                                 break
                             fi
-                        else
+                        # test mode asks what rmdir would: anything left in the folder, such as a symlink, keeps it
+                        elif would_rmdir "$DIR"; then
                             TEST_GONE[$DIR]=1
                             mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
+                        else
+                            mvDebuglogger "TEST MODE: Would fail to delete moved folder (not empty): ${DIR}" "Clean Empty Moved Folder"
+                            break
                         fi
                         chain_emptied=1
 

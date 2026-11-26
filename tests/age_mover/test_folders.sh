@@ -384,6 +384,16 @@ dataset_top() {
 same_in_test_mode "topFolder, the top folder is a ZFS dataset mountpoint" "$(printf '%s\n' \
     'Deleted empty folder: /mnt/cache/sh/only' 'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh')" dataset_top cleanFolders topFolder
 
+# no file or folder is left in the top folder, but rmdir refuses it for the symlink
+top_symlink() {
+    mk cache sh/only/f.txt
+    ln -s gone /mnt/cache/sh/link
+    row 'move from primary' f sh/only/f.txt | list
+}
+same_in_test_mode "topFolder, the top folder keeps only a symlink" 'Deleted empty folder: /mnt/cache/sh/only' top_symlink \
+    cleanFolders topFolder
+[ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'TEST MODE: Would fail to delete top-level folder (not empty): /mnt/cache/sh'
+
 # Unraid's move takes the folder itself; with rsync the walk deletes it
 one_empty_folder() {
     mkdir -p /mnt/cache/sh/e
@@ -404,6 +414,28 @@ for tool in rsync move; do
         cleanFolders topFolder movefilesTool "$tool"
     [ "$tool" = rsync ] || [ "${AGE_MOVER_DEBUG:-0}" != 2 ] ||
         dlog_has '"/mnt/cache/sh/p/e" would be gone from the source: the walk starts at its parent "/mnt/cache/sh/p"'
+done
+
+# rmdir, in move or the walk, refuses a folder a dataset is mounted on, and one that holds a symlink
+empty_mountpoint_row() {
+    mkdir -p /mnt/cache/sh/p/e
+    echo /mnt/cache/sh/p/e >"$T/zfs"
+    row 'move from primary' d sh/p/e | list
+}
+symlink_beside_row() {
+    mkdir -p /mnt/cache/sh/g/p/e
+    ln -s gone /mnt/cache/sh/g/p/link
+    row 'move from primary' d sh/g/p/e | list
+}
+for tool in rsync move; do
+    same_in_test_mode "topFolder, a folder row that is an empty ZFS dataset mountpoint ($tool)" \
+        'Skipping deletion of ZFS dataset mountpoint: /mnt/cache/sh/p/e' empty_mountpoint_row cleanFolders topFolder \
+        movefilesTool "$tool"
+    want=""
+    [ "$tool" = move ] || want='Deleted empty moved folder: /mnt/cache/sh/g/p/e'
+    same_in_test_mode "topFolder, a folder row whose parent holds a symlink ($tool)" "$want" symlink_beside_row \
+        cleanFolders topFolder movefilesTool "$tool"
+    [ "${AGE_MOVER_DEBUG:-0}" != 2 ] || dlog_has 'TEST MODE: Would fail to delete moved folder (not empty): /mnt/cache/sh/g/p'
 done
 
 # the second folder row's folder is gone before its turn, and the first row's walk deleted its parent
