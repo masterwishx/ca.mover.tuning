@@ -74,32 +74,27 @@ cache_is sh sh/bare.txt
 no_private
 notices "$NOT_MOUNTED"
 
-# a second stop, at the read of var.ini that puts the write method back, waits for it
+# a second stop that signals every process, as the plugin's does, reaches the run and the mdcmd that puts the write
+# method back: both wait for it
 begin "Clean ZFS datasets, a second stop as the stopped run puts the write method back" cleanFolders topFolder \
     cleanDatasets yes enableTurbo yes
 one_share
 mkdir -p /usr/local/sbin /var/local/emhttp
 echo 'md_write_method="0"' >/var/local/emhttp/var.ini
-printf '#!/bin/bash\necho "mdcmd $*" >>%q\n' "$T/mdcmd.calls" >/usr/local/sbin/mdcmd
-chmod 755 /usr/local/sbin/mdcmd
-echo $$ >"$T/pid"
-cat >"$T/bin/grep" <<EOF
+cat >/usr/local/sbin/mdcmd <<EOF
 #!/bin/bash
-if [ "\$2" = '^md_write_method=' ] && [ -e $T/stop2 ]; then
+if [ "\$3" = 0 ] && [ -e $T/stop2 ]; then
     rm -f $T/stop2
     p=\$PPID
     while [ "\$(cut -d' ' -f4 /proc/\$p/stat)" != $$ ]; do p=\$(cut -d' ' -f4 /proc/\$p/stat); done
-    kill -TERM "\$p"
+    kill -TERM "\$p" \$\$
 fi
-exec /usr/bin/grep "\$@"
+echo "mdcmd \$*" >>$T/mdcmd.calls
 EOF
-chmod 755 "$T/bin/grep"
-# the run is a subshell of this script: it would keep the grep this script found before
-hash -r
+chmod 755 /usr/local/sbin/mdcmd
+echo $$ >"$T/pid"
 { stop_hook run; echo "touch $T/stop2"; } >"$T/zfs.on_mount.zfs"
 run_moves 'processTheMoves did not return'
-rm -f "$T/bin/grep"
-hash -r
 check "the second stop came" "" "$(ls "$T/stop2" 2>/dev/null)"
 check "turbo write forced, then put back" "$(printf '%s\n' 'mdcmd set md_write_method 1' 'mdcmd set md_write_method 0')" \
     "$(cat "$T/mdcmd.calls")"
