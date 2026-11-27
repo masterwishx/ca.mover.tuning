@@ -29,7 +29,7 @@ env:
 
 jobs:
   publish:
-    # a failed or cancelled build is noted too; action_required is left out, as that build has not run yet
+    # failed, cancelled and timed-out builds come in too, so the Find step can note them; action_required has not run yet
     if: >-
       github.event.workflow_run.event == 'pull_request'
       && contains(fromJSON('["success", "failure", "cancelled", "timed_out"]'), github.event.workflow_run.conclusion)
@@ -80,7 +80,7 @@ jobs:
         while read -r at by; do
           [ "$by" = "$RUN_ACTOR" ] || continue
           age=$((created - $(date -d "$at" +%s)))
-          # a run is created after its press (2-5 s on this repo's 20 latest builds): the latest press by its starter up to 5 minutes before
+          # a run is created after its press (2-5 s on this repo's 20 latest test builds): the latest press by its starter up to 5 minutes before
           if [ "$age" -ge 0 ] && [ "$age" -le 300 ]; then pressed=$at; fi
         done <<<"$presses"
         # the label is its latest press's: any other run leaves it to that press's own run, which may still be building
