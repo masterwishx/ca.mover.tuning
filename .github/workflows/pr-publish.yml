@@ -12,10 +12,13 @@ permissions:
   contents: write
   pull-requests: write
   actions: read
+  issues: read
 
 concurrency:
   group: pr-publish-${{ github.event.workflow_run.head_repository.owner.login }}-${{ github.event.workflow_run.head_branch }}
   cancel-in-progress: false
+  # every PR build run queues here, a skipped one too: the default keeps one pending run and would drop a press's
+  queue: max
 
 env:
   PLUGIN_NAME: ca.mover.tuning
@@ -26,28 +29,86 @@ env:
 
 jobs:
   publish:
-    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    # failed, cancelled and timed-out builds come in too, so the Find step can note them; action_required has not run yet
+    if: >-
+      github.event.workflow_run.event == 'pull_request'
+      && contains(fromJSON('["success", "failure", "cancelled", "timed_out"]'), github.event.workflow_run.conclusion)
     runs-on: ubuntu-latest
     steps:
     - name: Find the labelled pull request this build belongs to
       id: pr
       env:
         HEAD: ${{ github.event.workflow_run.head_repository.owner.login }}:${{ github.event.workflow_run.head_branch }}
+        # who first started the run: a re-run keeps it, so a re-run is judged on its first starter's press
+        RUN_ACTOR: ${{ github.event.workflow_run.actor.login }}
+        CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        RUN_CREATED: ${{ github.event.workflow_run.created_at }}
+        RUN_ID: ${{ github.event.workflow_run.id }}
+        HEAD_REPO: ${{ github.event.workflow_run.head_repository.full_name }}
+        HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
       run: |
         set -euo pipefail
         # gh encodes the fields; a branch name may hold & # + and would split a hand-built query
-        number=$(gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" -f state=open -f per_page=100 -f head="$HEAD" \
-          --jq "map(select(.head.sha == \"$HEAD_SHA\")) | .[0].number")
-        if [ -z "$number" ] || [ "$number" = "null" ]; then
-          echo "No open pull request at $HEAD ${HEAD_SHA::7}; nothing to publish."
+        open=$(gh api -X GET "repos/$GITHUB_REPOSITORY/pulls" -f state=open -f per_page=100 -f head="$HEAD")
+        number=$(jq -r --arg sha "$HEAD_SHA" 'map(select(.head.sha == $sha)) | .[0].number // empty' <<<"$open")
+        moved=""
+        if [ -z "$number" ]; then
+          # commits pushed since this build: it is refused below, so the pull request is noted
+          found=$(jq -r --arg l "$LABEL" 'map(select(any(.labels[]; .name == $l))) | .[0] // empty | "\(.number) \(.head.sha)"' <<<"$open")
+          read -r number moved <<<"$found"
+        fi
+        if [ -z "$number" ]; then
+          echo "No open pull request at $HEAD is at ${HEAD_SHA::7} or carries the $LABEL label; nothing to publish."
           exit 0
         fi
         # the label is the maintainer's go; checked here too because this is the privileged job
-        if ! gh api "repos/$GITHUB_REPOSITORY/pulls/$number" --jq '.labels[].name' | grep -qx -- "$LABEL"; then
+        # unreadable, the run is noted and, as no press can be told apart, the label comes off
+        labels=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$number" --jq '.labels[].name') \
+          || { printf '%s\n' "number=$number" unlabel=true >> "$GITHUB_OUTPUT"; exit 1; }
+        if ! grep -qx -- "$LABEL" <<<"$labels"; then
           echo "Pull request #$number does not carry the $LABEL label; nothing to publish."
           exit 0
         fi
+        # from here on, a refusal or a failed lookup still updates the comment
         echo "number=$number" >> "$GITHUB_OUTPUT"
+        refuse() { echo "refused=$1" >> "$GITHUB_OUTPUT"; echo "::error::Not published: $1."; exit 1; }
+        # the pull request's own copy of PR build runs, on any event it names: the go is a run its starter's press began.
+        # Unreadable, no press can be told apart, so the label comes off
+        presses=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$number/events?per_page=100" \
+          --jq ".[] | select(.event == \"labeled\" and .label.name == \"$LABEL\") | \"\(.created_at) \(.actor.login)\"") \
+          || { echo "unlabel=true" >> "$GITHUB_OUTPUT"; exit 1; }
+        created=$(date -d "$RUN_CREATED" +%s)
+        pressed=""
+        while read -r at by; do
+          [ "$by" = "$RUN_ACTOR" ] || continue
+          age=$((created - $(date -d "$at" +%s)))
+          # a run is created after its press (2-5 s on this repo's 20 latest test builds): the latest press by its starter up to 5 minutes before
+          if [ "$age" -ge 0 ] && [ "$age" -le 300 ]; then pressed=$at; fi
+        done <<<"$presses"
+        latest=$(sort <<<"$presses" | tail -n 1 | cut -d' ' -f1)
+        # the label is its latest press's: that press's own run takes it off, any other leaves it to that run unless a lookup fails
+        grant() { if [ "$pressed" = "$latest" ]; then printf '%s\n' unlabel=true "pressed=$pressed" >> "$GITHUB_OUTPUT"; fi; }
+        [ -n "$pressed" ] || refuse "no press of the \`$LABEL\` label by \`$RUN_ACTOR\` in the 5 minutes before this run was created"
+        # the press's own run is the first one its presser started on this head after it; a later one may build later commits.
+        # Unreadable, this run may be that run: it takes the label off if its press is the latest
+        runs=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/pr-build.yml/runs" -f actor="$RUN_ACTOR" \
+          -f event=pull_request -f created="$pressed..$RUN_CREATED" -f per_page=100) || { grant; exit 1; }
+        # a run left off the page could be the press's own, whatever order the page is in
+        jq -e '.total_count <= (.workflow_runs | length)' <<<"$runs" >/dev/null || { grant; refuse \
+          "the runs \`$RUN_ACTOR\` started since pressing the \`$LABEL\` label do not fit on one page, so the first one is not known"; }
+        since=$(jq -c --arg a "$RUN_ACTOR" --arg r "$HEAD_REPO" --arg b "$HEAD_BRANCH" --arg s "$pressed" '[.workflow_runs[]
+          | select(.actor.login == $a and .head_repository.full_name == $r and .head_branch == $b and .created_at >= $s)]' <<<"$runs")
+        # the pull request's copy decides which run skips, so with runs on two commits the pressed one is not known
+        jq -e --arg sha "$HEAD_SHA" 'all(.head_sha == $sha)' <<<"$since" >/dev/null || { grant; refuse \
+          "\`$RUN_ACTOR\` started runs on more than one commit after pressing the \`$LABEL\` label, so the pressed commit is not known"; }
+        first=$(jq -r 'map(select(.conclusion != "skipped")) | min_by(.id) | .id' <<<"$since")
+        [ "$first" = "$RUN_ID" ] || refuse "it is not the first run \`$RUN_ACTOR\` started after pressing the \`$LABEL\` label"
+        grant
+        permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$RUN_ACTOR/permission" --jq .permission)
+        [[ "$permission" == admin || "$permission" == write ]] \
+          || refuse "the \`$LABEL\` label was added by \`$RUN_ACTOR\`, who cannot ask for a test build"
+        [ -z "$moved" ] || refuse "the pull request has moved on to ${moved::7} since"
+        [ "$CONCLUSION" = success ] || refuse "the build ended as \`$CONCLUSION\`"
 
     - name: Download the build
       if: steps.pr.outputs.number != ''
@@ -203,15 +264,22 @@ jobs:
         VERIFIED: ${{ steps.verify.outcome == 'success' }}
         CLOSED: ${{ steps.closed.outputs.closed == 'true' }}
         TAG: ${{ steps.meta.outputs.tag }}
+        REFUSED: ${{ steps.pr.outputs.refused }}
+        UNLABEL: ${{ steps.pr.outputs.unlabel == 'true' }}
       run: |
         set -euo pipefail
         removed=$(printf '%s\n' "$MARKER" "The test build for this pull request has been removed.")
+        logs="[build log]($BUILD_LOG), [publish log](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
+        # mirrors the label step's condition
+        next() { if [ "$UNLABEL" = true ]; then echo "$1"; else echo "The \`$LABEL\` label stays on, left for the run of its latest press."; fi; }
         if [ "$CLOSED" = true ]; then
           body=$removed
         elif [ "$VERIFIED" = true ]; then
-          body=$(printf '%s\n' "$MARKER" "Test build \`$VERSION\` of ${HEAD_SHA::7} ([build log]($BUILD_LOG)). Install from Plugins, Install Plugin, with this URL:" "" '```' "$INSTALL_URL" '```' "" "It installs over the current release and the next real release supersedes it. Add the \`$LABEL\` label again for a new build.")
+          body=$(printf '%s\n' "$MARKER" "Test build \`$VERSION\` of ${HEAD_SHA::7} ([build log]($BUILD_LOG)). Install from Plugins, Install Plugin, with this URL:" "" '```' "$INSTALL_URL" '```' "" "It installs over the current release and the next real release supersedes it. $(next "Add the \`$LABEL\` label again for a new build.")")
+        elif [ -n "$REFUSED" ]; then
+          body=$(printf '%s\n' "$MARKER" "The build of ${HEAD_SHA::7} was not published: $REFUSED ($logs). $(next "A maintainer can check its commits and add the \`$LABEL\` label again.")")
         else
-          body=$(printf '%s\n' "$MARKER" "The build of ${HEAD_SHA::7} was not published ([build log]($BUILD_LOG), [publish log](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)). Add the \`$LABEL\` label again to retry.")
+          body=$(printf '%s\n' "$MARKER" "The build of ${HEAD_SHA::7} was not published ($logs). $(next "Add the \`$LABEL\` label again to retry.")")
         fi
         id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" \
           --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$MARKER\"))) | .id" | head -n 1)
@@ -228,10 +296,23 @@ jobs:
         gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$removed" >/dev/null
 
     - name: Take the label off so the next build needs a new go
-      if: always() && steps.pr.outputs.number != ''
+      # only for its latest press's run, or when the Find step could not read the labels or presses
+      if: always() && steps.pr.outputs.unlabel == 'true'
       env:
         PR: ${{ steps.pr.outputs.number }}
+        PRESSED: ${{ steps.pr.outputs.pressed }}
       run: |
+        set -euo pipefail
+        # a press since the Find step owns the label now; this narrows the race, a press after this read still loses its label
+        if [ -n "$PRESSED" ]; then
+          if ! latest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/events?per_page=100" \
+            --jq ".[] | select(.event == \"labeled\" and .label.name == \"$LABEL\") | .created_at" | sort | tail -n 1); then
+            echo "::warning::Could not read the $LABEL presses again; taking the label off as the Find step decided."
+          elif [ "$latest" != "$PRESSED" ]; then
+            echo "The $LABEL label was added again at $latest; it is left for that press's run."
+            exit 0
+          fi
+        fi
         # someone may have taken it off meanwhile: that 404 is the outcome wanted, any other error is not
         if ! err=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels/$LABEL" -X DELETE 2>&1 >/dev/null); then
           [[ "$err" == *"(HTTP 404)"* ]] || { echo "$err" >&2; exit 1; }
