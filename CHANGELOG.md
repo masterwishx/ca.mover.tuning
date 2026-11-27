@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- No changes to the plugin since 2026.11.27: README, test and CI fixes only. (chodeus)
+
 ## 2026.11.27
 
 - perf: Faster in-use file checks: file leases replace fuser where the system supports them. (coppit)
