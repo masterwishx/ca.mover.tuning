@@ -62,7 +62,9 @@ jobs:
           exit 0
         fi
         # the label is the maintainer's go; checked here too because this is the privileged job
-        labels=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$number" --jq '.labels[].name')
+        # unreadable, the run is noted and, as no press can be told apart, the label comes off
+        labels=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$number" --jq '.labels[].name') \
+          || { printf '%s\n' "number=$number" unlabel=true >> "$GITHUB_OUTPUT"; exit 1; }
         if ! grep -qx -- "$LABEL" <<<"$labels"; then
           echo "Pull request #$number does not carry the $LABEL label; nothing to publish."
           exit 0
@@ -83,18 +85,19 @@ jobs:
           # a run is created after its press (2-5 s on this repo's 20 latest test builds): the latest press by its starter up to 5 minutes before
           if [ "$age" -ge 0 ] && [ "$age" -le 300 ]; then pressed=$at; fi
         done <<<"$presses"
-        # the label is its latest press's: any other run leaves it to that press's own run, which may still be building
-        if [ -n "$pressed" ] && [ "$pressed" = "$(sort <<<"$presses" | tail -n 1 | cut -d' ' -f1)" ]; then
-          { echo "unlabel=true"; echo "pressed=$pressed"; } >> "$GITHUB_OUTPUT"
-        fi
+        latest=$(sort <<<"$presses" | tail -n 1 | cut -d' ' -f1)
+        # the label is its latest press's: only that press's own run takes it off, any other leaves it to that run
+        grant() { if [ "$pressed" = "$latest" ]; then printf '%s\n' unlabel=true "pressed=$pressed" >> "$GITHUB_OUTPUT"; fi; }
         [ -n "$pressed" ] || refuse "no press of the \`$LABEL\` label by \`$RUN_ACTOR\` in the 5 minutes before this run was created"
-        # the press's own run is the first one its presser started on this head after it; a later one may build later commits
+        # the press's own run is the first one its presser started on this head after it; a later one may build later commits.
+        # Unreadable, this run may be that run: it takes the label off if its press is the latest
         runs=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/pr-build.yml/runs" -f actor="$RUN_ACTOR" \
-          -f event=pull_request -f created="$pressed..$RUN_CREATED" -f per_page=100)
+          -f event=pull_request -f created="$pressed..$RUN_CREATED" -f per_page=100) || { grant; exit 1; }
         first=$(jq -r --arg a "$RUN_ACTOR" --arg r "$HEAD_REPO" --arg b "$HEAD_BRANCH" --arg s "$pressed" '[.workflow_runs[]
           | select(.actor.login == $a and .head_repository.full_name == $r and .head_branch == $b and .created_at >= $s
             and .conclusion != "skipped")] | min_by(.id) | .id' <<<"$runs")
         [ "$first" = "$RUN_ID" ] || refuse "it is not the first run \`$RUN_ACTOR\` started after pressing the \`$LABEL\` label"
+        grant
         permission=$(gh api "repos/$GITHUB_REPOSITORY/collaborators/$RUN_ACTOR/permission" --jq .permission)
         [[ "$permission" == admin || "$permission" == write ]] \
           || refuse "the \`$LABEL\` label was added by \`$RUN_ACTOR\`, who cannot ask for a test build"
