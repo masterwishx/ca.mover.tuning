@@ -2,17 +2,7 @@
 
 ## Unreleased
 
-- Refuse a test build when the presser's runs since the press do not fit on one page (8e613c1)
-- Refuse a test build when the presser's runs since the press are on more than one commit (60f7fd8)
-- Say which runs take the label off (18616e1)
-- Take the label off only for the press's first run, and note an unreadable label lookup (78202c8)
-- Read the presses again before taking the label off (09f401e)
-- Say only what holds in the publish job's comments (86850ff)
-- Publish a test build only for the run its label press started (86497a7)
-- Say only what holds in each case in the container comments (407ed36)
-- Stop the test container on exit, and let it end by itself if run.sh is killed (4490f50)
-- Say what an orphan does in the test container: it stays a zombie, as in CI (e12d3c8)
-- Start the age_mover test container without an init, as CI's container job does (57d0f06)
+- No changes to the plugin since 2026.11.27: README, test and CI fixes only. (chodeus)
 
 ## 2026.11.27
 
