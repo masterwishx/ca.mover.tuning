@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026.11.27
+
+- perf: Faster in-use file checks: file leases replace fuser where the system supports them. (coppit)
+- perf: Logging costs much less, and almost nothing when it is off. (coppit)
+- perf: Large moves run faster, with fewer hardlink lookups and top folder checks. (chodeus, coppit)
+- fix: Apply now changes the mover schedule to the saved settings. (chodeus)
+- fix: File names holding $, <, : and similar characters now move; the filename check is removed. (chodeus)
+- fix: A file name holding < or > no longer breaks notifications before Unraid 7.2. (chodeus)
+- fix: Clean empty ZFS datasets keeps a dataset until everything in it has moved. (chodeus)
+- fix: Clean empty folders keeps the folder of a failed move, and on Yes the share's top folder. (chodeus)
+- fix: Turbo write is now restored when a move is stopped, Move Now included. (chodeus)
+- fix: Move Now no longer reads Unassigned Devices mounts or runs text from a share name. (chodeus)
+- fix: Test mode's folder cleanup and turbo write lines now match what a real run does. (chodeus)
+
 ## 2026.11.26b (beta)
 
 - No changes to the plugin since 2026.11.26a: README updates and release workflow fixes only. (masterwishx, chodeus)
