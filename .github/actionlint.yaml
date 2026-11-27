@@ -1,0 +1,5 @@
+# actionlint has no released support for concurrency's documented queue key (closed as not planned).
+paths:
+  .github/workflows/pr-publish.yml:
+    ignore:
+      - 'unexpected key "queue" for "concurrency" section'

@@ -4,13 +4,14 @@ name: PR build
 # token, "PR publish" turns it into a test plugin and takes the label off again.
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [labeled]
 
 permissions:
   contents: read
 
 concurrency:
-  group: pr-build-${{ github.event.pull_request.number }}
+  # per label: adding another label must not cancel a test build
+  group: pr-build-${{ github.event.pull_request.number }}-${{ github.event.label.name }}
   cancel-in-progress: true
 
 env:
@@ -18,7 +19,8 @@ env:
 
 jobs:
   build:
-    if: contains(github.event.pull_request.labels.*.name, 'test-build')
+    # only the press builds: a commit pushed after it is built when the label is added again
+    if: github.event.label.name == 'test-build'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout the pull request
