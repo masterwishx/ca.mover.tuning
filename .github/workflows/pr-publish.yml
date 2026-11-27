@@ -93,6 +93,9 @@ jobs:
         # Unreadable, this run may be that run: it takes the label off if its press is the latest
         runs=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/pr-build.yml/runs" -f actor="$RUN_ACTOR" \
           -f event=pull_request -f created="$pressed..$RUN_CREATED" -f per_page=100) || { grant; exit 1; }
+        # a run left off the page could be the press's own, whatever order the page is in
+        jq -e '.total_count <= (.workflow_runs | length)' <<<"$runs" >/dev/null || { grant; refuse \
+          "the runs \`$RUN_ACTOR\` started since pressing the \`$LABEL\` label do not fit on one page, so the first one is not known"; }
         since=$(jq -c --arg a "$RUN_ACTOR" --arg r "$HEAD_REPO" --arg b "$HEAD_BRANCH" --arg s "$pressed" '[.workflow_runs[]
           | select(.actor.login == $a and .head_repository.full_name == $r and .head_branch == $b and .created_at >= $s)]' <<<"$runs")
         # the pull request's copy decides which run skips, so with runs on two commits the pressed one is not known
