@@ -85,7 +85,7 @@ jobs:
         done <<<"$presses"
         # the label is its latest press's: any other run leaves it to that press's own run, which may still be building
         if [ -n "$pressed" ] && [ "$pressed" = "$(sort <<<"$presses" | tail -n 1 | cut -d' ' -f1)" ]; then
-          echo "unlabel=true" >> "$GITHUB_OUTPUT"
+          { echo "unlabel=true"; echo "pressed=$pressed"; } >> "$GITHUB_OUTPUT"
         fi
         [ -n "$pressed" ] || refuse "no press of the \`$LABEL\` label by \`$RUN_ACTOR\` in the 5 minutes before this run was created"
         # the press's own run is the first one its presser started on this head after it; a later one may build later commits
@@ -291,7 +291,19 @@ jobs:
       if: always() && steps.pr.outputs.unlabel == 'true'
       env:
         PR: ${{ steps.pr.outputs.number }}
+        PRESSED: ${{ steps.pr.outputs.pressed }}
       run: |
+        set -euo pipefail
+        # a press since the Find step owns the label now; this narrows the race, a press after this read still loses its label
+        if [ -n "$PRESSED" ]; then
+          if ! latest=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/events?per_page=100" \
+            --jq ".[] | select(.event == \"labeled\" and .label.name == \"$LABEL\") | .created_at" | sort | tail -n 1); then
+            echo "::warning::Could not read the $LABEL presses again; taking the label off as the Find step decided."
+          elif [ "$latest" != "$PRESSED" ]; then
+            echo "The $LABEL label was added again at $latest; it is left for that press's run."
+            exit 0
+          fi
+        fi
         # someone may have taken it off meanwhile: that 404 is the outcome wanted, any other error is not
         if ! err=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/labels/$LABEL" -X DELETE 2>&1 >/dev/null); then
           [[ "$err" == *"(HTTP 404)"* ]] || { echo "$err" >&2; exit 1; }
