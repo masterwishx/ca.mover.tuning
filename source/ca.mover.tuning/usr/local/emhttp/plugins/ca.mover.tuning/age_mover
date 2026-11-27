@@ -5,7 +5,7 @@
 #      2023 - hugenbd (parts of code from mover tuning package)
 #      2024 - R3yn4ld (parts of code from mover tuning package)
 #      2025 - masterwishx (as current author and maintainer of this file)
-#      2026 - masterwishx and chodeus (as current authors and maintainers of this file), with contributions by Joly0 (parts of code from mover tuning package)
+#      2026 - masterwishx and chodeus (as current authors and maintainers of this file)
 #License: GPLv2 only
 
 # This is the 'mover tuning' script used for moving files between the cache disk and main array.
@@ -28,7 +28,8 @@
 # Files at the top level of the cache or an array disk (i.e not in a share) are never moved.
 
 # The list is then passed to original unraid mover.
-# For each file, if the file is not "in use" by any process (as detected by 'fuser' command),
+# For each file, if the file is not "in use" by any process (as detected by an exclusive file lease,
+# with fuser as a compatibility fallback, and when Perl is missing, as before Unraid 6.11.0),
 # then the file is moved, and upon success, deleted from the source disk.  If the file already
 # exists on the target, it is not moved and the sourceis not deleted.  All meta-data of moved
 # files/directories is preserved: permissions, ownership, extended attributes, and access/modified
@@ -46,6 +47,7 @@ PAUSEFILE="/var/run/mover.pause"
 MOVINGFILE="/var/run/mover.moving"
 HOLD_SINCE=""
 AGEMOVER="/usr/local/emhttp/plugins/ca.mover.tuning/age_mover"
+FILES_IN_USE_HELPER="/usr/local/emhttp/plugins/ca.mover.tuning/files_in_use"
 SOFTSTOP_ACK=false
 UNRAIDCFGFILE="/boot/config/share.cfg"
 MOVERTUNINGCFGFILE="/boot/config/plugins/ca.mover.tuning/ca.mover.tuning.cfg"
@@ -91,13 +93,10 @@ COUNT_SECONDARY_FILES=0
 overrideFlag=0
 UNRAID_MOVER_LOGLEVEL=0
 UNRAID_MOVER=0
-# PHP requires escaped quotes (" -> \") for text fields
-DEFAULT_INVALID_FILE_CHARS=('$' '/' '<' '>' ':' '\"' '|' '?' '*')
 # Variables for counts when delete folders
 LAST_DIR=""
 LAST_COUNT=-1
 LAST_FOLDER_COUNT=-1
-EMPTY_DIR_COUNT=-1
 declare -A POOL_FSTYPE_CACHE=()
 # per cache:yes share, from createFilteredFilelist: "name|keeps its primary files|sync size limit in bytes|age filter days" lines for decideMoveActions
 SHARE_PLAN_RULES=""
@@ -249,6 +248,12 @@ unraid_notify() {
     else
         severity="warning"
     fi
+    # before 7.2 Unraid shows the description as raw HTML; from 7.2 its API sanitizes it (and from API 4.26 decodes
+    # entities first, undoing an escape). The quotes stop bash 5.2 reading & in the replacement as the matched text
+    if ! version_ge "$UNRAID_VERSION" 7.2; then
+        message=${message//</"&lt;"}
+        message=${message//>/"&gt;"}
+    fi
     #
     # Call the Unraid notification script
     /usr/local/emhttp/webGui/scripts/notify -s "$(translate_text "Mover Tuning Notification")" -d "$message" -i "$severity" -l "/Settings/Scheduler"
@@ -287,16 +292,45 @@ is_zfs_dataset_mountpoint() {
     [ "$(findmnt -no fstype --mountpoint "$1" | tail -n 1)" = "zfs" ]
 }
 
-titleLine() {
-    local title="$1"
-    local padding_char="$2"
-    local line_length=71
+# Prints the ZFS dataset mounted at exactly path $1; nothing for a folder inside one
+zfs_dataset_at() {
+    is_zfs_dataset_mountpoint "$1" && findmnt -no source --mountpoint "$1" | tail -n 1
+}
+
+# Prints zfs message $1's first line, from after its quoted name if it has one: later lines can list children's names,
+# which debug_mover does not mangle
+zfs_reason() { local r=${1%%$'\n'*}; printf '%s' "${r#*\': }"; }
+
+# When zfs message $2 says dataset $1 is busy, logs one plain line and succeeds: something else holds it, so no notice
+zfs_busy() {
+    # at the end: mount.zfs's messages keep the dataset's name, which may hold the word
+    [[ $(zfs_reason "$2") == *busy ]] || return 1
+    mvlogger "ZFS dataset [$1] is busy, will not delete: a process or another mount, such as a container's, may hold it."
+}
+
+# titleLineTo VAR TITLE CHAR: sets VAR to TITLE centred in CHAR padding, in bash alone. The printf | tr
+# pipelines it replaces forked four processes per line, and every debug block draws two lines.
+titleLineTo() {
+    local title="$2" padding_char="$3" line_length=71 left_padding right_padding
     local padding_left=$((line_length - ${#title} / 2))
     local padding_right=$((padding_left - ${#title} % 2 - 1))
-    local left_padding right_padding
-    left_padding=$(printf "%*s" "$padding_left" "" | tr ' ' "$padding_char")
-    right_padding=$(printf "%*s" "$padding_right" "" | tr ' ' "$padding_char")
-    echo "${left_padding}$padding_char $title $padding_char${right_padding}"
+    # a negative width still pads by its size (printf left-justifies the empty string), as printf | tr did
+    printf -v left_padding '%*s' "$padding_left" ""
+    printf -v right_padding '%*s' "$padding_right" ""
+    # the quoted replacement keeps a padding character such as & literal
+    printf -v "$1" '%s%s %s %s%s' "${left_padding// /"$padding_char"}" "$padding_char" "$title" "$padding_char" "${right_padding// /"$padding_char"}"
+}
+
+titleLine() {
+    local line
+    titleLineTo line "$1" "$2"
+    echo "$line"
+}
+
+# Prints MESSAGE after the current time as date +"%T.%3N" prints it, without forking date
+timestamped() {
+    local now=$EPOCHREALTIME
+    printf '%(%T)T.%.3s %s\n' "${now%[.,]*}" "${now#*[.,]}" "$1"
 }
 
 # Function to convert byte size to human-readable format
@@ -338,34 +372,6 @@ skiplist_share_lines() {
     ' "$list"
 }
 
-# Sanitize input filename to prevent attacks
-validate_filename() {
-    local filename="$1"
-
-    ## Check filename length
-    if [[ ${#filename} -gt 255 ]]; then
-        mvlogger "Error: Filename too long: '$filename'"
-        return 1
-    fi
-
-    # Invalid characters (Linux + Windows + macOS safe)
-    if [[ "$filename" == *["$INVALID_FILE_CHARS_STR"]* ]]; then
-        mvlogger "Error: Invalid characters in filename: '$filename'"
-        return 1
-    fi
-
-    # Fast path traversal detection
-    if [[ "$filename" == *".."* ]]; then
-        # Only block if '..' is used as a path segment
-        if [[ "$filename" == "../"* || "$filename" == *"/.."* || "$filename" == "..\\"* || "$filename" == *"\\.."* ]]; then
-            mvlogger "Error: Path traversal attempt detected: '$filename'"
-            return 1
-        fi
-    fi
-
-    return 0
-}
-
 # find's -path glob and the eval each strip one level, so a literal backslash
 # needs four. Order matters: backslash first, then '[', then the shell's own three,
 # whose escapes the eval consumes before find ever sees the name.
@@ -391,7 +397,17 @@ escape_find_path() {
 #
 # Wraps a path for a log message: the debug package ends a path at the quote, so an
 # embedded quote - an edge case, but the last redaction hole - would expose the rest.
-qp() { local p=${1//\\/\\\\}; printf '"%s"' "${p//\"/\\\"}"; }
+qp() { local q; qpAll q "$1"; printf '%s' "${q% }"; }
+
+# qpAll VAR ITEM...: sets VAR to each ITEM quoted for qp, each followed by a space. It owns the escapes,
+# which apply to every item at once, so a list costs no subshell per item.
+qpAll() {
+    local -a items=("${@:2}")
+    items=("${items[@]//\\/\\\\}")
+    items=("${items[@]//\"/\\\"}")
+    # printf with no arguments would still print the format once
+    if [ ${#items[@]} -gt 0 ]; then printf -v "$1" '"%s" ' "${items[@]}"; else printf -v "$1" ''; fi
+}
 
 # Fills each %s in TEXT from the remaining arguments; an inserted argument is never rescanned.
 fill_template() {
@@ -438,16 +454,16 @@ mvlogger() {
             echo "$msg"
         else
             # CLI or BUTTON → echo + logger
-            echo "$(date +"%T.%3N") $msg"
+            timestamped "$msg"
             logger -t move -- "$msg"
         fi
 
         # Always append to mover log
-        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
+        timestamped "$msg" >>"$MOVER_LOG"
 
     elif [ "$LOGLEVEL" = 2 ]; then
         # Files-only mode
-        echo "$(date +"%T.%3N") $msg" >>"$MOVER_LOG"
+        timestamped "$msg" >>"$MOVER_LOG"
     fi
 
     # Optional notification
@@ -465,10 +481,14 @@ mvlogger() {
 #   IS_CRON=0 → CLI or GUI button (echo + logger)
 #
 # DEBUGLEVEL:
+#   0 → nothing, and nothing is built
 #   1 → echo + debug log
 #   2 → debug log only
 #
+# Arguments are expanded before the call, so a call site whose message needs a subshell
+# (such as $(qp ...)) on every file should test DEBUGLEVEL itself.
 mvDebuglogger() {
+    [ "$DEBUGLEVEL" = 1 ] || [ "$DEBUGLEVEL" = 2 ] || return 0
     local msg="$1"
     local tag="$2"
 
@@ -478,13 +498,10 @@ mvDebuglogger() {
     fi
 
     # Build formatted debug block
-    local block
-    block="$(
-        printf '%s\n%s\n%s\n' \
-            "$(titleLine "Debugging $tag" '-')" \
-            "$(date +"%T.%3N") $msg" \
-            "$(titleLine " " ' ')"
-    )"
+    local block title_line blank_line now=$EPOCHREALTIME
+    titleLineTo title_line "Debugging $tag" '-'
+    titleLineTo blank_line " " ' '
+    printf -v block '%s\n%(%T)T.%.3s %s\n%s' "$title_line" "${now%[.,]*}" "${now#*[.,]}" "$msg" "$blank_line"
 
     if [ "$DEBUGLEVEL" = 1 ]; then
 
@@ -969,36 +986,6 @@ getMoverSettings() {
     else
         LISTFILESAGE=$(cfg listfilesDaysold)
         mvlogger "List files delete age: $LISTFILESAGE days"
-    fi
-
-    if [ -z $(cfg validateFilenames) ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            mvlogger "No Validate Filenames argument provided, defaulting to yes"
-            cfg_default validateFilenames yes
-            VALIDATE_FILENAMES="yes"
-        fi
-    else
-        VALIDATE_FILENAMES=$(cfg validateFilenames)
-        mvlogger "Validate Filenames: $VALIDATE_FILENAMES"
-    fi
-
-    if [ -z "$(cfg invalidFileChars)" ]; then
-        if [[ ! "$config_file" =~ shareOverrideConfig ]]; then
-            # Print and unescape the array element \" -> "
-            mvlogger "No Invalid characters argument provided, defaulting to: ${DEFAULT_INVALID_FILE_CHARS[*]//\\\"/\"}"
-            cfg_default invalidFileChars "${DEFAULT_INVALID_FILE_CHARS[*]}"
-            # Keep DEFAULT_INVALID_FILE_CHARS as an array
-            INVALID_FILE_CHARS=("${DEFAULT_INVALID_FILE_CHARS[@]}")
-            # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
-            INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
-        fi
-    else
-        # Convert the string from cfg invalidFileChars to an array
-        IFS=' ' read -r -a INVALID_FILE_CHARS <<<"$(cfg invalidFileChars)"
-        # Print and unescape the array element \" -> "
-        mvlogger "Invalid characters to block: ${INVALID_FILE_CHARS[*]//\\\"/\"}"
-        # Escape regex meta chars, first remove '\' from '\"', then add '\' to all characters
-        INVALID_FILE_CHARS_STR=$(printf '%s' "${INVALID_FILE_CHARS[@]//\\\"/\"}" | sed 's/./\\&/g')
     fi
 
     if [ -z $(cfg movefilesTool) ]; then
@@ -2531,6 +2518,337 @@ move_tool_said() {
     done <<<"$MOVE_OUT"
 }
 
+# Sets processTheMoves' FILES_IN_USE_CMD: the files_in_use helper through the perl in PATH (Unraid 6.11.0 and newer have
+# Perl), else fuser -s as before the helper. A helper that does not compile would fail closed on every file
+chooseFilesInUseCheck() {
+    if command -v perl >/dev/null && perl -c "$FILES_IN_USE_HELPER" >/dev/null 2>&1; then
+        FILES_IN_USE_CMD=(perl "$FILES_IN_USE_HELPER")
+        return
+    fi
+    FILES_IN_USE_CMD=(fuser -s)
+    [ "$MOVE_IN_USE" = yes ] && return
+    if command -v perl >/dev/null; then
+        mvlogger "The file lease helper could not start, so files are checked for use with fuser, which is slower on busy servers."
+    else
+        mvlogger "Perl not found, so files are checked for use with fuser, which is slower on busy servers. Perl is part of Unraid 6.11.0 and newer."
+    fi
+}
+
+# Succeeds when a path is in use or when FILES_IN_USE_CMD gives no answer, which it logs once per run through
+# processTheMoves' FILE_IN_USE_FAILURE_LOGGED
+filesInUse() {
+    local rc
+    if "${FILES_IN_USE_CMD[@]}" "$@" 2>/dev/null; then rc=0; else rc=$?; fi
+    case "$rc" in
+    0) return 0 ;;
+    1) return 1 ;;
+    esac
+    if [ "$FILE_IN_USE_FAILURE_LOGGED" != yes ]; then
+        mvlogger "A file could not be checked for use, so it stays where it is until a later run. Set 'Move files that are in use' to Yes to move such files anyway."
+        FILE_IN_USE_FAILURE_LOGGED=yes
+    fi
+    return 0
+}
+
+# Whether a real run would find path $1 on the source: test mode leaves out processTheMoves' TEST_GONE, what its moves
+# and deletions would have taken off it
+on_source() { [ -e "$1" ] && [ -z "${TEST_GONE[$1]+x}" ]; }
+
+# Prints how many of the paths find prints for args $@ a real run would find, as on_source does
+count_left() {
+    local - out p n=0 IFS=$'\n'
+    [ "$TESTMODE" = "yes" ] || { find "$@" | wc -l; return; }
+    # one read of find's output, split here: a read loop on a pipe takes a syscall per byte
+    out=$(find "$@")
+    set -f
+    for p in $out; do [ -n "${TEST_GONE[$p]+x}" ] || n=$((n + 1)); done
+    echo "$n"
+}
+
+# Whether a real run's rmdir would take folder $1: nothing left in it, as count_left sees, and no ZFS dataset mounted on it
+would_rmdir() { [ "$(count_left "$1" -mindepth 1 -maxdepth 1)" = 0 ] && ! is_zfs_dataset_mountpoint "$1"; }
+
+# In topFolder mode, notes this row's share top folder for the check after the pass; fills processTheMoves' TOP_SEEN
+# and TOP_FOLDERS
+note_top_folder() {
+    [ "$CLEANFOLDERS" = "topFolder" ] || return 0
+    local top="${SOURCE}/${SHARENAME}"
+    [ -n "${TOP_SEEN[$top]}" ] && return 0
+    TOP_SEEN[$top]=1
+    TOP_FOLDERS+=("$top")
+}
+
+# With Clean datasets and Clean folders on, notes this row's pool/share and destination for cleanShareDataset after
+# the pass when the row's source is the primary; fills processTheMoves' DATASET_DEST and SHARE_DATASETS
+note_share_dataset() {
+    [ "$CLEANDATASETS" = "yes" ] && [ "$CLEANFOLDERS" != "no" ] &&
+        [ "$SOURCE" = "/mnt/$PRIMARYSTORAGENAME" ] || return 0
+    local ds="$PRIMARYSTORAGENAME/$SHARENAME"
+    [ -n "${DATASET_DEST[$ds]+x}" ] && return 0
+    DATASET_DEST[$ds]=$DESTINATION
+    SHARE_DATASETS+=("$ds")
+}
+
+# A folder in this row's share emptied: hands the share to the top-folder and dataset checks after the pass, each
+# under its own settings
+note_emptied_share() { note_top_folder; note_share_dataset; }
+
+# Deletes share top folder $1 if it is empty, unless it is a ZFS dataset mountpoint or test mode is on
+cleanTopFolder() {
+    local top_folder=$1 file_count dir_count dataset=no pat skip=()
+    [ -d "$top_folder" ] || return 0
+    if [ -e "${top_folder}/.placeholder" ]; then
+        mvlogger "Not deleting top-level folder: contains .placeholder: ${top_folder}"
+        return 0
+    fi
+    # a dataset's .zfs holds the snapshots snapdir=visible shows, and a walk would mount each one. -path is a glob, so
+    # the folder's own \ * ? [ are escaped
+    if is_zfs_dataset_mountpoint "$top_folder"; then
+        dataset=yes
+        pat=${top_folder//\\/\\\\}
+        pat=${pat//\*/\\*}
+        pat=${pat//\?/\\?}
+        skip=(-path "${pat//\[/\\[}/.zfs" -prune -o)
+    fi
+    # -xdev: a mount inside, such as a child dataset, is counted but not walked
+    file_count=$(count_left "$top_folder" -xdev "${skip[@]}" -type f -print)
+    dir_count=$(count_left "$top_folder" -xdev -mindepth 1 "${skip[@]}" -type d -print)
+    mvDebuglogger "Top folder: $(qp "$top_folder"), share file(s): $file_count, share folder(s): $dir_count" "Clean Top Folder"
+    if [ "$file_count" -ne 0 ] || [ "$dir_count" -ne 0 ]; then
+        mvlogger "Not deleting top-level folder: contains $file_count file(s), $dir_count subfolder(s): ${top_folder}"
+    elif [ "$dataset" = yes ]; then
+        mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
+    elif [ "$TESTMODE" != "no" ]; then
+        if would_rmdir "$top_folder"; then
+            mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
+        else
+            mvDebuglogger "TEST MODE: Would fail to delete top-level folder (not empty): $top_folder" "Clean Top Folder"
+        fi
+    elif rmdir "$top_folder" 2>/dev/null; then
+        mvlogger "Deleted empty top-level folder: $top_folder"
+    else
+        mvDebuglogger "Failed to delete top-level folder (may not be empty): $top_folder" "Clean Top Folder"
+    fi
+}
+
+# Prints folder $1's first entry that is not a folder, or is a folder that folder $2 lacks; $1 itself when cd or find fails.
+# Succeeds once it has looked. Skips $1/.zfs, which snapdir=visible shows: its snapshots keep the dataset at the children check
+dataset_loses() {
+    local src=$1 dest=$2 entry
+    # two passes: the destination is read only once nothing but folders is left
+    entry=$(cd "$src" && {
+        first=$(find . -mindepth 1 -path ./.zfs -prune -o ! -type d -print -quit) || exit
+        [ -n "$first" ] && { printf '%s' "$first"; exit; }
+        find . -mindepth 1 -path ./.zfs -prune -o -type d ! -exec test -d "$dest/{}" \; -print -quit
+    }) || { printf '%s' "$src"; return 0; }
+    [ -z "$entry" ] || printf '%s' "$src/${entry#./}"
+}
+
+# Mounts the unmounted dataset $1 read-only at empty folder $2 and prints dataset_loses there against $4, with $2 shown
+# as $3; prints why and fails when it cannot mount or read it, and returns 2 with umount's reason when umount fails
+dataset_loses_unmounted() {
+    local err lost scanned=yes
+    if ! err=$(mount -t zfs -o ro,zfsutil "$1" "$2" 2>&1); then
+        printf 'mount: %s' "$(zfs_reason "${err#mount: }")"
+        return 1
+    fi
+    # a scan cut short can print nothing, as a clean one does: only its status tells them apart
+    lost=$(dataset_loses "$2" "$4") || scanned=
+    if ! err=$(umount "$2" 2>&1); then
+        printf '%s' "$(zfs_reason "${err#umount: }")"
+        return 2
+    fi
+    [ -n "$scanned" ] || { printf 'the check was cut short'; return 1; }
+    # dataset_loses names its folder itself when it cannot read it
+    [ "$lost" != "$2" ] || { printf 'find: the dataset could not be read'; return 1; }
+    [ -z "$lost" ] || printf '%s' "$3${lost#"$2"}"
+}
+
+# Run only inside $( ): ignores the stop signals there, so a stop that signals every process cannot end step $@ part-way
+finish_on_stop() {
+    trap '' TERM HUP INT
+    "$@"
+}
+
+# Logs lines $3... and notes dataset $2 for dataset_problems_notice at severity $1 (failure outranks warning); fills
+# processTheMoves' DATASET_PROBLEM (the dataset's entry in the notice) and DATASET_PROBLEM_LEVEL
+dataset_problem() {
+    DATASET_PROBLEM[$2]=${DATASET_PROBLEM[$2]:-[$2]}
+    [ "$DATASET_PROBLEM_LEVEL" = failure ] || DATASET_PROBLEM_LEVEL=$1
+    local line
+    for line in "${@:3}"; do mvlogger "$line"; done
+}
+
+# Logs why dataset $2's files are out of view and how to mount it back (template $1 filled with $3...), and puts the
+# translation in its notice entry: with action logging off the notice is all the user gets
+dataset_out_of_view() {
+    local template=$1 dataset=$2
+    shift 2
+    mvlogger "ZFS dataset [$dataset]: $(fill_template "$template" "$@")"
+    DATASET_PROBLEM[$dataset]="[$dataset] ($(finish_on_stop translate_text "$template" "$@"))"
+}
+
+# One notice naming the run's datasets with a problem: a problem that repeats notifies once a run
+dataset_problems_notice() {
+    local ds names=""
+    for ds in "${SHARE_DATASETS[@]}"; do [ -z "${DATASET_PROBLEM[$ds]}" ] || names+="${names:+ }${DATASET_PROBLEM[$ds]}"; done
+    [ -z "$names" ] || mvlogger_t "Clean empty ZFS datasets did not finish for %s. The mover log has the details unless Log Mover Tuning plugin actions is set to No." \
+        "$DATASET_PROBLEM_LEVEL" "$names"
+}
+
+# Mounts dataset $1 at its folder $2 from inside the folder and prints the first entry the mount hides, seen through .;
+# prints why and fails when the folder cannot be entered or the mount fails; fails with 2 when the look is cut short
+mount_back() {
+    local err entry
+    # made if gone: a write through /mnt/user can make it again, with a file in it, before the mount
+    { mkdir -p "$2" && cd "$2"; } 2>/dev/null || { printf 'cannot enter its folder %s' "$2"; return 1; }
+    err=$(zfs mount "$1" 2>&1) || { printf 'zfs: %s' "$(zfs_reason "$err")"; return 1; }
+    # a look cut short can print nothing, as a clean one does: only its status tells them apart
+    entry=$(find . -mindepth 1 -print -quit 2>/dev/null) || return 2
+    printf '%s' "$entry"
+}
+
+# Mounts dataset $1 again at its folder $2, unless the folder gained files that a mount would hide
+remount_dataset() {
+    local out
+    # a write through /mnt/user while it was unmounted lands in the bare folder
+    if [ -n "$(finish_on_stop find "$2" -mindepth 1 -print -quit 2>/dev/null)" ]; then
+        out="Not remounting ZFS dataset [$1]: its folder $2 holds files that a mount would hide"
+    else
+        out=$(finish_on_stop mount_back "$1" "$2")
+        case $? in
+        0)
+            [ -n "$out" ] || return 0
+            dataset_problem failure "$1" "ZFS dataset [$1] is mounted again, but $2/${out#./}, written as it was mounted, is hidden under it"
+            dataset_out_of_view "a file is hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+                "$1" "$1" "$2" "$1" "$2"
+            return 0
+            ;;
+        1) ;;
+        2)
+            # a failure, as a found file is: Notify errors only must still say a file may be out of view
+            dataset_problem failure "$1"
+            dataset_out_of_view "mounted again, but the look for a file written to %s as it was mounted was cut short, so one may be hidden under it: stop writes to the share, zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+                "$1" "$2" "$1" "$2" "$1" "$2"
+            return 0
+            ;;
+        *)
+            # killed outright, it may have mounted it or not
+            dataset_problem failure "$1"
+            dataset_out_of_view "the remount was cut short, so it may not be mounted or may hide a file: stop writes to the share, if zfs mount lists it at %s run zfs unmount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+                "$1" "$2" "$1" "$2" "$1" "$2"
+            return 0
+            ;;
+        esac
+    fi
+    dataset_problem failure "$1" "Failed to remount dataset [$1]" "$out"
+    dataset_out_of_view "not mounted: stop writes to the share, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+        "$1" "$2" "$1" "$2"
+}
+
+# Logs at debug level why dataset $1 is kept: entry $2 that a destroy could lose
+dataset_kept() {
+    # the planner never saw this name: a newline in it would end the debug line before debug_mover's mangling
+    mvDebuglogger "Keeping ZFS dataset [$1]: a destroy could lose $(qp "${2//$'\n'/\\n}")" "Clean Dataset"
+}
+
+# Succeeds if dataset $1 is mounted at folder $2; a stop does not cut the read short
+mounted_at() { [ "$(finish_on_stop findmnt -no source --mountpoint "$2")" = "$1" ]; }
+
+# Unmounts dataset $1 from folder $2 and destroys it if dataset_loses_unmounted at private folder $4 against $3 is empty;
+# else tries to mount it back. processTheMoves' stopped, set by a stop, skips the destroy
+unmount_check_destroy() {
+    local dataset=$1 folder=$2 private=$4 err lost rc
+    # stderr is discarded on both launch paths, so zfs's reason goes to the log
+    if ! err=$(finish_on_stop zfs unmount "$dataset" 2>&1); then
+        zfs_busy "$dataset" "$err" ||
+            dataset_problem failure "$dataset" "Failed to unmount ZFS dataset [${dataset}]" "zfs: $(zfs_reason "$err")"
+        return 0
+    fi
+    mvlogger "ZFS dataset [${dataset}] successfully unmounted."
+    # a file written between the first check and the unmount is in the dataset: checked again where nothing can write
+    lost=$(finish_on_stop dataset_loses_unmounted "$dataset" "$private" "$folder" "$3")
+    rc=$?
+    # a failed or killed check may leave the dataset at the private folder: mount.zfs can fail after mounting, and
+    # umount after unmounting, so the mount table decides
+    if [ "$rc" != 0 ]; then
+        [ "$rc" = 1 ] || [ "$rc" = 2 ] || lost="the check was cut short"
+        if ! mounted_at "$dataset" "$private"; then
+            # unmounted after all, but what the check found was not kept
+            [ "$rc" != 2 ] || { lost="umount: $lost"; rc=1; }
+        elif [ "$rc" != 2 ] && ! err=$(finish_on_stop umount "$private" 2>&1) && mounted_at "$dataset" "$private"; then
+            lost=$(zfs_reason "${err#umount: }")
+            rc=2
+        fi
+    fi
+    if [ "$rc" = 2 ]; then
+        dataset_problem failure "$dataset" \
+            "ZFS dataset [${dataset}] is still mounted read-only at ${private}, not at ${folder}: umount: $lost"
+        dataset_out_of_view "mounted read-only at %s: stop writes to the share, umount %s, move anything in %s aside, zfs mount %s, then move it back into %s without replacing a file already there: keep both copies and compare them" \
+            "$dataset" "$private" "$private" "$folder" "$dataset" "$folder"
+        return 0
+    elif [ "$rc" != 0 ]; then
+        # a hold by something else, such as a container's mount, makes the read-only mount busy
+        zfs_busy "$dataset" "$lost" ||
+            dataset_problem warning "$dataset" "ZFS dataset [${dataset}] could not be checked once unmounted, will not delete: $lost"
+    elif [ -n "$stopped" ]; then
+        mvlogger "Mover stopped while ZFS dataset [${dataset}] was unmounted: not deleting it, attempting to remount"
+    elif [ -n "$lost" ]; then
+        mvlogger "Keeping ZFS dataset [${dataset}]: the check after the unmount found something a destroy could lose."
+        dataset_kept "$dataset" "$lost"
+    elif ! err=$(finish_on_stop zfs destroy "$dataset" 2>&1); then
+        zfs_busy "$dataset" "$err" || dataset_problem failure "$dataset" \
+            "Failed to destroy ZFS dataset [${dataset}] — attempting to remount." "zfs: $(zfs_reason "$err")"
+    else
+        mvlogger "ZFS dataset [${dataset}] successfully destroyed."
+        return 0
+    fi
+    remount_dataset "$dataset" "$folder"
+}
+
+# Destroys dataset $1/$2 if it is mounted at /mnt/$1/$2, has no children or snapshots, and dataset_loses against $3/$2
+# is empty both before the unmount and after it; else keeps it, and the log says when it stays unmounted. Test mode
+# runs no zfs command: it says the dataset would be checked
+cleanShareDataset() {
+    local folder="/mnt/$1/$2" dataset="$1/$2" mounted names lost private
+    mounted=$(zfs_dataset_at "$folder")
+    [ -n "$mounted" ] || return 0
+    if [ "$mounted" != "$dataset" ]; then
+        mvDebuglogger "Keeping the ZFS dataset mounted at $(qp "$folder"): it is not ${dataset}" "Clean Dataset"
+        return 0
+    fi
+    if [ "$TESTMODE" != "no" ]; then
+        mvlogger "TEST MODE: Would check ZFS dataset [${dataset}] for deletion"
+        return 0
+    fi
+    # listed first, so between the content check and the unmount only a log line is written
+    if ! names=$(finish_on_stop zfs list -r -H -t filesystem,volume,snapshot -o name "$dataset" 2>&1); then
+        mvlogger "ZFS dataset [${dataset}] could not be listed, will not delete: $(zfs_reason "$names")"
+        return 0
+    fi
+    # cut short, it is kept as a folder it cannot read is
+    lost=$(finish_on_stop dataset_loses "$folder" "$3/$2") || lost=$folder
+    if [ -n "$lost" ]; then
+        dataset_kept "$dataset" "$lost"
+        return 0
+    fi
+    if [[ $names == *$'\n'* ]]; then
+        mvlogger "ZFS dataset [${dataset}] has child datasets or snapshots, will not delete..."
+        return 0
+    fi
+    # a stop during the checks above ends the run before the unmount
+    [ -z "$stopped" ] || return 0
+    if ! private=$(finish_on_stop mktemp -d -t ca.mover.tuning.XXXXXX 2>&1); then
+        dataset_problem warning "$dataset" \
+            "ZFS dataset [${dataset}] could not be checked once unmounted, will not delete: mktemp: $(zfs_reason "${private#mktemp: }")"
+        return 0
+    fi
+    mvlogger "ZFS dataset [${dataset}] holds only folders the destination also has, attempting to unmount and delete..."
+    unmount_check_destroy "$dataset" "$folder" "$3/$2" "$private"
+    # a folder the dataset is still mounted on stays
+    rmdir "$private" 2>/dev/null
+}
+
 # Internal move engine
 processTheMoves() {
     if [ -e $SOFTSTOPFILE ]; then
@@ -2541,10 +2859,7 @@ processTheMoves() {
     # the Pause button shows from here until movesEnd
     echo "$$ 0" >"$MOVINGFILE"
     mvlogger "$(titleLine 'LET THE MOVING SHOW BEGIN !' '*')"
-    if [ "$ENABLETURBO" = "yes" ]; then
-        mvlogger "Forcing turbo write on"
-        [ "$TESTMODE" != "yes" ] && /usr/local/sbin/mdcmd set md_write_method 1
-    fi
+    force_turbo
     # MOVER_ACTIONLIST header:
     # PRIMARYSTORAGENAME|SHARENAME|SHAREUSECACHE|MODIFYTIME|FILESIZE|POOLSUM|THRESHOLD|PROJECTED|NBLINKS|INODE|ACTION|FROM|TO|FILETYPE|FILEPATH
 
@@ -2560,16 +2875,22 @@ processTheMoves() {
     REMAINING_UNATTENDED_FOLDERS=$TOTALUNATTENDEDFOLDERS
     local -A HANDLED_LINKS=()
     local -A GONE_BEFORE=()
+    local -A TEST_GONE=()
     local -A CHARGED_BYTES=()
     local -A STAGED_OK=()
     local -A STAGED_VANISHED=()
     local -A STAGED_INUSE=()
-    # without fuser an open file cannot be told apart, so none is moved while moveInUse is no
-    local fuser_missing=0
-    if [ "$MOVE_IN_USE" != "yes" ] && ! command -v fuser >/dev/null; then
-        fuser_missing=1
-        mvlogger "fuser not found: files stay where they are, since they cannot be checked for use. Set 'Move files that are in use' to Yes to move them anyway."
-    fi
+    local -A TOP_SEEN=()
+    local -a TOP_FOLDERS=()
+    local -A DATASET_DEST=()
+    local -a SHARE_DATASETS=()
+    local -A DATASET_PROBLEM=()
+    local DATASET_PROBLEM_LEVEL=""
+    local top ds notice_lines stopped=""
+    # set by filesInUse the first time a file cannot be checked
+    local FILE_IN_USE_FAILURE_LOGGED=no
+    local -a FILES_IN_USE_CMD=()
+    chooseFilesInUseCheck
 
     # Dry mode info:
     if [ "$TESTMODE" = "yes" ]; then
@@ -2590,7 +2911,10 @@ processTheMoves() {
     # "keep on primary", "keep on secondary" and "keep misplaced" are not actions, so they are absent
 
     for ACTION_PASS in "${MOVE_ACTIONS[@]}"; do
-        while IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH; do
+        while IFS= read -r ROW; do
+            IFS="|" read -r PRIMARYSTORAGENAME SHARENAME SHAREUSECACHE MODIFYTIME FILESIZE POOLSUM THRESHOLD PROJECTED NBLINKS INODE ACTION SOURCE DESTINATION FILETYPE FILEPATH <<<"$ROW"
+            # read can drop a | that ends the row, so a set path is cut whole from the row, as the awk lookups below take it
+            if [ -n "$FILEPATH" ]; then FILEPATH=$ROW; for _ in {1..14}; do FILEPATH=${FILEPATH#*|}; done; fi
             # before the row's checks, so a long pause cannot leave them stale
             pauseHold
             if [ -e $SOFTSTOPFILE ]; then
@@ -2608,7 +2932,9 @@ processTheMoves() {
             # a move, so later rows are matched on the SYNCED_FILES_ARR key below, not the file. The key
             # carries the plan, so a group split across plans keeps every partition instead of dropping one.
             NBLINKS="${NBLINKS:-0}"
-            if [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -gt 1 ]; then
+            link_group=0
+            [ "$FILETYPE" = "f" ] && [ "$NBLINKS" -gt 1 ] && link_group=1
+            if [ "$link_group" = 1 ]; then
                 link_key="$ACTION|$SOURCE|$DESTINATION|$NBLINKS|$INODE|$MODIFYTIME"
                 [ -n "${HANDLED_LINKS[$link_key]}" ] && continue
                 HANDLED_LINKS[$link_key]=1
@@ -2660,37 +2986,19 @@ processTheMoves() {
             # via this array (instead of eval) stops the shell from interpreting
             # spaces, backticks, $(...), redirections, etc. that appear in file names.
             # every field is compared whole, so a name containing | cannot impersonate another row
-            mapfile -t SYNCED_FILES_ARR < <(awk -F'|' -v links="$NBLINKS" -v inode="$INODE" -v mtime="$MODIFYTIME" -v action="$ACTION" -v src="$SOURCE" -v dst="$DESTINATION" '
-                BEGIN { links = links ""; inode = inode ""; mtime = mtime "" }
-                $4 == mtime && $9 == links && $10 == inode && $11 == action && $12 == src && $13 == dst { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; print src "/./" p }' "$MOVER_ACTIONLIST")
+            # a row that is not a link group moves only its own name, without a scan of the action list
+            if [ "$link_group" = 1 ]; then
+                mapfile -t SYNCED_FILES_ARR < <(awk -F'|' -v links="$NBLINKS" -v inode="$INODE" -v mtime="$MODIFYTIME" -v action="$ACTION" -v src="$SOURCE" -v dst="$DESTINATION" '
+                    BEGIN { links = links ""; inode = inode ""; mtime = mtime "" }
+                    $4 == mtime && $9 == links && $10 == inode && $11 == action && $12 == src && $13 == dst { p = $15; for (i = 16; i <= NF; i++) p = p "|" $i; print src "/./" p }' "$MOVER_ACTIONLIST")
+            else
+                SYNCED_FILES_ARR=("$SOURCE/./$FILEPATH")
+            fi
 
             # SYNCED_FILES is a display/count string only, derived from the array so
             # the extraction pipeline above runs only once per file.
-            SYNCED_FILES=""
-            SYNCED_FILES=""
-            for f in "${SYNCED_FILES_ARR[@]}"; do SYNCED_FILES+="$(qp "$f") "; done
+            qpAll SYNCED_FILES "${SYNCED_FILES_ARR[@]}"
             GUI_CURRENT_FILE="$SOURCE/$FILEPATH"
-
-            # Check File by validate function and skip if error; rsync gets every hardlink name, so check them all
-            if [ "$VALIDATE_FILENAMES" = "yes" ]; then
-                for f in "${SYNCED_FILES_ARR[@]:-$SOURCE/./$FILEPATH}"; do
-                    # a name already gone is counted as vanished after the transfer, never as invalid
-                    [ -e "${f//\/.\//\/}" ] || continue
-                    validate_filename "$(basename "$f")" && continue
-                    mvlogger_t "Error: Invalid filename path: %s. Please either change the filename to valid or disable the 'Validate input filenames' option." "failure" "$(qp "${f//\/.\//\/}")"
-                    gone=0
-                    for g in "${SYNCED_FILES_ARR[@]}"; do [ -e "${g//\/.\//\/}" ] || gone=$((gone + 1)); done
-                    # a staged row is counted once, by its sync row, which finds the move incomplete and takes the gone names from here
-                    if [ "$STAGE_ROW" = 0 ]; then
-                        not_moved "$(( ${#SYNCED_FILES_ARR[@]} - gone > 0 ? ${#SYNCED_FILES_ARR[@]} - gone : 1 ))"
-                        [ "$FILETYPE" = "f" ] && VANISHEDFILES=$((VANISHEDFILES + gone))
-                        remaining_done "$gone" 0
-                    else
-                        STAGED_VANISHED[$chain_key]=$gone
-                    fi
-                    continue 2
-                done
-            fi
 
             # Check if list is complete (array length is exact, unlike parsing the string)
             NBFILES=${#SYNCED_FILES_ARR[@]}
@@ -2700,9 +3008,9 @@ processTheMoves() {
                 continue
             fi
 
-            # an open name keeps its source copy alive, so moving it frees nothing: skip it like Unraid's move
-            # (fuser takes no "--": with it, psmisc fuser reports an open file as not in use)
-            if [ "$MOVE_IN_USE" != "yes" ] && [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && { [ "$fuser_missing" = 1 ] || fuser -s "${SYNCED_FILES_ARR[@]//\/.\//\/}" 2>/dev/null; }; then
+            # An open name keeps its source copy alive, so moving it frees nothing: skip it like Unraid's move.
+            # filesInUse takes an exclusive lease at this point, or uses fuser when leases are unavailable.
+            if [ "$MOVE_IN_USE" != "yes" ] && [[ "$ACTION" =~ "move" && "$FILETYPE" = "f" ]] && [ "$NBFILES" -gt 0 ] && filesInUse "${SYNCED_FILES_ARR[@]//\/.\//\/}"; then
                 mvlogger "In use, left for a later run: $SYNCED_FILES"
                 # a move from primary left in place was not synced either, so lastCacheSync must wait; a staged row leaves that to its sync row
                 if [ "$STAGE_ROW" = 1 ]; then STAGED_INUSE[$chain_key]=1; else INUSEFILES=$((INUSEFILES + NBFILES)); fi
@@ -2732,15 +3040,15 @@ processTheMoves() {
             # Proceed with rsync
             if [[ "$ACTION" =~ "move" ]]; then
                 # Some verbosity
-                GUI_ACTION="Moving to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
-                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Moving to $DESTINATION/ $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
+                mvlogger "Moving $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
                 rsync_action="Move"
                 # Finalize RSYNC_CMD
                 RSYNC_CMD+=(--remove-source-files)
             elif [[ "$ACTION" =~ "sync" ]]; then
                 # Some verbosity
-                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
-                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$NBLINKS" -gt 1 ] && [ "$FILETYPE" = "f" ] && echo '(preserving hardlinks)')"
+                GUI_ACTION="Synchronizing to $DESTINATION/ $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
+                mvlogger "Synchronizing  $SYNCED_FILES to  $(qp "$DESTINATION/") $([ "$link_group" = 1 ] && echo '(preserving hardlinks)')"
                 rsync_action="Sync"
             fi
 
@@ -2767,7 +3075,7 @@ processTheMoves() {
                 if [ "$TESTMODE" = "yes" ]; then
                     mvlogger "TEST MODE: Would move using Unraid move utility"
                 else
-                    mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Move cmd: move, Move $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "Move Action"
                     # Unraid move keeps hardlinks only among names given in one run and skips the file otherwise;
                     # a folder row sends only the folder, which move leaves on the source while anything is in it
                     MOVE_DEBUG_ARGS=()
@@ -2783,9 +3091,10 @@ processTheMoves() {
                 else
                     # one quoted token per argv element, like SYNCED_FILES above: [*] joins the
                     # paths with spaces, and the anonymiser cannot tell where one ends
-                    RSYNC_CMD_LOG=""
-                    for a in "${RSYNC_CMD[@]}"; do RSYNC_CMD_LOG+="$(qp "$a") "; done
-                    mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
+                    if [ "$DEBUGLEVEL" != 0 ]; then
+                        qpAll RSYNC_CMD_LOG "${RSYNC_CMD[@]}"
+                        mvDebuglogger "Rsync cmd: $RSYNC_CMD_LOG, $rsync_action $filetype: $SYNCED_FILES, Dest: $(qp "$DESTINATION/")" "$rsync_action Action"
+                    fi
                     # Perform rsync. relative paths and hardlinks
                     if [ ${#SYNCED_FILES_ARR[@]} -gt 0 ]; then
                         if [ ${#present[@]} -gt 0 ]; then
@@ -2801,6 +3110,14 @@ processTheMoves() {
                 fi
             fi
             copyWatchStop
+            # test mode notes what a real move takes off the source: every file, and with Unraid's move a folder
+            # its rmdir would take, as move leaves any other
+            if [ "$TESTMODE" = "yes" ] && [[ "$ACTION" =~ "move" ]] && { [ "$FILETYPE" = "f" ] || [ "$MOVE_FILES_TOOL" = "move" ]; }; then
+                for f in "${present[@]}"; do
+                    f=${f//\/.\//\/}
+                    [ "$FILETYPE" = "f" ] || would_rmdir "$f" && TEST_GONE[$f]=1
+                done
+            fi
 
             # a dry run counts every name as done; a real run counts only verified arrivals below
             names=${#SYNCED_FILES_ARR[@]}
@@ -2874,117 +3191,67 @@ processTheMoves() {
                 # Define a function to handle the directory cleanup logic.
                 # Iterate the array directly (was: echo "$SYNCED_FILES" | xargs),
                 # so filenames with quotes/spaces/special chars are handled safely.
-                for FILE in "${SYNCED_FILES_ARR[@]}"; do
+                counted_in_row=0
+                for key in "${SYNCED_FILES_ARR[@]}"; do
                     # Collapse the rsync --relative marker ("/./" -> "/")
-                    FILE="${FILE//\/.\//\/}"
+                    FILE="${key//\/.\//\/}"
                     DIR=$(dirname "$FILE")
-                    mvDebuglogger "Current file: $(qp "$FILE"), Current folder: $(qp "$DIR"), Previous folder: $(qp "$LAST_DIR"), Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "Current file: $(qp "$FILE"), Current folder: $(qp "$DIR"), Previous folder: $(qp "$LAST_DIR"), Previous count: $LAST_COUNT" "Clean Folder - Start Loop"
 
                     if [ -e "${DIR}/.placeholder" ]; then
                         count=".placeholder"
+                    # a name gone before its turn may have left before an earlier row's count: its folder is counted again
+                    elif [ "${LAST_DIR}" != "${DIR}" ] || [ -n "${GONE_BEFORE[$key]}" ]; then
+                        # an earlier row may have emptied and deleted it
+                        LAST_COUNT=0
+                        [ ! -d "$DIR" ] || LAST_COUNT=$(count_left "$DIR" -maxdepth 1 -type f)
+                        LAST_DIR=$DIR
+                        counted_in_row=1
+                        count=$LAST_COUNT
                     else
-                        # Check if the current directory is same as the previous one
-                        if [ "${LAST_DIR}" == "${DIR}" ]; then
-                            # Check if the counter is greater than 0 to avoid counting files in the folder using wc -l
-                            if [ "$LAST_COUNT" -gt 0 ]; then
-                                count=$((LAST_COUNT - 1))
-                                # Save current counter
-                                LAST_COUNT="$count"
-                            fi
-                        else
-                            #count=$(ls -A "$DIR" | wc -l)
-                            count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
-                            # Save current counter
-                            LAST_COUNT="$count"
-                            # Save current Folder
-                            LAST_DIR="$DIR"
-                            # echo "Directory changed to: ${DIR}, Count of files: $count"
-                        fi
+                        # a count taken in this row already left out its moved names; a later row's name lowers it once it
+                        # left
+                        [ "$LAST_COUNT" = 0 ] || [ "$counted_in_row" = 1 ] || on_source "$FILE" || LAST_COUNT=$((LAST_COUNT - 1))
+                        count=$LAST_COUNT
                     fi
                     mvDebuglogger "Cycle of delete folder, Previous count: $LAST_COUNT, Count of file(s): $count" "Clean Folder - End Loop"
 
                     if [ "$count" = ".placeholder" ] || [ "$count" != 0 ]; then
                         mvlogger "Not deleting folder containing $count file$([ "$count" != ".placeholder" ] && echo "s"): ${DIR}"
                     else
-                        if [ "$TESTMODE" = "no" ]; then
-                            # Check if empty folder exists and remove it (but skip ZFS dataset mountpoints)
-                            if [ -d "${DIR}" ]; then
-                                if ! is_zfs_dataset_mountpoint "${DIR}"; then
-                                    if rmdir "${DIR}" 2>/dev/null; then
-                                        mvlogger "Deleted empty folder: ${DIR}"
-                                    else
-                                        mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Folder"
-                                    fi
+                        note_emptied_share
+                        # the share's top folder is cleanTopFolder's, after the pass and in topFolder mode only
+                        if [ "$DIR" != "${SOURCE}/${SHARENAME}" ] && [ -d "${DIR}" ] && on_source "$DIR"; then
+                            if is_zfs_dataset_mountpoint "${DIR}"; then
+                                mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
+                            # test mode asks what rmdir would: anything left in the folder keeps it
+                            elif [ "$TESTMODE" = "yes" ]; then
+                                if would_rmdir "$DIR"; then
+                                    TEST_GONE[$DIR]=1
+                                    mvlogger "TEST MODE: Would delete empty folder: ${DIR}"
                                 else
-                                    mvlogger "Skipping deletion of ZFS dataset mountpoint: ${DIR}"
+                                    mvDebuglogger "TEST MODE: Would fail to delete folder (not empty): ${DIR}" "Clean Folder"
                                 fi
+                            elif rmdir "${DIR}" 2>/dev/null; then
+                                mvlogger "Deleted empty folder: ${DIR}"
+                            else
+                                mvDebuglogger "Failed to delete folder (may not be empty): ${DIR}" "Clean Folder"
                             fi
                         fi
                     fi
                 done
             fi
 
-            # Clean parent ZFS dataset if empty
-            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "f" ]] && [ "$TESTMODE" = "no" ] && [ "$CLEANDATASETS" = "yes" ] && [[ "$CLEANFOLDERS" = "yes" || "$CLEANFOLDERS" = "topFolder" ]]; then
-                # Check counter if equal to 0 then check datasets
-                if [ "$LAST_COUNT" -eq 0 ]; then
-                    # Count files in share
-                    share_file_count=$(find "/mnt/${PRIMARYSTORAGENAME}/${SHARENAME}" -type f | wc -l)
-                    mvDebuglogger "Cycle of delete dataset" "Clean Dataset - Start Loop"
-                    # If no files in share
-                    if [ "${share_file_count}" -eq 0 ]; then
-                        # Check if mount point is ZFS
-                        if is_zfs_pool "$PRIMARYSTORAGENAME"; then
-                            DATASET="${PRIMARYSTORAGENAME}/${SHARENAME}"
-                            #echo "Checking if ZFS dataset [${DATASET}] is completely empty..."
-                            # If ZFS dataset children size is zero and No ZFS dataset children exist
-                            if [ "$(zfs list -Hpo usedbychildren "${DATASET}")" = 0 ] && [ -z "$(zfs list -r -H -o name "${DATASET}" | tail -n +2)" ]; then
-                                # Check for any files in the ZFS dataset avalible
-                                dataset_file_count=$(find "/mnt/${DATASET}" -type f | wc -l)
-                                if [ "${dataset_file_count}" -eq 0 ]; then
-                                    mvlogger "ZFS dataset [${DATASET}] appears empty, attempting to unmount and delete..."
-                                    # Unmount the ZFS dataset
-                                    if ! zfs unmount "${DATASET}"; then
-                                        mvlogger_t "Failed to unmount ZFS dataset [%s]" "failure" "${DATASET}"
-                                        continue
-                                    else
-                                        mvlogger "ZFS dataset [${DATASET}] successfully unmounted."
-                                    fi
-                                    # Destroy the ZFS dataset
-                                    if ! zfs destroy "${DATASET}"; then
-                                        mvlogger_t "Failed to destroy ZFS dataset [%s] — attempting to remount." "failure" "${DATASET}"
-                                        zfs mount "${DATASET}" 2>/dev/null || mvlogger_t "Failed to remount dataset [%s]" "warning" "${DATASET}"
-                                        continue
-                                    else
-                                        mvlogger "ZFS dataset [${DATASET}] successfully destroyed."
-                                    fi
-                                else
-                                    mvlogger "ZFS dataset [${DATASET}] contains files or directories, will not delete..."
-                                fi
-                            else
-                                mvlogger "ZFS dataset [${DATASET}] contains child datasets, will not delete..."
-                            fi
-                        fi
-                    fi
-                fi
-            fi
-
-            # Clean moved empty folders
-            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ]; then
+            # Clean moved empty folders, once the folder arrived: a failed move's would exist nowhere
+            if [[ "$ACTION" =~ "move" && "$FILETYPE" == "d" ]] && [ "$MOVE_EMPTY_FOLDERS" = "yes" ] && [ "$arrived" -gt 0 ]; then
                 START_DIR="${SOURCE}/${FILEPATH}"
 
                 LAST_FOLDER_COUNT=$((REMAINING_CACHE_FOLDERS + REMAINING_ARRAY_FOLDERS + REMAINING_UNATTENDED_FOLDERS))
-                EMPTY_DIR_COUNT=-1
 
-                # If Unraid already deleted the folder (move mode) using upper folder, skip cleanup
-                if [ ! -d "$START_DIR" ]; then
-                    START_DIR="$(dirname "${START_DIR}")"
-                    if [ -d "$START_DIR" ]; then
-                        mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists, using upper folder: $(qp "$(dirname "${START_DIR}")")" "Clean Empty Moved Folder"
-                    else
-                        mvDebuglogger "Skipping cleanup: $(qp "$START_DIR") no longer exists" "Clean Empty Moved Folder"
-                        continue
-                    fi
+                # Unraid's move deletes the folder itself; a parent gone too leaves the walk below nothing to do
+                if [ ! -d "$START_DIR" ] || ! on_source "$START_DIR"; then
+                    [ "$DEBUGLEVEL" != 0 ] && mvDebuglogger "$(qp "$START_DIR") $([ -d "$START_DIR" ] && echo "would be" || echo is) gone from the source: the walk starts at its parent $(qp "$(dirname "$START_DIR")")" "Clean Empty Moved Folder"
+                    START_DIR=$(dirname "$START_DIR")
                 fi
 
                 # Build list of parent directories
@@ -2993,14 +3260,16 @@ processTheMoves() {
 
                 mvDebuglogger "Cycle of delete empty folder: ${DIR}" "Clean Empty Moved Folder - Start Loop"
 
-                while [[ -d "$DIR" && "$DIR" != "${SOURCE}/${SHARENAME}" ]]; do
+                while [[ -d "$DIR" && "$DIR" != "${SOURCE}/${SHARENAME}" ]] && on_source "$DIR"; do
                     DIR_LIST+="${DIR}"$'\n'
                     DIR="$(dirname "${DIR}")"
                 done
 
-                # Process each directory using while read
+                # Process each directory using while read; a break leaves chain_emptied 0
+                chain_emptied=1
                 while IFS= read -r DIR; do
                     [ -z "$DIR" ] && continue
+                    chain_emptied=0
                     mvDebuglogger "Empty folder ${DIR}" "Clean Empty Moved Folder"
 
                     # Stop at ZFS dataset boundaries
@@ -3015,9 +3284,9 @@ processTheMoves() {
                         break
                     fi
 
-                    # Count files and subdirectories
-                    empty_file_count=$(find "$DIR" -maxdepth 1 -type f | wc -l)
-                    empty_dir_count=$(find "$DIR" -mindepth 1 -type d | wc -l)
+                    # the folder's own entries only: a walk below would mount each snapshot a child dataset shows
+                    empty_file_count=$(count_left "$DIR" -maxdepth 1 -type f)
+                    empty_dir_count=$(count_left "$DIR" -mindepth 1 -maxdepth 1 -type d)
 
                     # Folder is truly empty
                     if [ "$empty_file_count" -eq 0 ] && [ "$empty_dir_count" -eq 0 ]; then
@@ -3028,9 +3297,15 @@ processTheMoves() {
                                 mvDebuglogger "Failed to delete moved folder (may not be empty): ${DIR}" "Clean Empty Moved Folder"
                                 break
                             fi
-                        else
+                        # test mode asks what rmdir would: anything left in the folder, such as a symlink, keeps it
+                        elif would_rmdir "$DIR"; then
+                            TEST_GONE[$DIR]=1
                             mvlogger "TEST MODE: Would delete moved empty folder: ${DIR}"
+                        else
+                            mvDebuglogger "TEST MODE: Would fail to delete moved folder (not empty): ${DIR}" "Clean Empty Moved Folder"
+                            break
                         fi
+                        chain_emptied=1
 
                         mvDebuglogger "Cycle of delete empty folder, Previous count: $LAST_FOLDER_COUNT, Count of all empty folders: $((LAST_FOLDER_COUNT - 1))" "Clean Empty Moved Folder - End Loop"
                     else
@@ -3039,52 +3314,7 @@ processTheMoves() {
                     fi
 
                 done <<<"${DIR_LIST}"
-
-                if [ -n "${empty_file_count+x}" ] && [ -n "${empty_dir_count+x}" ]; then
-                    EMPTY_DIR_COUNT=$((empty_file_count + empty_dir_count))
-                else
-                    EMPTY_DIR_COUNT=-1
-                fi
-            fi
-
-            # Clean top level folder if empty
-            if [[ "$ACTION" =~ "move" ]] && [ "$CLEANFOLDERS" = "topFolder" ]; then
-                # Check counters if equal to 0 then check top share
-                if [[ "$LAST_COUNT" -eq 0 || "$EMPTY_DIR_COUNT" -eq 0 ]]; then
-                    # Determine top-level share folder
-                    top_folder="${SOURCE}/${SHARENAME}"
-                    # Skip if placeholder exists
-                    if [ -d "$top_folder" ]; then
-                        if [ -e "${top_folder}/.placeholder" ]; then
-                            mvlogger "Not deleting top-level folder: contains .placeholder: ${top_folder}"
-                        else
-                            # Count files and subfolders
-                            file_count=$(find "$top_folder" -type f | wc -l)
-                            dir_count=$(find "$top_folder" -mindepth 1 -type d | wc -l)
-
-                            mvDebuglogger "Top folder: $(qp "$top_folder"), share file(s): $file_count, share folder(s): $dir_count" "Clean Top Folder"
-
-                            # Delete only if truly empty
-                            if [ "$file_count" -eq 0 ] && [ "$dir_count" -eq 0 ]; then
-                                if [ "$TESTMODE" = "no" ]; then
-                                    if ! is_zfs_dataset_mountpoint "$top_folder"; then
-                                        if rmdir "$top_folder" 2>/dev/null; then
-                                            mvlogger "Deleted empty top-level folder: $top_folder"
-                                        else
-                                            mvDebuglogger "Failed to delete top-level folder (may not be empty): $top_folder" "Clean Top Folder"
-                                        fi
-                                    else
-                                        mvlogger "Skipping deletion of ZFS dataset mountpoint: $top_folder"
-                                    fi
-                                else
-                                    mvlogger "TEST MODE: Would delete empty top-level folder: $top_folder"
-                                fi
-                            else
-                                mvlogger "Not deleting top-level folder: contains $file_count file(s), $dir_count subfolder(s): ${top_folder}"
-                            fi
-                        fi
-                    fi
-                fi
+                [ "$chain_emptied" = 1 ] && note_emptied_share
             fi
 
             # Setting mover status: a name leaves the remaining-work counters once it arrived or was found gone,
@@ -3135,6 +3365,27 @@ processTheMoves() {
     mvlogger "$(titleLine "Cleaning up" '-')"
     movesEnd
     moverStep "Cleaning up"
+    # once per noted share, after the pass: a soft stop's break 2 lands here too. A stop, whether it signals the run alone
+    # or every process (the plugin's), lets the step in hand finish, then the remount if one is due and the notice, and
+    # ends the run
+    trap 'stopped=1' TERM HUP INT
+    for ds in "${SHARE_DATASETS[@]}"; do
+        [ -z "$stopped" ] || break
+        cleanShareDataset "${ds%%/*}" "${ds#*/}" "${DATASET_DEST[$ds]}"
+    done
+    # the notice's log lines come back out of the $( )
+    notice_lines=$(finish_on_stop dataset_problems_notice)
+    [ -z "$notice_lines" ] || printf '%s\n' "$notice_lines"
+    if [ -n "$stopped" ]; then
+        # a second stop must not end the run, or its mdcmd, before the pid file goes
+        trap '' TERM HUP INT
+        last_restore_turbo
+        # the plugin's stop removes these once the run has ended; a stop that signals the run alone leaves them
+        [ "$(cat "$PIDFILE" 2>/dev/null)" != "$$" ] || rm -f "$PIDFILE" "$MOVER_STATUS" "$PAUSEFILE" "$MOVINGFILE"
+        exit 0
+    fi
+    trap - TERM HUP INT
+    for top in "${TOP_FOLDERS[@]}"; do cleanTopFolder "$top"; done
 
     if [ "$TESTMODE" != "yes" ] && [ ! -e $SOFTSTOPFILE ] && [ "$SYNCFAILED" = 0 ] &&
         awk -F'|' '$11 ~ /^sync / { found = 1; exit } END { exit !found }' "$MOVER_ACTIONLIST"; then
@@ -3160,12 +3411,64 @@ processTheMoves() {
         done
     fi
 
-    if [ $ENABLETURBO = "yes" ]; then
-        turbo_write_mode=$(cat /var/local/emhttp/var.ini | grep "md_write_method=" | cut -d'"' -f2)
-        mvlogger "Restoring original turbo write mode $( ([ $turbo_write_mode = "auto" ] && echo "Auto (read/modify/write)") || ([ $turbo_write_mode -eq 1 ] && echo "Turbo writes (Reconstruct)") || echo "Read/modify/write")"
-        [ $TESTMODE != "yes" ] && /usr/local/sbin/mdcmd set md_write_method $turbo_write_mode
-    fi
+    restore_turbo
 }
+
+# Prints the write method var.ini gives when it is one mdcmd can set back: 0, 1 or auto, as mover.php checks
+write_method() {
+    local m
+    m=$(grep -s '^md_write_method=' /var/local/emhttp/var.ini | cut -d'"' -f2)
+    case $m in 0 | 1 | auto) echo "$m" ;; *) return 1 ;; esac
+}
+
+# With Turbo Mode on, forces turbo write for the moves, only when the write method can be set back after
+force_turbo() {
+    TURBO_WAS=""
+    [ "$ENABLETURBO" = "yes" ] || return 0
+    if ! TURBO_WAS=$(write_method); then
+        mvlogger "Not forcing turbo write on: /var/local/emhttp/var.ini gives no write method (0, 1 or auto) to set back after"
+        return 0
+    fi
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would force turbo write on"
+        return 0
+    fi
+    # set first: a stop that ends the run from here on puts the write method back on its way out, and a second stop
+    # waits for it; a KILL cannot
+    trap 'trap "" HUP INT TERM; restore_turbo' EXIT
+    mvlogger "Forcing turbo write on"
+    /usr/local/sbin/mdcmd set md_write_method 1 || mvlogger "Could not force turbo write on: mdcmd exited $?"
+}
+
+# Sets the write method back after force_turbo, where the run ends or from the EXIT trap of a run a signal ends sooner;
+# it clears the trap, in a real run only once mdcmd has set it back
+restore_turbo() {
+    local m name
+    [ -n "$TURBO_WAS" ] || return 0
+    # var.ini's now, which Settings may have changed during the moves; the one read before when it gives none
+    m=$(write_method) || m=$TURBO_WAS
+    case $m in
+    auto) name="Auto (read/modify/write)" ;;
+    1) name="Turbo writes (Reconstruct)" ;;
+    *) name="Read/modify/write" ;;
+    esac
+    if [ "$TESTMODE" = "yes" ]; then
+        mvlogger "TEST MODE: Would restore original turbo write mode $name"
+    else
+        mvlogger "Restoring original turbo write mode $name"
+        # the plugin's stop signals mdcmd before the run: one it ends first leaves the EXIT trap to try again
+        /usr/local/sbin/mdcmd set md_write_method "$m" || {
+            mvlogger "Could not restore original turbo write mode $name: mdcmd exited $?"
+            return 1
+        }
+    fi
+    TURBO_WAS=""
+    trap - EXIT
+}
+
+# The last try, before the run removes its pid file: a run that starts after may force turbo write, which a later try
+# would undo
+last_restore_turbo() { restore_turbo || trap - EXIT; }
 
 # The settings pages cannot offer this combination, so it only arrives by saving a
 # lower moving threshold while the old freeing value is still selected.
@@ -3341,6 +3644,7 @@ start() {
 
     mvDebuglogger "Reset run-once settings completed" "run-once settings END"
 
+    last_restore_turbo
     mvlogger "Cleaning lock and stop files"
     for file in $PIDFILE $SOFTSTOPFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE; do
         [[ -e "$file" ]] && rm -f "$file"
@@ -3430,8 +3734,7 @@ reset() {
     # Remove the schedule files, then write back the ones default.cfg sets; this runs after a failed step too, so the
     # schedules follow whichever settings are left
     rm -f "${MOVERTUNINGCFGFILE%/*}/mover.cron" "${MOVERTUNINGCFGFILE%/*}/mover.tuning.cron" "${MOVERTUNINGCFGFILE%/*}/mover.watchdog.cron" || failed=1
-    /usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/updateCron.php sync || failed=1
-    /usr/local/sbin/update_cron || failed=1
+    /usr/bin/php -q /usr/local/emhttp/plugins/ca.mover.tuning/updateCron.php apply || failed=1
     if [ "$failed" -ne 0 ]; then
         echo "mover: Error: The reset did not complete, see the lines above."
         exit 1
@@ -3452,20 +3755,32 @@ killtree() {
     for child in $(pgrep --ns $$ -P $pid); do
         killtree $child
     done
-    # a paused copy acts on the TERM only once it runs again
-    [ $pid -ne $$ ] && kill -TERM $pid && kill -CONT "$pid"
+    # a paused copy acts on the TERM only once it runs again; a process can end before either signal reaches it
+    [ $pid -ne $$ ] && kill -TERM $pid 2>/dev/null && kill -CONT "$pid" 2>/dev/null
 }
 
 # Caution: stopping mover like this can lead to partial files on the destination
 # and possible incomplete hard link transfer.  Not recommended to do this.
 stop() {
+    local pid waited=0
     if [ ! -f $PIDFILE ]; then
         echo "mover: not running"
         exit 0
     fi
-    killtree $(cat $PIDFILE)
+    pid=$(cat $PIDFILE)
+    killtree $pid
     sleep 2
-    rm -f $PIDFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE
+    # a run cleaning ZFS datasets first finishes the step in hand and mounts the dataset back; its pid file keeps another
+    # run from starting meanwhile
+    if kill -0 "$pid" 2>/dev/null; then
+        echo "mover: waiting for the run to end"
+        while kill -0 "$pid" 2>/dev/null; do
+            [ $((waited += 1)) -le 60 ] || { echo "mover: the run (pid $pid) has not ended after a minute"; exit 1; }
+            sleep 1
+        done
+    fi
+    # a run started since this one ended owns them now; a run stopped while cleaning datasets has removed its own
+    [ "$(cat $PIDFILE 2>/dev/null)" != "$pid" ] || rm -f $PIDFILE $MOVER_STATUS $PAUSEFILE $MOVINGFILE
     echo "mover: stopped"
     exit
 }
