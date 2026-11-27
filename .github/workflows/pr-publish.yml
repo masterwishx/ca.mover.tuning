@@ -86,7 +86,7 @@ jobs:
           if [ "$age" -ge 0 ] && [ "$age" -le 300 ]; then pressed=$at; fi
         done <<<"$presses"
         latest=$(sort <<<"$presses" | tail -n 1 | cut -d' ' -f1)
-        # the label is its latest press's: only that press's own run takes it off, any other leaves it to that run
+        # the label is its latest press's: that press's own run takes it off, any other leaves it to that run unless a lookup fails
         grant() { if [ "$pressed" = "$latest" ]; then printf '%s\n' unlabel=true "pressed=$pressed" >> "$GITHUB_OUTPUT"; fi; }
         [ -n "$pressed" ] || refuse "no press of the \`$LABEL\` label by \`$RUN_ACTOR\` in the 5 minutes before this run was created"
         # the press's own run is the first one its presser started on this head after it; a later one may build later commits.
@@ -290,7 +290,7 @@ jobs:
         gh api "repos/$GITHUB_REPOSITORY/issues/comments/$id" -X PATCH -f body="$removed" >/dev/null
 
     - name: Take the label off so the next build needs a new go
-      # only for its latest press's run, or when the Find step could not read the presses
+      # only for its latest press's run, or when the Find step could not read the labels or presses
       if: always() && steps.pr.outputs.unlabel == 'true'
       env:
         PR: ${{ steps.pr.outputs.number }}
